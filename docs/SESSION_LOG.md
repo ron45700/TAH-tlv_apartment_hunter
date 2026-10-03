@@ -185,3 +185,57 @@ order is in `BACKLOG.md`, "Next sprint".
 1. Where the #41 filters live in v1, given that the dashboard is Phase 6+.
 2. Whether a post with `null` in a filtered field is shown or hidden.
 3. Whether repeated phone numbers within one post are kept or collapsed (#38 does not say).
+
+---
+
+## 2026-10-02 / 2026-10-03 — New baseline and docs cross-check (docs only, no code changes)
+
+### Done
+
+Ron brought a revised handoff with several large changes of direction. It was worked through with
+him question by question, and the result is `docs/BASELINE.md`, approved 2026-10-02.
+
+The main changes: home server with Tailscale instead of GCP; friends as users from the start;
+dashboard before Telegram; alerts only on a profile match; the keyword sniper removed; bounded
+retention (archive at 25 days, delete at 40); a rejected list with reasons, admin-only; a filter
+model with fixed-critical, default-critical and preference levels. `BASELINE.md` §13 lists what
+changed against the old documents.
+
+Then every other document was cross-checked against the baseline, in a fixed order:
+
+| File | What was done |
+|---|---|
+| `BASELINE.md` | Marked approved. Amended: shared group list, the shared-post exception to the no-images rule, "women preferred", entry date wording, Gate E, and four items missing from the build order (watermark, reclassify job, sent-alert record, price mismatch in the digest) |
+| `RESEARCH.md` | **New.** Verified facts, providers, field map, traps, dedup findings and model test results, carried from the two archived documents with later corrections folded in. Replaces the never-created `PROVIDERS.md` |
+| `DECISIONS.md` | #5, #9, #12, #13, #15, #16, #17, #21, #39, #41 marked superseded; #18, #29, #31 corrected; #8, #19, #25, #38 extended or amended; #42–#60 added |
+| `ASSUMPTIONS.md` | Firestore and Cloud Run items marked as no longer applying; references repointed to `RESEARCH.md`; new items for Telegram long polling, the Mini App on a tailnet, Tailscale sharing, image download, and the areas source |
+| `SCHEMA.md` | Wording only. No field, type or rule changed. Gate E added to the gate table and Gate C widened |
+| `PHASE_1.md` | Rewritten as the collection phase. Task numbers 1.1a, 1.1, 1.2, 1.2b, 1.3 kept; 1.4–1.9 retired; new tasks from 1.10 |
+| `BACKLOG.md` | Rewritten for the new order |
+| `HANDOFF.md`, `MACRO_PLAN.md` | Moved to `docs/archive/` with an "archived" header |
+
+### Verified
+
+- Telegram needs no public address for a bot: long polling and outbound sends (Bot API docs).
+- Tailscale Serve is tailnet-only HTTPS; device sharing admits an outside user to one machine
+  (Tailscale docs).
+- The sniper is not in the package: `tlv_hunter/classify/` holds only the protocol and the stub.
+
+### Found
+
+- `HANDOFF.md` had no §7 (the legal section three documents pointed at) and no "What Ron is looking
+  for" section. Ron confirmed the legal section is not needed; the open legal question is
+  `ASSUMPTIONS.md` L1.
+- About 10% of the sample (2 of 20 posts) has no images and will be rejected before the model. Ron
+  confirmed the rule, with the shared-post exception.
+
+### Not done in this pass
+
+- `CLAUDE.md` was deliberately left for a separate review with Ron. It still describes the old
+  direction in several places (`BACKLOG.md`, "Doc debt"). **Until that review, `BASELINE.md` wins
+  wherever the two disagree.**
+
+### Next
+
+1. Review `CLAUDE.md` with Ron.
+2. Phase 1 in the order given in `BACKLOG.md`. Ron brings the Apify token for task 1.1a.

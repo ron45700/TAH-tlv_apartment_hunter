@@ -5,14 +5,16 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-09-14
+**Last updated:** 2026-10-03 — wording aligned to `BASELINE.md`. **No field, type or rule was
+changed.** Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 
 | Gate | Covers | Status |
 |---|---|---|
 | A | `RawPost` | ✅ Approved 2026-09-14 |
-| B | `Listing` | ⬜ Not opened |
-| C | Filter rules (`policy`) | ⬜ Not opened |
-| D | Dedup stage B key | ⬜ Not opened |
+| E | What the lifecycle adds to a stored post: state, rejection reason, flagger, last publication, repost log, image paths | ⬜ Not opened — phase 1 |
+| B | `Listing` | ⬜ Not opened — phase 2 |
+| D | Dedup stage B key | ⬜ Not opened — phase 2 |
+| C | Filter rules, and the user, key and profile records | ⬜ Not opened — phase 3 |
 
 ---
 
@@ -60,8 +62,8 @@ regardless. The question is: **will I filter, query, or dedup on it?** If not, i
 | `source` | `str` | — | `"thedoor"` / `"memo23"`. Set at fetch time, not present in `raw`. The only trace of origin after normalization. |
 | `source_post_id` | `str` | `post_id` | Facebook's own post ID, as the provider gave it. Dedup layer 1. |
 | `listing_id` | `str` | derived | `sha256(source_post_id)`. **`source` is deliberately excluded** — see below. |
-| `group_id` | `str` | `group_id` | Per-group watermark, silent-group detection, future per-user subscriptions. |
-| `group_title` | `str \| None` | ❌ (memo23 has it) | Displayed in the message. |
+| `group_id` | `str` | `group_id` | Per-group watermark, silent-group detection. |
+| `group_title` | `str \| None` | ❌ (memo23 has it) | Displayed on the card. |
 | `permalink` | `str` | `post_url` | The link Ron clicks. |
 | `posted_at` | `datetime` (UTC) | `creation_time` — RFC 2822, `parsedate_to_datetime` | **The watermark is the max of this**, never run time. |
 | `fetched_at` | `datetime` (UTC) | — | **When we first saw it.** The gap from `posted_at` measures how slow we are. On re-fetch the rest of the record is overwritten but this value is **kept** — the watermark overlap re-fetches the same post almost every run, so overwriting would destroy the measurement. Set at fetch time. |
@@ -69,8 +71,8 @@ regardless. The question is: **will I filter, query, or dedup on it?** If not, i
 
 ### `listing_id` — what it is and is not
 
-`listing_id` is **our record identifier**: the Firestore document ID, what `Notification` points
-at, what appears shortened in the Telegram message. It is **not** part of dedup logic.
+`listing_id` is **our record identifier**: the stored record's ID and what a sent-alert record
+points at. It is **not** part of dedup logic.
 
 Two records can be the same apartment and still have different `listing_id` values — exactly the
 three duplicate pairs found in task 1.2. **`listing_id` is unique per post, not per apartment.**
@@ -79,14 +81,14 @@ Apartment-level identity is the canonical `listing_id`, and `duplicate_of` point
 **`source` is excluded from the hash on purpose.** thedoor's `post_id` and memo23's `legacyId` are
 both Facebook's post ID — the same post carries the same number from either provider. Including
 `source` would make one post produce two records the moment a failover happens, which is precisely
-the Phase 5 scenario. Excluding it lets dedup layer 1 work across providers, not only within one.
+the provider-failover scenario. Excluding it lets dedup layer 1 work across providers, not only within one.
 
 ### Content
 
 | Field | Type | Source | Rationale |
 |---|---|---|---|
 | `text` | `str` | `text`, falling back to `sharedPost` | What is sent to Gemini **verbatim**. |
-| `text_source` | `str` | derived | `"text"` / `"shared_post"` / `"none"`. When a post comes out `no_text`, this separates "empty share" from "post that is entirely an image" — two different cases Ron will want to see separately in the dashboard. |
+| `text_source` | `str` | derived | `"text"` / `"shared_post"` / `"none"`. When a post comes out `no_text`, this separates "empty share" from "post that is entirely an image" — two different cases Ron will want to tell apart in the admin's rejected list. |
 | `post_type` | `str` | `post_type` | Observed: `regular`, `sale_post`. Documented but not yet observed: `shared`. Lets us find the `shared` cases when they first arrive. |
 
 ### Media
@@ -95,9 +97,9 @@ the Phase 5 scenario. Excluding it lets dedup layer 1 work across providers, not
 |---|---|---|---|
 | `media[]` | `list[Media]` | `media[]` | `{type, uri, width, height, media_id, page_url}`. `width` and `height` are `int \| None`: `Video` items **omit the keys entirely** — a missing key maps to `None`. |
 
-`uri` is a signed `scontent.*.fbcdn.net` link that expires within days. **`page_url` does not
-expire** — it is the real fallback for the dashboard, and the reason `media[]` is stored even though
-the URLs rot. Its shape depends on the item type: `facebook.com/photo/?fbid=…` for photos, a
+`uri` is a signed `scontent.*.fbcdn.net` link that expires within days, which is why images are
+downloaded at fetch time (`BASELINE.md` §3). **`page_url` does not expire** — it is the fallback
+when a download failed, and a reason `media[]` is stored even though the URLs rot. Its shape depends on the item type: `facebook.com/photo/?fbid=…` for photos, a
 `/videos/` page for videos. Do not assume the photo form.
 
 `Video` items also carry an extra `thumbnail` key that photos do not. Not promoted — it stays in
@@ -122,7 +124,7 @@ the provider supplied.
 
 **Not promoted, left in `raw`:** `sale_post.isOnMarketplace` and `sale_post.isSold`. Neither will
 be filtered or grouped on. `isOnMarketplace` was `false` even on a structured `sale_post`, so it
-does not mean what `HANDOFF.md` implied; `isSold` is provider-reported and unverifiable for a
+does not mean what the research notes first implied; `isSold` is provider-reported and unverifiable for a
 rental — `false` does not mean the room is free. Both remain backfillable from `raw` if they ever
 earn promotion.
 
@@ -135,8 +137,8 @@ earn promotion.
 | `author_profile_url` | `str \| None` | `user.profileUrl` | The only way to reach a poster when there is no phone — and there is no phone in half the posts. |
 
 **`user.id` is not always a rotating `pfbid`.** Most posts return `pfbid0uUyZMG…`, but at least one
-returns a plain numeric ID (`558703982`) with a real vanity profile URL. `HANDOFF.md` §3 states it
-is always a rotating `pfbid`; that is inaccurate. The rule is unchanged — never use it as an
+returns a plain numeric ID (`558703982`) with a real vanity profile URL. The research notes first
+stated it is always a rotating `pfbid`; that is inaccurate. The rule is unchanged — never use it as an
 identity key — and the justification is now stronger: it is sometimes stable and sometimes not, and
 there is no way to tell in advance. A key that is sometimes stable is worse than one that never is.
 
@@ -166,8 +168,8 @@ The pair `(no_text, text_hash)` resolves the ambiguity: `no_text=True` with `tex
 | Field | Type | Computed in | Rationale |
 |---|---|---|---|
 | `text_hash` | `str \| None` | Phase 0 | sha256 of aggressively normalized text. Dedup layer 2, the primary key. `None` when `no_text` is `True` — two empty strings must never collide — or when textnorm has not run. |
-| `phones` | `list[str] \| None` | Phase 0 | Dedup layer 3, a one-directional signal. ~50% coverage. **Stored normalized**: digits only, `+972` converted to a leading `0`, so `050-9184537` and `+972509184537` both become `0509184537`. One stored format is what makes a Firestore equality lookup possible in Phase 2; nothing is lost, since the message always shows the full original text and `raw` keeps the rest. `find_by_phone` normalizes its input before comparing. `None` means not extracted; `[]` means extracted and none found. |
-| `no_text` | `bool \| None` | Phase 0 | Stored, never rejected. **Not sent to Gemini** — we do not analyse images. Excluded from ranking, retrievable as its own bucket in the dashboard. True when the text is absent, whitespace-only, **or normalizes to nothing** (an emoji-only post). A post that normalizes to nothing must never raise: a failed run does not advance the watermark, so one throwaway post would block the window permanently. `text_source` still records where the text came from — `"text"` with `no_text=True` means it arrived and was unusable. |
+| `phones` | `list[str] \| None` | Phase 0 | Dedup layer 3, a one-directional signal. ~50% coverage. **Stored normalized**: digits only, `+972` converted to a leading `0`, so `050-9184537` and `+972509184537` both become `0509184537`. One stored format is what makes an equality lookup in the store possible; nothing is lost, since the card always shows the full original text and `raw` keeps the rest. `find_by_phone` normalizes its input before comparing. `None` means not extracted; `[]` means extracted and none found. |
+| `no_text` | `bool \| None` | Phase 0 | Stored, and rejected with the reason "no text" (`BASELINE.md` §5). **Not sent to Gemini** — we do not analyse images. Seen only in the admin's rejected list. True when the text is absent, whitespace-only, **or normalizes to nothing** (an emoji-only post). A post that normalizes to nothing must never raise: a failed run does not advance the watermark, so one throwaway post would block the window permanently. `text_source` still records where the text came from — `"text"` with `no_text=True` means it arrived and was unusable. |
 | `is_canonical` | `bool \| None` | Phase 1 (task 1.3) | Dedup result. A property of the post, not of any user, so it lives here and not on `Decision`. |
 | `duplicate_of` | `str \| None` | Phase 1 (task 1.3) | The canonical `listing_id` this post duplicates. `None` is ambiguous on its own — read it together with `is_canonical`. |
 
@@ -190,7 +192,8 @@ under the other.
 write it."** The second meaning belongs to `Listing`. Do not conflate them.
 
 memo23 has **not** been verified against a real response by anyone but Ron, at research time. Its
-input field is `startUrls`, not `url`. See `ASSUMPTIONS.md` M1–M3; verification happens in Phase 5.
+input field is `startUrls`, not `url`. See `ASSUMPTIONS.md` M1–M3; verification happens when the
+failover adapter is built.
 
 ---
 
@@ -219,7 +222,9 @@ applies to stubs too, so their Phase 0 shapes are approved explicitly and narrow
 | `ListingStub` | `listing_id` | Not persisted in Phase 0 |
 | `DecisionStub` | `user_id`, `listing_id`, `notify` | Not persisted in Phase 0 |
 
-`Notification` and `GroupWatermark` are **not** created in Phase 0 — they are Phase 2.
+`Notification` and `GroupWatermark` are **not** created in Phase 0. `GroupWatermark` arrives with
+the watermark in phase 1 and the sent-alert record with alerts in phase 4; each field set is
+approved before it is written.
 
 **The class and module names must contain `Stub`** (`contracts/listing_stub.py`, `ListingStub`).
 A class named `Listing` sitting in the codebase looks like an approved starting point, which is

@@ -1,15 +1,15 @@
 # TLV Apartment Hunter — Baseline
 
-**Status:** DRAFT for Ron's review. Not yet the source of truth.
-**Written:** 2026-10-02, from Ron's revised handoff and the alignment session of the same day.
+**Status:** Approved by Ron, 2026-10-02. Amended 2026-10-03 after the cross-check of the other docs.
 **Owner:** Ron
 
-> Once approved, this file replaces `HANDOFF.md` and `MACRO_PLAN.md` as the description of what
-> the system is and how it is built. Those two move to `docs/archive/`. `DECISIONS.md`,
-> `BACKLOG.md`, `CLAUDE.md` and `PHASE_1.md` are then updated to match this file.
+> This file is the description of what the system is and how it is built. It replaces
+> `HANDOFF.md` and `MACRO_PLAN.md`, which are in `docs/archive/` and describe the old direction.
+> Research findings that still hold (providers, field map, traps, test results) are in
+> `docs/RESEARCH.md`.
 >
 > `SCHEMA.md` stays the only source of truth for field names and types. This file states
-> **requirements**; it does not name fields. Names and types are settled at Gate B.
+> **requirements**; it does not name fields. Names and types are settled at the gates (§12).
 
 ---
 
@@ -23,8 +23,10 @@ saved profile.
 **The problem it solves:** manually scanning several groups several times a day for the few posts
 that fit.
 
-**Sources:** Facebook public groups through Apify actors. Yad2 is a later addition and will
-probably need its own scraper; the design must stay open to it (see §13).
+**Sources:** Facebook public groups through Apify actors. The group list is one shared list: every
+user sees posts from all of them. Editing the list from the dashboard is a later addition. Yad2 is
+also a later addition and will probably need its own scraper; the design must stay open to it
+(see §13).
 
 ---
 
@@ -90,9 +92,8 @@ scheduler -> Apify (thedoor) -> provider normalize -> pre-model rejects -> text 
 - **Model:** Gemini Flash, `temperature=0`, structured output, schema derived from the pydantic
   model. The original text is sent verbatim.
 
-Research facts that still hold (provider inputs, field map, traps, duplicate rate, group IDs) are
-carried into this file's appendix when the old documents are archived. Until then they remain in
-`HANDOFF.md` §3–§5 and `ASSUMPTIONS.md`.
+Provider inputs, the field map, traps, the duplicate rate and the group IDs are in
+`docs/RESEARCH.md`.
 
 ---
 
@@ -112,7 +113,7 @@ A repost resets the clock. A repost of an archived post makes it active again.
 | Reason | Decided | Notes |
 |---|---|---|
 | No text | Before the model | Not sent to the model |
-| No images | Before the model | Not sent to the model |
+| No images | Before the model | Not sent to the model. A post that shares another post is checked first: it is rejected only if the shared post has no images either |
 | Other city | By the model | The post names a city that is not Tel Aviv–Yafo. The named city is shown next to the post. Applies to all users. A nearby city mentioned as a landmark ("5 minutes from Givatayim") is not a rejection |
 | Seeking | By the model | The poster is looking for an apartment, not offering one |
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |
@@ -134,7 +135,8 @@ prompt.
 - Images
 - Link to the original post
 - Price
-- Entry date ("immediate" is a valid value)
+- Entry date, as the poster wrote it. "כניסה מיידית" counts as a stated entry date; it is not
+  only for calendar dates
 - Location: street and or area
 - Listing kind, and a sublet mark when it is one
 - Phone, when present. Every distinct number in the post is shown; an identical number appears
@@ -151,6 +153,8 @@ prompt.
 - Parking (not written is shown as "none")
 - Arnona and house committee, as two separate fields
 - "Women only"
+- "Women preferred" (עדיפות לבנות). This is not "women only": it is a mark on the card and hides
+  nothing
 - Elevator, furnished, air conditioning (card only, never a filter)
 
 ### Field states
@@ -255,14 +259,22 @@ and stays valid. Gate A (`RawPost`) stays approved.
 
 | Phase | Contents | Done means |
 |---|---|---|
-| **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · thedoor fetch · pre-model rejects · dedup A · repost log · image download · SQLite store | A real run stores posts and images with no duplicates |
-| **2. Classification** | **Gate B** (field schema from §5–§7) · Gemini · post-model rejects · street and area · **Gate D** and dedup B | Every post has fields and a state |
-| **3. Basic dashboard** | Users and keys · profile and filters (**Gate C**) · cards · rejected list · flagging | Ron filters and sees real apartments in a browser |
-| **4. Telegram** | Bot · account linking · alerts by profile · Mini App spike | A real alert arrives according to Ron's profile |
-| **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours · archive and deletion job · digest · silent-group detection | Two days unattended; first friend connected |
-| **6. Later** | memo23 failover · UI polish from Ron's screenshots · schedule editing from the dashboard · Yad2 | |
+| **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · **Gate E** (post lifecycle fields) · SQLite store · thedoor fetch · pre-model rejects · dedup A · repost log · image download · per-group watermark | A real run stores posts and images with no duplicates, and a second run does not repeat them |
+| **2. Classification** | **Gate B** (field schema from §5–§7) · Gemini · post-model rejects · street and area · **Gate D** and dedup B · reclassify job | Every post has fields and a state |
+| **3. Basic dashboard** | **Gate C** (filter rules, and the user, key and profile records) · users and keys · profile and filters · cards · rejected list · flagging | Ron filters and sees real apartments in a browser |
+| **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike | A real alert arrives according to Ron's profile |
+| **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
+| **6. Later** | memo23 failover · UI polish from Ron's screenshots · schedule and group-list editing from the dashboard · Yad2 | |
 
 Phases 1–4 run on Ron's personal laptop in Docker.
+
+**Gates.** A (`RawPost`) is approved. B, C, D and E are settled with Ron before the code that
+depends on them. Gate E covers what the lifecycle adds to a stored post: state, rejection reason,
+who flagged it, last publication time, the repost log, and local image paths.
+
+**Detailed planning is one phase ahead.** `PHASE_1.md` details phase 1 only. Two technical choices
+are deliberately left for when their phase is planned: the dashboard framework (phase 3) and the
+Telegram library (phase 4).
 
 Because history is at most 40 days, adding a field later means reclassifying 40 days of posts, not
 everything. The field list can start lean.
@@ -315,4 +327,4 @@ None as of 2026-10-02. The contact name next to a phone number is a new requirem
 
 Ron's position is that the tool stays personal: users are close friends searching with him or
 alongside him. Whether the personal-use exclusion in the Privacy Protection Law covers this was
-never checked legally (`ASSUMPTIONS.md` L2).
+never checked legally (`ASSUMPTIONS.md` L1).

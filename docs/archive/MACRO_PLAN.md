@@ -1,5 +1,9 @@
 # TLV Apartment Hunter — Macro Plan
 
+> **ARCHIVED 2026-10-03. Do not build from this file.** It describes the old direction (GCP,
+> single user, Telegram-first) and the old phase order. The plan is `docs/BASELINE.md`; what still
+> holds was carried into `docs/RESEARCH.md`. Kept for history only.
+
 **Status:** architecture agreed, phases agreed. Phase 1 detailed separately in `PHASE_1.md`.
 **Last updated:** 2026-09-13
 **Owner:** Ron

@@ -1,5 +1,9 @@
 # TLV Apartment Hunter — Project Handoff
 
+> **ARCHIVED 2026-10-03. Do not build from this file.** It describes the old direction (GCP,
+> single user, Telegram-first). The plan is `docs/BASELINE.md`; the research findings that still
+> hold were carried into `docs/RESEARCH.md`. Kept for history only.
+
 **Status:** planning complete, all external dependencies verified, ready for architecture + implementation planning.
 **Last updated:** 2026-09-13
 **Owner:** Ron

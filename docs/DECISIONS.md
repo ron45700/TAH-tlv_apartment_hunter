@@ -9,9 +9,13 @@ holds, say so explicitly and change the entry — do not quietly work around it.
 Superseded decisions are kept, marked, and left in place. Deleting them would lose the fact that
 the question was considered at all.
 
-**Last updated:** 2026-10-02
+**Last updated:** 2026-10-03
 
 > Written in English like every document in `docs/`.
+>
+> `HANDOFF.md` and `MACRO_PLAN.md` are in `docs/archive/`. Where an entry below names them, it is
+> recording where the decision came from at the time. The current plan is `BASELINE.md`; research
+> findings are in `RESEARCH.md`.
 
 ---
 
@@ -25,7 +29,7 @@ the question was considered at all.
 
 ---
 
-## Original decisions (from `HANDOFF.md` §2, research phase)
+## Original decisions (research phase)
 
 | # | Decision | Why | Status |
 |---|---|---|---|
@@ -33,24 +37,24 @@ the question was considered at all.
 | 2 | **Never paste own `sessionCookies` into any actor** | Hands credentials to a third party and reintroduces exactly the account risk decision 1 removed. Hard line. | Active |
 | 3 | **Buy collection from Apify, don't build a scraper** | Selector rot is the real maintenance killer (weeks, not months). Outsourcing it moves the fragile part to someone else's problem. | Active |
 | 4 | **Provider adapter layer from day one** | Already proven necessary: the first provider was blocked mid-project. Three providers evaluated, all with incompatible schemas. | Active |
-| 5 | **Everything runs in the cloud (GCP)** | Once collection moved to Apify, the home/residential IP stopped being an asset. No Raspberry Pi, no home laptop, no local collector. | Active |
-| 6 | **LLM classifies; we filter on structured fields** | Keyword pre-filtering is fragile in Hebrew (negation, prefixes, `/` forms). Filtering on model output is re-runnable and changeable without re-scraping. | Active — see #17 for where the filtering now happens |
+| 5 | **Everything runs in the cloud (GCP)** | Once collection moved to Apify, the home/residential IP stopped being an asset. No Raspberry Pi, no home laptop, no local collector. | **Superseded by #43** |
+| 6 | **LLM classifies; we filter on structured fields** | Keyword pre-filtering is fragile in Hebrew (negation, prefixes, `/` forms). Filtering on model output is re-runnable and changeable without re-scraping. | Active — see #51 for where the filtering now happens |
 | 7 | **The model classifies only — never summarizes** | Ron always reads the original text. A summary adds tokens and hallucination surface for zero value. | Active |
-| 8 | **`null` is information, not failure** | Distinguishes "the poster didn't write it" from "we don't know". Drives triage ranking, not rejection. | Active |
-| 9 | **Telegram push only in v1. No buttons, no dashboard.** | Dashboard comes after the bot works. Interactive buttons would require webhook + state for no v1 benefit. | Active |
-| 10 | **Daily digest message is v1, not a nice-to-have** | Ron's criteria are narrow. Silence and failure look identical without it. It is a measuring instrument. | Active |
+| 8 | **`null` is information, not failure** | Distinguishes "the poster didn't write it" from "we don't know". Drives triage ranking, not rejection. | Active — extended by #54 |
+| 9 | **Telegram push only in v1. No buttons, no dashboard.** | Dashboard comes after the bot works. Interactive buttons would require webhook + state for no v1 benefit. | **Superseded by #48** |
+| 10 | **Daily digest message is v1, not a nice-to-have** | Ron's criteria are narrow. Silence and failure look identical without it. It is a measuring instrument. | Active — sent to the admin only |
 | 11 | **Bootstrap mode on first run** | First run pulls a backlog and would fire ~30 messages in a row. First run writes to DB and sends one summary. | Active |
-| 12 | **Keyword sniper runs in shadow, as QC — not as a filter** | Kept because it is already written and tested. Disagreements with the model flag posts worth eyeballing. | **Superseded by #16** |
-| 13 | **Nothing is ever deleted** | Rejected posts are stored with the reason. Feeds the future "rejected" dashboard pane. | Active |
+| 12 | **Keyword sniper runs in shadow, as QC — not as a filter** | Kept because it is already written and tested. Disagreements with the model flag posts worth eyeballing. | **Superseded by #16, then #45** |
+| 13 | **Nothing is ever deleted** | Rejected posts are stored with the reason. Feeds the future "rejected" dashboard pane. | **Superseded by #46** |
 | 14 | **Never advance the watermark on a failed run** | A skipped window is a permanently missed apartment. | Active |
-| 15 | **Include `new_north` in the allowed areas at launch** | Derech Namir / Arlozorov sit on the old-north/new-north boundary. Better a little noise than a missed border listing. | Active — revisit after a week of real data |
+| 15 | **Include `new_north` in the allowed areas at launch** | Derech Namir / Arlozorov sit on the old-north/new-north boundary. Better a little noise than a missed border listing. | **Superseded by #51** |
 
 ---
 
 ## Planning decisions (2026-09-13/14)
 
 ### 16 — The deterministic sniper is out of v1
-**Supersedes #12.** `sniper.py` and `test_sniper.py` stay in the repo, outside the execution path.
+**Status: superseded by #45.** **Supersedes #12.** `sniper.py` and `test_sniper.py` stay in the repo, outside the execution path.
 The sniper becomes a second implementation of the `Classifier` protocol, switchable on later in
 shadow mode without touching the pipeline.
 
@@ -59,6 +63,8 @@ It was listed as "not blocking" in `HANDOFF.md` §6 *because* the sniper caught 
 longer holds. It moves into the Gemini regression set.
 
 ### 17 — v1 pushes everything, with reasons. Rich filtering moves to the dashboard
+**Status: superseded by #48 and #52.**
+
 v1 is a **calibration mode**: every non-duplicate post is pushed to Telegram carrying the reason it
 was classified as it was, so extraction quality can be judged against real output and the prompt
 tuned. The LLM-populated fields become dashboard facets rather than v1 notification filters.
@@ -67,6 +73,10 @@ tuned. The LLM-populated fields become dashboard facets rather than v1 notificat
 does not match) from `missing_field` (the model did not extract it). Two completely different bugs.
 
 ### 18 — The pipeline always stores; `policy` decides only what to notify
+**Status: corrected by #46 and #49.** Still the principle: collection never filters by anyone's
+criteria. Two limits now apply. Posts rejected before the model (no text, no images) are stored but
+not classified, and stored posts are removed after the retention period.
+
 **The central architectural principle.** Classification and storage happen for every post
 regardless of anyone's criteria. The policy layer decides notification only.
 
@@ -75,6 +85,8 @@ extracted field is three changes (model, prompt, test); and because `raw` is pre
 reclassification job can backfill a new field onto all history.
 
 ### 19 — Approval gates before any schema
+**Status: active, extended by #59** (Gate E added; Gate C widened).
+
 No schema, field, or filter rule is created or changed without Ron's explicit approval.
 `docs/SCHEMA.md` is the only source of truth. Gates A (RawPost), B (Listing), C (filter rules),
 D (dedup B key). Recorded as invariant 1 in `CLAUDE.md`.
@@ -91,6 +103,8 @@ designed, dedup absorbs the wider overlap, and silent-group detection falls out 
 *Status:* the per-group behaviour of `postsNewerThan` is `ASSUMED` — verified in task 1.1a.
 
 ### 21 — `httpx` directly against Telegram, not `python-telegram-bot`
+**Status: superseded by #56.**
+
 That library is for bots that **listen**. Push-only v1 is two HTTP calls: no event loop, no
 dependency that drags the design toward a webhook prematurely.
 
@@ -101,8 +115,8 @@ drift is silent.
 ### 23 — Semi-macro planning one phase ahead only
 Detailed planning of later phases rests on assumptions that Phase 1 has not yet resolved — the same
 failure `HANDOFF.md` §2 warns about. A detailed plan also creates commitment: it is harder to
-discard than a row in a table. Each phase ends with a stop to update `HANDOFF.md` and
-`ASSUMPTIONS.md` before the next phase is planned.
+discard than a row in a table. Each phase ends with a stop to update `BASELINE.md`, `RESEARCH.md`
+and `ASSUMPTIONS.md` before the next phase is planned.
 
 *Exception:* decisions expensive to reverse from an early phase (chiefly data shape) are settled
 up front as the anchors in `PHASE_1.md` §1.0.
@@ -125,6 +139,11 @@ not premature abstraction — karpathy lists over-abstraction as an anti-pattern
 `ABC` as its examples, which is exactly what `providers/` and `classify/` look like.
 
 ### 25 — Collection is shared; evaluation is personal
+**Status: active, amended by #47.** It is no longer a future direction: friends are users from the
+start. The group list is shared by all users, so "which groups a user subscribes to" below no
+longer applies. The legal note at the end refers to a research section that no longer exists; the question is
+tracked in `ASSUMPTIONS.md` L1.
+
 A post is fetched, classified, and stored **once**, regardless of how many users exist. What is
 personal: which groups a user subscribes to, which posts pass their filter, how those posts rank,
 and what reaches their bot.
@@ -167,12 +186,15 @@ exactly that. Text alone is better.
 ### 28 — `listing_id = sha256(source_post_id)`, without `source`
 thedoor's `post_id` and memo23's `legacyId` are both Facebook's post ID — the same post carries the
 same number from either provider. Including `source` in the hash would make one post produce two
-records the moment a failover happens, which is precisely the Phase 5 scenario. Excluding it lets
+records the moment a failover happens, which is precisely the provider-failover scenario. Excluding it lets
 dedup layer 1 work across providers, not only within one.
 
 `source` remains its own field for provenance.
 
 ### 29 — Empty text: stored, flagged, never classified
+**Status: corrected by #49.** Still stored, flagged and never classified. It is now a rejection
+reason ("no text") seen by the admin only, not a dashboard bucket.
+
 A post with no text after extraction (a `shared` post, or one whose content is entirely in an image)
 is stored, never rejected, flagged `no_text`, **not sent to Gemini** (we do not analyse images),
 excluded from ranking, and retrievable as its own bucket in the dashboard.
@@ -196,6 +218,11 @@ back into `raw`.
 ## Decisions from the Phase 0 plan review (2026-09-14)
 
 ### 31 — Config splits along the shared/personal line, not by topic
+**Status: corrected by #47.** The shared half stands: `collection.yaml` holds collection settings,
+now including the schedule and quiet hours. The personal half moves out of YAML: a user's profile
+is stored in the database and edited from the dashboard, and there are no per-user group
+subscriptions.
+
 `collection.yaml` (shared): provider, group IDs, `maxPosts`, `sortingOrder`, `fetchAllComments`,
 store root. `users/<user_id>.yaml` (personal): `user_id`, subscribed groups; filter rules join at
 Gate C. Secrets come only from environment variables, never from a file.
@@ -270,13 +297,17 @@ every subsequent run would re-fetch it and fail again.
 from: `"text"` with `no_text=True` means it arrived and was unusable.
 
 ### 38 — Phone numbers are stored normalized
+**Status: active, extended by #57.**
+
 Digits only, `+972` converted to a leading `0`. `050-9184537` and `+972509184537` both become
 `0509184537`. `find_by_phone` normalizes its input before comparing.
 
-*Why:* Phase 2's Firestore lookup is an equality query and cannot match across formats. Nothing is
-lost — the Telegram message always shows the full original text, and `raw` keeps everything.
+*Why:* a store lookup by phone is an equality query and cannot match across formats. Nothing is
+lost — the card always shows the full original text, and `raw` keeps everything.
 
 ### 39 — No-text posts **are** notified, in a minimal distinct format
+**Status: superseded by #49.**
+
 Link, images, and a line stating there is no text and the content is probably in the image. No
 fields, no `confidence`, no reasons block — there is nothing to fill.
 
@@ -299,6 +330,8 @@ Recorded in the `external-contract-verification` skill.
 ## Decisions from the alignment session (2026-10-02)
 
 ### 41 — Filtering is a view-time layer over all collected posts, with three filters
+**Status: superseded by #51.** Both open points at the end are closed there.
+
 Stated by Ron, 2026-10-02. The model is a listings site such as Yad2: everything is collected and
 stored, and Ron narrows **what is displayed**. Collection never filters.
 
@@ -330,6 +363,121 @@ criteria baked into collection or notification cannot do that.
    post (#17). Until a read-side UI exists there is nowhere to apply a filter interactively.
 2. **A post whose filtered field is `null`** (no price written, room count missing): shown or
    hidden when that filter is active? By #8, `null` is information, not failure.
+
+---
+
+## Baseline decisions (2026-10-02 and 2026-10-03)
+
+Made by Ron in the alignment sessions that produced `BASELINE.md`. Each entry states the decision
+and what it replaces. The detail lives in `BASELINE.md` and is not repeated here.
+
+### 42 — `BASELINE.md` is the plan
+It replaces `HANDOFF.md` and `MACRO_PLAN.md`, which move to `docs/archive/`. Research findings that
+still hold are in `RESEARCH.md`.
+
+*Why:* Ron revised the direction in several large ways at once. Patching two documents written
+for the old direction would have left contradictions for Claude Code to trip over.
+
+### 43 — Home server with Tailscale; GCP is the fallback
+**Supersedes #5.** `BASELINE.md` §3.
+
+*Why:* Ron prefers to run it on his own machine. Telegram needs no public address (long polling and
+outbound calls only), and Tailscale Serve plus device sharing gives friends HTTPS access without
+exposing anything publicly, which is also a second access gate.
+
+### 44 — Docker Compose, SQLite, images on disk
+Replaces the Cloud Run, Cloud Scheduler and Firestore choices of the old plan. `BASELINE.md` §3.
+
+*Why:* the same compose file runs on Ron's laptop and on the server. At ~50 posts a day and a
+handful of users SQLite is enough and its backup is one file. The `store` interface keeps Postgres
+a cheap swap.
+
+### 45 — The keyword sniper is removed
+**Supersedes #12 and #16.** Not dormant, not a second classifier: gone.
+
+*Why:* the model scored 10/10 on real posts including adversarial cases. *Consequence:* detecting
+"other city" and "seeking" rests on the model alone, as schema fields. The seeking case that was
+never tested (`ASSUMPTIONS.md` C2) must be in the regression set.
+
+### 46 — Retention is bounded
+**Supersedes #13.** 25 days after last publication a post is archived and its images deleted; at 40
+days it is deleted entirely. `BASELINE.md` §5.
+
+*Why:* an apartment post that old is no longer relevant, and 40 days is enough for debugging.
+*Consequence:* reclassifying after a schema change covers 40 days, not all history, so the field
+list can start lean.
+
+### 47 — Friends are users from the start
+One-time key from Ron, password on the site, Telegram linked by a code, one profile for both.
+The group list is shared by all users. `BASELINE.md` §1, §10. **Amends #25 and #31.**
+
+*Open, recorded:* whether the personal-use position holds with several users was never checked
+legally. Ron's position: close friends only, still personal. `ASSUMPTIONS.md` L1.
+
+### 48 — Dashboard first; alerts only on a profile match
+**Supersedes #9 and #17.** The site is built before the bot. There is no calibration mode that
+pushes every post. `BASELINE.md` §12.
+
+*Why:* the filters need somewhere to live, and judging extraction quality is done better in a list
+Ron can scan than in a stream of messages.
+
+### 49 — Post lifecycle and rejection reasons
+Active, rejected, archived, deleted. Rejection reasons: no text, no images, other city, seeking,
+for sale, not a listing, flagged. The rejected list is admin-only. `BASELINE.md` §5.
+**Supersedes #39; corrects #18 and #29.**
+
+A post with no images that shares another post is rejected only if the shared post has no images
+either.
+
+### 50 — Flagging replaces the calibration file
+Any user can flag a post as not what it claims. It moves to rejected for everyone, with the
+flagger's name, and the admin can restore it. Flagged posts are kept as text, past the retention
+period, as the regression set. Replaces `calibration.jsonl`.
+
+### 51 — The filter model
+**Supersedes #41 and #15.** Listing kind is a hard filter; area and price are fixed critical;
+"women only" is critical by default and can be turned off; the rest are preferences that a user
+can make critical; no value means no effect. One profile holds separate values for a room and for
+an empty apartment. `BASELINE.md` §8.
+
+### 52 — Alert rules
+A new, non-rejected post that passes the user's kind and critical conditions, has an explicit
+price and an understood location. Preferences never block an alert. `BASELINE.md` §9.
+
+### 53 — Area is decided by the model from the street and the hints in the text
+A street that crosses several areas with nothing to settle it carries all of them and is marked
+unclear; it still matches and alerts if one of them was chosen. A location the model cannot place
+gets no area and never alerts. Areas come from a closed list taken from a public source.
+`BASELINE.md` §7.
+
+### 54 — Field states
+**Extends #8.** Present, not written, unclear, and a separate stronger mark when price or entry
+date is missing. Balcony and parking are both stored as "not written"; they differ in display only.
+`BASELINE.md` §6.
+
+### 55 — Runs every 30 minutes, none between 01:00 and 07:00
+The hours are config, later editable by the admin. Closes the old open point on scheduler
+frequency.
+
+### 56 — The bot listens
+**Supersedes #21.** Account linking needs the bot to receive a code, by long polling. Which library
+to use is decided when phase 4 is planned.
+
+### 57 — Phones: every distinct number, an identical one once, with the name when given
+**Extends #38.** Closes the question #38 left open. The name next to a number is a new requirement
+for Gate B, since the phone itself is extracted without the model.
+
+### 58 — Sublet is a basic flag; "women only" is negative only
+A post is a sublet or it is not, with no duration. "Women only" hides a post; "women preferred" is
+a mark on the card and hides nothing.
+
+### 59 — Gate E, and a wider Gate C
+**Extends #19.** Gate E: what the lifecycle adds to a stored post (state, rejection reason, flagger,
+last publication, repost log, image paths). Gate C now also covers the user, key and profile
+records.
+
+### 60 — Yad2 stays future, and will likely need its own scraper
+Not through an Apify provider. The design stays open to it.
 
 ---
 
