@@ -9,6 +9,7 @@ are in `SCHEMA.md`.
 
 **Compiled:** 2026-10-03 from `archive/HANDOFF.md` and `archive/MACRO_PLAN.md`, with the
 corrections made since (Gate A, task 1.2, Phase 0 build) folded in.
+**Updated:** 2026-10-04 with the results of spike 1.1a (`SPIKE_1_1a.md`).
 
 ---
 
@@ -24,7 +25,7 @@ All verified against a real 20-post run on 2026-09-13 (cost: under $0.10).
 | `creation_time` parses cleanly | 20/20 with `email.utils.parsedate_to_datetime` (thedoor, RFC 2822 GMT) |
 | Images are available | 18/20 posts, 82 items. thedoor `media[].uri` at `mx1200x1600`. 2 posts had no media at all |
 | Image URLs expire within days | Signed `scontent.*.fbcdn.net` links. Images must be downloaded at fetch time |
-| Post volume | 20 posts spanned 30.6h across 2 groups ≈ 8 posts/group/day. 6 groups ≈ 50/day |
+| Post volume | **Measured 2026-10-04 (spike 1.1a): ~150 posts/day across the six groups**, from ~4/day (`733810383372996`) to ~73/day (`101875683484689`). Not ~48: the research estimate (20 posts over 30.6h across 2 groups ≈ 8 posts/group/day) was about 3× too low. The measured window was Friday night to Saturday; a weekday may be higher |
 | Duplicates are severe | 3 duplicate pairs in 20 posts (15%). Two pairs were **within the same group**: different `post_id`, identical text. `post_id` dedup is not sufficient |
 | `sale_post` means **rental**, not sale | 8/20 flagged. Titles: `להשכרה 3 חדרים`, `Room Only`. Rejecting on post type would lose 40% of the data |
 | Structured listings carry a price | thedoor: `sale_post.price` / `title` / `location`. memo23: `marketplacePrice`. `sale_post.price` is a **string with a currency symbol** (`"₪3,600"`) |
@@ -56,12 +57,20 @@ All verified against a real 20-post run on 2026-09-13 (cost: under $0.10).
   ordinary posts and is not used.
 - `postsNewerThan` is always sent as **relative minutes** (`"90 minutes"`). The absolute form is
   date-only and would cap the watermark at one day. Relative is measured from run start.
-- `fetchAllComments` and `includeTopComment` both **default to `true`** and bill per result. Both
-  are always set to `false` explicitly.
+- `includeTopComment` **defaults to `true`**; `fetchAllComments` defaults to `false` since build
+  1.0.195 (2026-10-03; it was `true`). Both are always set to `false` explicitly. With
+  `includeTopComment=false`, `topComment` is present on every row as `null`.
 - **No diagnostic rows.** Private or failed groups are silent in the dataset; errors go to the run
-  log only. "Group returned nothing" has to be detected on our side.
-- `post_type: "shared"` arrives with empty `text`; the real content sits in `sharedPost`. Never
-  observed in a real response.
+  log only. "Group returned nothing" has to be detected on our side. **The run log does carry
+  per-group diagnostics:** a line per group `done … | Posts: N | Reason: time_frame_reached` or
+  `target_reached`, transient `Proxy/session error … blocked` lines, and a final
+  `Successful groups: x/6`. The log format is undocumented (`ASSUMPTIONS.md` P13).
+- `post_type: "shared"` arrives with empty `text`; the real content sits in `sharedPost`: text at
+  `sharedPost.text`, images at `sharedPost.media` (verified 2026-10-04, 19 of 19). `post_type`
+  values `shared_reel` and `__reel__` also exist and can carry a `sharedPost`. Media items can
+  have `type: "Reel"`.
+- **Memory:** the actor sets its own default, `min(4096, (floor(url.length / 40) + 1) * 1024)` MB:
+  1 GB for under 40 URLs. One start event per run.
 - `topComment` is documented as an array; the real response carries an object or `null`.
 - The actor's human-readable Input tab is stale. **`/api/openapi` is the source of truth** for its
   input schema.
@@ -90,7 +99,8 @@ either one.
 
 ### Media items
 `Video` items omit the `width` and `height` keys entirely (they are not `null`), carry an extra
-`thumbnail` key, and their page link is a `/videos/` page rather than `photo/?fbid=`.
+`thumbnail` key, and their page link is a `/videos/` page rather than `photo/?fbid=`. Some `Photo`
+items omit `width` and `height` too (9 in spike 1.1a), so the keys are never assumed present.
 
 ### Groups (all public, verified)
 ```
@@ -113,6 +123,8 @@ either one.
 
 ## 3. Apify call shape
 
+- **API paths:** the Apify API spec (`v2-2026-10-01`) lists `/v2/actors/…`; the older
+  `/v2/acts/…` form still answers.
 - **Synchronous call** (`run-sync-get-dataset-items`), not webhooks. To also get cost and the run
   log, start the run with the regular call and keep its run ID: the run object carries
   `usageTotalUsd` and `chargedEventCounts`. `maxTotalChargeUsd` caps the cost of a run.
@@ -123,7 +135,10 @@ either one.
   locally. Whether the window applies per group inside one run is not yet verified
   (`ASSUMPTIONS.md` P1). If it does not: six separate runs.
 
-Expected cost: ~1,500 posts/month ≈ $2.25 on Apify; Gemini Flash negligible.
+Expected cost (from spike 1.1a, `SPIKE_1_1a.md`): 36 runs/day, ~150 posts/day, $0.0015 per
+result and $0.005 per run start. **One run covering all 6 groups: ~$12–16/month**; six separate
+runs: ~$39–43/month. **Accepted by Ron, 2026-10-04.** The earlier "~1,500 posts/month ≈ $2.25"
+ignored the start fee and underestimated volume. Gemini Flash is not included.
 
 ---
 
@@ -226,6 +241,11 @@ identical. Working rule from the measured ~8 posts/group/day: a group returning 
 consecutive runs is marked suspect in the digest; 48 consecutive runs raises an alert. The
 thresholds are `ASSUMED` and get calibrated against a week of real data. Runs skipped during the
 quiet hours do not count.
+
+**These thresholds need recalibrating (spike 1.1a, 2026-10-04).** A live group went 31 hours
+without a post, and the busiest group posts ~73/day while the quietest posts ~4/day. A single
+threshold for all six groups will either miss failures or flag quiet groups. The run log's
+per-group reason may be a better signal than counting zeros.
 
 ---
 

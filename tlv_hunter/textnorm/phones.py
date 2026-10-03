@@ -15,7 +15,9 @@ _PHONE_RE = re.compile(
 
 
 def extract_phones(text: str) -> list[str]:
-    return [match.group(0) for match in _PHONE_RE.finditer(text)]
+    """Distinct phones in canonical form, in order of first appearance."""
+    phones = (canonical_phone(match.group(0)) for match in _PHONE_RE.finditer(text))
+    return list(dict.fromkeys(phones))
 
 
 def canonical_phone(phone: str) -> str:

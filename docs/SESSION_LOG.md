@@ -263,3 +263,194 @@ with `BASELINE.md`.
 ### Next
 
 Phase 1 in the order given in `BACKLOG.md`. Ron brings the Apify token for task 1.1a.
+
+---
+
+## 2026-10-03 (continued) — Task 1.2b: `textnorm` fixes for #37, #38, #57
+
+### Done
+
+- **#37.** `compute_text_hash` returns `None` when the normalized text is empty; `UnhashableTextError`
+  is removed (grep: it was referenced only in `normalize.py` and `test_textnorm.py`, never caught in
+  the pipeline). A new `normalize.py::normalizes_to_nothing` is the single definition of `no_text`,
+  used by both `annotate` and the `RawPost` validator. The `text_source` checks still use
+  `is_blank`, so `text_source="text"` with `no_text=True` is valid.
+- **#38, #57.** `extract_phones` returns `canonical_phone` output, an identical number once, in
+  order of first appearance. `find_by_phone` still normalizes its input and now compares directly
+  against the stored (already canonical) phones. Before simplifying it: the configured store root
+  (`data/store`) does not exist, so no records with as-written phones were stored.
+- Tests: the raising test replaced by a `None` test; new tests for an emoji-only post through
+  `to_raw_post` + `annotate`, the validator accepting/rejecting emoji-only `no_text`, and a number
+  repeated in three formats within one post. `PHONES_FROM_TASK_1_2` and `test_phone_formats` now
+  expect canonical form.
+
+### Verified
+
+- `uv run pytest`: 101 passed. `ruff check` and `ruff format`: clean.
+- Fixture results unchanged: 20 posts, 17 distinct hashes, the same 3 colliding pairs, phones in 10
+  of 20 posts, 0 `no_text`.
+- `RESEARCH.md` and `ASSUMPTIONS.md` hold no statement made stale by this change.
+
+### Open for Ron
+
+- `SCHEMA.md`, `phones` row: says "stored normalized" but does not state the once-per-post rule from
+  #57. Not edited; Ron decides whether to add it.
+- `PHASE_1.md` still lists 1.2b without a completion mark. Not edited in this task.
+- The name next to a number (#57) remains a Gate B requirement, recorded in `DECISIONS.md` #57.
+
+### Next
+
+Task 1.1a, the spike. Needs `APIFY_TOKEN` in `.env`.
+
+---
+
+## 2026-10-04 — Part A doc fixes; task 1.1a, the spike
+
+### Done
+
+- **Doc fixes (approved by Ron, wording only):** `SCHEMA.md` `phones` row states the #57
+  once-per-post rule (no field or type changed); `PHASE_1.md` marks 1.2b complete; `BACKLOG.md`
+  has a row for #57's name-next-to-number, pointing at Gate B.
+- **Contract read before any paid call** (`external-contract-verification`): the build's OpenAPI
+  definition (build 1.0.195, rebuilt 2026-10-03), the actor's pricing, the build's actor
+  definition, and the Apify API spec `v2-2026-10-01T153946Z`.
+- **Two paid runs**, approved by Ron, $0.50 cap each: run 1 `GcarNt1rhe8tuSDuV` (24-hour window)
+  and control `9TShaAS1e6c2fv56t` (no window). 5 images downloaded. Report: `docs/SPIKE_1_1a.md`.
+  Raw responses, run objects, stored inputs and logs in `data/raw/thedoor_spike_1_1a_2026-10-04*`.
+  Script: `scratch/spike_1_1a.py`. The token was read from `.env` and sent only in the
+  `Authorization` header to `api.apify.com`; it was never printed.
+
+### Verified
+
+- **P1: the time window applies per group.** Five groups stopped independently at the same cutoff;
+  each matches the control exactly. One run for all six groups stands.
+- `maxPosts` is per group (control: 30 × 6 = 180).
+- All six groups reachable. One group returned 0 rows because it had not posted for 31 hours; the
+  run log, not the dataset, says so (`Reason: time_frame_reached`).
+- `includeTopComment=false` works: 0 of 285 rows carry a `topComment`.
+- Shared posts: text at `sharedPost.text`, images at `sharedPost.media`, 19 of 19.
+- Images download at fetch time with a plain GET: 5 of 5 JPEG.
+- Cost: $0.1535 + $0.2525 = $0.4060. $0.0015 per result, $0.005 per start; one start event per
+  run, since the actor gives itself 1 GB for under 40 URLs.
+
+### Found
+
+- `fetchAllComments` now defaults to `false`; `CLAUDE.md` invariant 7 says `true` (not edited;
+  doc-debt row added).
+- Response shape changed since 2026-09-13: `actors` and `text_preview` gone, ten keys added, new
+  `post_type` values `shared_reel` and `__reel__`. The mapper maps all 251 non-shared rows.
+- Volume is ~150 posts/day, not ~48. Projected cost ~$12–16/month for one run per slot (~$39–43
+  for six). `RESEARCH.md`'s $2.25/month is stale.
+- The silent-group thresholds in `RESEARCH.md` §9 would flag a healthy quiet group.
+- Charged results are fewer than rows returned (99/105, 165/180); cause unknown.
+
+### Not done
+
+- `ASSUMPTIONS.md` and `RESEARCH.md` not edited; the proposed changes are listed at the end of
+  `SPIKE_1_1a.md`.
+- `PHASE_1.md` does not yet mark 1.1a complete.
+
+### Next
+
+Ron reviews `SPIKE_1_1a.md` and its proposed edits. Then Gate E. Task 1.1 is unblocked on the
+window question.
+
+---
+
+## 2026-10-04 (continued) — Spike follow-up docs; decisions #61 and #62 (docs only)
+
+### Done
+
+All approved by Ron. No code changes.
+
+- **`ASSUMPTIONS.md`:** the 8 changes from `SPIKE_1_1a.md`. P1, P2, P9, I6 → VERIFIED; P5 and P6
+  extended; new P13 (run-log format, ASSUMED), P14 (`Photo` without `width`/`height`), I7 (link
+  expiry ≈ 4.4 days, ASSUMED). The `fetchAllComments` default change was applied to the existing
+  P3 row rather than as a new row, so that no row contradicts it.
+- **`RESEARCH.md`:** the 6 changes. §3 records that Ron accepted the projected ~$12–16/month for
+  one run covering all 6 groups.
+- **`CLAUDE.md`** invariant 7: wording only. `includeTopComment` defaults to `true`,
+  `fetchAllComments` to `false`; both still sent as `false`.
+- **`SCHEMA.md`** `Media`: wording only, `Photo` items can also omit `width`/`height`. No field or
+  type changed.
+- **`PHASE_1.md`:** 1.1a complete; P1, P2, P5, P6, P9, I6 marked in §2.
+- **Decision #61** (amends #55): admin-set run interval, 30 minutes by default; a "run now"
+  button; manual runs allowed in quiet hours; one run at a time. Phase 5. `DECISIONS.md`,
+  `BASELINE.md` §4, §11, §12. The phase 6 item now reads "editing the quiet hours and the group
+  list", since the interval moved to phase 5.
+- **Decision #62:** viewed posts per user, a separate record settled at Gate C; unviewed first.
+  `DECISIONS.md`, `BASELINE.md` §8, §12 (Gate C and phase 3).
+- **`BACKLOG.md`:** spike-review item and the invariant-7 doc-debt row removed; shared-post images
+  row added (Gate A amendment, with Gate E, undecided); rows for #61 and #62; the scheduler choice
+  notes the interval and manual-run requirements.
+
+### Still stale, not in this pass's scope
+
+- `ASSUMPTIONS.md` P7 (~8 posts/group/day, ASSUMED) is contradicted by the measured ~150/day; P1c
+  (window measured from run start) was observed in the spike log; the "Normalization choices" row
+  on the shared-post trigger (`post_type` vs empty text) is answered by the spike — `sharedPost`
+  is non-null on all 19 shared rows, across three `post_type` values.
+- `RESEARCH.md` "Media items" still says only `Video` items omit `width`/`height`.
+- `SCHEMA.md` `post_type` row still says `shared` is not yet observed, and lists neither
+  `shared_reel` nor `__reel__`.
+- `ASSUMPTIONS.md` I3 still sizes Gemini cost at ~50 posts/day.
+
+### Next
+
+Gate E, together with the shared-post images question (`BACKLOG.md` items 1 and 2).
+
+---
+
+## 2026-10-04 (continued) — Gate E approved; decision #63 (docs only)
+
+### Done
+
+All approved by Ron, 2026-10-04. No code changes.
+
+- **`SCHEMA.md`:** Gate E marked approved; new "GATE E" section (post lifecycle record, keyed by
+  `listing_id` and separate from `RawPost`; the rules with no field of their own; `GroupWatermark`).
+  Gate A amended: `media[]` falls back to `sharedPost.media[]` (`id` → `media_id`, `url` →
+  `page_url`, `width`/`height` `None`); a shared post is detected by `sharedPost` being present.
+  `post_type` row lists the observed values. Stub-contracts paragraph updated. `schema_version`
+  not bumped.
+- **`DECISIONS.md`:** #63 with the reasons; #59 marked settled by #63.
+- **`CLAUDE.md`** invariant 3: flagged posts are exempt from deletion (wording only).
+- **`BASELINE.md`:** §5 adds `pending`, flagged posts keep the full record including raw, an
+  archived post keeps its reason; §12 Gate E approved; §14 spike items, shared-post path and
+  fetch-time download VERIFIED, download from the home server still unverified.
+- **`PHASE_1.md`:** Gate E approved; 1.13 has the open point on a per-group failure inside a
+  successful run.
+- **Stale wording fixed:** `ASSUMPTIONS.md` P7, P1c, "Normalization choices", I3; `RESEARCH.md`
+  "Media items"; `SCHEMA.md` `post_type`.
+- **`BACKLOG.md`:** Gate E and shared-post images rows removed; #63 row pointing to tasks 1.10,
+  1.11, 1.3, 1.12, 1.13; #46 and #49 rows note Gate E is approved.
+
+### Verified
+
+- The Gate A amendment's condition, checked against both spike datasets with no network: all 65
+  `sharedPost.media[].url` values are `www.facebook.com` page links (`photo/?fbid=…`,
+  `video.php?v=…`, `reel/…`), the same forms as own `page_url`, with no `oe` or signature
+  parameter. Recorded in `SCHEMA.md` under the fallback. "Never expires" rests on link form, as for
+  `page_url`.
+
+### For Ron
+
+- **`schema_version`:** not bumped, and I think no bump is needed. No `RawPost` field or type
+  changed, and the fallback only changes the output for shared posts, which the mapper has refused
+  until now — no stored record anywhere was produced the old way.
+- **`schema_version` on the Gate E records:** `PHASE_1.md` §1.0 says "`schema_version` on every
+  record". The approved lifecycle and `GroupWatermark` tables have none. Not added.
+- **Record names:** the lifecycle record has no code name in `SCHEMA.md`; it gets one in task 1.10.
+- **Tags kept `ASSUMED`:** P1c (observed in the spike log, but not documented) and P7 (one 24-hour
+  window), per the tag rule in `ASSUMPTIONS.md`.
+- **The reasons in #63** were written from the rules and the earlier decisions; Ron gave the rules,
+  not every reason.
+
+### Next
+
+Task 1.10, the SQLite store (`BACKLOG.md` item 1).
+
+**Follow-up (approved by Ron):** `schema_version: int` (starts at 1) added to the post lifecycle
+record and `GroupWatermark` in `SCHEMA.md`; the #63 reason for downloading images of posts the
+model will reject replaced; `GroupWatermark` removed from the "no approval gate yet" sentence in
+"Stub contracts".

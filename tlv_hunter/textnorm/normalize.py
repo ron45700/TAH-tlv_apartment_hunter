@@ -2,8 +2,6 @@ import hashlib
 import re
 import unicodedata
 
-from tlv_hunter.textnorm.blank import is_blank
-
 _NIQUD_RE = re.compile("[\u0591-\u05c7]")
 _QUOTES_RE = re.compile("[\u05f3\u05f4\u2018\u2019\u201c\u201d\"']")
 _EMOJI_RE = re.compile(
@@ -21,16 +19,15 @@ _FINAL_LETTERS = str.maketrans(
 _WHITESPACE_RE = re.compile(r"\s+")
 
 
-class UnhashableTextError(ValueError):
-    """Text is not blank but normalizes to nothing (e.g. emoji only). Handling is undecided."""
+def normalizes_to_nothing(text: str) -> bool:
+    """The single definition of `no_text`: blank, or empty after normalization (emoji only)."""
+    return not _normalize_for_hash(text)
 
 
 def compute_text_hash(text: str) -> str | None:
-    if is_blank(text):
-        return None
     normalized = _normalize_for_hash(text)
     if not normalized:
-        raise UnhashableTextError("text is not blank but normalizes to an empty string")
+        return None
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 

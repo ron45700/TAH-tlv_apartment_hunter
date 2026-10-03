@@ -30,11 +30,7 @@ class LocalJsonRepository:
 
     def find_by_phone(self, phone: str) -> list[RawPost]:
         wanted = canonical_phone(phone)
-        return [
-            post
-            for post in self.query()
-            if post.phones and wanted in {canonical_phone(p) for p in post.phones}
-        ]
+        return [post for post in self.query() if post.phones and wanted in post.phones]
 
     def query(self) -> list[RawPost]:
         if not self._posts_dir.is_dir():

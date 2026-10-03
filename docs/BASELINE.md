@@ -1,6 +1,8 @@
 # TLV Apartment Hunter — Baseline
 
 **Status:** Approved by Ron, 2026-10-02. Amended 2026-10-03 after the cross-check of the other docs.
+Amended 2026-10-04: run interval and manual run (`DECISIONS.md` #61), viewed posts (#62), Gate E
+(#63).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -77,9 +79,15 @@ scheduler -> Apify (thedoor) -> provider normalize -> pre-model rejects -> text 
           -> dedup B -> store -> per-user evaluation -> Telegram alert
 ```
 
-- **Schedule:** every 30 minutes. No runs between 01:00 and 07:00 Israel time. The 07:00 run
-  covers the whole night through the watermark. The hours live in config; later they are editable
-  by the admin from the dashboard.
+- **Schedule:** every 30 minutes by default. No scheduled runs between 01:00 and 07:00 Israel
+  time. The 07:00 run covers the whole night through the watermark. The hours live in config;
+  later they are editable by the admin from the dashboard.
+- **Interval and manual run** (`DECISIONS.md` #61, phase 5): the interval is an admin setting, and
+  a change takes effect at once — the next run is the last run's start plus the new interval. The
+  admin can start a run now, also during the quiet hours. A manual run is an ordinary run; when it
+  succeeds, the next scheduled run is its start plus the interval, and when it fails the timer is
+  not reset. One run at a time: a manual request during a run is refused or waits, and two runs
+  never overlap.
 - **Watermark:** per group, the highest post time seen, with a 10–15 minute overlap, advanced only
   on a successful run.
 - **Bootstrap:** the first run stores everything and alerts nothing.
@@ -101,9 +109,10 @@ Provider inputs, the field map, traps, the duplicate rate and the group IDs are 
 
 | State | Meaning | Visible to |
 |---|---|---|
+| **Pending** | Stored, passed the pre-model rejects, not classified yet. In phase 2 the model moves it to active or rejected | Admin |
 | **Active** | Classified, not rejected | All users, through their filters |
 | **Rejected** | Stored with a reason; never shown in the regular list | Admin only, for every reason. It exists so Ron can check that what was rejected belongs there |
-| **Archived** | 25 days since last publication with no repost. Hidden. Images deleted; text and raw data kept | Admin |
+| **Archived** | 25 days since last publication with no repost. Hidden. Images deleted; text and raw data kept. A post that was rejected keeps its rejection reason | Admin |
 | **Deleted** | 40 days since last publication. Removed entirely | — |
 
 A repost resets the clock. A repost of an archived post makes it active again.
@@ -123,8 +132,11 @@ A repost resets the clock. A repost of an archived post makes it active again.
 **Flagging.** Any user can flag a post that passed but is not what it claims (for example, an
 apartment in Netanya that looked like Tel Aviv). The post moves to rejected for everyone and
 records who flagged it. The admin can review flags by user and restore a post. Flagged posts are
-exempt from full deletion: their text (no images) is kept as a permanent regression set for the
-prompt.
+exempt from deletion: the full record, including the raw data and not only the text, is kept as a
+permanent regression set for the prompt. Their images are deleted at archive like any post's. A
+restored post follows normal retention.
+
+Fields and rules: `SCHEMA.md`, Gate E (`DECISIONS.md` #63).
 
 ---
 
@@ -209,6 +221,12 @@ not an apartment's), and every card shows clearly which option it answers.
 conditions but not the preferences; at the bottom, posts where a filtered value is not written or
 unclear. Posts that are known to fail a critical condition are not shown.
 
+**Viewed posts** (`DECISIONS.md` #62): each user sees which posts they have already viewed. All
+unviewed posts come first, then the viewed ones; within each of the two, the order above. "Viewed"
+belongs to the user and is never written on the post. It survives a repost, since a repost updates
+the existing card, and goes when the post is deleted. The exact trigger is decided in the phase 3
+UI design, with a manual "mark as not viewed".
+
 ---
 
 ## 9. Alerts
@@ -248,6 +266,7 @@ signing up.
 - Daily digest: collected / deduplicated / classified / rejected / alerted, per group; silent-group
   detection; failures. Admin only.
 - Key issuing
+- Run interval, 30 minutes by default, and a "run now" button (phase 5, `DECISIONS.md` #61)
 - Schedule hours (later)
 
 ---
@@ -261,16 +280,17 @@ and stays valid. Gate A (`RawPost`) stays approved.
 |---|---|---|
 | **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · **Gate E** (post lifecycle fields) · SQLite store · thedoor fetch · pre-model rejects · dedup A · repost log · image download · per-group watermark | A real run stores posts and images with no duplicates, and a second run does not repeat them |
 | **2. Classification** | **Gate B** (field schema from §5–§7) · Gemini · post-model rejects · street and area · **Gate D** and dedup B · reclassify job | Every post has fields and a state |
-| **3. Basic dashboard** | **Gate C** (filter rules, and the user, key and profile records) · users and keys · profile and filters · cards · rejected list · flagging | Ron filters and sees real apartments in a browser |
+| **3. Basic dashboard** | **Gate C** (filter rules, and the user, key, profile and viewed-post records) · users and keys · profile and filters · cards · viewed posts · rejected list · flagging | Ron filters and sees real apartments in a browser |
 | **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike | A real alert arrives according to Ron's profile |
-| **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
-| **6. Later** | memo23 failover · UI polish from Ron's screenshots · schedule and group-list editing from the dashboard · Yad2 | |
+| **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
+| **6. Later** | memo23 failover · UI polish from Ron's screenshots · editing the quiet hours and the group list from the dashboard · Yad2 | |
 
 Phases 1–4 run on Ron's personal laptop in Docker.
 
-**Gates.** A (`RawPost`) is approved. B, C, D and E are settled with Ron before the code that
-depends on them. Gate E covers what the lifecycle adds to a stored post: state, rejection reason,
-who flagged it, last publication time, the repost log, and local image paths.
+**Gates.** A (`RawPost`) and E (post lifecycle record and `GroupWatermark`, 2026-10-04) are
+approved. B, C and D are settled with Ron before the code that depends on them. Gate E covers what
+the lifecycle adds to a stored post: state, rejection reason, who flagged it, last publication
+time, the repost log, and local image paths.
 
 **Detailed planning is one phase ahead.** `PHASE_1.md` details phase 1 only. Two technical choices
 are deliberately left for when their phase is planned: the dashboard framework (phase 3) and the
@@ -315,9 +335,9 @@ bootstrap mode, Gate A.
 | A Telegram Mini App loads from a tailnet-only HTTPS address on a phone with Tailscale on | `ASSUMED` — spike in Phase 4. If it fails, the plain site still works |
 | Tailscale device sharing covers the number of friends on the free plan | `UNKNOWN` |
 | Public source for Tel Aviv areas, the Old North split, and streets per area | `UNKNOWN` |
-| Image download from the signed Facebook links works at fetch time from the server | `ASSUMED` |
-| Apify spike: time window per group, all groups return data, comment flag honoured, real cost | Open since task 1.1a |
-| Shared-post content path | `ASSUMED`, never observed |
+| Image download from the signed Facebook links works at fetch time | `VERIFIED` 2026-10-04 from the laptop (spike 1.1a, 5 of 5). From the home server itself: still unverified |
+| Apify spike: time window per group, all groups return data, comment flag honoured, real cost | `VERIFIED` 2026-10-04 (`SPIKE_1_1a.md`) |
+| Shared-post content path | `VERIFIED` 2026-10-04: `sharedPost.text` and `sharedPost.media` |
 
 ### Open for Ron
 

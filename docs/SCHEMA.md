@@ -5,13 +5,22 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-03 — wording aligned to `BASELINE.md`. **No field, type or rule was
-changed.** Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
+**Last updated:** 2026-10-04 — **Gate E approved** (post lifecycle record, `GroupWatermark`).
+**Gate A amended:** `media[]` falls back to `sharedPost.media`; a shared post is detected by
+`sharedPost` being present. Both approved by Ron, 2026-10-04 (`DECISIONS.md` #63). `post_type`
+wording updated to the observed values. No `RawPost` field or type changed; `schema_version` stays 1.
+
+**Earlier on 2026-10-04:** `Media` wording: `Photo` items, not only `Video`, can omit
+`width`/`height` (spike 1.1a). Earlier the same day: the `phones` row states the `DECISIONS.md` #57
+rule (an identical number within one post is stored once). **No field or type was changed.**
+
+**Previously:** 2026-10-03 — wording aligned to `BASELINE.md`. No field, type or rule was changed.
+Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 
 | Gate | Covers | Status |
 |---|---|---|
 | A | `RawPost` | ✅ Approved 2026-09-14 |
-| E | What the lifecycle adds to a stored post: state, rejection reason, flagger, last publication, repost log, image paths | ⬜ Not opened — phase 1 |
+| E | Post lifecycle record (state, rejection reason, flag, last publication, images) and `GroupWatermark` | ✅ Approved 2026-10-04 |
 | B | `Listing` | ⬜ Not opened — phase 2 |
 | D | Dedup stage B key | ⬜ Not opened — phase 2 |
 | C | Filter rules, and the user, key and profile records | ⬜ Not opened — phase 3 |
@@ -89,18 +98,29 @@ the provider-failover scenario. Excluding it lets dedup layer 1 work across prov
 |---|---|---|---|
 | `text` | `str` | `text`, falling back to `sharedPost` | What is sent to Gemini **verbatim**. |
 | `text_source` | `str` | derived | `"text"` / `"shared_post"` / `"none"`. When a post comes out `no_text`, this separates "empty share" from "post that is entirely an image" — two different cases Ron will want to tell apart in the admin's rejected list. |
-| `post_type` | `str` | `post_type` | Observed: `regular`, `sale_post`. Documented but not yet observed: `shared`. Lets us find the `shared` cases when they first arrive. |
+| `post_type` | `str` | `post_type` | Observed: `regular`, `sale_post`, `shared`, `shared_reel`, `__reel__` (spike 1.1a, 2026-10-04). Not used to detect a shared post: `shared`, `shared_reel` and `__reel__` can all carry a `sharedPost`, so a shared post is detected by `sharedPost` being present. |
 
 ### Media
 
 | Field | Type | Source | Rationale |
 |---|---|---|---|
-| `media[]` | `list[Media]` | `media[]` | `{type, uri, width, height, media_id, page_url}`. `width` and `height` are `int \| None`: `Video` items **omit the keys entirely** — a missing key maps to `None`. |
+| `media[]` | `list[Media]` | `media[]`, falling back to `sharedPost.media[]` | `{type, uri, width, height, media_id, page_url}`. `width` and `height` are `int \| None`: `Video` items, and some `Photo` items, **omit the keys entirely** — a missing key maps to `None`. |
 
 `uri` is a signed `scontent.*.fbcdn.net` link that expires within days, which is why images are
 downloaded at fetch time (`BASELINE.md` §3). **`page_url` does not expire** — it is the fallback
 when a download failed, and a reason `media[]` is stored even though the URLs rot. Its shape depends on the item type: `facebook.com/photo/?fbid=…` for photos, a
 `/videos/` page for videos. Do not assume the photo form.
+
+**Shared-post fallback (Gate A amendment, 2026-10-04).** When the post's own `media[]` is empty and
+`sharedPost` is present, `media[]` is mapped from `sharedPost.media[]`: `type` → `type`, `uri` →
+`uri`, `id` → `media_id`, `url` → `page_url`, and `width` / `height` are `None` (the shared items
+carry neither). No type changes. **Condition:** before task 1.1 relies on it, verify against the
+spike data that `sharedPost.media[].url` is a non-expiring Facebook page link like `page_url`, not a
+signed CDN link. *Checked 2026-10-04 against both spike datasets:* all 65 `sharedPost.media[].url`
+values are `www.facebook.com` page links (`photo/?fbid=…`, `video.php?v=…`, `reel/…`), the same
+forms as the posts' own `page_url`, with no `oe` or signature parameter; the signed CDN link is in
+`uri`. That they never expire rests on the same basis as `page_url`: link form, not observation
+over time.
 
 `Video` items also carry an extra `thumbnail` key that photos do not. Not promoted — it stays in
 `raw`, backfillable if it ever earns promotion.
@@ -168,7 +188,7 @@ The pair `(no_text, text_hash)` resolves the ambiguity: `no_text=True` with `tex
 | Field | Type | Computed in | Rationale |
 |---|---|---|---|
 | `text_hash` | `str \| None` | Phase 0 | sha256 of aggressively normalized text. Dedup layer 2, the primary key. `None` when `no_text` is `True` — two empty strings must never collide — or when textnorm has not run. |
-| `phones` | `list[str] \| None` | Phase 0 | Dedup layer 3, a one-directional signal. ~50% coverage. **Stored normalized**: digits only, `+972` converted to a leading `0`, so `050-9184537` and `+972509184537` both become `0509184537`. One stored format is what makes an equality lookup in the store possible; nothing is lost, since the card always shows the full original text and `raw` keeps the rest. `find_by_phone` normalizes its input before comparing. `None` means not extracted; `[]` means extracted and none found. |
+| `phones` | `list[str] \| None` | Phase 0 | Dedup layer 3, a one-directional signal. ~50% coverage. **Stored normalized**: digits only, `+972` converted to a leading `0`, so `050-9184537` and `+972509184537` both become `0509184537`. One stored format is what makes an equality lookup in the store possible; nothing is lost, since the card always shows the full original text and `raw` keeps the rest. An identical number within one post is stored once, in order of first appearance (`DECISIONS.md` #57). `find_by_phone` normalizes its input before comparing. `None` means not extracted; `[]` means extracted and none found. |
 | `no_text` | `bool \| None` | Phase 0 | Stored, and rejected with the reason "no text" (`BASELINE.md` §5). **Not sent to Gemini** — we do not analyse images. Seen only in the admin's rejected list. True when the text is absent, whitespace-only, **or normalizes to nothing** (an emoji-only post). A post that normalizes to nothing must never raise: a failed run does not advance the watermark, so one throwaway post would block the window permanently. `text_source` still records where the text came from — `"text"` with `no_text=True` means it arrived and was unusable. |
 | `is_canonical` | `bool \| None` | Phase 1 (task 1.3) | Dedup result. A property of the post, not of any user, so it lives here and not on `Decision`. |
 | `duplicate_of` | `str \| None` | Phase 1 (task 1.3) | The canonical `listing_id` this post duplicates. `None` is ambiguous on its own — read it together with `is_canonical`. |
@@ -210,11 +230,58 @@ failover adapter is built.
 
 ---
 
+# GATE E — post lifecycle and `GroupWatermark`
+
+**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63 · **Lifecycle:** `BASELINE.md` §5
+
+## Post lifecycle record
+
+A **separate record per post, keyed by `listing_id`. Not added to `RawPost`**: Gate A stays a pure
+function of `raw`, and these fields change after fetch.
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1. On every record (`PHASE_1.md` §1.0) |
+| `state` | `"pending"` / `"active"` / `"rejected"` / `"archived"` | On store: `"pending"`, or `"rejected"` if a pre-model reject applies. In phase 2 the model moves it to `"active"` or `"rejected"`. A repost record has no card of its own; that is `is_canonical` / `duplicate_of` from Gate A, not a state |
+| `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `None` | One reason, the first that applies, in that order. Set only when `state` is `"rejected"` or `"archived"` (an archived post keeps its reason) |
+| `flagged_by` | user id / `None` | `None` until phase 3 |
+| `flagged_at` | `datetime` UTC / `None` | |
+| `flag_note` | `str` / `None` | Optional short note from the flagger |
+| `last_published_at` | `datetime` UTC | The latest `posted_at` of the post and all its duplicates (any dedup layer: A now, B in phase 2). A phone-only match is not a duplicate. Never moves backwards |
+| `images` | list of `{listing_id, media_id, local_path, error}` | One entry per downloaded photo; `listing_id` is the record the image came from. `local_path` is `None` when the download failed, and `error` holds a short reason |
+
+### Rules with no field of their own
+
+- **Repost log:** derived from the records whose `duplicate_of` points at the post. Not stored.
+- **Restore:** restoring a flagged post clears `flagged_by`, `flagged_at`, `flag_note` and
+  `rejection_reason`; `state` returns to `"active"`.
+- **Flagged posts:** archived at 25 days (images deleted) and never deleted. The full record,
+  including `raw`, is kept as the prompt regression set. A restored post follows normal retention.
+- **Images:** photos only, no video or reels (a video shows its `page_url` link). One retry within
+  the same run. A failed download fails neither the run nor the post.
+- Images are downloaded also for posts the model will reject, and deleted at archive like any post.
+- **Reposts:** a repost with an identical text hash downloads no images, except when the canonical
+  is archived, or all of its images failed; then the repost's images are downloaded.
+
+## `GroupWatermark`
+
+One record per group.
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1. On every record (`PHASE_1.md` §1.0) |
+| `group_id` | `str` | |
+| `watermark` | `datetime` UTC / `None` | `None` before the first run |
+| `last_success_at` | `datetime` UTC / `None` | |
+| `consecutive_failures` | `int` | Per group |
+
+---
+
 # Stub contracts (Phase 0 only)
 
 **Approved:** 2026-09-14
 
-`Listing`, `Decision`, `Notification` and `GroupWatermark` have no approval gate yet. Invariant 1
+`Listing`, `Decision` and `Notification` have no approval gate yet. Invariant 1
 applies to stubs too, so their Phase 0 shapes are approved explicitly and narrowly.
 
 | Stub | Fields | Notes |
@@ -222,9 +289,9 @@ applies to stubs too, so their Phase 0 shapes are approved explicitly and narrow
 | `ListingStub` | `listing_id` | Not persisted in Phase 0 |
 | `DecisionStub` | `user_id`, `listing_id`, `notify` | Not persisted in Phase 0 |
 
-`Notification` and `GroupWatermark` are **not** created in Phase 0. `GroupWatermark` arrives with
-the watermark in phase 1 and the sent-alert record with alerts in phase 4; each field set is
-approved before it is written.
+`Notification` and `GroupWatermark` are **not** created in Phase 0. `GroupWatermark` was approved at
+Gate E on 2026-10-04 (above) and is built in task 1.13. The sent-alert record arrives with alerts in
+phase 4; its field set is approved before it is written.
 
 **The class and module names must contain `Stub`** (`contracts/listing_stub.py`, `ListingStub`).
 A class named `Listing` sitting in the codebase looks like an approved starting point, which is

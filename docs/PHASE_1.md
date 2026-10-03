@@ -1,6 +1,6 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gate A approved. Task 1.2 complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b and 1.1a complete.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -56,7 +56,7 @@ false collisions. Phones in 10 of 20 posts. Findings: `RESEARCH.md` §6, `ASSUMP
 
 ---
 
-## 1.2b `textnorm` fixes
+## 1.2b `textnorm` fixes — ✅ COMPLETE (2026-10-04)
 
 Decisions #37 and #38 were approved on 2026-09-14 and never reached the code. Decision #57 adds one
 rule to #38. Dedup reads `text_hash`, `no_text` and `phones`, so these come first. The exact code
@@ -68,7 +68,9 @@ stored once; tests updated; `uv run pytest` green.
 
 ---
 
-## 1.1a Spike — one real run against all six groups
+## 1.1a Spike — one real run against all six groups — ✅ COMPLETE (2026-10-04)
+
+Report: `SPIKE_1_1a.md`. The time window applies per group; one run for all six groups stands.
 
 Needs `APIFY_TOKEN` in `.env`. A throwaway script: one call to thedoor with all 6 URLs,
 `maxPosts=30`, `fetchAllComments=false` and `includeTopComment=false` set explicitly, and
@@ -90,7 +92,10 @@ Every later adapter test runs against that file with no network.
 
 ---
 
-## GATE E — post lifecycle fields (before 1.10)
+## GATE E — post lifecycle fields (before 1.10) — ✅ APPROVED (2026-10-04)
+
+Approved and copied into `SCHEMA.md`, Gate E, with the Gate A media amendment. Reasons:
+`DECISIONS.md` #63.
 
 Gate A approved what the provider gives. The baseline adds things a stored post must carry that
 Gate A does not have. Settle with Ron:
@@ -181,6 +186,11 @@ other images.
 Rules in `RESEARCH.md` §4. The run input is `min(all watermarks) - buffer`, filtered per group
 locally. The watermark advances only when the whole run succeeded.
 
+**Open point — a per-group failure inside a successful run.** Posts arrive newest first, so a group
+that fails midway would advance its watermark past posts it never returned (invariant 2). The run
+log reports per-group status, but its format is `ASSUMED` (`ASSUMPTIONS.md` P13). Decided when 1.13
+is planned.
+
 ---
 
 ## 1.14 Wiring `run_once`, and bootstrap
@@ -199,12 +209,12 @@ Full register: `ASSUMPTIONS.md`.
 
 | Item | Task | Status |
 |---|---|---|
-| P1: `postsNewerThan` applies per group in one multi-URL run | 1.1a | open. If false: six runs |
-| P5: all six groups return data | 1.1a | open |
-| P9: `includeTopComment=false` suppresses `topComment` | 1.1a | open. 3 of 20 sampled posts carried one |
-| P6: real cost of a run | 1.1a | rate verified; a real run's bill not yet seen |
-| I6: images download from the signed links | 1.1a, 1.12 | open |
-| P2: where a shared post's content sits | 1.1a, 1.1 | open. Never observed |
+| P1: `postsNewerThan` applies per group in one multi-URL run | 1.1a | ✅ VERIFIED 2026-10-04 |
+| P5: all six groups return data | 1.1a | ✅ VERIFIED 2026-10-04. One group returned 0 rows because it was quiet; the run log shows per-group status (P13, ASSUMED) |
+| P9: `includeTopComment=false` suppresses `topComment` | 1.1a | ✅ VERIFIED 2026-10-04. 0 of 285 rows |
+| P6: real cost of a run | 1.1a | ✅ VERIFIED 2026-10-04. $0.1535 and $0.2525; ~$12–16/month projected, accepted by Ron |
+| I6: images download from the signed links | 1.1a, 1.12 | ✅ VERIFIED 2026-10-04 at fetch time, 5 of 5. Link lifetime ≈ 4.4 days is ASSUMED (I7) |
+| P2: where a shared post's content sits | 1.1a, 1.1 | ✅ VERIFIED 2026-10-04. `sharedPost.text`, `sharedPost.media` |
 
 Closed earlier: minute granularity (P1b), duplicate pairs collide on hash (D1–D4), phone regex
 coverage (D8), actor pricing (P6 rate).

@@ -128,6 +128,16 @@ def test_no_text_must_agree_with_text() -> None:
         RawPost(**_valid(no_text=True, text_hash=None, phones=[]))
 
 
+def test_text_that_normalizes_to_nothing_is_accepted_as_no_text() -> None:
+    post = RawPost(**_valid(text="🏠🏠", no_text=True, text_hash=None, phones=[]))
+    assert post.text_source == "text" and post.no_text is True
+
+
+def test_text_that_normalizes_to_nothing_cannot_be_no_text_false() -> None:
+    with pytest.raises(ValidationError):
+        RawPost(**_valid(text="🏠🏠", no_text=False, text_hash="abc", phones=[]))
+
+
 def test_with_changes_revalidates() -> None:
     post = RawPost(**_valid())
     with pytest.raises(ValidationError):

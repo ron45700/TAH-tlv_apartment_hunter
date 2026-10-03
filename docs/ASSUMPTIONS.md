@@ -6,7 +6,7 @@ tagged `VERIFIED`, `ASSUMED`, or `UNKNOWN`.
 **The rule:** nothing moves to implementation while resting on `ASSUMED`. If an `ASSUMED` item
 blocks progress, the next step is a spike that resolves it — not code that hopes.
 
-**Last updated:** 2026-10-03
+**Last updated:** 2026-10-04 — spike 1.1a results applied (`SPIKE_1_1a.md`)
 
 > Written in English like every document in `docs/`. Conversation is in Hebrew; documentation is not.
 >
@@ -74,7 +74,7 @@ so these are contract details, not implementation trivia.
 | Strips plain and curly quotes, not only geresh and gershayim | ✅ accepted | Wider than first described, but consistent, which is all hashing needs |
 | The "emoji" range also removes arrows (U+2190–21FF) and U+2B00–2BFF symbols | ✅ accepted | Same reasoning |
 | The `+972` branch matches mobile numbers only (`+972 5X`) | ⚠️ ASSUMED | Unexercised in the sample. Landline international format would be missed |
-| The shared-post fallback triggers on `post_type == "shared"`, not on empty text | ⚠️ **open question** | These are not the same condition. `post_type` is what the provider claims; empty text is what actually happened. Tied to P2, still unverified |
+| The shared-post fallback triggers on `post_type == "shared"`, not on empty text | ✅ **answered** 2026-10-04 | Neither: a shared post is detected by `sharedPost` being present. Spike 1.1a found `shared`, `shared_reel` and `__reel__` all carrying a `sharedPost`. Settled in the Gate A amendment (`SCHEMA.md`, `DECISIONS.md` #63) |
 
 ### The three duplicate pairs, for the record
 | Pair | post_ids | group_id | Shared phone |
@@ -91,20 +91,22 @@ Pair 3 is the load-bearing case: hash was the only layer that caught it.
 
 | # | Claim | Tag | Evidence |
 |---|---|---|---|
-| P1 | `postsNewerThan` applies **per group** in a single run with multiple URLs | ⚠️ ASSUMED | Never tested. `maxPosts` is verified per-group; that does not establish the same for the time window. Resolved by task 1.1a. If false: 6 separate runs, one file changes. |
+| P1 | `postsNewerThan` applies **per group** in a single run with multiple URLs | ✅ VERIFIED | 2026-10-04, spike 1.1a. Run `GcarNt1rhe8tuSDuV` log: one cutoff, applied by each group independently (five groups stopped at 22, 17, 0, 8, 28 posts). Exact match, post ID for post ID, against control run `9TShaAS1e6c2fv56t`. One run for all six groups stands. `SPIKE_1_1a.md` Q1. |
 | P1b | `postsNewerThan` accepts **minute** granularity | ✅ VERIFIED | The actor's OpenAPI definition (current build, 2026-09-12) gives the pattern `^\d{4}-\d{2}-\d{2}$\|^(\d+(?:\.\d+)?)\s*(minute\|hour\|day\|week\|month\|year)s?$`. The **absolute** form is date-only — a full ISO datetime is rejected. The **relative** form accepts minutes and decimals (`"45 minutes"`, `"1.5 hours"`). Decision: always send relative minutes, computed as `now - min(watermark) - buffer`. See `DECISIONS.md` #36. |
-| P1c | Relative windows are measured from **run start**, not from our calculation | ⚠️ ASSUMED | Follows from the format but unobserved. A delayed run start shifts the window by the delay. The 10–15 min overlap buffer absorbs it — an additional reason not to shrink that buffer. |
-| P2 | `sharedPost` content is at `sharedPost.text` | ⚠️ ASSUMED | Zero `post_type: "shared"` posts in the 20-post sample, so the fallback path has never executed. The field name is a guess, verified against neither documentation nor a real response. Resolved in 1.1. |
-| P3 | `fetchAllComments` defaults to `true` and bills per result | ✅ VERIFIED | `RESEARCH.md` §2. Always set explicitly to `false`. |
+| P1c | Relative windows are measured from **run start**, not from our calculation | ⚠️ ASSUMED | **Observed 2026-10-04** in the spike 1.1a log: the cutoff was the actor's own start minus the window (≈1 s after Apify's `startedAt`). Not stated in the documentation, so it stays ASSUMED by the tag rule. A delayed run start shifts the window by the delay; the 10–15 min overlap buffer absorbs it — an additional reason not to shrink that buffer. |
+| P2 | `sharedPost` content is at `sharedPost.text` | ✅ VERIFIED | 2026-10-04, spike 1.1a: shared text at `sharedPost.text`, images at `sharedPost.media`, 19 of 19 rows. `sharedPost.time` is `null` on all 19. `post_type` values `shared_reel` and `__reel__` can also carry a `sharedPost`. `SPIKE_1_1a.md` Q6. |
+| P3 | `fetchAllComments` defaults to **`false`** | ✅ VERIFIED | Changed: the OpenAPI definition of build 1.0.195 (2026-10-03) gives `"default": false`; it was `true`. Still always sent explicitly as `false`. `SPIKE_1_1a.md` Q3. |
 | P4 | `sortingOrder: newest_activity` mixes bumped old posts into the feed | ✅ VERIFIED | `RESEARCH.md` §2. Always `newest_posts`. |
-| P5 | Failed or private groups are silent — no diagnostic rows in the dataset | ✅ VERIFIED | `RESEARCH.md` §2. Errors go to the run log only. Zero results and a failure are indistinguishable from the data alone. |
-| P6 | Actor pricing is ~$1.50 / 1,000 results | ✅ VERIFIED | Confirmed by Ron, 2026-09-13. The store page header shows "from $1.00 / 1,000 results", which is the **floor** of a tiered per-event scheme, not the working rate; the actor's own description on the same page reads "⚡1.5$". A cached older snapshot of the Input tab shows $3.00. Three numbers, one page — always read the Pricing tab, never the header. |
+| P5 | Failed or private groups are silent — no diagnostic rows in the dataset | ✅ VERIFIED | `RESEARCH.md` §2. Errors go to the run log only. Zero results and a failure are indistinguishable from the data alone. **The run log carries per-group status** (`Posts: N \| Reason: …`, `Successful groups: x/6`), seen 2026-10-04 in spike 1.1a. |
+| P6 | Actor pricing is ~$1.50 / 1,000 results | ✅ VERIFIED | **Real bill, 2026-10-04 (spike 1.1a):** $0.0015 per result, $0.005 per start event, one start event per run at 1 GB. Results charged were fewer than rows returned (99/105, 165/180), cause unknown. Confirmed by Ron, 2026-09-13. The store page header shows "from $1.00 / 1,000 results", which is the **floor** of a tiered per-event scheme, not the working rate; the actor's own description on the same page reads "⚡1.5$". A cached older snapshot of the Input tab shows $3.00. Three numbers, one page — always read the Pricing tab, never the header. |
 | P8 | `sortingOrder` has a fourth value, `buy_sell_listings` | ✅ VERIFIED | Full enum: `newest_posts`, `newest_activity`, `most_relevant`, `buy_sell_listings`. Buy/Sell mode **skips ordinary posts**. Not used. Invariant 6 stands. |
-| P9 | `includeTopComment` defaults to **`true`** | ✅ VERIFIED | From the OpenAPI definition. This is a second billing-relevant default alongside `fetchAllComments`. The research input had it set to `false`, yet 3 of 20 posts carry a `topComment` — so either the run did not send the flag or the actor ignores it. Establish which in 1.1a; it costs money either way. |
+| P9 | `includeTopComment` defaults to **`true`**, and `false` suppresses `topComment` | ✅ VERIFIED | Default from the OpenAPI definition. Suppression verified 2026-10-04, spike 1.1a: the flag is in both runs' stored input, and 0 of 285 rows carry a non-null `topComment` (the key stays, as `null`). The research run's 3 of 20 remain unexplained, most likely the flag was not sent then. `SPIKE_1_1a.md` Q3. |
 | P10 | `maxPosts` has no maximum in the current schema | ✅ VERIFIED | Default 50, minimum 1, no upper bound. A cached older snapshot claims a maximum of 500. |
 | P11 | `topComment` is an array | ❌ FALSE | The README documents an array; the real response carries an object or `null`. Per skill principle P2, the real response wins. |
 | P12 | The actor's human-readable **Input tab is stale** | ✅ VERIFIED | It serves an April-2026 snapshot (603 users, 12K runs, $3.00, only `url` / `maxPosts` / `isNewPosts`) while the API pages of the same actor show the current build (4.5K users, 28K runs, modified 2026-09-12). **`/api/openapi` is the source of truth for an Apify actor's input schema**, not the Input tab. |
-| P7 | Post volume is ~8 posts/group/day | ⚠️ ASSUMED | Derived from 20 posts over 30.6h across 2 groups. A single window, not a measured rate. The silent-group detection thresholds depend on this (`RESEARCH.md` §9); runs skipped in the quiet hours do not count toward them. |
+| P13 | The run log's per-group status lines are stable enough to rely on for silent-group detection | ⚠️ ASSUMED | Seen in two runs, 2026-10-04. The log format is not a documented contract. |
+| P14 | `Photo` media items can also lack `width`/`height` | ✅ VERIFIED | 2026-10-04, spike 1.1a: 9 `Photo` and 11 `Video` items without the keys. Until then only videos were known to omit them. |
+| P7 | Post volume is **~150 posts/day across the six groups** | ⚠️ ASSUMED | Measured 2026-10-04 (spike 1.1a): 75 posts in a 24-hour window from five groups, plus ~73/day for `101875683484689`, which hit `maxPosts`. Per group from ~4/day to ~73/day. One window, Friday night to Saturday; a weekday may be higher. Replaces the research estimate of ~8 posts/group/day. The silent-group detection thresholds depend on this (`RESEARCH.md` §9); runs skipped in the quiet hours do not count toward them. |
 
 ---
 
@@ -148,10 +150,11 @@ Pair 3 is the load-bearing case: hash was the only layer that caught it.
 |---|---|---|
 | I1 | Firestore free tier absorbs thousands of rows and 48 runs/day | No longer applies — SQLite on the home server (`DECISIONS.md` #44). Relevant again only if the GCP fallback is used |
 | I2 | Cloud Run Job + Scheduler at 48 runs/day stays within free tier | No longer applies — same reason |
-| I3 | Gemini Flash cost at ~50 posts/day is negligible | ⚠️ ASSUMED — measure in phase 2 |
+| I3 | Gemini Flash cost at ~150 posts/day is negligible | ⚠️ ASSUMED — measure in phase 2 |
 | I4 | Tailscale Serve publishes a local service over HTTPS to the tailnet only, and device sharing gives an outside Tailscale user access to one machine | ✅ VERIFIED — Tailscale docs, read 2026-10-02 |
 | I5 | Device sharing covers the number of friends on the free plan | ❓ UNKNOWN — check before phase 5 |
-| I6 | Images can be downloaded from the signed Facebook links at fetch time | ⚠️ ASSUMED — Telegram downloaded them at research time; our own download is untested. Phase 1 |
+| I6 | Images can be downloaded from the signed Facebook links at fetch time | ✅ VERIFIED — 2026-10-04, spike 1.1a: 5 of 5, plain GET with no token or cookies, HTTP 200, JPEG |
+| I7 | Signed image links expire ≈ 4.4 days after fetch | ⚠️ ASSUMED — read from the `oe` query parameter as a hex Unix timestamp (4.3–4.5 days on all 355 links in run 1). That reading is not documented; nothing was re-downloaded later |
 
 ---
 

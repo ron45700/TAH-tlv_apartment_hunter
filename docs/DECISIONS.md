@@ -9,7 +9,7 @@ holds, say so explicitly and change the entry — do not quietly work around it.
 Superseded decisions are kept, marked, and left in place. Deleting them would lose the fact that
 the question was considered at all.
 
-**Last updated:** 2026-10-03
+**Last updated:** 2026-10-04
 
 > Written in English like every document in `docs/`.
 >
@@ -456,6 +456,9 @@ date is missing. Balcony and parking are both stored as "not written"; they diff
 `BASELINE.md` §6.
 
 ### 55 — Runs every 30 minutes, none between 01:00 and 07:00
+**Status: active, amended by #61** (30 minutes is the default interval, editable by the admin; a
+manual run is added).
+
 The hours are config, later editable by the admin. Closes the old open point on scheduler
 frequency.
 
@@ -472,12 +475,78 @@ A post is a sublet or it is not, with no duration. "Women only" hides a post; "w
 a mark on the card and hides nothing.
 
 ### 59 — Gate E, and a wider Gate C
+**Status: Gate E settled by #63** (approved 2026-10-04).
+
 **Extends #19.** Gate E: what the lifecycle adds to a stored post (state, rejection reason, flagger,
 last publication, repost log, image paths). Gate C now also covers the user, key and profile
 records.
 
 ### 60 — Yad2 stays future, and will likely need its own scraper
 Not through an Apify provider. The design stays open to it.
+
+---
+
+## Decisions from 2026-10-04
+
+### 61 — The run interval is an admin setting, and the admin can run now
+**Amends #55.**
+- The interval is an admin setting. 30 minutes is the default, not a fixed value. A change takes
+  effect immediately: the next run is the last run's start plus the new interval.
+- The admin dashboard has a "run now" button. A manual run is an ordinary run. When it succeeds,
+  the next scheduled run is its start plus the interval, so no scheduled run follows sooner than
+  one interval. A manual run that fails does not reset the timer.
+- A manual run is allowed during the quiet hours (01:00–07:00). Scheduled runs still do not run
+  then.
+- One run at a time. A manual request while a run is in progress is refused or waits; two runs
+  never overlap (invariant 2).
+- Built in phase 5, with the scheduler. No schema change now: the stored interval and the last-run
+  record are approved when phase 5 is built.
+
+### 62 — Each user sees which posts they have already viewed
+- "Viewed" is per user and never written on the post (invariant 12). It is a separate per-user
+  record (user, post, time), settled at Gate C in phase 3.
+- It survives a repost, since a repost updates the existing card. It is deleted with the post.
+- The exact trigger is decided in the phase 3 UI design, together with a manual "mark as not
+  viewed".
+- Display order: all unviewed posts first, then the viewed ones; within each group, the order in
+  `BASELINE.md` §8.
+
+### 63 — Gate E: the post lifecycle record and `GroupWatermark`
+**Extends #59; amends Gate A** (approved 2026-10-04). Fields and types are in `SCHEMA.md`, Gate E, and the Gate A
+media fallback. The rules and why:
+
+- **The lifecycle is a separate record, not `RawPost` fields.** Gate A stays a pure function of
+  `raw` and stays backfillable; state, flags and images change after fetch.
+- **A `"pending"` state.** In phase 1 nothing has been classified. Storing such a post as
+  `"active"` would claim a verdict nobody has made, and phase 2 needs to find the posts the model
+  has not seen.
+- **One rejection reason, the first that applies, in a fixed order.** The pre-model reasons come
+  first because they are decided first and are cheapest; a post rejected before the model never
+  gets a model reason. One reason is what the admin's rejected list shows. An archived post keeps
+  its reason, so the record still says why it was hidden.
+- **A phone-only match is not a repost.** A phone is a one-directional signal
+  (`ASSUMPTIONS.md` D7): one landlord or agent posts different apartments with one number.
+  Treating such a match as a repost would hide a different apartment and move its last
+  publication time.
+- **`last_published_at` never moves backwards.** It drives the retention clock; a late-arriving
+  older duplicate must not shorten a post's life.
+- **Images: photos only, one retry, a failure fails nothing.** Videos are not analysed and are
+  shown as their link. A failed run blocks the window (invariant 2), so a lost image must never
+  fail the run or the post.
+- **Images are downloaded for posts the model will reject.** Image download runs before the
+  model in the data path, so at download time no verdict exists. For a rejected post what matters
+  is its original text and link, so downloading its images costs nothing important.
+- **An identical-hash repost downloads no images**, since they duplicate the canonical's, unless
+  the canonical is archived (its images are gone) or all its downloads failed.
+- **Flagged posts are kept whole and never deleted.** A flag marks a model mistake, and the full
+  record, including `raw`, is what is needed to re-run the prompt on it. Images are deleted at
+  archive like any post's, since the model never sees images.
+- **Shared posts take their images from `sharedPost.media`, and are detected by `sharedPost` being
+  present.** Spike 1.1a found three `post_type` values carrying a `sharedPost`, with the post's own
+  `media` empty on all of them. Without the fallback, every shared post would be rejected as having
+  no images, against the rule in `BASELINE.md` §5.
+- **`GroupWatermark` per group, with `consecutive_failures`.** The watermark is per group
+  (`RESEARCH.md` §4) and the failure count feeds silent-group detection.
 
 ---
 

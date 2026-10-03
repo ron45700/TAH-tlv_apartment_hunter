@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from tlv_hunter.parsing.ids import compute_listing_id
 from tlv_hunter.textnorm.blank import is_blank
+from tlv_hunter.textnorm.normalize import normalizes_to_nothing
 
 RAW_POST_SCHEMA_VERSION = 1
 
@@ -81,7 +82,7 @@ class RawPost(BaseModel):
             if self.text_hash is not None or self.phones is not None:
                 raise ValueError("text_hash and phones must be None until textnorm has run")
         else:
-            if self.no_text != blank:
+            if self.no_text != normalizes_to_nothing(self.text):
                 raise ValueError("no_text disagrees with the text")
             if self.no_text and self.text_hash is not None:
                 raise ValueError("text_hash must be None when no_text is True")
