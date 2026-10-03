@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from tlv_hunter.parsing.datetimes import require_utc
 from tlv_hunter.parsing.ids import compute_listing_id
 from tlv_hunter.textnorm.blank import is_blank
 from tlv_hunter.textnorm.normalize import normalizes_to_nothing
@@ -65,9 +66,7 @@ class RawPost(BaseModel):
     @field_validator("posted_at", "fetched_at")
     @classmethod
     def _require_utc(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.utcoffset() != timedelta(0):
-            raise ValueError("must be a tz-aware UTC datetime")
-        return value
+        return require_utc(value)
 
     @model_validator(mode="after")
     def _check_consistency(self) -> Self:

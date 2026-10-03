@@ -1,6 +1,6 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b and 1.1a complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a and 1.10 complete.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -111,13 +111,24 @@ Gate A does not have. Settle with Ron:
 
 ---
 
-## 1.10 SQLite store
+## 1.10 SQLite store — ✅ COMPLETE (2026-10-04)
 
-A second implementation of the existing `Repository` interface, next to `local_json`. Same
-contract tests run against both. `local_json` stays for tests.
+Storage for both Gate E records, on one SQLite file (`DECISIONS.md` #64, #65):
+
+- `SqliteRepository` (`store/sqlite.py`), a second implementation of `Repository` next to
+  `local_json`. `Repository` gains the lifecycle methods (`upsert_with_lifecycle`,
+  `save_lifecycle`, `get_lifecycle`, `find_without_lifecycle`); `local_json` implements them too.
+  The same contract tests run against both. `local_json` stays for tests.
+- `WatermarkStore` and `SqliteWatermarkStore` in `state/`, for `GroupWatermark`. Not part of
+  `Repository`.
+- `PostLifecycle`, `PostImage` and `GroupWatermark` in `contracts/`, with the Gate E rules.
+
+Not in 1.10: wiring into `pipeline.py` (1.14), building the initial lifecycle record (1.11), and
+when the watermark advances (1.13).
 
 **DoD:** the Phase 0 exit test passes against SQLite: 20 posts in, 20 identical posts out, second
-run leaves the store unchanged, first `fetched_at` preserved.
+run leaves the store unchanged, first `fetched_at` preserved. *Met:* the exit test runs against both
+`local_json` and SQLite.
 
 ---
 
@@ -131,7 +142,7 @@ Follow the `external-contract-verification` skill before writing it.
 
 | Trap | Handling |
 |---|---|
-| `post_type: "shared"` | `text` is empty; real content sits in `sharedPost`. Path unverified until a real one is seen |
+| `post_type: "shared"` | `text` is empty; real content sits in `sharedPost`: the text at `sharedPost.text`, the media at `sharedPost.media` (verified, `ASSUMPTIONS.md` P2) |
 | `creation_time` | RFC 2822 → UTC |
 | missing `group_title` | thedoor does not provide it; must not crash or fabricate |
 | silent group | zero rows and a failure look the same; count rows per group every run |
@@ -145,10 +156,23 @@ Follow the `external-contract-verification` skill before writing it.
 A post is set aside before any model call when:
 
 - it has no text (`no_text`), or
-- it has no images. A post that shares another post is checked first: it is rejected only if the
-  shared post has no images either.
+- it has no media at all (`no_images`, `DECISIONS.md` #67). A post whose only media is video or
+  reel is **not** rejected. A post that shares another post is checked first: it is rejected only
+  if the shared post has no media either. This is the rejection rule; which media are downloaded
+  (photos only) is the separate download rule in 1.12.
 
-It is stored with its reason and is never classified. About 10% of the sample has no images.
+It is stored with its reason and is never classified. About 10% of the sample has no media.
+
+The initial `PostLifecycle` (`"pending"`, or `"rejected"` with its reason) is built here and stored
+through `Repository.upsert_with_lifecycle` (1.10), which never overwrites an existing record.
+
+**Re-fetched with media** (`DECISIONS.md` #68): a post rejected as `no_images` and fetched again
+with media returns to `"pending"` and goes to the model. It does not stay rejected.
+
+**Open, decided when 1.11 is planned:**
+1. Does the same hold for a `no_text` post that later has text?
+2. What happens when the media arrives through a repost (a different post with the same text hash)
+   rather than the same post?
 
 ---
 
@@ -179,9 +203,19 @@ At fetch time, for canonical non-rejected posts: download each image to disk, re
 path. A failed download must not fail the run or the post; it is recorded, and the post keeps its
 other images.
 
+**Open point — decided when 1.12 is planned.** The text above says images are downloaded "for
+canonical non-rejected posts". `SCHEMA.md` Gate E adds the repost exception (a repost with an
+identical text hash downloads its images when the canonical is archived or all of its downloads
+failed) and says images are also downloaded for posts the model will reject. The plan for 1.12
+states exactly which posts get their images downloaded.
+
 ---
 
 ## 1.13 Per-group watermark
+
+The watermark **logic** only: when it advances. Its storage (`GroupWatermark`, `WatermarkStore`)
+was built in 1.10; all groups are written together through `WatermarkStore.save_all`, one
+transaction.
 
 Rules in `RESEARCH.md` §4. The run input is `min(all watermarks) - buffer`, filtered per group
 locally. The watermark advances only when the whole run succeeded.
@@ -198,8 +232,16 @@ is planned.
 `pipeline.py` holds no logic of its own. `run_id` on every log line. An error at any stage means no
 watermark write.
 
+Storage wiring (1.10): posts are stored through `upsert_with_lifecycle`; `SqliteRepository` and
+`SqliteWatermarkStore` are both constructed on `<store_root>/tlv_hunter.sqlite3`.
+
 Bootstrap is an explicit flag, never auto-detected: the first run stores everything and initializes
 the watermarks. Once alerts exist (phase 4), a bootstrap run sends none.
+
+**Open points — decided when 1.14 is planned:**
+1. Which step calls `find_without_lifecycle`, and what it does with a non-empty result.
+2. Who creates the `store_root` directory: `SqliteRepository` does not, `local_json` does.
+3. Where the production constant for `tlv_hunter.sqlite3` lives.
 
 ---
 

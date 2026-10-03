@@ -6,9 +6,10 @@ tagged `VERIFIED`, `ASSUMED`, or `UNKNOWN`.
 **The rule:** nothing moves to implementation while resting on `ASSUMED`. If an `ASSUMED` item
 blocks progress, the next step is a spike that resolves it — not code that hopes.
 
-**Last updated:** 2026-10-04 — spike 1.1a results applied (`SPIKE_1_1a.md`)
+**Last updated:** 2026-10-04 — I8 (SQLite version in the container) added, task 1.10. Earlier the
+same day: spike 1.1a results applied (`SPIKE_1_1a.md`)
 
-> Written in English like every document in `docs/`. Conversation is in Hebrew; documentation is not.
+> Written in English like every document in `docs/`, and like replies to Ron.
 >
 > `HANDOFF.md` and `MACRO_PLAN.md` are in `docs/archive/`. Research findings are in `RESEARCH.md`;
 > the plan is `BASELINE.md`. Task numbers 1.4–1.9 belonged to the old Phase 1 and are retired; the
@@ -155,6 +156,7 @@ Pair 3 is the load-bearing case: hash was the only layer that caught it.
 | I5 | Device sharing covers the number of friends on the free plan | ❓ UNKNOWN — check before phase 5 |
 | I6 | Images can be downloaded from the signed Facebook links at fetch time | ✅ VERIFIED — 2026-10-04, spike 1.1a: 5 of 5, plain GET with no token or cookies, HTTP 200, JPEG |
 | I7 | Signed image links expire ≈ 4.4 days after fetch | ⚠️ ASSUMED — read from the `oe` query parameter as a hex Unix timestamp (4.3–4.5 days on all 355 links in run 1). That reading is not documented; nothing was re-downloaded later |
+| I8 | The home-server container's SQLite is at least 3.24.0, the minimum the store and state modules require (`DECISIONS.md` #65) | ❓ UNKNOWN — checked when the image is built (phase 5). Ron's laptop: Python 3.12.9 with SQLite 3.45.3, run 2026-10-04. Below the minimum, both modules refuse to start and name the found and required versions |
 
 ---
 

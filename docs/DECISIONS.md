@@ -429,6 +429,8 @@ for sale, not a listing, flagged. The rejected list is admin-only. `BASELINE.md`
 A post with no images that shares another post is rejected only if the shared post has no images
 either.
 
+*Clarified by #67 (2026-10-04): "no images" means no media at all.*
+
 ### 50 — Flagging replaces the calibration file
 Any user can flag a post as not what it claims. It moves to rejected for everyone, with the
 flagger's name, and the admin can restore it. Flagged posts are kept as text, past the retention
@@ -547,6 +549,106 @@ media fallback. The rules and why:
   no images, against the rule in `BASELINE.md` §5.
 - **`GroupWatermark` per group, with `consecutive_failures`.** The watermark is per group
   (`RESEARCH.md` §4) and the failure count feeds silent-group detection.
+
+### 64 — Task 1.10 stores both Gate E records; the watermark has its own interface
+Approved by Ron, 2026-10-04.
+
+- **Scope.** Task 1.10 builds the storage of both Gate E records: the post lifecycle record and
+  `GroupWatermark`. Task 1.13 keeps only the watermark logic (when it advances).
+- **Names.** `PostLifecycle` and `PostImage` in `contracts/post_lifecycle.py`; `GroupWatermark` in
+  `contracts/group_watermark.py`.
+- **`Repository` gains:** `save_lifecycle(record) -> PostLifecycle`, a whole-record replace;
+  `get_lifecycle(listing_id) -> PostLifecycle | None`;
+  `upsert_with_lifecycle(post, initial) -> RawPost`, which upserts the post (keeping the first
+  `fetched_at`) and stores `initial` only if the post has no lifecycle record — create-only, never a
+  merge or an overwrite, in one transaction in SQLite; and `find_without_lifecycle() -> list[RawPost]`.
+  `upsert` keeps its signature. `save_lifecycle` requires a stored post and raises `KeyError`
+  otherwise. local_json implements all of them, and the same contract tests run on both.
+- **No merge and no "never backwards" logic in the storage layer.** That belongs to task 1.3. Who
+  builds the `initial` record is task 1.11.
+- **`GroupWatermark` is not in `Repository`.** It has its own interface, `WatermarkStore` in
+  `state/` (`get`, `get_all`, and `save_all` in one transaction), backed by the same SQLite file.
+  SQLite implementation only.
+- **Guards** (approved in the 1.10 review, 2026-10-04): `upsert_with_lifecycle` raises `ValueError`
+  when the record's `listing_id` differs from the post's; `save_all` raises `ValueError` on a
+  duplicate `group_id`.
+
+*Why:* `state/` is the seam already listed in `CLAUDE.md` for the watermark.
+`upsert_with_lifecycle` and `find_without_lifecycle` exist because two separate writes could leave
+a stored post with no lifecycle record after a crash; phase 2 looks for `"pending"` posts, so such a
+post would never be classified. The atomic method prevents the gap in SQLite; the query finds it in
+local_json, which cannot write two files atomically, and anywhere else. No reason was recorded for
+the names, for `KeyError`, for SQLite being the only `WatermarkStore`, or for the guards.
+
+### 65 — SQLite layout
+Approved by Ron, 2026-10-04.
+
+- **One JSON document per record**, written and read by the pydantic model, plus lookup columns
+  only. `raw` is inside the document, whole. The one lookup column is `text_hash`, a plain column
+  written by `upsert` in the same statement as the document. Phones are filtered in Python through
+  the existing phone normalization.
+- **`images` sit inside the lifecycle document**, not in a table of their own.
+- **One connection per operation.**
+- **The default rollback journal.** WAL is an open choice for phase 3 (`BACKLOG.md`).
+- **Each module creates its own tables; no helper is shared between `store` and `state`.**
+- **The file is `<store_root>/tlv_hunter.sqlite3`,** the same path passed to both modules. No
+  config change.
+- **Layout version per module:** a `layout_version` table with one row per module; SQLite's
+  `user_version` is not used. On a mismatch, older or newer, the module refuses to open and names
+  the module, the expected version and the version found. No automatic migration.
+- **Minimum SQLite version:** each module's constructor checks `sqlite3.sqlite_version_info` against
+  a minimum constant and raises below it. The minimum is 3.24.0, the release that added UPSERT
+  (`INSERT … ON CONFLICT (target) DO UPDATE / DO NOTHING`), checked against sqlite.org on
+  2026-10-04. The container's version is unknown (`ASSUMPTIONS.md` I8).
+- **Known limit:** `save_lifecycle` is last-write-wins. Phase 1 has one writer. A contract test pins
+  the behaviour, and the concurrent case is an open choice for phase 3 (`BACKLOG.md`).
+
+*Why:* a generated `text_hash` column would need SQLite 3.31, and the home-server container's
+version is unverified; a plain column removes that dependency. No reason was recorded for the other
+points.
+
+### 66 — Gate E additions: types and consistency rules
+Approved by Ron, 2026-10-04. Written into `SCHEMA.md`, Gate E. `schema_version` stays 1.
+
+1. `flagged_by` is `str | None`. Gate C may refine it.
+2. `PostImage`: `listing_id: str`, `media_id: str`, `local_path: str | None`, `error: str | None`.
+3. Exactly one of `local_path` and `error` is set.
+4. `rejection_reason` is `None` when `state` is `"pending"` or `"active"`, required when
+   `"rejected"`, optional when `"archived"`.
+5. `flagged_by` and `flagged_at` are set together or both `None`; `rejection_reason` `"flagged"`
+   requires both.
+6. One UTC check, `require_utc` in `parsing/datetimes.py`, used by `RawPost` and by the new records.
+   `RawPost`'s behaviour is unchanged.
+7. `GroupWatermark` storage is built in task 1.10, its logic in task 1.13.
+8. *Added in the 1.10 review, 2026-10-04:* the post lifecycle record has an explicit `listing_id`
+   row (`str`; the post this record belongs to, and the record's key). The code already had the
+   field.
+
+*Why:* no reason recorded.
+
+### 67 — `no_images` means the post has no media at all
+Approved by Ron, 2026-10-04. **Clarifies #49.**
+
+- The pre-model `no_images` rejection applies only when the post has no media of any kind. A post
+  whose only media is video or reel is **not** rejected.
+- The same applies to a shared post's media: the post is rejected only if the shared post has no
+  media either.
+- Gate E's "Images: photos only" stays as the **download** rule. The two are separate rules: one
+  decides whether a post is rejected, the other which media are downloaded.
+
+*Why:* no reason recorded.
+
+### 68 — A rejected `no_images` post that comes back with media returns to `"pending"`
+Approved by Ron, 2026-10-04.
+
+A post rejected before the model as `no_images`, and fetched again with media, returns to
+`"pending"` and goes to the model. It does not stay rejected.
+
+**Open, for task 1.11 planning:** (i) does the same hold for a `no_text` post that later has text;
+(ii) what happens when the media arrives through a repost (a different post with the same text
+hash) rather than the same post.
+
+*Why:* no reason recorded.
 
 ---
 

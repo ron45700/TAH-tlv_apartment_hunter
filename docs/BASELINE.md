@@ -2,7 +2,8 @@
 
 **Status:** Approved by Ron, 2026-10-02. Amended 2026-10-03 after the cross-check of the other docs.
 Amended 2026-10-04: run interval and manual run (`DECISIONS.md` #61), viewed posts (#62), Gate E
-(#63).
+(#63), the SQLite file shared by `store` and `state` (#64, #65), and "no images" means no media at
+all (#67, #68).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -57,7 +58,7 @@ also a later addition and will probably need its own scraper; the design must st
 | Machine | Ron's home server (a laptop being converted), running 24/7. Development and first runs on Ron's personal laptop. |
 | OS | Ubuntu Server LTS or Debian, no desktop. |
 | Runtime | Docker Compose. The same compose file runs on the personal laptop and on the server. |
-| Database | SQLite, behind the existing `store` interface. Postgres stays a cheap swap. |
+| Database | SQLite, one file, behind the `store` interface (posts and their lifecycle records) and the `state` interface (per-group watermarks). Postgres stays a cheap swap. |
 | Images | Downloaded at fetch time to a directory on disk (Facebook image links expire within days). |
 | Remote access | Tailscale. The dashboard is published with Tailscale Serve (HTTPS, tailnet only). Friends get access through Tailscale device sharing. |
 | Telegram | Outbound only: long polling (`getUpdates`) and send calls. No public address or open port. |
@@ -122,7 +123,7 @@ A repost resets the clock. A repost of an archived post makes it active again.
 | Reason | Decided | Notes |
 |---|---|---|
 | No text | Before the model | Not sent to the model |
-| No images | Before the model | Not sent to the model. A post that shares another post is checked first: it is rejected only if the shared post has no images either |
+| No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again with media returns to pending and goes to the model (`DECISIONS.md` #67, #68). Which media are downloaded (photos only) is a separate rule |
 | Other city | By the model | The post names a city that is not Tel Aviv–Yafo. The named city is shown next to the post. Applies to all users. A nearby city mentioned as a landmark ("5 minutes from Givatayim") is not a rejection |
 | Seeking | By the model | The poster is looking for an apartment, not offering one |
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |

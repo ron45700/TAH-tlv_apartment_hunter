@@ -454,3 +454,78 @@ Task 1.10, the SQLite store (`BACKLOG.md` item 1).
 record and `GroupWatermark` in `SCHEMA.md`; the #63 reason for downloading images of posts the
 model will reject replaced; `GroupWatermark` removed from the "no approval gate yet" sentence in
 "Stub contracts".
+
+---
+
+## 2026-10-04 (continued) — Task 1.10: SQLite store and `state/`; decisions #64–#68
+
+### Done
+
+Decisions approved by Ron, 2026-10-04, recorded as `DECISIONS.md` #64 (scope and interfaces), #65
+(SQLite layout), #66 (Gate E types and consistency rules), #67 (`no_images` means no media at all),
+#68 (a re-fetched `no_images` post with media returns to `"pending"`).
+
+- **Code:** `contracts/post_lifecycle.py` (`PostLifecycle`, `PostImage`),
+  `contracts/group_watermark.py` (`GroupWatermark`), `store/sqlite.py` (`SqliteRepository`),
+  `state/base.py` (`WatermarkStore`), `state/sqlite.py` (`SqliteWatermarkStore`). `Repository`
+  gains `upsert_with_lifecycle`, `save_lifecycle`, `get_lifecycle`, `find_without_lifecycle`;
+  `local_json` implements them. `require_utc` in `parsing/datetimes.py`, now used by `RawPost` and
+  the new records. `pipeline.py` untouched.
+- **Tests:** contract tests shared by both repositories (`test_repository_contract.py`, run through
+  the `make_repository` fixture); `test_sqlite_store.py`, `test_watermark_store.py`,
+  `test_post_lifecycle.py`; the Phase 0 exit test runs against both repositories.
+- **Docs:** `SCHEMA.md` Gate E (#66, #67), `PHASE_1.md` (1.10 complete, 1.11, 1.13, 1.14 wiring),
+  `BASELINE.md` §3 and §5, `DECISIONS.md` #64–#68 and a note on #49, `ASSUMPTIONS.md` I8 and the
+  language line, `BACKLOG.md`, `CLAUDE.md` (language line, `store/` and `state/` rows).
+
+### Verified
+
+- `uv run pytest`: 197 passed. `uv run ruff check .`: clean. `uv run ruff format --check .`: 67
+  files formatted.
+- The 101 tests as they stand at `HEAD`, exported unchanged and run against the new code: 101
+  passed.
+- Phase 0 exit test: both tests pass for `local_json` and for `sqlite`.
+- SQLite thresholds, read on sqlite.org on 2026-10-04: UPSERT added in 3.24.0 (a conflict target
+  required until 3.35.0; the code always gives one); generated columns 3.31.0, `RETURNING` 3.35.0,
+  built-in JSON 3.38.0, none of them used; foreign keys 3.6.19, off by default per connection and a
+  no-op inside a transaction. Minimum set to 3.24.0.
+- On Ron's laptop (Python 3.12.9, SQLite 3.45.3), by running it: the default `datetime` adapter
+  raises `DeprecationWarning` (not used); pydantic's ISO strings do not sort lexically when
+  microseconds vary (no datetime columns); a file with an open connection cannot be deleted on
+  Windows (one connection per operation, and a test for it); explicit `BEGIN IMMEDIATE` / `ROLLBACK`
+  work under `autocommit=True`.
+
+### Not verified
+
+- The home-server container's SQLite version (`ASSUMPTIONS.md` I8).
+- Behaviour with two processes writing the same file. Phase 1 has one writer; the concurrent case
+  is an open choice in `BACKLOG.md`.
+
+### For Ron
+
+- **`listing_id` on `PostLifecycle`.** Gate E says the record is "keyed by `listing_id`" but has no
+  `listing_id` row. The model carries it, since `save_lifecycle(record)` takes only the record.
+  Should a row be added to the table?
+- **Guards not in the approval:** `upsert_with_lifecycle` raises `ValueError` when the record's
+  `listing_id` differs from the post's; `save_all` raises `ValueError` on a duplicate `group_id`.
+- **Pre-existing contradictions, not fixed:** `PHASE_1.md` 1.12 says images are downloaded "for
+  canonical non-rejected posts", while Gate E downloads for posts the model will reject and for some
+  reposts. `PHASE_1.md` 1.1 still calls the shared-post path "unverified" (P2 is verified).
+- **The `CLAUDE.md` single-implementation list** (normalization, datetime parsing, `listing_id`,
+  price parsing) does not name the UTC check. Not added.
+- **`CLAUDE.md` is gitignored and not tracked**, so its edits do not appear in `git status`.
+- **The file name `tlv_hunter.sqlite3`** is only in `tests/conftest.py` for now. Where its
+  production constant lives is decided with the 1.14 wiring.
+
+### Next
+
+Task 1.1, thedoor `fetch()` (`BACKLOG.md` item 1).
+
+**Follow-up — 1.10 review (docs only, approved by Ron, 2026-10-04):** `SCHEMA.md` Gate E has an
+explicit `listing_id` row on the post lifecycle record (noted as #66 item 8; `schema_version` stays
+1). The two guards are recorded as approved in #64. `CLAUDE.md` single-implementation rule names
+`require_utc`. `PHASE_1.md` 1.1: shared-post path marked verified (P2). `PHASE_1.md` 1.12 and
+`BACKLOG.md`: open point on exactly which posts get their images downloaded; the rule itself is
+unchanged. `PHASE_1.md` 1.14 and `BACKLOG.md`: open points on who calls `find_without_lifecycle`,
+who creates `store_root`, and where the `tlv_hunter.sqlite3` constant lives. `BACKLOG.md` #49 row
+brought up to date. No code or tests changed.

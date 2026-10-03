@@ -1,11 +1,24 @@
 from typing import Protocol, runtime_checkable
 
+from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 
 
 @runtime_checkable
 class Repository(Protocol):
     def upsert(self, post: RawPost) -> RawPost: ...
+
+    def upsert_with_lifecycle(self, post: RawPost, initial: PostLifecycle) -> RawPost:
+        """Upsert the post; store `initial` only if the post has no lifecycle record yet."""
+        ...
+
+    def save_lifecycle(self, record: PostLifecycle) -> PostLifecycle:
+        """Whole-record replace, last write wins. KeyError if the post is not stored."""
+        ...
+
+    def get_lifecycle(self, listing_id: str) -> PostLifecycle | None: ...
+
+    def find_without_lifecycle(self) -> list[RawPost]: ...
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]: ...
 

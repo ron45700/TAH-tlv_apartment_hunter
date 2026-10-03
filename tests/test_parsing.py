@@ -1,10 +1,10 @@
 import hashlib
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
 import pytest
 
-from tlv_hunter.parsing.datetimes import parse_rfc2822_utc
+from tlv_hunter.parsing.datetimes import parse_rfc2822_utc, require_utc
 from tlv_hunter.parsing.ids import compute_listing_id
 from tlv_hunter.parsing.prices import ParsedPrice, parse_native_price
 
@@ -47,6 +47,24 @@ def test_unknown_zone_minus_0000_raises_instead_of_returning_naive() -> None:
 def test_garbage_datetime_raises() -> None:
     with pytest.raises(ValueError):
         parse_rfc2822_utc("not a date")
+
+
+def test_require_utc_accepts_utc_and_returns_it_unchanged() -> None:
+    value = datetime(2026, 10, 4, 9, 0, tzinfo=UTC)
+    assert require_utc(value) is value
+    assert require_utc(datetime(2026, 10, 4, 9, 0, tzinfo=timezone(timedelta(0)))).tzinfo
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        datetime(2026, 10, 4, 9, 0),
+        datetime(2026, 10, 4, 12, 0, tzinfo=timezone(timedelta(hours=3))),
+    ],
+)
+def test_require_utc_rejects_naive_and_non_utc(value: datetime) -> None:
+    with pytest.raises(ValueError, match="tz-aware UTC"):
+        require_utc(value)
 
 
 def test_all_8_observed_sale_post_prices_parse(thedoor_items) -> None:

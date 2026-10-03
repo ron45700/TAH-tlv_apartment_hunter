@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from tests.conftest import CONFIG_ROOT, FETCHED_AT, THEDOOR_20
+from tests.conftest import CONFIG_ROOT, FETCHED_AT, SQLITE_FILENAME, THEDOOR_20
 from tlv_hunter.classify.base import Classifier
 from tlv_hunter.classify.classifier_stub import ClassifierStub
 from tlv_hunter.config.base import ConfigSource
@@ -17,8 +17,11 @@ from tlv_hunter.policy.base import Policy
 from tlv_hunter.policy.policy_stub import AlwaysNotifyPolicyStub
 from tlv_hunter.providers.base import Provider
 from tlv_hunter.providers.fixture import FixtureProvider
+from tlv_hunter.state.base import WatermarkStore
+from tlv_hunter.state.sqlite import SqliteWatermarkStore
 from tlv_hunter.store.base import Repository
 from tlv_hunter.store.local_json import LocalJsonRepository
+from tlv_hunter.store.sqlite import SqliteRepository
 
 
 def test_listing_stub_fields_are_exactly_approved() -> None:
@@ -56,6 +59,17 @@ def test_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
 def test_repository_has_no_delete() -> None:
     assert not any("delete" in name or "remove" in name for name in dir(Repository))
     assert not any("delete" in name or "remove" in name for name in dir(LocalJsonRepository))
+
+
+def test_sqlite_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
+    path = tmp_path / SQLITE_FILENAME
+    assert isinstance(SqliteRepository(path), Repository)
+    assert isinstance(SqliteWatermarkStore(path), WatermarkStore)
+
+
+def test_sqlite_store_and_watermark_store_have_no_delete() -> None:
+    for cls in (SqliteRepository, WatermarkStore, SqliteWatermarkStore):
+        assert not any("delete" in name or "remove" in name for name in dir(cls))
 
 
 def test_policy_stub_always_notifies_for_its_user() -> None:

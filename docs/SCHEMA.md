@@ -5,7 +5,14 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-04 — **Gate E approved** (post lifecycle record, `GroupWatermark`).
+**Last updated:** 2026-10-04 (task 1.10) — **Gate E amended** (`DECISIONS.md` #66, #67), approved
+by Ron: `flagged_by` is `str | None`; `PostImage` typed; consistency rules on `rejection_reason`,
+the flag and `PostImage`; `no_images` means no media at all, stated apart from the download rule;
+"Stub contracts" wording on where `GroupWatermark` is built; an explicit `listing_id` row on the
+post lifecycle record (its key, already in the code). No other field added or removed;
+`schema_version` stays 1 on every record.
+
+**Earlier on 2026-10-04:** **Gate E approved** (post lifecycle record, `GroupWatermark`).
 **Gate A amended:** `media[]` falls back to `sharedPost.media`; a shared post is detected by
 `sharedPost` being present. Both approved by Ron, 2026-10-04 (`DECISIONS.md` #63). `post_type`
 wording updated to the observed values. No `RawPost` field or type changed; `schema_version` stays 1.
@@ -232,23 +239,41 @@ failover adapter is built.
 
 # GATE E — post lifecycle and `GroupWatermark`
 
-**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63 · **Lifecycle:** `BASELINE.md` §5
+**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66 and #67 ·
+**Lifecycle:** `BASELINE.md` §5
 
-## Post lifecycle record
+## Post lifecycle record (`PostLifecycle`)
 
 A **separate record per post, keyed by `listing_id`. Not added to `RawPost`**: Gate A stays a pure
 function of `raw`, and these fields change after fetch.
 
+**Amended 2026-10-04** (`DECISIONS.md` #66), approved by Ron: the `flagged_by` type, the
+`PostImage` types, and the consistency rules on `rejection_reason`, the flag and `PostImage`. Then
+an explicit `listing_id` row, the key the record already had. No other field was added or removed;
+`schema_version` stays 1.
+
 | Field | Type | Rule |
 |---|---|---|
 | `schema_version` | `int` | Starts at 1. On every record (`PHASE_1.md` §1.0) |
+| `listing_id` | `str` | The post this record belongs to, and the record's key |
 | `state` | `"pending"` / `"active"` / `"rejected"` / `"archived"` | On store: `"pending"`, or `"rejected"` if a pre-model reject applies. In phase 2 the model moves it to `"active"` or `"rejected"`. A repost record has no card of its own; that is `is_canonical` / `duplicate_of` from Gate A, not a state |
-| `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `None` | One reason, the first that applies, in that order. Set only when `state` is `"rejected"` or `"archived"` (an archived post keeps its reason) |
-| `flagged_by` | user id / `None` | `None` until phase 3 |
-| `flagged_at` | `datetime` UTC / `None` | |
+| `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `None` | One reason, the first that applies, in that order. `None` when `state` is `"pending"` or `"active"`; required when `"rejected"`; optional when `"archived"` (an archived post keeps its reason) |
+| `flagged_by` | `str` / `None` | A user id. `None` until phase 3. Gate C may refine the type. Set together with `flagged_at`: both or neither |
+| `flagged_at` | `datetime` UTC / `None` | Set together with `flagged_by`: both or neither. `rejection_reason` `"flagged"` requires both |
 | `flag_note` | `str` / `None` | Optional short note from the flagger |
 | `last_published_at` | `datetime` UTC | The latest `posted_at` of the post and all its duplicates (any dedup layer: A now, B in phase 2). A phone-only match is not a duplicate. Never moves backwards |
-| `images` | list of `{listing_id, media_id, local_path, error}` | One entry per downloaded photo; `listing_id` is the record the image came from. `local_path` is `None` when the download failed, and `error` holds a short reason |
+| `images` | `list[PostImage]` | One entry per downloaded photo. See below |
+
+### `PostImage`
+
+| Field | Type | Rule |
+|---|---|---|
+| `listing_id` | `str` | The record the image came from |
+| `media_id` | `str` | |
+| `local_path` | `str` / `None` | `None` when the download failed |
+| `error` | `str` / `None` | A short reason when the download failed |
+
+Exactly one of `local_path` and `error` is set.
 
 ### Rules with no field of their own
 
@@ -257,8 +282,12 @@ function of `raw`, and these fields change after fetch.
   `rejection_reason`; `state` returns to `"active"`.
 - **Flagged posts:** archived at 25 days (images deleted) and never deleted. The full record,
   including `raw`, is kept as the prompt regression set. A restored post follows normal retention.
-- **Images:** photos only, no video or reels (a video shows its `page_url` link). One retry within
-  the same run. A failed download fails neither the run nor the post.
+- **Rejection as `no_images`** (`DECISIONS.md` #67): only when the post has **no media at all**. A
+  post whose only media is video or reel is not rejected. For a post that shares another post, the
+  same test applies to the shared post's media: it is rejected only if the shared post has no media
+  either. This is the rejection rule; the download rule below is separate.
+- **Images (download):** photos only, no video or reels (a video shows its `page_url` link). One
+  retry within the same run. A failed download fails neither the run nor the post.
 - Images are downloaded also for posts the model will reject, and deleted at archive like any post.
 - **Reposts:** a repost with an identical text hash downloads no images, except when the canonical
   is archived, or all of its images failed; then the repost's images are downloaded.
@@ -290,8 +319,9 @@ applies to stubs too, so their Phase 0 shapes are approved explicitly and narrow
 | `DecisionStub` | `user_id`, `listing_id`, `notify` | Not persisted in Phase 0 |
 
 `Notification` and `GroupWatermark` are **not** created in Phase 0. `GroupWatermark` was approved at
-Gate E on 2026-10-04 (above) and is built in task 1.13. The sent-alert record arrives with alerts in
-phase 4; its field set is approved before it is written.
+Gate E on 2026-10-04 (above); its storage is built in task 1.10, and the watermark logic (when it
+advances) in task 1.13. The sent-alert record arrives with alerts in phase 4; its field set is
+approved before it is written.
 
 **The class and module names must contain `Stub`** (`contracts/listing_stub.py`, `ListingStub`).
 A class named `Listing` sitting in the codebase looks like an approved starting point, which is
