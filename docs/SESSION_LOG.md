@@ -239,3 +239,27 @@ Then every other document was cross-checked against the baseline, in a fixed ord
 
 1. Review `CLAUDE.md` with Ron.
 2. Phase 1 in the order given in `BACKLOG.md`. Ron brings the Apify token for task 1.1a.
+
+---
+
+## 2026-10-03 (continued) — `CLAUDE.md` aligned (docs only)
+
+### Done
+
+`CLAUDE.md` reviewed with Ron against `BASELINE.md` and rewritten in place. Twelve corrections:
+the project description and current phase; the three `jobs.*` commands removed (they do not exist
+yet); invariants 3, 5, 7 and 9 reworded; the seams table brought in line (profiles live in the
+store, `policy` and `notify` are stubs until phases 3 and 4, `state` is phase 1); two domain traps
+corrected; the files table now lists `BASELINE.md` and `RESEARCH.md` and no archived or
+never-created file.
+
+Three invariants added with Ron's approval, numbered 11–13 so that existing references to
+invariants 1–10 stay valid: the model classifies only; collection never filters by a user's
+criteria; no Facebook login with any provider.
+
+This closes the "Not done in this pass" item of the previous entry. All active documents now agree
+with `BASELINE.md`.
+
+### Next
+
+Phase 1 in the order given in `BACKLOG.md`. Ron brings the Apify token for task 1.1a.

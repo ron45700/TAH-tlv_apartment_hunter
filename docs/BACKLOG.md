@@ -26,15 +26,14 @@ Phase 1, as detailed in `PHASE_1.md`.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
-| 1 | Review `CLAUDE.md` against `BASELINE.md` with Ron | "Doc debt" below | Ron |
-| 2 | Task 1.2b: `textnorm` fixes for #37, #38, #57 | `PHASE_1.md` 1.2b | — |
-| 3 | Task 1.1a: spike, one real run over all 6 groups, written report | `PHASE_1.md` 1.1a | `APIFY_TOKEN` in `.env` (Ron brings it) |
-| 4 | Gate E: post lifecycle fields | `PHASE_1.md` Gate E | Ron's approval |
-| 5 | Task 1.10: SQLite store | `PHASE_1.md` 1.10 | — |
-| 6 | Task 1.1: thedoor `fetch()` | `PHASE_1.md` 1.1 | item 3 done |
-| 7 | Task 1.11: pre-model rejects | `PHASE_1.md` 1.11 | item 4 done |
-| 8 | Task 1.3: dedup stage A and the repost log | `PHASE_1.md` 1.3 | items 2 and 4 done |
-| 9 | Tasks 1.12–1.14: image download, watermark, `run_once` | `PHASE_1.md` | items above |
+| 1 | Task 1.2b: `textnorm` fixes for #37, #38, #57 | `PHASE_1.md` 1.2b | — |
+| 2 | Task 1.1a: spike, one real run over all 6 groups, written report | `PHASE_1.md` 1.1a | `APIFY_TOKEN` in `.env` (Ron brings it) |
+| 3 | Gate E: post lifecycle fields | `PHASE_1.md` Gate E | Ron's approval |
+| 4 | Task 1.10: SQLite store | `PHASE_1.md` 1.10 | — |
+| 5 | Task 1.1: thedoor `fetch()` | `PHASE_1.md` 1.1 | item 2 done |
+| 6 | Task 1.11: pre-model rejects | `PHASE_1.md` 1.11 | item 3 done |
+| 7 | Task 1.3: dedup stage A and the repost log | `PHASE_1.md` 1.3 | items 1 and 3 done |
+| 8 | Tasks 1.12–1.14: image download, watermark, `run_once` | `PHASE_1.md` | items above |
 
 ---
 
@@ -73,7 +72,7 @@ Left open on purpose until their phase is planned (`DECISIONS.md` #23).
 
 | Item | Where |
 |---|---|
-| `CLAUDE.md` still describes the old direction: calibration mode, "nothing is ever deleted", a files table pointing at archived and never-created docs, `jobs.*` commands that do not exist, `user.id` wording, `isMarketplaceListing` | `CLAUDE.md` — reviewed with Ron next |
+| `CLAUDE.md` lists no run commands: the `jobs.*` commands were removed because they do not exist. Add them back when task 1.14 writes them | `CLAUDE.md`, Commands |
 | Not recorded outside `SESSION_LOG.md`: documented top-level `user_id` absent from the real response; `RawPost` validators; `FixtureProvider` inclusive `since` | `ASSUMPTIONS.md` / `SCHEMA.md` |
 
 ---
