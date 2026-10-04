@@ -1546,3 +1546,142 @@ Ron's instructions asked: the JSON functions are built in by default as of SQLit
 Ron's code review of #80, then his separate go for run B. Run A's links live about until
 2026-10-08 (I7, ASSUMED). Expected in B: run A's 228 failed own photos retried from the stored
 links and held; its 45 repost entries keep `network: gaierror` (U7).
+
+---
+
+## 2026-10-04 (continued) — Run B, a normal run
+
+### Done
+
+Run B, approved by Ron (#79 D2), run once:
+`uv run --env-file .env python -m tlv_hunter.jobs.run_once`, 14:48:40 → 15:00:28 UTC, **exit 0**.
+No code change, no git. Runs C and D were not started.
+
+- **Before the run:**
+  - The working tree was clean at commit `0d33c35` (Ron's commit of #80).
+  - No `.py` file was newer than the last full test run (602 passed), so the suite was not run
+    again.
+  - `APIFY_TOKEN` loads through `uv run --env-file` (46 characters, never printed).
+  - A read-only snapshot of the store after A was saved to
+    `data/runs/run_B_2026-10-04/snapshot_before_B.json` (IDs, timestamps, dedup results, image
+    entries, file times; no text), for the comparison.
+- **Saved in `data/runs/run_B_2026-10-04/`** (gitignored): the JSON log, exit code, times,
+  `check_store.txt` and `check_apify.txt` (from `scratch/check_run_B.py`, read-only), and
+  `REPORT.md`.
+- **`BACKLOG.md`:** item 1 is runs C and D.
+- **`ASSUMPTIONS.md`:** evidence added to P6, P19, P20, I6 and I11; no status changed.
+
+### Verified
+
+- **Run:** `since` 2026-10-04T12:40:09.201Z, exactly A's start minus 15 minutes.
+  - Apify run `Wz3H9VivgTZgAVZcH` `SUCCEEDED`: 33 rows (5, 11, 11, 0, 0, 6 per group).
+  - Skipped 0, dropped 0, no group cut off. No network wait logged.
+  - The token appears nowhere in the log.
+- **DoD item 2 holds:**
+  - 240 posts: 28 new, 5 re-fetched, 0 lost.
+  - Every post from A keeps its first `fetched_at`, `is_canonical`, `duplicate_of` and
+    `text_hash`. 7 new posts are duplicates of posts from A.
+  - 0 canonicals share a hash; 0 duplicates point at a missing or non-canonical post; 0 posts
+    without a record.
+  - None of the 415 photo files from A was rewritten.
+  - `last_success_at` is B's start on all six groups; no `watermark` moved backwards.
+  - `5612809662118963` and `733810383372996` returned no row: `consecutive_failures` 1.
+- **#80 works on real data:**
+  - 214 stored links retried and 214 held, 0 failed, no HTTP error; plus 14 photos of re-fetched
+    posts through the batch path.
+  - Of run A's 273 failed entries, 228 are now held. The 45 left are all repost entries with
+    `network: gaierror` (U7); none is an own photo.
+  - **All 53 of run A's photo-less posts now hold at least one photo.**
+  - 80 photos of new posts, all held. 723 files against 723 references, both ways, no `.tmp`.
+  - Images 107.8 MB, database 2.9 MB.
+- **Speed:** 308 photos in 679 s, about 2.2 s each, slower than run A's 1.36 s; no 403, 429 or
+  timeout.
+- **Cost:** $0.0545, with 33 items and 1 start charged, the same in three reads (the last at
+  15:01:28Z). `fetch()` logged $0.005 at the end of the run: the start fee only (P19).
+
+### Not established
+
+The summary line's "55 stored canonicals outside the batch updated" is consistent with the 53
+posts, plus 5 canonicals changed by B's new duplicates, less the posts in B's own batch. It is not
+broken down exactly: the store does not record which posts a run fetched.
+
+### Next
+
+Ron's separate go for runs C (a normal run killed during the photo download) and D (the recovery).
+Each sends the $0.50 cap; worst case $0.455 each.
+
+---
+
+## 2026-10-04 (continued) — Runs C (killed) and D (the recovery)
+
+### Done
+
+Runs C and D, approved by Ron (#79 D2). No code change, no git. C did not need repeating. The
+end-of-phase steps of `PHASE_1.md` §3 were not started.
+
+- **Before C:**
+  - The working tree's code was unchanged since run B: `tlv_hunter/` and `tests/` were identical
+    to commit `0d33c35`, and no `.py` file was newer than B's start.
+  - A read-only snapshot of the store (240 posts, 240 records, 723 files, the six
+    `GroupWatermark` records) was saved to `data/runs/run_C_2026-10-04/snapshot_before_C.json`.
+- **Run C** started at 16:43:29 UTC, 1 h 55 min after B's start, from `scratch/run_C_kill.ps1`
+  (`Start-Process`, for the Windows PID).
+  - The script waited for thedoor's fetch summary (16:43:54.6), waited 3 s more, and ran
+    `taskkill /F /T` at 16:43:59.7, in the photo step.
+  - `since` was B's start minus 15 minutes. Apify run `XgWDMjgcuuKDxXksJ`: 30 rows.
+- **Run D:** 16:44:59 → 16:46:28 UTC, to the end, **exit 0**.
+- **Saved** in `data/runs/run_C_2026-10-04/` and `data/runs/run_D_2026-10-04/` (gitignored): the
+  logs, the kill's timestamps, the output of `scratch/check_run_CD.py` (read-only, counts only)
+  and a `REPORT.md` each.
+- **`BACKLOG.md`:** item 1 is now the end of phase 1, waiting for Ron's go.
+- **`ASSUMPTIONS.md`:** evidence added to P1c, P6, P19, P20 and I11; no status changed.
+
+### Verified
+
+- **After C, against the snapshot:**
+  - The six watermark records are **identical**.
+  - Posts and records are 240 / 240, with 0 new, 0 lost and 0 changed.
+  - 4 orphan image files (727 on disk, 723 referenced), all under one post; no `.tmp`.
+  - The log has 2 parseable lines and ends at the fetch summary.
+- **After D:**
+  - `since` was 2026-10-04T14:33:40.722Z, **B's start minus 15 minutes**.
+  - 34 rows fetched and 33 kept: one row older than `since` was dropped by `fetch()` and still
+    billed (P1c).
+  - 266 posts: 26 new, 0 lost. 0 canonicals sharing a hash; 0 duplicates pointing at a missing
+    post; 0 posts without a record.
+  - **818 files against 818 references, both ways; all 4 of C's orphan files are referenced
+    now.**
+  - `last_success_at` is D's start on all six groups; no `watermark` moved backwards.
+  - No network wait. No stored-link retry: the only failed entries are run A's 45 repost
+    entries (U7).
+  - D downloaded 95 photos in 74 s.
+- **Cost:** C $0.05 (30 items), D $0.056 (34 items), each read over a minute after the run ended.
+  The end-of-run figures logged were lower ($0.0485, $0.041; P19).
+- **The four runs:** $0.323 + $0.0545 + $0.05 + $0.056 = **$0.4835**, against the $1.82 worst
+  case.
+- **Tokens:** none in any of the four logs.
+
+### The Phase 1 DoD, item by item (items 1–3)
+
+1. **Met.** Run A against all six groups stored 212 posts and 415 photos.
+   - The network dropped during its photo step, and 53 posts were left with no photo.
+   - Run B recovered all 53 from the stored links (#80).
+   - With C and D, the store now holds 266 posts and 818 photos, every file referenced.
+2. **Met.** Run B started 1 h 43 min after A ended. It stored nothing twice:
+   - every post from A kept its first `fetched_at` and dedup result;
+   - no photo was downloaded again;
+   - `last_success_at` became B's start on all six groups, and no watermark moved backwards.
+3. **Met.** C was killed in the photo step with `taskkill /F`.
+   - It moved no watermark and wrote nothing to the store; it left 4 orphan files.
+   - D asked from B's start minus 15 minutes, covering C's window, and stored it once.
+   - C's orphan files are referenced now.
+   - **One limit:** C's 30 post IDs were not compared with D's row by row, since C's dataset was
+     not saved. D asked from the same `since`, 89 s later, with at most 12 rows a group against
+     `max_posts` 50.
+
+Item 4 (the `ASSUMED` items of §2) was closed before the runs and not re-checked here.
+
+### Next
+
+Ron decides when to start the end of phase 1 (`PHASE_1.md` §3, `BACKLOG.md` item 1). After
+2026-10-08: the free GET on an expired run A link (`BACKLOG.md` item 2).

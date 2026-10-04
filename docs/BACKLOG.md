@@ -26,7 +26,7 @@ Phase 1, as detailed in `PHASE_1.md`.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
-| 1 | The remaining real runs that close the Phase 1 DoD (run A is in `SESSION_LOG.md`): B a normal run started at least 15 minutes after A ends, C killed during the photo download, D the recovery (`DECISIONS.md` #79 D2) | `PHASE_1.md` 1.14 | `DECISIONS.md` #80 is built (2026-10-04): run B retries run A's failed photos from the stored links, which live about until 2026-10-08 (`ASSUMPTIONS.md` I7, ASSUMED). B, C and D each need Ron's separate go. Each run sends the $0.50 cap; worst case $1.82 for four runs, hard ceiling $2.00 ($2.50 if C is repeated once). Then `PHASE_1.md` §3, end of phase |
+| 1 | The end of phase 1 (`PHASE_1.md` §3): `RESEARCH.md` and `ASSUMPTIONS.md` from what the real runs showed, the public source for Tel Aviv areas and streets (A1), then phase 2 planning | `PHASE_1.md` §3 | The four real runs A–D are done (2026-10-04, `SESSION_LOG.md`); DoD items 1–3 are met by them. Not started: Ron's go |
 | 2 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
 
 ---
