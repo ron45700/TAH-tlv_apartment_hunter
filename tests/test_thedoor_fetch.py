@@ -206,7 +206,7 @@ def test_a_failed_abort_still_raises(config, apify, clock, caplog) -> None:
     apify.fail_abort = True
     with caplog.at_level(logging.ERROR), pytest.raises(ProviderRunError, match="aborted"):
         _fetch(config, apify, clock)
-    assert "abort failed" in caplog.text
+    assert f"apify_run {apify.run['id']}: abort failed" in caplog.text
 
 
 def test_rows_at_the_cap_raise(config, apify, clock) -> None:
@@ -248,7 +248,7 @@ def _break(items: list[dict[str, Any]]) -> None:
 
 def test_every_row_broken_raises(config, apify, clock) -> None:
     _break(apify.items)
-    with pytest.raises(ProviderRunError, match="105 of 105 rows failed to map"):
+    with pytest.raises(ProviderRunError, match=r"apify_run \S+: 105 of 105 rows failed to map"):
         _fetch(config, apify, clock)
 
 
@@ -343,6 +343,8 @@ def test_run_log_line_counts_every_requested_group(config, apify, clock, caplog)
     summary = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
     assert len(summary) == 1
     line = summary[0]
+    # Named apify_run, so that run_id in a log line is only ours (DECISIONS.md #79).
+    assert line.startswith(f"apify_run {apify.run['id']}: SUCCEEDED, ")
     assert f"'{ZERO_ROW_GROUP}': 0" in line
     assert f"'{MAX_POSTS_GROUP}': 30" in line
     assert "105 rows" in line and "skipped 0" in line and "dropped 0" in line

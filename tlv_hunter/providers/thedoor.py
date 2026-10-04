@@ -119,13 +119,13 @@ class ThedoorProvider:
         run = self._wait(run, deadline=started + timedelta(seconds=self._config.run_timeout_secs))
         run_id = run["id"]
         if run["status"] != "SUCCEEDED":
-            raise ProviderRunError(f"run {run_id} ended {run['status']}")
+            raise ProviderRunError(f"apify_run {run_id} ended {run['status']}")
 
         items = self._call("GET", f"/datasets/{run['defaultDatasetId']}/items?format=json")
         max_items = run["options"]["maxItems"]
         if len(items) >= max_items:
             raise ProviderRunError(
-                f"run {run_id} returned {len(items)} rows, at the charge cap's maxItems "
+                f"apify_run {run_id} returned {len(items)} rows, at the charge cap's maxItems "
                 f"{max_items}; the dataset may be cut off"
             )
         return self._to_posts(run, items, group_ids, since)
@@ -136,7 +136,7 @@ class ThedoorProvider:
             if remaining <= 0:
                 self._abort(run["id"])
                 raise ProviderRunError(
-                    f"run {run['id']} still {run['status']} after "
+                    f"apify_run {run['id']} still {run['status']} after "
                     f"{self._config.run_timeout_secs}s; aborted"
                 )
             wait = min(POLL_WAIT_SECS, math.ceil(remaining))
@@ -148,7 +148,7 @@ class ThedoorProvider:
             self._call("POST", f"/actor-runs/{run_id}/abort")
         except (ApifyApiError, OSError) as error:
             # The run is failed either way; a failed abort only means it may keep billing.
-            logger.error("run %s: abort failed: %s", run_id, error)
+            logger.error("apify_run %s: abort failed: %s", run_id, error)
 
     def _to_posts(
         self,
@@ -168,7 +168,7 @@ class ThedoorProvider:
             post_id = item.get("post_id") if isinstance(item, dict) else None
             if isinstance(group_id, str) and group_id not in requested:
                 logger.warning(
-                    "run %s: dropped post_id %s from group %s, which was not requested",
+                    "apify_run %s: dropped post_id %s from group %s, which was not requested",
                     run_id,
                     post_id,
                     group_id,
@@ -181,7 +181,7 @@ class ThedoorProvider:
                 mapped.append(to_raw_post(item, fetched_at))
             except Exception as error:  # one broken row must not block every group's window
                 logger.error(
-                    "run %s: skipped post_id %s in group %s: %s",
+                    "apify_run %s: skipped post_id %s in group %s: %s",
                     run_id,
                     post_id,
                     group_id,
@@ -192,14 +192,14 @@ class ThedoorProvider:
         considered = len(items) - dropped
         if skipped >= MIN_SKIPPED_TO_FAIL and skipped * 2 > considered:
             raise ProviderRunError(
-                f"run {run_id}: {skipped} of {considered} rows failed to map; "
+                f"apify_run {run_id}: {skipped} of {considered} rows failed to map; "
                 "the response shape may have changed"
             )
 
         for group_id in group_ids:
             if rows_per_group[group_id] >= self._config.max_posts:
                 logger.warning(
-                    "run %s: group %s returned %d rows, at or above max_posts (%d); "
+                    "apify_run %s: group %s returned %d rows, at or above max_posts (%d); "
                     "its window may be cut off",
                     run_id,
                     group_id,
@@ -209,7 +209,7 @@ class ThedoorProvider:
 
         posts = [post for post in mapped if post.posted_at >= since]
         logger.info(
-            "run %s: %s, %d rows, per group %s, mapped %d, skipped %d, dropped %d, "
+            "apify_run %s: %s, %d rows, per group %s, mapped %d, skipped %d, dropped %d, "
             "kept %d since %s, usageTotalUsd %s",
             run_id,
             run["status"],

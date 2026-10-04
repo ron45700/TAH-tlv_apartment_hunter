@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from tlv_hunter.contracts.raw_post import RawPost
+from tlv_hunter.jobs.run_once import SQLITE_FILENAME
 from tlv_hunter.providers.thedoor import to_raw_post
 from tlv_hunter.store.base import Repository
 from tlv_hunter.store.local_json import LocalJsonRepository
@@ -18,7 +19,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_ROOT = REPO_ROOT / "config"
 THEDOOR_20 = REPO_ROOT / "data" / "raw" / "thedoor_20posts_2026-09-13.json"
 SPIKE_1_1A_PREFIX = REPO_ROOT / "data" / "raw" / "thedoor_spike_1_1a_2026-10-04"
-SQLITE_FILENAME = "tlv_hunter.sqlite3"
 
 FETCHED_AT = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
 

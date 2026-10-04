@@ -1,6 +1,7 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11, 1.3, 1.12 and 1.13 complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11, 1.3, 1.12, 1.13 and 1.14 built. The real runs that close
+the DoD are not run yet (1.14).
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -11,7 +12,8 @@ aside. No model, no dashboard, no Telegram.
 
 **Phase DoD:**
 1. A real run against all six groups stores posts and their images.
-2. A second run 15 minutes later stores nothing twice and leaves the watermark correct.
+2. A second run started at least 15 minutes after the first ends stores nothing twice and leaves
+   the watermark correct.
 3. Killing a run mid-flight does not advance the watermark; the next run picks up the missed window.
 4. The `ASSUMED` items in §2 are resolved to `VERIFIED` or explicitly re-planned.
 
@@ -325,31 +327,54 @@ pin the spike's own `maxPosts` (30, read from its input fixture).
 
 ---
 
-## 1.14 Wiring `run_once`, and bootstrap
+## 1.14 Wiring `run_once`, and bootstrap — ✅ BUILT (2026-10-04); real runs open
 
-`pipeline.py` holds no logic of its own. `run_id` on every log line. An error at any stage means no
-watermark write.
+Settled by `DECISIONS.md` #79. `run_once` in `tlv_hunter/pipeline.py` replaces `run_pipeline`
+(O1) and holds no logic of its own; the command is `tlv_hunter/jobs/run_once.py`:
 
-Storage wiring (1.10): posts are stored through `upsert_with_lifecycle`; `SqliteRepository` and
-`SqliteWatermarkStore` are both constructed on `<store_root>/tlv_hunter.sqlite3`.
+```bash
+uv run --env-file .env python -m tlv_hunter.jobs.run_once --bootstrap   # first run (paid)
+uv run --env-file .env python -m tlv_hunter.jobs.run_once               # every run after it (paid)
+```
 
-Bootstrap is an explicit flag, never auto-detected: the first run stores everything and initializes
-the watermarks. Once alerts exist (phase 4), a bootstrap run sends none.
+**One run:** repair any stored post with no lifecycle record (O3); our clock as `run_started_at`;
+`since` from `run_since`, or 24 hours back under `--bootstrap` (D1); `fetch()`; `annotate`;
+`dedup_a`; `download_images`; the store step (O2); `advance` on the watermark records read again
+(O9); `WatermarkStore.save_all`. An error at any step means no watermark write. The cut-off groups
+and a summary are logged; every log line is JSON on stderr with the run's `run_id` (O8).
 
-**Open points — decided when 1.14 is planned:**
-1. Which step calls `find_without_lifecycle`, and what it does with a non-empty result. 1.3
-   already builds a record for a stored canonical that has none (#75 F4).
-2. Who creates the `store_root` directory: `SqliteRepository` does not, `local_json` does.
-3. Where the production constant for `tlv_hunter.sqlite3` lives.
-4. Where `ThedoorProvider` gets the Apify token (`APIFY_TOKEN` in `.env`); the provider takes it as
-   a constructor argument.
-5. The watermark wiring (`DECISIONS.md` #78): `run_started_at` from our clock before `fetch()`;
-   `since` from `run_since`, or the bootstrap window under the bootstrap flag, and how long that
-   window is; `advance` after the store step; `save_all` only after a successful run; the cut-off
-   groups logged with the `run_id`.
-6. The store step: writing `dedup_a`'s result — each post through `upsert` /
-   `upsert_with_lifecycle`, each record through `save_lifecycle` — and in what sequence. 1.3
-   already calls `initial_lifecycle` and `recheck` (`DECISIONS.md` #73.6, #75 F2).
+**The store step** (O2): the records of stored canonicals outside the batch, then the batch
+canonicals, then the batch duplicates, each post through `upsert_with_lifecycle` then
+`save_lifecycle`. The order is what makes a crash between two writes recoverable.
+
+**Bootstrap** is an explicit flag, never auto-detected: it stores everything inside its window, up
+to `max_posts` per group, creates `store_root`, and creates the watermark records. On a store that
+already has records it is allowed, with a warning (O4). Once alerts exist (phase 4), a bootstrap
+run sends none.
+
+**The open points, as settled:** `find_without_lifecycle` (O3); `store_root` created by
+`--bootstrap`, resolved against the repo root (O6); `SQLITE_FILENAME` in the entry; `APIFY_TOKEN`
+read from the environment in the entry only, never logged; the watermark wiring (#78, O9); the
+store step (O2).
+
+**Tests:** `tests/test_run_once.py` (both stores, `FixtureProvider` and a list provider, a fake
+image transport): bootstrap, a cut-off group, a normal run, a second run over the same data, a
+failure or kill at every step, a crash before every write of the store step (also after an
+archived canonical is saved), the repair, and the DoD sequence (bootstrap, a later run, a killed
+run, the recovery). `tests/test_run_once_job.py`: the command through the fake Apify transport.
+`tests/test_phase0_exit.py` ported to `run_once`. No network.
+
+**Still open: the real runs that close the DoD** (#79 D2), after Ron's separate go:
+
+| Run | What it does | Checked after |
+|---|---|---|
+| A | `--bootstrap`, all six groups | Six watermark records; every post has a record; files match `local_path` references |
+| B | A normal run, started at least 15 minutes after A ends | Nothing stored twice; first `fetched_at` kept; no held photo downloaded again; `last_success_at` is B's start |
+| C | A normal run 1–2 hours after B, killed during the photo download | Watermark records unchanged since B |
+| D | A normal run right after C | `since` is B's start minus the buffer; C's window stored once; files match references |
+
+Each run sends the $0.50 cap. Worst case 4 × $0.455 = $1.82, hard ceiling $2.00 ($2.50 if C is
+repeated once).
 
 ---
 

@@ -1246,3 +1246,114 @@ new files).
 ### Next
 
 Task 1.14, `run_once` (`BACKLOG.md` item 1), including the watermark wiring.
+
+---
+
+## 2026-10-04 (continued) — Task 1.14: plan presented, not approved
+
+### Done
+
+Plan for task 1.14 (`run_once` and bootstrap) presented to Ron in the session. No code, no test,
+no config change, no network call, no paid run, no git. `BACKLOG.md` unchanged: nothing was
+decided.
+
+The plan covers: the sequence of one run and what each step's failure leaves behind; the store
+step and its crash behaviour; `find_without_lifecycle`; `store_root`, the `tlv_hunter.sqlite3`
+constant and `APIFY_TOKEN`; the run command, the `--bootstrap` flag and `run_id` logging; the
+zero-network tests; the bootstrap window options; the four real runs that close the DoD (planned,
+not run).
+
+### Found while planning
+
+1. **The store step must write canonicals before duplicates.** The provider returns posts newest
+   first, so a duplicate normally comes before its canonical. Stored in that order, a crash between
+   the two leaves a stored duplicate pointing at a canonical that is not stored, and every later
+   `dedup_a` raises ("not a stored canonical"): collection stops for good. Read from
+   `dedup/stage_a.py` (`_Reader.canonical_of`), not run.
+2. **A stored canonical's changed record must be saved before the new duplicate that changed it.**
+   Otherwise, after a crash, #75 E1 sees the duplicate as already stored and an archived canonical
+   never comes back (#74), and the #77 D4 repost download is lost.
+3. **Bootstrap numbers** at `max_posts` 50, estimated from the spike control dataset (180 posts,
+   632 photos, Friday night to Saturday): 6 h ≈ 46 rows, 12 h ≈ 87, 24 h ≈ 125, 48 h ≈ 207,
+   72 h ≈ 237, 7 days ≈ 280; worst case 300 rows, $0.455, below the cap's `maxItems` 333.
+4. `uv run --env-file .env` exists in the installed uv (0.12.11, read from `uv run --help`): the
+   token can come from the process environment with no new dependency.
+5. Contradictions listed for Ron: #11's bootstrap summary message against "alerts nothing";
+   "stores everything" against a window that is always sent; `run_pipeline` and the Phase 0 exit
+   test (classifier stub, `upsert` only, `is_canonical is None`) against phase 1 and #64; "15
+   minutes later" against runs longer than 30 minutes (#77 D5b); two different run IDs in one log
+   line; the `BASELINE.md` §4 data path stores after the model.
+
+### Next
+
+Ron decides: the bootstrap window and where its value lives; the open points (store-step
+location, `find_without_lifecycle`, bootstrap on an existing store, `store_root` resolution,
+`run_pipeline`, a failing `annotate`, the log format, re-reading the watermarks before `advance`);
+`APIFY_TOKEN` read from the environment, by name; the real-run plan and its budget. Then 1.14 is
+built; the real runs follow only on Ron's separate approval.
+
+---
+
+## 2026-10-04 (continued) — Task 1.14: `run_once` and bootstrap, built
+
+### Done
+
+Task 1.14 approved by Ron with decision #79 (D1, D2, O1–O4, O6–O9, the names). Code, tests and
+docs. No network, no paid run, no git. `data/store` was not created.
+
+1. **`tlv_hunter/pipeline.py`:** `run_pipeline` replaced by `run_once` (O1), which returns a
+   `RunResult`. Steps: repair any stored post with no lifecycle record (O3); `run_started_at`;
+   `since` from `run_since`, or `run_started_at - bootstrap_window`, with a warning naming the
+   groups that already have records (O4); `fetch`; `annotate`; `dedup_a`; `download_images`; the
+   store step `_store` (O2); `advance` on the records read again (O9); `save_all`. A failure at any
+   step is logged as "run failed at step X (Type)" and raised. Afterwards the cut-off groups and a
+   summary line are logged. The classifier, policy and notifier stubs are no longer called; they
+   stay as seams.
+2. **`tlv_hunter/jobs/run_once.py`** (new, with `jobs/__init__.py`): `main()` with `--bootstrap`.
+   Holds `SQLITE_FILENAME`, `BOOTSTRAP_WINDOW` (24 h, D1) and `REPO_ROOT`. Reads `APIFY_TOKEN` from
+   the environment. Resolves `store_root` against the repo root (O6). Creates it under
+   `--bootstrap`, and otherwise refuses when the SQLite file is missing, before any constructor
+   runs. Refuses a provider other than thedoor. JSON log lines on stderr with a 12-hex `run_id`,
+   set through a `ContextVar` and a handler filter (O8). On a failure: exit 1, the exception
+   without input values (a pydantic `ValidationError` reduced to location and type), and the
+   traceback frames only.
+3. **`providers/thedoor.py`:** its log lines and exception messages name the Apify run ID
+   `apify_run`. No other change.
+4. **Tests:**
+   - `tests/test_run_once.py` (new, 46 tests, local_json and SQLite): bootstrap; the cut-off log;
+     bootstrap on a store with records; a normal run with no record (the provider is never
+     called); `since` from the last success; a second run over the same data; a normal run 40
+     minutes later.
+   - The same file, failures: a failure at each step (annotate, dedup, images, fetch with a
+     `KeyboardInterrupt` too, a disk error leaving 2 orphan files, store, advance, save
+     watermarks); a run overtaken by a later one.
+   - The same file, the store step: its write order; a crash before every write of the store step
+     converging to the uninterrupted store (the three known pairs plus two posts, newest first);
+     the same after an archived canonical is saved.
+   - The same file, the rest: the repair; no post text in the log; the DoD sequence A, B, killed
+     C, D against a reference A, B, D.
+   - `tests/test_run_once_job.py` (new, 9 tests): the command through `FakeApify`.
+     `tests/test_phase0_exit.py` ported to `run_once`. `tests/test_thedoor_fetch.py`: three
+     assertions read `apify_run`. `tests/conftest.py` imports `SQLITE_FILENAME` from the entry.
+5. **Docs:** `BACKLOG.md` (sprint item 1 is now the four real runs; the done rows for #63, #64/#65,
+   #67–#74, #75, #76/#77 and #78 removed; #49 updated; a later-phase row for #11 against a silent
+   bootstrap; a known limit: a kill during the fetch does not abort the Apify run; the scheduler
+   row notes no lock; the `CLAUDE.md` commands doc debt removed). `DECISIONS.md` #79. `PHASE_1.md`
+   (status, DoD item 2, 1.14 built with the real-run table). `BASELINE.md` §4 (diagram and one
+   bullet). `CLAUDE.md` (two paid commands; one line on `jobs/run_once.py`). This log.
+
+### Verified
+
+- The store-step order guards against the finding. With the order temporarily reverted to the
+  provider's (and the out-of-batch saves last), both crash tests failed on SQLite, one with
+  `dedup_a`'s "…which is not a stored canonical". Restored.
+- `uv run pytest`: 517 passed in 325 s. `test_run_once.py` alone takes about 135 s, most of it in
+  local_json: 42 s for the DoD sequence, 25 s for the second-run test.
+- `uv run ruff check .`: all checks passed. `uv run ruff format --check .`: 84 files already
+  formatted.
+- `uv run python -m tlv_hunter.jobs.run_once --help` prints the flag. No run was started.
+
+### Next
+
+Ron's code review of task 1.14, then his separate go for the real runs A–D (#79 D2, `BACKLOG.md`
+item 1). Then `PHASE_1.md` §3, end of phase.

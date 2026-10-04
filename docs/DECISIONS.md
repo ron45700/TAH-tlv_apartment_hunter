@@ -1043,6 +1043,62 @@ it. The rest of the task 1.13 plan was approved as written.
 
 For W5a, the skipped row and the location, no reason was recorded.
 
+### 79 — Task 1.14: `run_once` and bootstrap
+Approved by Ron, 2026-10-04. **Settles the six open points of `PHASE_1.md` 1.14; amends the Phase 1
+DoD item 2 and `BASELINE.md` §4 (wording).** Each point was presented to Ron as a recommendation
+with the reason given here, and he approved it. The rest of the task 1.14 plan was approved as
+written.
+
+- **D1. The bootstrap window is 24 hours,** a module constant next to the flag (`BOOTSTRAP_WINDOW`
+  in `tlv_hunter/jobs/run_once.py`).
+  *Why:* about 125 rows, about $0.19, up to 13 minutes of downloads; it leaves a wide margin under
+  the 30-minute budget on a busy day. (72 h was the alternative: more posts from quiet groups,
+  closer to the budget.)
+- **D2. The four real runs that close the DoD are approved as a plan:** A bootstrap; B a normal run
+  started at least 15 minutes after A ends; C a normal run killed during the photo download; D the
+  recovery. Each sends the $0.50 cap. Worst case 4 × $0.455 = $1.82, hard ceiling $2.00 ($2.50 if C
+  is repeated once). They run only after Ron's separate go.
+- **O1. `run_once` replaces `run_pipeline`; the Phase 0 exit test is ported.**
+  *Why:* `run_pipeline` calls the classifier stub and stores through `upsert` only, against "no
+  model in phase 1" and #64.
+- **O2. The store step,** a private function in `pipeline.py`. The order: the records of stored
+  canonicals outside the batch, then the batch canonicals, then the batch duplicates. Every post
+  goes through `upsert_with_lifecycle`, then `save_lifecycle`.
+  *Why (a finding of the 1.14 planning, confirmed by a test that fails under the provider's
+  order):* each write is its own transaction. The provider returns posts newest first, so a
+  duplicate usually comes before its canonical; a stored duplicate pointing at a canonical that is
+  not stored makes every later `dedup_a` raise, and collection stops for good. A stored canonical's
+  record saved after the new duplicate that changed it means, after a crash between the two, that
+  the duplicate is no longer new to the store (#75 E1): an archived canonical never comes back
+  (#74), and the #77 D4 repost download is lost.
+- **O3. A stored post with no lifecycle record,** found by `find_without_lifecycle` at the start of
+  every run, before the fetch: its record is built with `initial_lifecycle` and saved, and the run
+  logs at error level the count and the `listing_id`s.
+  *Why:* it should not happen; repairing and continuing is better than stopping collection.
+- **O4. `--bootstrap` on a store that already has records is allowed,** with a warning naming the
+  groups.
+  *Why:* today it is the only way to add a group (#78 W7).
+- **O6.** A relative `store_root` resolves against the repo root, not the working directory.
+- **O7. `annotate` raising on a post fails the run.**
+  *Why:* it is our own code, so a failure is a bug that must be seen.
+- **O8.** Log lines are JSON on stderr, each with the run's `run_id`.
+- **O9.** The watermark records are read again just before `advance`: a run overtaken by a later
+  one fails there and moves no watermark backwards.
+- **`store_root`:** created by a `--bootstrap` run; a normal run with no
+  `<store_root>/tlv_hunter.sqlite3` stops before anything is constructed. `SQLITE_FILENAME` lives in
+  the entry, `tlv_hunter/jobs/run_once.py`, the only code that constructs both modules (#65).
+- **Names, approved:** the `APIFY_TOKEN` environment variable, read in the entry only and never
+  logged; the module `tlv_hunter/jobs/run_once.py`; the `--bootstrap` flag.
+- **Wording:** Phase 1 DoD item 2 reads "a second run started at least 15 minutes after the first
+  ends". A bootstrap run stores everything inside its window, up to `max_posts` per group.
+  `BASELINE.md` §4: in phase 1 the post is stored before the model, as `"pending"`; the model
+  updates the stored post later. thedoor's log lines name the Apify run ID `apify_run`, so that
+  `run_id` is only ours.
+- **Not resolved:** #11 says the first run "sends one summary"; `BASELINE.md` §4 says a bootstrap
+  run alerts nothing. Ron decides when phase 4 is planned (`BACKLOG.md`).
+
+For O6, O8, O9, `store_root`, `SQLITE_FILENAME` and the names, no reason was recorded.
+
 ---
 
 ## Corrections to recorded facts

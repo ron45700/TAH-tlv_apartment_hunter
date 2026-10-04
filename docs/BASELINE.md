@@ -79,10 +79,13 @@ power-on after power loss, wired network.
 
 ```
 scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-model rejects
-          -> dedup A -> image download -> Gemini -> post-model rejects -> street/area
-          -> dedup B -> store -> per-user evaluation -> Telegram alert
+          -> dedup A -> image download -> store ("pending")
+          -> Gemini -> post-model rejects -> street/area -> dedup B -> update the stored post
+          -> per-user evaluation -> Telegram alert
 ```
 
+- **Stored before the model** (`DECISIONS.md` #79): in phase 1 the post is stored before the
+  model, as `"pending"`; the model updates the stored post later.
 - **Schedule:** every 30 minutes by default. No scheduled runs between 01:00 and 07:00 Israel
   time. The 07:00 run covers the whole night: its window starts at the last successful run. The hours live in config;
   later they are editable by the admin from the dashboard.
