@@ -547,7 +547,9 @@ media fallback. The rules and why:
 - **Images: photos only, one retry, a failure fails nothing.** Videos are not analysed and are
   shown as their link. A failed run blocks the window (invariant 2), so a lost image must never
   fail the run or the post. *Since #77 (2026-10-04): one retry within a run, and again on a
-  later run when the post is fetched again (D2); a disk write error fails the run (D5a).*
+  later run when the post is fetched again (D2); a disk write error fails the run (D5a). Since
+  #80 (2026-10-04): a network error waits on a schedule instead of the one retry, and failed
+  photos are retried from the stored link.*
 - **Images are downloaded for posts the model will reject.** Image download runs before the
   model in the data path, so at download time no verdict exists. For a rejected post what matters
   is its original text and link, so downloading its images costs nothing important. *Extended by
@@ -593,7 +595,8 @@ Approved by Ron, 2026-10-04.
   when the record's `listing_id` differs from the post's; `save_all` raises `ValueError` on a
   duplicate `group_id`.
 
-*Amended by #75 F3 (2026-10-04): `Repository` gains `get(listing_id) -> RawPost | None`.*
+*Amended by #75 F3 (2026-10-04): `Repository` gains `get(listing_id) -> RawPost | None`. Amended
+by #80 (2026-10-04): `Repository` gains `find_lifecycles_with_image_errors(prefixes)`.*
 
 *Why:* `state/` is the seam already listed in `CLAUDE.md` for the watermark.
 `upsert_with_lifecycle` and `find_without_lifecycle` exist because two separate writes could leave
@@ -621,7 +624,9 @@ Approved by Ron, 2026-10-04.
 - **Minimum SQLite version:** each module's constructor checks `sqlite3.sqlite_version_info` against
   a minimum constant and raises below it. The minimum is 3.24.0, the release that added UPSERT
   (`INSERT … ON CONFLICT (target) DO UPDATE / DO NOTHING`), checked against sqlite.org on
-  2026-10-04. The container's version is unknown (`ASSUMPTIONS.md` I8).
+  2026-10-04. The container's version is unknown (`ASSUMPTIONS.md` I8). *Amended by #80
+  (2026-10-04): the store module's minimum is 3.38.0, for the JSON functions; `state` keeps
+  3.24.0.*
 - **Known limit:** `save_lifecycle` is last-write-wins. Phase 1 has one writer. A contract test pins
   the behaviour, and the concurrent case is an open choice for phase 3 (`BACKLOG.md`).
 
@@ -947,6 +952,8 @@ the short `error` reasons; the function's input and output; tests through a fake
   is not attempted again and its error entry stays. The archive case (D4) is unchanged.
   *Why:* one rule for reposts, and no duplicate photos on the card, which is the reason behind
   #72.3.
+  *Amended by #80 (2026-10-04): a failed photo is also retried from the stored link, without a
+  re-fetch, while its post is less than 4 days old; the repost rule above still applies.*
 - **D3. Canonical and reposts new in the same run:** the canonical first, its retry included; then
   its duplicates in canonical-rule order, each checked after the previous one finishes.
   *Why:* otherwise the same photos are stored twice.
@@ -1098,6 +1105,91 @@ written.
   run alerts nothing. Ron decides when phase 4 is planned (`BACKLOG.md`).
 
 For O6, O8, O9, `store_root`, `SQLITE_FILENAME` and the names, no reason was recorded.
+
+### 80 — The photo download waits on a network error, and retries failed photos from the stored link
+Approved by Ron, 2026-10-04, after run A. **Amends #63 (the one retry within a run, for network
+errors only), #64 (`Repository` gains a method), #65 (the store module's minimum SQLite version)
+and #77 D2 (retry only on re-fetch); amends `PHASE_1.md` 1.12 and the 1.12 plan's "stored posts
+outside the batch are never downloaded".** The finding: in run A the laptop's network dropped at
+13:05:37Z and the downloader did not wait; every remaining photo failed at once, twice, 546
+attempts in 1.25 s. How long the outage lasted is unknown.
+
+1. **A network error waits, on a fixed schedule set by Ron.** When a download fails with a
+   network-type error, the whole download step waits 1 minute and tries the same photo again;
+   then 3 minutes; then 5; then a last attempt after 10 (`NETWORK_WAITS_SECS = (60, 180, 300,
+   600)` in `images/download.py`). Per outage, not per photo: any reply ends the waiting, and a
+   later network error starts the schedule again. A network error no longer gets #63's second
+   pass; other errors keep it.
+   *Why (Ron's words):* network drops are possible, though probably rare at home; a backup like
+   this is worth building properly so that data which could easily be saved is not lost.
+2. **Failed photos are retried from the stored link.** On every run, after the batch's own
+   downloads, the photos of stored posts whose entry is a network-type error or `not attempted:
+   time budget` are attempted again from the link already stored, with no Apify call. An HTTP
+   error (an expired link) replaces the entry and ends the retries. The repost rules hold: the
+   canonical's own photos first, then its reposts' in canonical-rule order, and a repost's only
+   while the canonical holds no image (#72.3, #77 D2, D3); an archived post is skipped (#77 D4);
+   a post in the batch is left to the batch path.
+   *Why:* free, it recovers the 53 posts of run A while their links live (about until
+   2026-10-08, I7 ASSUMED), and it heals any later outage and any time-budget overflow by itself.
+   A second bootstrap would cost about $0.32 and recover only part: two groups are cut off at 50.
+
+Each point below was presented to Ron as a recommendation with the reason given here, and he
+approved it.
+
+- **§4. The waits count inside the 30-minute download budget** (#77 D5b); a wait stops when the
+  budget runs out.
+  *Why:* a run's length stays bounded; what was not attempted is retried on the next run for
+  free. Without it a flapping network stretches a run with no upper bound.
+- **U1. A timeout counts as a network error in both cases:** the socket timeout and the 60-second
+  cap per photo. Network-type: `network: …` (DNS, connection, TLS, a dropped connection) and
+  `timeout`; never an HTTP status or a judged response.
+- **U2, as settled with Ron on 2026-10-04 while building:** no new error text. U2 was approved as
+  "photos skipped because the network is down are recorded as `not attempted: network down`";
+  under U3 no photo is skipped, so nothing would write it, and Ron chose to drop it. Every entry
+  records a real attempt.
+  *Why (U2's own):* an entry must not claim an attempt that never happened.
+- **U3. After the schedule runs out, each remaining photo is tried once without waiting; the first
+  reply restarts the schedule.** Settled with Ron while building: any reply counts, an HTTP or
+  content error included, since it shows the network is up.
+  *Why:* one dead host must not cost every other photo of the run; a real outage costs only fast
+  failures.
+- **U4. Stored-link retries never wait:** one attempt each per run, a network error stays on the
+  entry, and the budget still applies.
+  *Why:* one stored link that always fails must not cost 19 minutes on every run.
+- **U5. A stored link is retried only while the post's `fetched_at` is less than 4 days old**
+  (`STORED_LINK_MAX_AGE`, a module constant), measured from the run's start. For a repost's
+  photo, the repost's `fetched_at`. `fetched_at` is the first fetch: a post fetched again later
+  carries a newer link than its `fetched_at` says, so the limit errs on the short side.
+  *Why:* the design assumes an expired link returns an HTTP error, which has never been observed
+  (I7); if it fails as a network error or a timeout instead, hundreds of dead links would be
+  attempted on every run until archive. 4 days sits under the ~4.4-day link life and does not
+  rest on that assumption. One free GET on an expired run A link after 2026-10-08 is in
+  `BACKLOG.md`.
+- **U6.** A stored post that no longer contains the photo's `media_id` is skipped, and the entry
+  left as is.
+- **U7.** Accepted: a repost's entry blocked by the repost rule keeps its network error.
+- **Contract (#64 amended):** `Repository.find_lifecycles_with_image_errors(prefixes) ->
+  list[PostLifecycle]`, the records with at least one image entry whose `error` starts with one of
+  the prefixes, ordered by `listing_id`. Which errors to ask for stays in `images/download.py`.
+  SQLite answers with its JSON functions (`json_each` over `$.images`, `->>` on `error`); no layout
+  change. Both stores, with contract tests.
+  *Why:* without the method the whole store is scanned in Python on every run; the JSON query
+  matches the image entries exactly instead of depending on how the document is serialized.
+- **Minimum SQLite version (#65 amended):** the store module needs 3.38.0, the first release with
+  the JSON functions and operators built in by default (read on sqlite.org/json1.html,
+  2026-10-04); its constructor refuses an older SQLite. Ron: there is no constraint on the
+  version, since the home server is not built yet and will be set up to match. The `state`
+  module, which uses no JSON function, keeps 3.24.0.
+- **Names, approved:** `NETWORK_WAITS_SECS`; `find_lifecycles_with_image_errors`. `too slow` is
+  not introduced (U1); `not attempted: network down` was dropped (U2).
+- **`SCHEMA.md` Gate E download rule:** wording only. No field or type change; `schema_version`
+  stays 1.
+- **Found while building, fixed:** a stored canonical outside `dedup_a`'s result kept only the
+  first photo recorded into its record in one run; the rest were lost. Task 1.12's code; a
+  regression test now covers it. Run A was not affected: in a bootstrap every canonical is in the
+  batch.
+
+For U1, U6, U7, the minimum version and the names, no reason was recorded.
 
 ---
 

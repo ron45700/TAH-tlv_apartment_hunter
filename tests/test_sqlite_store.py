@@ -91,8 +91,9 @@ def test_no_connection_is_left_open(db_path: Path, posts) -> None:
 def test_refuses_a_sqlite_older_than_the_minimum(
     db_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 23, 1))
-    with pytest.raises(RuntimeError, match=r"'store' needs 3\.24\.0"):
+    # 3.38.0: the JSON functions built in by default (DECISIONS.md #80).
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 37, 2))
+    with pytest.raises(RuntimeError, match=r"'store' needs 3\.38\.0"):
         SqliteRepository(db_path)
     assert not db_path.exists()
 

@@ -24,7 +24,7 @@ from tlv_hunter.contracts.group_watermark import GroupWatermark
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.images import download
-from tlv_hunter.images.download import ImageResponse, ImageWriteError
+from tlv_hunter.images.download import ImageFetchError, ImageResponse, ImageWriteError
 from tlv_hunter.pipeline import RunResult, run_once
 from tlv_hunter.premodel.rejects import initial_lifecycle
 from tlv_hunter.providers.fixture import FixtureProvider
@@ -54,11 +54,19 @@ class Crash(Exception):
 
 
 class Cdn:
+    """Serves every photo, or fails DNS on every call while `down` is set."""
+
     def __init__(self) -> None:
         self.calls: list[str] = []
+        self.down = False
+        self.down_after: int | None = None
 
     def __call__(self, url: str) -> ImageResponse:
         self.calls.append(url)
+        if self.down_after is not None and len(self.calls) > self.down_after:
+            self.down = True
+        if self.down:
+            raise ImageFetchError("network: gaierror")
         return JPEG
 
 
@@ -112,6 +120,9 @@ class CrashingRepository:
     def find_without_lifecycle(self) -> list[RawPost]:
         return self._inner.find_without_lifecycle()
 
+    def find_lifecycles_with_image_errors(self, prefixes: Sequence[str]) -> list[PostLifecycle]:
+        return self._inner.find_lifecycles_with_image_errors(prefixes)
+
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]:
         return self._inner.find_by_hash(text_hash)
 
@@ -134,6 +145,7 @@ class Store:
     kind: str
     root: Path
     cdn: Cdn = field(default_factory=Cdn)
+    slept: list[float] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)  # the entry's job in production
@@ -168,6 +180,7 @@ class Store:
             clock=lambda: at,
             bootstrap_window=window,
             image_transport=self.cdn,
+            image_sleep=self.slept.append,
         )
 
     def snapshot(self) -> dict[str, tuple[RawPost, PostLifecycle | None]]:
@@ -508,6 +521,40 @@ def test_a_crash_after_an_archived_canonical_is_saved_converges(kind: str, tmp_p
         store.run(ListProvider([repost]), later)
         assert store.snapshot() == reference.snapshot(), f"crash before write {crash_at}"
         assert store.watermarks.get_all() == reference.watermarks.get_all()
+
+
+# --- the network drops during the download (DECISIONS.md #80) ---------------------------------
+
+
+def test_photos_lost_to_a_network_drop_are_recovered_by_the_next_run(store: Store) -> None:
+    """Run A's case: the network drops partway through the download and stays down. The run
+    waits the whole schedule once, tries the rest once each, and succeeds; the next run, with
+    nothing new in its batch, downloads them from the stored links."""
+    store.cdn.down_after = 10
+    store.run(ListProvider(_posts_20()), T20, window=WINDOW_20)
+    assert store.slept == [60, 180, 300, 600]  # once: then each photo is tried once (U3)
+    failed = [
+        image
+        for _, record in store.snapshot().values()
+        if record is not None
+        for image in record.images
+        if image.error is not None
+    ]
+    assert failed and all(image.error == "network: gaierror" for image in failed)
+    assert store.files() == store.referenced()
+
+    store.cdn.down, store.cdn.down_after = False, None
+    store.slept.clear()
+    store.run(ListProvider([]), T20 + timedelta(hours=1))
+    assert store.slept == []
+    for _, record in store.snapshot().values():
+        assert record is not None
+        left = [image for image in record.images if image.error is not None]
+        # U7: a repost's failure stays only where the canonical now holds an image.
+        assert all(image.listing_id != record.listing_id for image in left)
+        if left:
+            assert any(image.local_path for image in record.images)
+    assert store.files() == store.referenced()
 
 
 # --- find_without_lifecycle --------------------------------------------------------------------

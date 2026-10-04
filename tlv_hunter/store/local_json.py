@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
 
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
@@ -56,6 +57,22 @@ class LocalJsonRepository:
 
     def find_without_lifecycle(self) -> list[RawPost]:
         return [post for post in self.query() if not self._lifecycle_path(post.listing_id).exists()]
+
+    def find_lifecycles_with_image_errors(self, prefixes: Sequence[str]) -> list[PostLifecycle]:
+        if not self._lifecycle_dir.is_dir():
+            return []
+        records = (
+            PostLifecycle.model_validate_json(path.read_text(encoding="utf-8"))
+            for path in sorted(self._lifecycle_dir.glob("*.json"))
+        )
+        return [
+            record
+            for record in records
+            if any(
+                image.error is not None and image.error.startswith(tuple(prefixes))
+                for image in record.images
+            )
+        ]
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]:
         if text_hash is None:

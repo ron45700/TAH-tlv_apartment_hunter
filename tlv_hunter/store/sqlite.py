@@ -1,5 +1,5 @@
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -7,8 +7,10 @@ from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.textnorm.phones import canonical_phone
 
-# UPSERT with a conflict target (INSERT ... ON CONFLICT(col) DO UPDATE / DO NOTHING), 3.24.0.
-MIN_SQLITE_VERSION = (3, 24, 0)
+# The JSON functions and operators built in by default, used by
+# find_lifecycles_with_image_errors: 3.38.0, read on sqlite.org/json1.html on 2026-10-04
+# (DECISIONS.md #80). It covers UPSERT with a conflict target, 3.24.0 (#65).
+MIN_SQLITE_VERSION = (3, 38, 0)
 LAYOUT_MODULE = "store"
 LAYOUT_VERSION = 1
 
@@ -104,6 +106,21 @@ class SqliteRepository:
             "LEFT JOIN post_lifecycle l ON l.listing_id = p.listing_id "
             "WHERE l.listing_id IS NULL ORDER BY p.listing_id"
         )
+
+    def find_lifecycles_with_image_errors(self, prefixes: Sequence[str]) -> list[PostLifecycle]:
+        if not prefixes:
+            return []
+        wanted = ", ".join("(?)" for _ in prefixes)
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT l.doc FROM post_lifecycle l WHERE EXISTS ("
+                "SELECT 1 FROM json_each(l.doc, '$.images') AS image, "
+                f"(VALUES {wanted}) AS wanted "
+                "WHERE substr(image.value ->> '$.error', 1, length(wanted.column1)) "
+                "= wanted.column1) ORDER BY l.listing_id",
+                tuple(prefixes),
+            ).fetchall()
+        return [PostLifecycle.model_validate_json(doc) for (doc,) in rows]
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]:
         if text_hash is None:

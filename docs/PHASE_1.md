@@ -276,7 +276,12 @@ fails the run (#77 D5a).
   repost's photos, retries included, are attempted only while the canonical holds no image
   (#77 D2, amended in the review); a canonical's own photos not held are retried whenever it is
   fetched again (D2).
-- Photos only, no video or reels (Gate E). Stored posts outside the batch are never downloaded.
+- Photos only, no video or reels (Gate E). Stored posts outside the batch are never downloaded;
+  *amended by #80 (2026-10-04): a stored post's failed photo (a network error, or not attempted
+  for the budget) is retried from the stored link while the post is less than 4 days old.*
+- *#80 (2026-10-04), after run A:* a network error waits 1, 3, 5 and 10 minutes, per outage,
+  inside the budget, instead of #63's one retry; after the schedule, each remaining photo is
+  tried once until any reply. Tests: `tests/test_image_network.py`.
 
 **Settled by #77:** where the files live (D1), retry on a later run (D2), the order in one run
 (D3), the archived reading (D4), a 30-minute budget (D5b, amended from 10 in the review: a run
@@ -369,7 +374,7 @@ run, the recovery). `tests/test_run_once_job.py`: the command through the fake A
 | Run | What it does | Checked after |
 |---|---|---|
 | A | `--bootstrap`, all six groups | Six watermark records; every post has a record; files match `local_path` references |
-| B | A normal run, started at least 15 minutes after A ends | Nothing stored twice; first `fetched_at` kept; no held photo downloaded again; `last_success_at` is B's start |
+| B | A normal run, started at least 15 minutes after A ends | Nothing stored twice; first `fetched_at` kept; no held photo downloaded again; `last_success_at` is B's start. Run A's 228 failed own photos retried from the stored links (#80); its 45 repost entries keep their error (#80 U7) |
 | C | A normal run 1–2 hours after B, killed during the photo download | Watermark records unchanged since B |
 | D | A normal run right after C | `since` is B's start minus the buffer; C's window stored once; files match references |
 

@@ -247,3 +247,64 @@ def test_find_without_lifecycle_returns_exactly_the_posts_without_a_record(
 
     missing = {post.listing_id for post in make_repository().find_without_lifecycle()}
     assert missing == {post.listing_id for post in posts[5:]}
+
+
+# --- find_lifecycles_with_image_errors (DECISIONS.md #80) ---
+
+
+def _image(post: RawPost, media_id: str, error: str | None) -> PostImage:
+    local_path = None if error is not None else f"images/{post.listing_id}/{media_id}.jpg"
+    return PostImage(
+        listing_id=post.listing_id, media_id=media_id, local_path=local_path, error=error
+    )
+
+
+def test_find_lifecycles_with_image_errors_matches_the_entries_by_prefix(
+    make_repository: MakeRepository, posts
+) -> None:
+    repo = make_repository()
+    images = {
+        0: [_image(posts[0], "a", None), _image(posts[0], "b", "network: gaierror")],
+        1: [_image(posts[1], "a", "timeout")],
+        2: [_image(posts[2], "a", "http 403"), _image(posts[2], "b", None)],
+        3: [],
+        4: [_image(posts[4], "a", "not attempted: time budget")],
+    }
+    for index, entries in images.items():
+        repo.upsert_with_lifecycle(posts[index], _pending(posts[index], images=entries))
+
+    found = make_repository().find_lifecycles_with_image_errors(("network: ", "timeout"))
+    expected = sorted([posts[0].listing_id, posts[1].listing_id])
+    assert [record.listing_id for record in found] == expected
+    assert found[0] == make_repository().get_lifecycle(expected[0])
+
+    every = make_repository().find_lifecycles_with_image_errors(
+        ("network: ", "timeout", "not attempted: time budget", "http ")
+    )
+    assert len(every) == 4
+    assert make_repository().find_lifecycles_with_image_errors(()) == []
+    assert make_repository().find_lifecycles_with_image_errors(("too large",)) == []
+
+
+def test_find_lifecycles_with_image_errors_reads_only_the_error_field_from_its_start(
+    make_repository: MakeRepository, posts
+) -> None:
+    repo = make_repository()
+    # The prefix in other fields, or inside an error, is not a match.
+    noted = _pending(
+        posts[0],
+        state="rejected",
+        rejection_reason="flagged",
+        flagged_by="ron",
+        flagged_at=datetime(2026, 10, 4, 9, 0, tzinfo=UTC),
+        flag_note="network: gaierror",
+        images=[_image(posts[0], "network: gaierror", "http 404 network: gaierror")],
+    )
+    repo.upsert_with_lifecycle(posts[0], noted)
+    assert make_repository().find_lifecycles_with_image_errors(("network: ",)) == []
+
+
+def test_find_lifecycles_with_image_errors_on_an_empty_store(
+    make_repository: MakeRepository,
+) -> None:
+    assert make_repository().find_lifecycles_with_image_errors(("network: ",)) == []

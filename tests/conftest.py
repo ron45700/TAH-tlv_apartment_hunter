@@ -1,5 +1,6 @@
 import json
 import socket
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -35,6 +36,20 @@ class NetworkBlockedError(RuntimeError):
 
 def _refuse_network(*args: Any, **kwargs: Any) -> None:
     raise NetworkBlockedError("tests must not open network connections")
+
+
+class RealSleepError(RuntimeError):
+    pass
+
+
+def _refuse_sleep(seconds: float) -> None:
+    raise RealSleepError(f"tests must not really sleep ({seconds} s); inject a sleep")
+
+
+@pytest.fixture(autouse=True)
+def _block_real_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The network waits of the photo download (DECISIONS.md #80) go through an injected sleep."""
+    monkeypatch.setattr(time, "sleep", _refuse_sleep)
 
 
 @pytest.fixture(autouse=True)

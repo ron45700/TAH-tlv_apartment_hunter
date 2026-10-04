@@ -5,7 +5,12 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-04 (task 1.13) — **`GroupWatermark` rules, rule text only:**
+**Last updated:** 2026-10-04 (#80) — **Gate E download rule, wording only:** a network error waits on a fixed
+schedule instead of the one retry within a run; a failed photo is also retried from the stored link
+while its post is less than 4 days old. Approved by Ron (`DECISIONS.md` #80). No field or type changed;
+`schema_version` stays 1.
+
+**Earlier on 2026-10-04 (task 1.13):** **`GroupWatermark` rules, rule text only:**
 `watermark`, `last_success_at` and `consecutive_failures` have their rules; the `posted_at` row
 says that "never run time" is about `watermark`, while the run's window starts from
 `last_success_at`. Approved by Ron (`DECISIONS.md` #78 W1, W5a, W5b). No field or type changed;
@@ -321,9 +326,13 @@ Exactly one of `local_path` and `error` is set.
   either. This is the rejection rule; the download rule below is separate.
 - **Images (download):** photos are downloaded for every canonical post that has photos, whatever
   its state, a `no_text` post included (`DECISIONS.md` #76). Photos only, no video or reels (a
-  video shows its `page_url` link). One retry within a run; on a later run, whenever a post is
+  video shows its `page_url` link). One retry within a run for an error that is not a network
+  error; a network error (DNS, connection, timeout) waits 1, 3, 5 and 10 minutes, per outage,
+  inside the run's download budget (`DECISIONS.md` #80). On a later run, whenever a post is
   fetched again, each of its own photos not held is attempted again and its error entry is
-  replaced by the new result (#77 D2). A repost's photos, retries included, are attempted only
+  replaced by the new result (#77 D2). On every run, a photo whose entry is a network error or
+  `not attempted: time budget` is also attempted once from the stored link, without a fetch,
+  while its post is less than 4 days old; an HTTP error replaces the entry and ends it (#80). A repost's photos, retries included, are attempted only
   while the canonical holds no image; once it holds one, a repost's failed photo keeps its error
   entry (#77 D2, amended). A failed download fails neither the run nor the post.
 - Images are downloaded also for posts the model will reject, and deleted at archive like any post.

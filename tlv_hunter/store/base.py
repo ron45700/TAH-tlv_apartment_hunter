@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
@@ -21,6 +22,11 @@ class Repository(Protocol):
     def get_lifecycle(self, listing_id: str) -> PostLifecycle | None: ...
 
     def find_without_lifecycle(self) -> list[RawPost]: ...
+
+    def find_lifecycles_with_image_errors(self, prefixes: Sequence[str]) -> list[PostLifecycle]:
+        """The records with at least one image entry whose `error` starts with one of `prefixes`,
+        ordered by listing_id. Which errors to ask for is the caller's rule (DECISIONS.md #80)."""
+        ...
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]: ...
 

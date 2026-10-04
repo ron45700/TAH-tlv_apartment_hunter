@@ -26,7 +26,8 @@ Phase 1, as detailed in `PHASE_1.md`.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
-| 1 | The real runs that close the Phase 1 DoD: A bootstrap, B a normal run started at least 15 minutes after A ends, C killed during the photo download, D the recovery (`DECISIONS.md` #79 D2) | `PHASE_1.md` 1.14 | Ron's separate go, after the code review of task 1.14. Each run sends the $0.50 cap; worst case $1.82 for four runs, hard ceiling $2.00 ($2.50 if C is repeated once). Then `PHASE_1.md` §3, end of phase |
+| 1 | The remaining real runs that close the Phase 1 DoD (run A is in `SESSION_LOG.md`): B a normal run started at least 15 minutes after A ends, C killed during the photo download, D the recovery (`DECISIONS.md` #79 D2) | `PHASE_1.md` 1.14 | `DECISIONS.md` #80 is built (2026-10-04): run B retries run A's failed photos from the stored links, which live about until 2026-10-08 (`ASSUMPTIONS.md` I7, ASSUMED). B, C and D each need Ron's separate go. Each run sends the $0.50 cap; worst case $1.82 for four runs, hard ceiling $2.00 ($2.50 if C is repeated once). Then `PHASE_1.md` §3, end of phase |
+| 2 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
 
 ---
 
@@ -64,7 +65,9 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | The admin lists (rejected, pending, archive) show canonicals only (`DECISIONS.md` #75 B) | Phase 3 |
 | Whether a duplicate's retention follows its own clock or its canonical's (`DECISIONS.md` #75 B). Note: `dedup_a` raises when a stored duplicate points at a canonical that is not stored, so deleting a canonical before its duplicates would block the run | Phase 5 |
 | The phone as a candidate signal for dedup B; layer 3 of dedup A produces nothing (`DECISIONS.md` #75 C) | Gate D |
+| Measure a week of real runs before concluding on volume and monthly cost. Run A, a weekday, returned 212 rows in 24 h with two groups cut off at 50, against the ~125–150 estimated from weekend data (`ASSUMPTIONS.md` P7); the ~$12–16/month Ron accepted may be low. Approved by Ron, 2026-10-04 | Before any conclusion on volume or cost; each run is paid and approved by Ron |
 | A daily wide run covering 24 h, about $5/month, to heal a per-group miss within a day (`DECISIONS.md` #78 W1) | Phase 5, the scheduler |
+| Check the container's SQLite version against the store module's minimum, 3.38.0 (the JSON functions built in by default, `DECISIONS.md` #80); the constructor refuses an older one. `ASSUMPTIONS.md` I8 | Phase 5, when the server is set up |
 | The alert thresholds on `consecutive_failures` (zero-row successful runs). A healthy group can be silent for 31 h, about 49 runs (`DECISIONS.md` #78 W5b, `RESEARCH.md` §9) | Phase 5 |
 | Detect a group that fails inside a successful run from the run log, and hold back only that group (`DECISIONS.md` #78 W4). Needs the run-log endpoint verified under the `external-contract-verification` skill, one small test run against an unreachable group (about $0.01; Ron approves it when planned), and `fetch()` returning per-group status (a provider contract change). Rests on P13, ASSUMED | Its own task, when Ron schedules it |
 | Groups × `max_posts` must stay below the charge cap's `maxItems` (333 at $0.50); a seventh group at 50 crosses it (`DECISIONS.md` #78 W3) | Planning group editing (phase 6) |
@@ -79,6 +82,7 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 |---|---|
 | A group that fails inside a successful run advances like the others; its window is lost (`DECISIONS.md` #78 W4) | Posts missed for good, until the run-log task above exists |
 | A group at `max_posts` short of its window still advances; `advance` reports it (`DECISIONS.md` #78 W3) | The posts between its window start and its oldest returned post may be missed for good. A row skipped under #71 D lowers the count, and such a group can go unreported |
+| A repost's photo that failed while its canonical held nothing keeps its error once the canonical holds an image (`DECISIONS.md` #77 D2, #80 U7) | The record still reads `network: …` for that photo; it is never retried. The stored-link query returns the record on every run, and it is skipped |
 | A run killed during `fetch()` (Ctrl+C, `taskkill`) does not abort its Apify run: only the run deadline aborts (`DECISIONS.md` #71 F, #79) | The Apify run finishes and is billed, up to the $0.50 cap; its dataset is never read. The watermark does not move |
 | `dedup_a` finds a canonical's stored duplicates through the hashes of the canonical and of its batch duplicates (`DECISIONS.md` #75 D1). A stored duplicate with media whose text was edited later has a different hash and is not found | #70 can miss it, and a canonical with no media can return to `"rejected"` |
 

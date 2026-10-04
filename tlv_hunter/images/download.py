@@ -1,8 +1,9 @@
-"""Task 1.12: photo download (DECISIONS.md #63, #70, #72.3, #73.5, #76, #77).
+"""Task 1.12: photo download (DECISIONS.md #63, #70, #72.3, #73.5, #76, #77, #80).
 
 Reads the Repository and writes nothing to it: the lifecycle records are returned, and the store
 step is task 1.14. Files are written under `<store_root>/images/`. A failed download fails neither
-the run nor the post; a disk write error fails the run (#77 D5a).
+the run nor the post; a disk write error fails the run (#77 D5a). A network error waits on a fixed
+schedule, and failed photos of stored posts are retried from the stored link (#80).
 """
 
 import hashlib
@@ -12,8 +13,9 @@ import os
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Protocol
 
@@ -33,6 +35,16 @@ MAX_IMAGE_BYTES = 20 * 1024 * 1024
 # The whole download step; a hanging CDN must not hang the run (#77 D5b).
 TIME_BUDGET_SECS = 1800
 NOT_ATTEMPTED = "not attempted: time budget"
+# After a network error the whole step waits, then tries the same photo again, per outage (#80).
+# The waits count inside TIME_BUDGET_SECS.
+NETWORK_WAITS_SECS = (60, 180, 300, 600)
+# A stored link is retried only while its post was first fetched less than this long ago: links
+# live about 4.4 days (ASSUMPTIONS.md I7), and what an expired one returns is unknown (#80 U5).
+STORED_LINK_MAX_AGE = timedelta(days=4)
+TIMEOUT = "timeout"
+NETWORK = "network: "
+# The errors retried from the stored link (#80 decision 2): the network-type ones, and the budget.
+RETRYABLE_ERRORS = (NETWORK, TIMEOUT, NOT_ATTEMPTED)
 _CHUNK_BYTES = 64 * 1024
 
 logger = logging.getLogger(__name__)
@@ -75,18 +87,24 @@ def urllib_image_transport(url: str) -> ImageResponse:
                 if len(body) > MAX_IMAGE_BYTES:
                     raise ImageFetchError("too large")
                 if time.monotonic() - started > IMAGE_CAP_SECS:
-                    raise ImageFetchError("timeout")
+                    raise ImageFetchError(TIMEOUT)
             return ImageResponse(response.status, response.headers.get("Content-Type"), bytes(body))
     except urllib.error.HTTPError as error:
         return ImageResponse(error.code, error.headers.get("Content-Type"), b"")
     except urllib.error.URLError as error:
         if isinstance(error.reason, TimeoutError):
-            raise ImageFetchError("timeout") from None
-        raise ImageFetchError(f"network: {type(error.reason).__name__}") from None
+            raise ImageFetchError(TIMEOUT) from None
+        raise ImageFetchError(f"{NETWORK}{type(error.reason).__name__}") from None
     except TimeoutError:
-        raise ImageFetchError("timeout") from None
+        raise ImageFetchError(TIMEOUT) from None
     except (OSError, http.client.HTTPException) as error:
-        raise ImageFetchError(f"network: {type(error).__name__}") from None
+        raise ImageFetchError(f"{NETWORK}{type(error).__name__}") from None
+
+
+def is_network_error(reason: str | None) -> bool:
+    """A network-type failure (#80): DNS, connection, TLS, and both timeouts (U1). Never an HTTP
+    status or a judged response."""
+    return reason is not None and (reason == TIMEOUT or reason.startswith(NETWORK))
 
 
 def download_images(
@@ -95,13 +113,20 @@ def download_images(
     store_root: Path,
     transport: ImageTransport = urllib_image_transport,
     clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] | None = None,
+    now: datetime | None = None,
 ) -> DedupResult:
     """`dedup_a`'s result with the photos downloaded and recorded in the lifecycle records.
 
     `posts` is returned unchanged. `lifecycles` keeps its records and order, with `images`
-    updated; a stored canonical outside it whose record gained images is added at the end.
+    updated; a stored canonical outside it whose record changed is added at the end: it gained
+    images, or a stored link was retried (#80). `now` is the run's start, for the age of a
+    stored link. `sleep` defaults to `time.sleep`, looked up at the call so that tests can
+    refuse it.
     """
-    run = _Run(repository, Path(store_root), transport, clock)
+    run = _Run(
+        repository, Path(store_root), transport, clock, time.sleep if sleep is None else sleep
+    )
     for record in result.lifecycles:
         run.records[record.listing_id] = record
 
@@ -125,14 +150,22 @@ def download_images(
         for duplicate in duplicates:
             run.download(canonical_id, duplicate, run.repost_photos(canonical_id, duplicate))
 
+    # After the batch, whose links are fresh (#80 decision 2).
+    run.retry_stored(
+        {post.listing_id for post in result.posts}, datetime.now(UTC) if now is None else now
+    )
+
     logger.info(
-        "images: %d held, %d failed, %d not attempted",
+        "images: %d held, %d failed, %d not attempted; stored links: %d retried, %d held",
         run.held,
         run.failed,
         run.not_attempted,
+        run.retried,
+        run.retried_held,
     )
     lifecycles = tuple(run.records[record.listing_id] for record in result.lifecycles)
-    return DedupResult(posts=result.posts, lifecycles=lifecycles + tuple(run.added.values()))
+    added = tuple(run.records[listing_id] for listing_id in run.added)
+    return DedupResult(posts=result.posts, lifecycles=lifecycles + added)
 
 
 class _Run:
@@ -142,15 +175,21 @@ class _Run:
         store_root: Path,
         transport: ImageTransport,
         clock: Callable[[], float],
+        sleep: Callable[[float], None],
     ) -> None:
         self._repository = repository
         self._store_root = store_root
         self._transport = transport
         self._clock = clock
+        self._sleep = sleep
         self._started = clock()
+        # The schedule ran out: each photo is tried once, without waiting, until any reply (#80 U3).
+        self._network_down = False
+        self.retried = self.retried_held = 0
         self.records: dict[str, PostLifecycle] = {}
-        self.added: dict[str, PostLifecycle] = {}
-        """Stored canonical records outside `dedup_a`'s result that gained images."""
+        self.added: list[str] = []
+        """Stored canonicals outside `dedup_a`'s result whose record changed, in order. Their final
+        record is in `records`, so that every change after the first is kept too."""
         self._stored: dict[str, PostLifecycle | None] = {}
         self._held_this_run: set[str] = set()
         self.held = self.failed = self.not_attempted = 0
@@ -215,17 +254,19 @@ class _Run:
         for attempt in (1, 2):
             failed = []
             for photo in pending:
-                if self._clock() - self._started >= TIME_BUDGET_SECS:
+                if self._out_of_time():
                     # #77 D5b. A retry not attempted keeps the first attempt's error.
                     if attempt == 1:
                         self._set(canonical_id, _failure(post, photo, NOT_ATTEMPTED))
                     continue
-                image = self._fetch(post, photo)
+                image = self._attempt(post, photo, wait=True)
                 self._set(canonical_id, image)
-                if image.local_path is None:
-                    failed.append(photo)
-                else:
+                if image.local_path is not None:
                     self._held_this_run.add(canonical_id)
+                elif not is_network_error(image.error):
+                    # The one retry within a run (#63) is for other errors; a network error has
+                    # had its waits instead (#80).
+                    failed.append(photo)
             pending = failed
         for photo in attempted:
             entry = _entry(self.record(canonical_id), post.listing_id, photo.media_id)
@@ -242,6 +283,107 @@ class _Run:
                     photo.media_id,
                     entry.error,
                 )
+
+    def retry_stored(self, batch_ids: Collection[str], now: datetime) -> None:
+        """#80 decision 2: the failed photos of stored posts, from the stored link, with no Apify
+        call. One attempt each per run, never a wait (U4); the budget still applies."""
+        for stored in self._repository.find_lifecycles_with_image_errors(RETRYABLE_ERRORS):
+            canonical_id = stored.listing_id
+            if canonical_id in batch_ids:
+                continue  # the batch path retried it with a fresh link (#77 D2)
+            before = self.stored(canonical_id)
+            if self.record(canonical_id).state == "archived" or (
+                before is not None and before.state == "archived"
+            ):
+                continue  # #77 D4: an archived post downloads nothing
+            entries = [
+                image
+                for image in self.record(canonical_id).images
+                if image.local_path is None
+                and image.error is not None
+                and image.error.startswith(RETRYABLE_ERRORS)
+                and image.listing_id not in batch_ids
+            ]
+            for entry in entries:
+                if entry.listing_id == canonical_id:
+                    self._retry(canonical_id, entry, now)
+            reposts = [entry for entry in entries if entry.listing_id != canonical_id]
+            for entry, post in self._in_canonical_order(reposts):
+                # #77 D2 for reposts: only while the canonical holds no image (U7).
+                if any(image.local_path for image in self.record(canonical_id).images):
+                    break
+                self._retry(canonical_id, entry, now, post)
+
+    def _in_canonical_order(self, entries: list[PostImage]) -> list[tuple[PostImage, RawPost]]:
+        """#77 D3: reposts in canonical-rule order. An entry whose post is gone is skipped."""
+        found = [(entry, self._repository.get(entry.listing_id)) for entry in entries]
+        ordered = [(entry, post) for entry, post in found if post is not None]
+        return sorted(ordered, key=lambda pair: (pair[1].posted_at, pair[1].listing_id))
+
+    def _retry(
+        self, canonical_id: str, entry: PostImage, now: datetime, post: RawPost | None = None
+    ) -> None:
+        if self._out_of_time():
+            return  # the entry stays as it is; the next run tries again
+        post = self._repository.get(entry.listing_id) if post is None else post
+        if post is None or now - post.fetched_at >= STORED_LINK_MAX_AGE:
+            return  # U5: the link may have expired; the entry stays
+        photo = next((item for item in _photos(post) if item.media_id == entry.media_id), None)
+        if photo is None:
+            return  # U6: the stored post no longer has this photo; the entry is left as is
+        image = self._attempt(post, photo, wait=False)
+        self._set(canonical_id, image)
+        self.retried += 1
+        if image.local_path is not None:
+            self.retried_held += 1
+            self._held_this_run.add(canonical_id)
+        else:
+            logger.warning(
+                "stored link failed: listing %s media %s: %s",
+                post.listing_id,
+                photo.media_id,
+                image.error,
+            )
+
+    def _attempt(self, post: RawPost, photo: Media, *, wait: bool) -> PostImage:
+        """One photo. A network error waits on the schedule and tries the same photo again (#80
+        decision 1); any reply restarts the schedule. The waits count inside the budget, and a
+        wait stops when the budget runs out (#80 §4)."""
+        image = self._fetch(post, photo)
+        if not is_network_error(image.error):
+            self._network_down = False
+            return image
+        if not wait or self._network_down:
+            return image
+        for number, seconds in enumerate(NETWORK_WAITS_SECS, start=1):
+            remaining = TIME_BUDGET_SECS - (self._clock() - self._started)
+            if remaining <= 0:
+                return image
+            logger.warning(
+                "network error (%s) on listing %s media %s: waiting %d s (%d of %d)",
+                image.error,
+                post.listing_id,
+                photo.media_id,
+                seconds,
+                number,
+                len(NETWORK_WAITS_SECS),
+            )
+            self._sleep(min(seconds, remaining))
+            if self._out_of_time():
+                return image
+            image = self._fetch(post, photo)
+            if not is_network_error(image.error):
+                return image
+        # U3: the rest of the run's photos are tried once each, without waiting, until any reply.
+        self._network_down = True
+        logger.error(
+            "network still down after %d s of waiting; trying each remaining photo once",
+            sum(NETWORK_WAITS_SECS),
+        )
+        return image
+
+    def _out_of_time(self) -> bool:
+        return self._clock() - self._started >= TIME_BUDGET_SECS
 
     def _fetch(self, post: RawPost, photo: Media) -> PostImage:
         try:
@@ -268,11 +410,9 @@ class _Run:
         else:
             images.append(image)
         updated = PostLifecycle(**{**dict(record), "images": images})
-        if canonical_id in self.records:
-            self.records[canonical_id] = updated
-        else:
-            self.added[canonical_id] = updated
-            self.records[canonical_id] = updated
+        if canonical_id not in self.records:
+            self.added.append(canonical_id)
+        self.records[canonical_id] = updated
 
 
 def _photos(post: RawPost) -> list[Media]:

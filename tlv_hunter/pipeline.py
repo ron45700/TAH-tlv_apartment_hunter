@@ -52,6 +52,7 @@ def run_once(
     clock: Callable[[], datetime],
     bootstrap_window: timedelta | None = None,
     image_transport: ImageTransport = urllib_image_transport,
+    image_sleep: Callable[[float], None] | None = None,
 ) -> RunResult:
     """One run. `bootstrap_window` set means a bootstrap run: the window is that long, back from
     `run_started_at`, and configured groups with no watermark record get one."""
@@ -83,7 +84,14 @@ def run_once(
         result = dedup_a(annotated, repository)
 
         step = "images"
-        result = download_images(result, repository, Path(store_root), image_transport)
+        result = download_images(
+            result,
+            repository,
+            Path(store_root),
+            image_transport,
+            sleep=image_sleep,
+            now=run_started_at,
+        )
 
         step = "store"
         _store(result, repository)

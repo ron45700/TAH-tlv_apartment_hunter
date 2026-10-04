@@ -259,6 +259,27 @@ def test_a_stored_canonical_outside_the_result_is_returned_at_the_end(repo, base
     ]
 
 
+def test_every_change_to_a_stored_canonical_outside_the_result_is_kept(
+    repo, base, tmp_path
+) -> None:
+    """Regression, found building #80: only the first photo recorded into such a record was
+    returned; the second was lost."""
+    canonical = _seed(repo, _post(base, "1", [_media("c1")], minutes=60))
+    repo.save_lifecycle(
+        repo.get_lifecycle(canonical.listing_id).model_copy(
+            update={"images": [_failed(canonical.listing_id, "c1")]}
+        )
+    )
+    late = _post(base, "2", [_media("r1"), _media("r2")], minutes=0)
+    result = download_images(dedup_a([late], repo), repo, tmp_path, FakeTransport())
+    assert [r.listing_id for r in result.lifecycles] == [late.listing_id, canonical.listing_id]
+    assert _outcomes(result.lifecycles[-1]) == [
+        (canonical.listing_id, "c1", False),
+        (late.listing_id, "r1", True),
+        (late.listing_id, "r2", True),
+    ]
+
+
 # --- #77 D1: where the files live ---
 
 
@@ -306,15 +327,18 @@ def test_a_failure_then_success_gives_one_held_entry(repo, base, tmp_path) -> No
         (ImageResponse(200, None, JPEG), "not an image: no content type"),
         (ImageResponse(200, "image/jpeg", b""), "empty body"),
         (ImageResponse(200, "image/jpeg", b"GIF89a..."), "unrecognized bytes"),
-        (ImageFetchError("timeout"), "timeout"),
-        (ImageFetchError("network: ConnectionResetError"), "network: ConnectionResetError"),
+        (ImageFetchError("too large"), "too large"),
     ],
 )
 def test_two_failures_are_recorded_and_fail_nothing(repo, base, tmp_path, answer, error) -> None:
+    # Errors that are not network-type: the one retry within the run, and never a wait. A network
+    # error or a timeout waits instead (DECISIONS.md #80, tests/test_image_network.py).
     post = _post(base, "1", [_media("bad"), _media("good")])
     transport = FakeTransport({"bad": [answer]})
-    result = _run(repo, [post], tmp_path, transport)
+    slept: list[float] = []
+    result = _run(repo, [post], tmp_path, transport, sleep=slept.append)
     assert transport.calls == ["bad", "good", "bad"]
+    assert slept == []
     record = _record(result, post)
     assert record.images[0] == _failed(post.listing_id, "bad", error)
     assert record.images[1].local_path is not None

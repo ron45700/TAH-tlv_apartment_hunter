@@ -2,7 +2,7 @@
 posts out, the second run leaves the store unchanged, the first `fetched_at` is kept. No model."""
 
 import socket
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -57,6 +57,9 @@ class SpyRepository:
 
     def find_without_lifecycle(self) -> list[RawPost]:
         return self._inner.find_without_lifecycle()
+
+    def find_lifecycles_with_image_errors(self, prefixes: Sequence[str]) -> list[PostLifecycle]:
+        return self._inner.find_lifecycles_with_image_errors(prefixes)
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]:
         return self._inner.find_by_hash(text_hash)

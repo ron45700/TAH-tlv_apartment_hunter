@@ -1357,3 +1357,192 @@ docs. No network, no paid run, no git. `data/store` was not created.
 
 Ron's code review of task 1.14, then his separate go for the real runs A–D (#79 D2, `BACKLOG.md`
 item 1). Then `PHASE_1.md` §3, end of phase.
+
+---
+
+## 2026-10-04 (continued) — Run A, the bootstrap run
+
+### Done
+
+Run A, approved by Ron (#79 D2), run once:
+`uv run --env-file .env python -m tlv_hunter.jobs.run_once --bootstrap`, 12:55:08 → 13:05:42 UTC,
+**exit 0**. No code or config change; no git. Runs B, C and D were not started.
+
+- **Before the run:** `uv run pytest` 517 passed; `ruff check` and `ruff format --check` clean.
+  `data/store` did not exist. `.env` holds `APIFY_TOKEN`: 46 characters, unquoted, delivered the
+  same way by `uv run --env-file` (lengths checked, value never printed).
+- **Saved in `data/runs/run_A_2026-10-04/`** (gitignored): the JSON log, exit code, start and end
+  times, the output of two read-only check scripts (`scratch/check_run_A.py`,
+  `scratch/check_run_A_failures.py`, counts and hostnames only, the database opened with `mode=ro`),
+  and `REPORT.md`.
+- **`ASSUMPTIONS.md`:** P20 added (`fetch()`'s regular call against the live API, VERIFIED).
+  Evidence added to P6, P7 (contradicted once, still ASSUMED), P19, I6, I9 and I11.
+- **`BACKLOG.md`:** item 1 marks A done and records the photo finding for Ron.
+
+### Verified
+
+- **Fetch:** Apify run `PI0qBslZY0nAeaIi5` `SUCCEEDED` in 60 s. 212 rows: 38, 49, 50, 18, 7 and 50
+  per group; skipped 0, dropped 0.
+  - `101875683484689` and `295395253832427` were cut off at 50. Their oldest posts were
+    2026-10-04 08:11Z and 2026-10-03 17:20Z, against a window start of 2026-10-03 12:55Z.
+  - The plan estimated about 125 rows.
+- **Store:**
+  - 212 posts: 184 canonical, 28 duplicate. 0 duplicates pointing at a missing or non-canonical
+    post; 0 canonicals sharing a hash; **0 posts without a lifecycle record**.
+  - States: `pending` 183, `rejected` 29 (`no_images` 21, `no_text` 8).
+  - Images 58.5 MB, database 2.6 MB.
+- **Photos:**
+  - 688 entries: 415 held, 273 failed, 0 not attempted; 45 entries from reposts.
+  - 415 files on disk against 415 references, matching both ways; all JPEG.
+  - The download took 564 s, about 1.36 s per photo, with no 403, 429 or timeout.
+- **Watermarks:** six records, `last_success_at` 2026-10-04T12:55:09.201Z, all
+  `consecutive_failures` 0 (`5612809662118963` returned 18 rows this time). Each `watermark` is
+  its group's newest post.
+- **Cost:** read about 10 minutes after the run: $0.323, with 212 items and 1 start charged
+  (212 × $0.0015 + $0.005). The run logged $0.32 at its end. The cap was received:
+  `maxTotalChargeUsd` 0.5, `maxItems` 333.
+- **Log:** one `run_id` (`32526fbcf616`) on all 281 lines; the token appears nowhere in it.
+
+### Found — reported, not fixed
+
+**273 of 688 photos failed with `network: gaierror` (DNS resolution).**
+- All 546 attempts (two per photo) fell between 13:05:37.6Z and 13:05:38.9Z, right after the last
+  photo written (13:05:37.4Z).
+- They span 23 CDN hosts, the same hosts that served the photos held.
+- Posts split cleanly: 104 with every photo held, 53 with none, at the end of the download order.
+- A minute later the Apify API answered, and three of the failed hosts resolved again. The cause
+  on the laptop is unknown.
+- How long the outage lasted is unknown: 1.25 s is how long the 546 attempts took, because the
+  downloader did not wait (corrected 2026-10-04 on Ron's reading).
+- The code behaved as designed (#63, #77). The consequence: 53 posts (52 `pending`) hold no photo.
+  Under #77 D2 they are retried only when fetched again, and only 3 of them fall in run B's window
+  (from 12:40:09Z). The other 50 lose their photos for good unless they are re-fetched before the
+  links expire (about 4.4 days, I7 ASSUMED).
+
+### Next
+
+Ron decides what to do about the 50 posts with no photo, and whether that changes the plan for B,
+C and D. Then a separate go for run B (a normal run, started at least 15 minutes after A ended,
+that is after 13:20:42Z).
+
+---
+
+## 2026-10-04 (continued) — Photo download after run A: plan presented, not approved
+
+### Done
+
+Ron approved two changes to the photo download before run B. (1) A network-type error waits 1,
+3, 5 and 10 minutes, per outage, then the rest of the run's photos are recorded as network
+failures. (2) Failed photos are retried from the stored link on every run, with no Apify call.
+Both are to be recorded as `DECISIONS.md` #80 with the plan. The plan was presented in the
+session; no code, no network, no paid run, no git. `DECISIONS.md` is not written yet.
+
+- **Wording corrected, on Ron's reading:** the outage did not last 1.25 s. That is how long the
+  546 attempts took, because the downloader did not wait; how long the outage lasted is unknown.
+  Fixed in `data/runs/run_A_2026-10-04/REPORT.md`, `BACKLOG.md`, this log's run A entry, and
+  `ASSUMPTIONS.md` I6 (same wording, not named by Ron).
+- **`BACKLOG.md`:**
+  - Sprint item 1 is now the photo-download change; the runs B–D are item 2.
+  - New row, approved by Ron: measure a week of real runs before concluding on volume and monthly
+    cost. Run A returned 212 rows in 24 h with two groups cut off, against ~125–150 estimated
+    (P7); ~$12–16/month may be low.
+
+### Found while planning (read-only, from the run A store)
+
+- All 273 failed entries would qualify under decision 2: 228 are the canonicals' own photos, and
+  45 are repost entries on 7 canonicals.
+- No record is archived, and every failed record is a canonical.
+- Under the repost rule (#77 D2 amended, D3 order), once a canonical's own photos are held its
+  repost entries are not attempted again. Expected after run B, if the links still live: 228
+  retried and held, and the 45 repost entries left as `network: gaierror` by design.
+- The lifecycle table holds 212 records in 194 KB, and SQLite's JSON functions work on the laptop
+  (3.45.3).
+
+### Next
+
+Ron decides the plan's open points: whether the waits count in the 30-minute budget, which
+`timeout` is network-type, the reason for photos skipped after the schedule, one unreachable
+host, whether retries wait, the new Repository method by name. Then #80 is recorded and built.
+Run A's links expire around 2026-10-08 (I7, ASSUMED).
+
+---
+
+## 2026-10-04 (continued) — #80: network waits and stored-link retries, built
+
+### Done
+
+#80 approved by Ron (decisions 1 and 2, §4, U1–U7, the contract, the names). Code, tests and
+docs. No paid run, no git. The only network access was one read of sqlite.org/json1.html, as
+Ron's instructions asked: the JSON functions are built in by default as of SQLite 3.38.0
+(2022-02-22), and `->` / `->>` date from the same release.
+
+**Two points settled with Ron while building:**
+- **U2's text is dropped.** Under U3 every remaining photo is tried once, so nothing would ever
+  write `not attempted: network down`.
+- **Any reply restarts the schedule,** an HTTP error included (U3's "first success").
+
+1. **`images/download.py`:**
+   - **Constants:** `NETWORK_WAITS_SECS = (60, 180, 300, 600)`; `STORED_LINK_MAX_AGE` (4 days,
+     U5); `RETRYABLE_ERRORS`; the error texts `TIMEOUT` and `NETWORK`, already in use.
+   - **`is_network_error`:** `network: …` and `timeout` (U1).
+   - **`_Run._attempt` (decision 1):** waits on the schedule and tries the same photo again.
+     - The waits count inside the budget, and a wait is cut when the budget runs out (§4).
+     - After the schedule, each remaining photo is tried once until any reply (U3).
+     - A network error no longer goes into #63's second pass.
+   - **`_Run.retry_stored` (decision 2):** after the batch, using the new Repository query.
+     - It skips posts in the batch, archived posts (stored or in-run), links of posts 4 days old
+       or more (U5), and photos gone from the stored post (U6).
+     - It tries the canonical's own photos first, then repost photos in canonical-rule order
+       while the canonical holds nothing (U7).
+     - One attempt each and never a wait (U4); entries past the budget are left as they are.
+   - **`download_images`** takes `sleep` (default `time.sleep`, looked up at the call) and `now`
+     (the run's start). Its log line counts the stored-link retries.
+2. **A bug found and fixed (task 1.12's code):**
+   - **What was wrong:** a stored canonical outside `dedup_a`'s result kept only its first change
+     of the run. `_Run.added` held the record from its first `_set`, and later photos were lost.
+   - **The fix:** `added` now holds IDs, and the final record is read from `records`.
+   - **Proof:** two regression tests fail on the old code (4 failures across both stores, run
+     with a temporary file copy, no git) and pass on the fix.
+   - **Run A:** not affected; every canonical was in its batch.
+3. **`store/`:**
+   - `Repository.find_lifecycles_with_image_errors(prefixes)` in the protocol, `SqliteRepository`
+     (`json_each` over `$.images`, `->>` on `error`, an exact prefix match by `substr`) and
+     `LocalJsonRepository`.
+   - The store module's `MIN_SQLITE_VERSION` is 3.38.0; `state` keeps 3.24.0. No layout change.
+4. **`pipeline.py`:** `run_once` takes `image_sleep` and passes it, and `now=run_started_at`, to
+   `download_images`.
+5. **Tests:**
+   - `tests/test_image_network.py` (new, 25 test functions, most on both stores): one or more per decision, U1–U7,
+     §4, and the 4-day limit on both sides. A network error on a stored-link retry: no wait, and
+     the entry stays.
+   - `tests/conftest.py`: a guard that makes any real `time.sleep` in a test raise.
+   - `tests/test_repository_contract.py`: three contract tests for the new method.
+   - `tests/test_image_download.py`: the #63 test now covers non-network errors only, and asserts
+     no wait; plus the regression test.
+   - `tests/test_sqlite_store.py`: expects 3.38.0.
+   - `tests/test_run_once.py`: run A's case end to end (the network drops, the schedule runs
+     once, the next run recovers from the stored links); the wrappers pass the new method through.
+   - `tests/test_phase0_exit.py`: the wrapper passes the new method through.
+6. **Docs:**
+   - `BACKLOG.md`: item 1 is runs B–D; item 2 the free GET on an expired link after 2026-10-08
+     (U5); a phase 5 row to check the container's SQLite against 3.38.0; a known limit (U7).
+   - `DECISIONS.md` #80, with pointers in #63, #64, #65 and #77 D2.
+   - `SCHEMA.md` Gate E download rule, wording only.
+   - `PHASE_1.md` 1.12 (the amended line, a #80 note) and the 1.14 run B check.
+   - `ASSUMPTIONS.md` I8 (minimum 3.38.0; status unchanged).
+   - `CLAUDE.md` seam table.
+
+### Verified
+
+- `uv run pytest`: 602 passed in 361 s.
+- `uv run ruff check .`: all checks passed. `uv run ruff format --check .`: 85 files already
+  formatted.
+- The first attempt at the image tests ran for minutes: the existing network-error tests really
+  slept, because `time.sleep` was the default. That is why `sleep` is now looked up at the call,
+  and why conftest refuses a real sleep.
+
+### Next
+
+Ron's code review of #80, then his separate go for run B. Run A's links live about until
+2026-10-08 (I7, ASSUMED). Expected in B: run A's 228 failed own photos retried from the stored
+links and held; its 45 repost entries keep `network: gaierror` (U7).
