@@ -968,3 +968,186 @@ Nothing calls `dedup_a` yet; the store step is 1.14.
 ### Next
 
 Task 1.12, image download (`BACKLOG.md` item 1).
+
+---
+
+## 2026-10-04 (continued) — Decision #76, and the task 1.12 plan
+
+### Done
+
+Docs only. No code, no test change, no git. #76 approved by Ron, 2026-10-04.
+
+- **`DECISIONS.md` #76, "Which canonicals get their photos downloaded":** photos for every
+  canonical post that has photos, whatever its state, a `no_text` post included; the duplicate rule
+  unchanged (#72.3, as read in #73.5); photos only. Replaces "for canonical non-rejected posts" in
+  `PHASE_1.md` 1.12. A pointer from #63's "images are downloaded for posts the model will reject".
+- **`PHASE_1.md` 1.12:** the opening sentence no longer says "canonical non-rejected"; a "Which
+  posts" list (canonicals by #76, duplicates by Gate E / #72.3 / #73.5, photos only); open point 1
+  ("exactly which posts") replaced by the two points still open for the plan: retry on a later run,
+  and where the files live on disk. Open points 2 and 3 kept.
+- **`BACKLOG.md`:** item 1's 1.12 open points updated the same way; a #76 row in "Decisions
+  pending implementation"; a new section "Known limits, not handled now" with one row: `dedup_a`
+  finds a canonical's stored duplicates only through the hashes of the canonical and of its batch
+  duplicates, so a stored duplicate with media whose text was edited later is not found, #70 (D1)
+  can miss it, and a canonical with no media can return to `"rejected"`.
+- **Files touched:** `docs/DECISIONS.md`, `docs/PHASE_1.md`, `docs/BACKLOG.md`, this log.
+  `SCHEMA.md` unchanged: Gate E says images are downloaded "also for posts the model will reject"
+  and never limits downloads to non-rejected posts, so no wording there contradicts #76.
+  `BASELINE.md` unchanged: §3 and §5 say nothing about which posts' images are downloaded.
+  `CLAUDE.md`, `RESEARCH.md`, `ASSUMPTIONS.md` unchanged: no line found stale.
+
+### Verified
+
+Fixture facts for the 1.12 plan, read today from `data/raw/` with no network:
+
+- Media types across the three fixtures: `Photo`, `Video`, `Reel` only.
+- At most 5 photos per post in the spike datasets; `photo_count` equals the own-media photo count
+  on every row.
+- Two `media_id` values have the form `GenericAttachmentMedia:EntityID:<digits>`: a `media_id` is
+  not safe as a file name (`:` is illegal on Windows).
+- Photo link paths end in `.jpg`, `.png` or `.webp` (spike main 339 / 53 / 20, control
+  555 / 57 / 20). Spike 1.1a downloaded 5 JPEGs only; PNG and WebP were never downloaded.
+- The spike 1.1a download script sent `User-Agent: Mozilla/5.0`; no download without that header
+  was tried.
+- The spike links' `oe` values read as 2026-10-08 05:32–09:32 UTC (`ASSUMPTIONS.md` I7).
+
+### For Ron
+
+Cases #76 does not define, left as they are:
+
+1. Whether #76 applies only the first time a canonical is stored, or on every fetch of it (a
+   re-fetched canonical whose photos are held, or whose downloads failed). Same question as the
+   1.12 retry point.
+2. An archived canonical fetched again by the same post (not a repost). #76 says "whatever its
+   state"; Gate E deletes an archived post's images. Unreachable in normal runs: a post is archived
+   25 days after its last publication, far outside the fetch window.
+3. `SCHEMA.md` Gate E does not state #76 positively ("images are downloaded also for posts the
+   model will reject" says nothing about pre-model rejects). Not a contradiction, so not changed;
+   a wording amendment would need approval.
+
+### Next
+
+Task 1.12 plan presented to Ron; waiting for his decisions before any code.
+
+---
+
+## 2026-10-04 (continued) — Task 1.12: image download, built
+
+### Done
+
+#77 approved by Ron, 2026-10-04: the download check, D1–D5d, the location, and the Gate E wording.
+No git.
+
+- **Check first** (`scratch/check_1_12_images.py`, throwaway): the 632 photo links of the spike
+  control dataset, one at a time, `User-Agent: Mozilla/5.0`, 30 s socket timeout, 60 s and 20 MB
+  caps; then 5 links without the header. Metadata only, in
+  `data/raw/spike_1_12_images_2026-10-04/` (`results.json`, `REPORT.md`). No Apify call. Both of
+  Ron's criteria held, so the code followed.
+- **Code:** `tlv_hunter/images/download.py` — `download_images(result, repository, store_root,
+  transport, clock) -> DedupResult`, `urllib_image_transport`, `ImageFetchError`,
+  `ImageWriteError`. Rules as in `PHASE_1.md` 1.12 and #77. Nothing calls it; `pipeline.py`
+  untouched.
+- **Tests:** `tests/test_image_download.py`, 30 test functions, 79 runs (parametrized, and over
+  both stores), fake transport, no network.
+- **Docs:**
+  - `BACKLOG.md`: item 1 is now 1.13–1.14, with two 1.14 points (where `download_images` is
+    called; the time budget against a bootstrap run); the #63 and #67–#74 rows say 1.12 is done;
+    the #76 row became "#76, #77 photo download"; a #77 D4b row (phase 5); the phase 5 row on
+    `PostImage` at archive replaced by a phase 5 row for a sweep of unreferenced image files.
+  - `DECISIONS.md`: #77; pointers from #63 (two bullets), #72 and #76.
+  - `SCHEMA.md` Gate E, wording only as approved: #76 in the download rule; `images` is one entry
+    per photo attempted; retry on a later run (D2); the "Reposts" rule with D3 and D4; header and
+    reasons line.
+  - `PHASE_1.md`: status; 1.12 complete; the §2 I6 row.
+  - `ASSUMPTIONS.md`: I6 extended; I9 (the link's extension does not say what is served, FALSE),
+    I10 (no header needed, 5 links), I11 (632 links unthrottled, about 1.6 s each).
+  - `CLAUDE.md`: one line on `images/download.py`.
+  - This log.
+- **Files touched:** `tlv_hunter/images/__init__.py`, `tlv_hunter/images/download.py`,
+  `tests/test_image_download.py`, `scratch/check_1_12_images.py`,
+  `data/raw/spike_1_12_images_2026-10-04/results.json`,
+  `data/raw/spike_1_12_images_2026-10-04/REPORT.md`, `docs/BACKLOG.md`, `docs/DECISIONS.md`,
+  `docs/SCHEMA.md`, `docs/PHASE_1.md`, `docs/ASSUMPTIONS.md`, `CLAUDE.md`, this log. `scratch/`,
+  `data/` and `CLAUDE.md` are gitignored. `pipeline.py`, the contracts, `dedup/`, `premodel/` and
+  the stores unchanged.
+
+### Verified
+
+- The check: 632 of 632 HTTP 200, `image/jpeg`, JPEG bytes — `.jpg` 555, `.png` 57, `.webp` 20.
+  No failure, no 403 or 429. 1,010 s in all (median 1.77 s for `.jpg`, 0.55 s `.png`, 0.73 s
+  `.webp`; at most 2.97 s). Without the header: 5 of 5, JPEG, 0.42–0.66 s.
+- `uv run pytest`: 431 passed. `uv run ruff check .`: all checks passed.
+  `uv run ruff format --check .`: 77 files already formatted.
+
+### Not verified
+
+- Nothing calls `download_images` yet; the store step is 1.14.
+- Downloads from the home server; behaviour after a link's `oe` time; concurrent requests.
+
+### For Ron
+
+1. **The 10-minute budget against a bootstrap run.** At about 1.6 s per photo (I11), 10 minutes
+   covers about 375 photos. A bootstrap run of six groups at `max_posts` 30 holds about 540
+   canonical photos (the control run had 632 photo links over 180 posts). The rest are recorded as
+   `"not attempted: time budget"`, and D2 retries them only if their post is fetched again — which
+   a bootstrap post outside the next run's overlap is not, so those photos are lost. A normal run
+   (tens of photos) is far below the budget. Recorded as a 1.14 point in `BACKLOG.md` item 1.
+2. **D2 on a repost, as built:** a duplicate's photo with an error entry in the canonical's record
+   is retried when the duplicate is fetched again, even if the canonical now holds a photo. A photo
+   of that duplicate with no entry follows the repost rule (downloaded only while the canonical
+   holds nothing). #77 D2 says "each of its photos that is not held is attempted again"; the
+   repost rule says a repost downloads nothing while the canonical holds. This reading retries only
+   what was attempted before.
+3. **D4, as built:** for a canonical brought back from archive this run, "holds" counts only photos
+   downloaded in this run, so an entry left from before archive (none exist before phase 5, and
+   D4b removes them) does not stop the bringing repost. A duplicate of such a canonical that did
+   not bring it back downloads only what it retries.
+4. **D5b, as built:** a retry that the budget stops keeps the first attempt's error, not "not
+   attempted": the photo was attempted.
+5. **A canonical in the batch that is archived** downloads its photos by #76 ("whatever its
+   state"). Unreachable in normal runs (see the #76 entry above).
+6. `BASELINE.md` §14 still says image download is verified "5 of 5"; not in this task's doc list,
+   left unchanged.
+
+### Next
+
+Task 1.13, the per-group watermark logic (`BACKLOG.md` item 1).
+
+---
+
+## 2026-10-04 (continued) — Task 1.12 review: budget, reposts, BASELINE
+
+### Done
+
+Two changes and one doc fix, approved by Ron. No network, no git.
+
+1. **The time budget is 30 minutes** (#77 D5b amended): `TIME_BUDGET_SECS = 1800` in
+   `images/download.py`. The bootstrap open point is removed from `BACKLOG.md` item 1 (it was not
+   in `PHASE_1.md`); one line kept in the `BACKLOG.md` scheduler row (phase 5) and in `PHASE_1.md`
+   1.12: a run can now last longer than the 30-minute interval, one run at a time (#61).
+2. **A repost's photos, retries included, are attempted only while the canonical holds no image**
+   (#77 D2 amended for reposts). Once the canonical holds an image, a repost's failed photo keeps
+   its error entry. D2 is unchanged for a canonical's own photos. D4 unchanged: for a canonical
+   brought back from archive this run, "holds" still means a photo downloaded in this run; the
+   reposts that brought it back download, and another duplicate retries only what it attempted
+   before, both only while the canonical holds nothing from this run. `repost_photos` rewritten;
+   the re-fetched repost test is now parametrized: the canonical holds an image → nothing
+   attempted, the error entry stays; the canonical holds nothing → both failed photos attempted.
+3. **`BASELINE.md` §14:** the image-download row now says 5 of 5 in spike 1.1a, then 632 of 632 in
+   the task 1.12 check, all JPEG (I6), from the laptop; the home server still unverified.
+
+- **Docs:** `BACKLOG.md` (item 1, the #76/#77 row, the scheduler row); `DECISIONS.md` #77 (header,
+  D2 amendment, D5b amendment); `SCHEMA.md` Gate E download rule and header, wording only;
+  `PHASE_1.md` 1.12; `BASELINE.md` §14; this log.
+- **Files touched:** `tlv_hunter/images/download.py`, `tests/test_image_download.py`,
+  `docs/BACKLOG.md`, `docs/DECISIONS.md`, `docs/SCHEMA.md`, `docs/PHASE_1.md`, `docs/BASELINE.md`,
+  this log.
+
+### Verified
+
+`uv run pytest`: 433 passed. `uv run ruff check .`: all checks passed.
+`uv run ruff format --check .`: 77 files already formatted.
+
+### Next
+
+Task 1.13, the per-group watermark logic (`BACKLOG.md` item 1).

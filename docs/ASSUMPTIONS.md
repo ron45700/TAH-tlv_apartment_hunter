@@ -6,7 +6,7 @@ tagged `VERIFIED`, `ASSUMED`, or `UNKNOWN`.
 **The rule:** nothing moves to implementation while resting on `ASSUMED`. If an `ASSUMED` item
 blocks progress, the next step is a spike that resolves it — not code that hopes.
 
-**Last updated:** 2026-10-04 — P15–P19 added and P6 corrected, task 1.1. Earlier the same day: I8 (SQLite version in the container) added, task 1.10. Earlier the
+**Last updated:** 2026-10-04 — I6 extended and I9–I11 added, task 1.12 download check. Earlier the same day: P15–P19 added and P6 corrected, task 1.1. Earlier the same day: I8 (SQLite version in the container) added, task 1.10. Earlier the
 same day: spike 1.1a results applied (`SPIKE_1_1a.md`)
 
 > Written in English like every document in `docs/`, and like replies to Ron.
@@ -159,7 +159,10 @@ Pair 3 is the load-bearing case: hash was the only layer that caught it.
 | I3 | Gemini Flash cost at ~150 posts/day is negligible | ⚠️ ASSUMED — measure in phase 2 |
 | I4 | Tailscale Serve publishes a local service over HTTPS to the tailnet only, and device sharing gives an outside Tailscale user access to one machine | ✅ VERIFIED — Tailscale docs, read 2026-10-02 |
 | I5 | Device sharing covers the number of friends on the free plan | ❓ UNKNOWN — check before phase 5 |
-| I6 | Images can be downloaded from the signed Facebook links at fetch time | ✅ VERIFIED — 2026-10-04, spike 1.1a: 5 of 5, plain GET with no token or cookies, HTTP 200, JPEG |
+| I6 | Images can be downloaded from the signed Facebook links at fetch time | ✅ VERIFIED — 2026-10-04, spike 1.1a: 5 of 5, plain GET with no token or cookies, HTTP 200, JPEG. Task 1.12 check, the same day, about 8.5 hours after the control run: 632 of 632 photo links of the control dataset, HTTP 200, `image/jpeg`, JPEG bytes, 10 KB – 591 KB (`data/raw/spike_1_12_images_2026-10-04/REPORT.md`). From the laptop only; the home server is unverified |
+| I9 | The extension in a photo link's path says what is served | ❌ FALSE — 2026-10-04, task 1.12 check: the 57 `.png` and 20 `.webp` links served JPEG with `image/jpeg`. The downloader reads the type from the bytes (`DECISIONS.md` #77 D1) |
+| I10 | A photo link downloads without a `User-Agent` header | ✅ VERIFIED for 5 links — 2026-10-04, task 1.12 check: one `.jpg`, one `.png`, one `.webp` and two more `.jpg`, all HTTP 200 and JPEG. The header is sent anyway (`DECISIONS.md` #77 D5c) |
+| I11 | Downloading a bootstrap run's photos one at a time is not throttled, and takes about 1.6 s per photo | ✅ VERIFIED from the laptop — 2026-10-04, task 1.12 check: 632 links in 1,010 s, no 403, 429 or timeout; median 1.77 s for `.jpg`, at most 2.97 s. Concurrent requests and the home server: not tried |
 | I7 | Signed image links expire ≈ 4.4 days after fetch | ⚠️ ASSUMED — read from the `oe` query parameter as a hex Unix timestamp (4.3–4.5 days on all 355 links in run 1). That reading is not documented; nothing was re-downloaded later |
 | I8 | The home-server container's SQLite is at least 3.24.0, the minimum the store and state modules require (`DECISIONS.md` #65) | ❓ UNKNOWN — checked when the image is built (phase 5). Ron's laptop: Python 3.12.9 with SQLite 3.45.3, run 2026-10-04. Below the minimum, both modules refuse to start and name the found and required versions |
 

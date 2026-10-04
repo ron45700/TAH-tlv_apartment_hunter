@@ -538,14 +538,18 @@ media fallback. The rules and why:
   does not become the canonical either.*
 - **Images: photos only, one retry, a failure fails nothing.** Videos are not analysed and are
   shown as their link. A failed run blocks the window (invariant 2), so a lost image must never
-  fail the run or the post.
+  fail the run or the post. *Since #77 (2026-10-04): one retry within a run, and again on a
+  later run when the post is fetched again (D2); a disk write error fails the run (D5a).*
 - **Images are downloaded for posts the model will reject.** Image download runs before the
   model in the data path, so at download time no verdict exists. For a rejected post what matters
-  is its original text and link, so downloading its images costs nothing important.
+  is its original text and link, so downloading its images costs nothing important. *Extended by
+  #76 (2026-10-04): photos for every canonical that has photos, whatever its state, a `no_text`
+  post included.*
 - **An identical-hash repost downloads no images**, since they duplicate the canonical's, unless
   the canonical is archived (its images are gone) or all its downloads failed. *Extended by #70
   (2026-10-04): also when the canonical has no media at all. Reworded by #72.3 (2026-10-04): while
-  the canonical has no successfully downloaded image, or when it is archived.*
+  the canonical has no successfully downloaded image, or when it is archived. Read on the stored
+  state, before #74, and retried on a later run: #77 D2, D4 (2026-10-04).*
 - **Flagged posts are kept whole and never deleted.** A flag marks a model mistake, and the full
   record, including `raw`, is what is needed to re-run the prompt on it. Images are deleted at
   archive like any post's, since the model never sees images.
@@ -784,7 +788,8 @@ approved it.
 
 *Extended by #73 (2026-10-04): the re-check in (1) also applies to a `"pending"` post (#73.2), not
 to an archived one (#73.3); (3) is read as #73.5. (5) is kept by #74, which replaces "active
-again" for every archived post.*
+again" for every archived post. (3)'s "when the canonical is archived" is read on the stored
+state, before #74: #77 D4.*
 
 ### 73 — Task 1.11: pre-model rejects
 Approved by Ron, 2026-10-04. **Amends `BASELINE.md` §4 (data path order); extends #72.1;
@@ -886,6 +891,85 @@ through dedup as new (#72.2); a duplicate points at the canonical, never at anot
   `initial_lifecycle`. Overlaps the task 1.14 open point on `find_without_lifecycle`.
 
 For D3, D5, E1, E3, F1, F2 and F4, no reason was recorded.
+
+### 76 — Which canonicals get their photos downloaded
+Approved by Ron, 2026-10-04. **Replaces "for canonical non-rejected posts" in `PHASE_1.md` 1.12;
+extends #63's "images are downloaded for posts the model will reject".**
+
+- Photos are downloaded for every canonical post that has photos, whatever its state, a `no_text`
+  post included.
+- The rule for duplicates is unchanged (#72.3, as read in #73.5).
+- Photos only, as in Gate E.
+
+*Why:* one simple rule. In the admin's rejected list the photos of a `no_text` post are its whole
+content, and the signed links expire within days. The cost is disk space only.
+
+*Built in task 1.12, with the download rules of #77 (2026-10-04).*
+
+### 77 — Task 1.12: image download
+Approved by Ron, 2026-10-04; D2 (reposts) and D5b amended the same day in the task 1.12 review.
+**Extends #63 (retry), #72.3 (reposts, as read in #73.5) and #76; settles the phase 5 archive
+point on `PostImage` (D4b).** Each point was presented to Ron as a
+recommendation with the reason given here, and he approved it. The rest of the task 1.12 plan was
+approved as written: photos are `Media.type == "Photo"`; one at a time, a 30 s socket timeout, a
+60 s and 20 MB cap per image; the retry as a second pass over the failures; the failure kinds and
+the short `error` reasons; the function's input and output; tests through a fake transport.
+
+- **Check.** Before the code, a throwaway download check: the 632 photo links of the spike 1.1a
+  control dataset, one at a time, with the same header and timeouts, plus 5 links without the
+  header. Metadata only, no image file, in `data/raw/spike_1_12_images_2026-10-04/`. No Apify
+  call. *Result:* 632 of 632 HTTP 200, `image/jpeg`, JPEG bytes, including the `.png` and `.webp`
+  links; 1,010 s in all; 5 of 5 without the header (`ASSUMPTIONS.md` I6, I9–I11).
+  *Why:* only 5 jpg links were ever downloaded; png/webp and bootstrap volume were unverified, and
+  the links expire on 2026-10-08.
+- **D1. Files live at `<store_root>/images/<listing_id>/<sha256(media_id)[:16]>.<ext>`**, the
+  extension read from the bytes. `local_path` is stored relative to `store_root`, with `/`. No new
+  config key.
+  *Why:* a relative path keeps working when the store moves from the laptop to the server.
+- **D2. Retry on a later run.** Whenever a batch post is fetched again, each of its photos that is
+  not held is attempted again, and the error entry is replaced by the new result. Gate E's "one
+  retry within the same run" is a limit within one run.
+  *Why:* the re-fetch brings a fresh link; the watermark overlap limits it to one or two retries.
+  **Amended 2026-10-04 (task 1.12 review), approved by Ron — reposts:** this applies to a post's
+  own photos in its own record (canonicals). A repost's photos, retries included, are attempted
+  only while the canonical holds no image; once it holds one, a repost's photo that failed before
+  is not attempted again and its error entry stays. The archive case (D4) is unchanged.
+  *Why:* one rule for reposts, and no duplicate photos on the card, which is the reason behind
+  #72.3.
+- **D3. Canonical and reposts new in the same run:** the canonical first, its retry included; then
+  its duplicates in canonical-rule order, each checked after the previous one finishes.
+  *Why:* otherwise the same photos are stored twice.
+- **D4. #72.3's "when the canonical is archived" is read on the stored state, before #74:** a
+  repost downloads when the stored record was archived and `dedup_a` brought it back this run, for
+  the reposts that brought it back, in D3 order. A canonical that is still archived downloads
+  nothing.
+  *Why:* the original images were deleted at archive and their links have expired.
+- **D4b. Phase 5, the archive job:** archiving deletes the image files **and** removes their
+  `PostImage` entries.
+  *Why:* the record always reflects what is on disk.
+- **D5a. A disk write error (disk full, permissions) fails the run.** It is not "a failed
+  download".
+  *Why:* otherwise a full disk silently loses a whole window's images.
+- **D5b. A time budget for the download step**, a module constant. Photos not attempted in time
+  are recorded as failures (`"not attempted: time budget"`) and follow D2.
+  *Why:* a hanging CDN must not hang the run.
+  **Amended 2026-10-04 (task 1.12 review), approved by Ron: 30 minutes, not 10.**
+  *Why:* the check measured about 1.6 s per photo, so 10 minutes covers about 375 photos and a
+  bootstrap run holds about 540–630; photos past the budget are lost for posts that are never
+  fetched again. 30 minutes covers about 1,100. A normal run is far below either figure.
+  Consequence: a run can last longer than the 30-minute interval; the phase 5 scheduler runs one
+  run at a time (#61).
+- **D5c. The `User-Agent: Mozilla/5.0` header is sent**, as in the spike. It is not a login or a
+  cookie (invariant 13). Kept whatever the no-header requests show (they all succeeded).
+- **D5d. A re-fetched post that lost photos to an edit keeps the entries already held.** A
+  canonical may hold both its own photos and an earlier repost's.
+- **Location.** `tlv_hunter/images/download.py`, a plain module, not a seam. `CLAUDE.md` names it
+  in one line.
+- **`SCHEMA.md` Gate E, wording only:** #76 in the download rule; the `images` row is one entry per
+  photo attempted; the "Reposts" and retry rules reflect D2–D4. No field or type change;
+  `schema_version` stays 1.
+
+For D5c, D5d and the location, no reason was recorded.
 
 ---
 

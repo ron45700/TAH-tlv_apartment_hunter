@@ -5,7 +5,17 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-04 (task 1.11 planning) — **Gate E, "Reposts" rule reworded:** an
+**Last updated:** 2026-10-04 (task 1.12 review) — **Gate E download rule, wording only:** a
+repost's photos, retries included, are attempted only while the canonical holds no image
+(`DECISIONS.md` #77 D2, amended). Approved by Ron. No field or type changed; `schema_version`
+stays 1.
+
+**Earlier on 2026-10-04 (task 1.12):** **Gate E, wording only:** the download rule states
+`DECISIONS.md` #76 (every canonical with photos, whatever its state); the `images` row is one
+entry per photo attempted; the "Reposts" and retry rules reflect #77 D2–D4. Approved by Ron
+(`DECISIONS.md` #77). No field or type changed; `schema_version` stays 1.
+
+**Earlier on 2026-10-04 (task 1.11 planning):** **Gate E, "Reposts" rule reworded:** an
 identical-hash repost downloads its photos while the canonical has no successfully downloaded image
 (no `PostImage` with a `local_path`), or when the canonical is archived. This replaces the "all of
 its images failed" and "no media at all" cases. Approved by Ron (`DECISIONS.md` #72.3). No field or
@@ -255,7 +265,8 @@ failover adapter is built.
 
 # GATE E — post lifecycle and `GroupWatermark`
 
-**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66, #67, #70 and #72 ·
+**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66, #67, #70, #72, #76
+and #77 ·
 **Lifecycle:** `BASELINE.md` §5
 
 ## Post lifecycle record (`PostLifecycle`)
@@ -278,7 +289,7 @@ an explicit `listing_id` row, the key the record already had. No other field was
 | `flagged_at` | `datetime` UTC / `None` | Set together with `flagged_by`: both or neither. `rejection_reason` `"flagged"` requires both |
 | `flag_note` | `str` / `None` | Optional short note from the flagger |
 | `last_published_at` | `datetime` UTC | The latest `posted_at` of the post and all its duplicates (any dedup layer: A now, B in phase 2). A phone-only match is not a duplicate. Never moves backwards |
-| `images` | `list[PostImage]` | One entry per downloaded photo. See below |
+| `images` | `list[PostImage]` | One entry per photo attempted: a failed download is recorded too. See below |
 
 ### `PostImage`
 
@@ -302,12 +313,21 @@ Exactly one of `local_path` and `error` is set.
   post whose only media is video or reel is not rejected. For a post that shares another post, the
   same test applies to the shared post's media: it is rejected only if the shared post has no media
   either. This is the rejection rule; the download rule below is separate.
-- **Images (download):** photos only, no video or reels (a video shows its `page_url` link). One
-  retry within the same run. A failed download fails neither the run nor the post.
+- **Images (download):** photos are downloaded for every canonical post that has photos, whatever
+  its state, a `no_text` post included (`DECISIONS.md` #76). Photos only, no video or reels (a
+  video shows its `page_url` link). One retry within a run; on a later run, whenever a post is
+  fetched again, each of its own photos not held is attempted again and its error entry is
+  replaced by the new result (#77 D2). A repost's photos, retries included, are attempted only
+  while the canonical holds no image; once it holds one, a repost's failed photo keeps its error
+  entry (#77 D2, amended). A failed download fails neither the run nor the post.
 - Images are downloaded also for posts the model will reject, and deleted at archive like any post.
 - **Reposts:** a repost with an identical text hash downloads no images, except while the
   canonical has no successfully downloaded image (no `PostImage` with a `local_path`), or when the
   canonical is archived; then the repost's photos are downloaded (`DECISIONS.md` #70, #72.3).
+  "Archived" is read on the stored record, before a repost returns it from archive: the reposts
+  that brought it back this run download; a canonical still archived downloads nothing (#77 D4).
+  A canonical and its reposts new in the same run: the canonical first, its retry included, then
+  its duplicates in canonical-rule order, each checked after the previous one finishes (#77 D3).
 
 ## `GroupWatermark`
 

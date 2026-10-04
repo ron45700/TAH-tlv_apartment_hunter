@@ -1,6 +1,6 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11 and 1.3 complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11, 1.3 and 1.12 complete.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -252,26 +252,44 @@ main posts keep their result; the 4 late, older posts join the stored canonical)
 
 ---
 
-## 1.12 Image download
+## 1.12 Image download — ✅ COMPLETE (2026-10-04)
 
-At fetch time, for canonical non-rejected posts: download each image to disk, record the local
-path. A failed download must not fail the run or the post; it is recorded, and the post keeps its
-other images.
+`download_images(result, repository, store_root, transport) -> DedupResult` in
+`tlv_hunter/images/download.py`, a plain module (`DECISIONS.md` #76, #77). It takes `dedup_a`'s
+result, downloads the photos to `<store_root>/images/`, and returns the result with the lifecycle
+records' `images` updated: posts unchanged, and a stored canonical outside the result whose record
+gained images added at the end. It reads the Repository and saves nothing; the store step is 1.14.
+Nothing calls it yet. A failed download fails neither the run nor the post; a disk write error
+fails the run (#77 D5a).
 
-**Open points — decided when 1.12 is planned:**
+**Which posts:**
 
-1. The text above says images are downloaded "for
-canonical non-rejected posts". `SCHEMA.md` Gate E adds the repost exception (a repost with an
-identical text hash downloads its photos while the canonical has no successfully downloaded image —
-no `PostImage` with a `local_path` — or when the canonical is archived, `DECISIONS.md` #70, #72.3;
-the repost's photos are recorded in the canonical's `images`) and says images are also downloaded
-for posts the model will reject. "What we hold" is any `PostImage` with a `local_path` in the
-canonical's `images`, including one from an earlier repost, for every canonical (#73.5). The plan
-for 1.12 states exactly which posts get their images downloaded.
-2. When canonical and repost are new in the same run,
-whether the repost downloads depends on the order of downloads.
-3. Whether #72.3's "when the canonical is archived" is read before or after #74 returns the
-   canonical from archive: a post returned to `"active"` has had its images deleted.
+- **Canonicals:** every canonical post that has photos, whatever its state, a `no_text` post
+  included (#76).
+- **Duplicates:** the repost exception of `SCHEMA.md` Gate E: a repost with an identical text hash
+  downloads its photos while the canonical has no successfully downloaded image, or when the
+  canonical was archived and this repost brought it back (read on the stored record, before #74,
+  #77 D4); the repost's photos are recorded in the canonical's `images` (#70, #72.3, #73.5).
+  Canonical first, retry included, then its duplicates in canonical-rule order (#77 D3). A
+  repost's photos, retries included, are attempted only while the canonical holds no image
+  (#77 D2, amended in the review); a canonical's own photos not held are retried whenever it is
+  fetched again (D2).
+- Photos only, no video or reels (Gate E). Stored posts outside the batch are never downloaded.
+
+**Settled by #77:** where the files live (D1), retry on a later run (D2), the order in one run
+(D3), the archived reading (D4), a 30-minute budget (D5b, amended from 10 in the review: a run
+can now last longer than the 30-minute interval, for the phase 5 scheduler's "one run at a
+time", #61), the `User-Agent` header (D5c), entries
+kept after an edit (D5d). The phase 5 archive job removes the `PostImage` entries with the files
+(D4b).
+
+**Check, before the code:** the 632 photo links of the spike control dataset, one at a time:
+632 of 632 downloaded, all JPEG, in 1,010 s (`data/raw/spike_1_12_images_2026-10-04/REPORT.md`,
+`ASSUMPTIONS.md` I6, I9–I11).
+
+**Tests:** `tests/test_image_download.py`, against both stores, through a fake transport, no
+network: one test per decision, the retry and failure kinds, the urllib transport's error mapping,
+and spike main through `dedup_a`.
 
 ---
 
@@ -330,7 +348,7 @@ Full register: `ASSUMPTIONS.md`.
 | P5: all six groups return data | 1.1a | ✅ VERIFIED 2026-10-04. One group returned 0 rows because it was quiet; the run log shows per-group status (P13, ASSUMED) |
 | P9: `includeTopComment=false` suppresses `topComment` | 1.1a | ✅ VERIFIED 2026-10-04. 0 of 285 rows |
 | P6: real cost of a run | 1.1a | ✅ VERIFIED 2026-10-04. $0.1535 and $0.2525 as read at the end of the runs; run 1's final figure, read later, is $0.1625 (`ASSUMPTIONS.md` P19). ~$12–16/month projected, accepted by Ron |
-| I6: images download from the signed links | 1.1a, 1.12 | ✅ VERIFIED 2026-10-04 at fetch time, 5 of 5. Link lifetime ≈ 4.4 days is ASSUMED (I7) |
+| I6: images download from the signed links | 1.1a, 1.12 | ✅ VERIFIED 2026-10-04 at fetch time, 5 of 5, then 632 of 632 in the 1.12 check (I9–I11). Link lifetime ≈ 4.4 days is ASSUMED (I7) |
 | P2: where a shared post's content sits | 1.1a, 1.1 | ✅ VERIFIED 2026-10-04. `sharedPost.text`, `sharedPost.media` |
 
 Closed earlier: minute granularity (P1b), duplicate pairs collide on hash (D1–D4), phone regex

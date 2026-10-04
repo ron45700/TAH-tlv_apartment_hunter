@@ -346,7 +346,7 @@ bootstrap mode, Gate A.
 | A Telegram Mini App loads from a tailnet-only HTTPS address on a phone with Tailscale on | `ASSUMED` — spike in Phase 4. If it fails, the plain site still works |
 | Tailscale device sharing covers the number of friends on the free plan | `UNKNOWN` |
 | Public source for Tel Aviv areas, the Old North split, and streets per area | `UNKNOWN` |
-| Image download from the signed Facebook links works at fetch time | `VERIFIED` 2026-10-04 from the laptop (spike 1.1a, 5 of 5). From the home server itself: still unverified |
+| Image download from the signed Facebook links works at fetch time | `VERIFIED` 2026-10-04 from the laptop: spike 1.1a, 5 of 5; then the task 1.12 check, 632 of 632, all JPEG (`ASSUMPTIONS.md` I6). From the home server itself: still unverified |
 | Apify spike: time window per group, all groups return data, comment flag honoured, real cost | `VERIFIED` 2026-10-04 (`SPIKE_1_1a.md`) |
 | Shared-post content path | `VERIFIED` 2026-10-04: `sharedPost.text` and `sharedPost.media` |
 
