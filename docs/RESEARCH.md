@@ -9,8 +9,9 @@ are in `SCHEMA.md`.
 
 **Compiled:** 2026-10-03 from `archive/HANDOFF.md` and `archive/MACRO_PLAN.md`, with the
 corrections made since (Gate A, task 1.2, Phase 0 build) folded in.
-**Updated:** 2026-10-04 with the results of spike 1.1a (`SPIKE_1_1a.md`), and the watermark rules
-of task 1.13 (`DECISIONS.md` #78).
+**Updated:** 2026-10-04 with the results of spike 1.1a (`SPIKE_1_1a.md`), the watermark rules
+of task 1.13 (`DECISIONS.md` #78), the four real runs that closed phase 1 (§11), and the
+candidate sources for Tel Aviv areas and streets (§12).
 
 ---
 
@@ -26,8 +27,8 @@ All verified against a real 20-post run on 2026-09-13 (cost: under $0.10).
 | `creation_time` parses cleanly | 20/20 with `email.utils.parsedate_to_datetime` (thedoor, RFC 2822 GMT) |
 | Images are available | 18/20 posts, 82 items. thedoor `media[].uri` at `mx1200x1600`. 2 posts had no media at all |
 | Image URLs expire within days | Signed `scontent.*.fbcdn.net` links. Images must be downloaded at fetch time |
-| Post volume | **Measured 2026-10-04 (spike 1.1a): ~150 posts/day across the six groups**, from ~4/day (`733810383372996`) to ~73/day (`101875683484689`). Not ~48: the research estimate (20 posts over 30.6h across 2 groups ≈ 8 posts/group/day) was about 3× too low. The measured window was Friday night to Saturday; a weekday may be higher |
-| Duplicates are severe | 3 duplicate pairs in 20 posts (15%). Two pairs were **within the same group**: different `post_id`, identical text. `post_id` dedup is not sufficient |
+| Post volume | **More than 212 posts in one 24-hour window** (run A, Saturday 12:55 to Sunday 12:55 UTC; Sunday is a working day in Israel), with two groups cut off at `max_posts` 50, and **about 13–15 new posts an hour** on a Sunday afternoon (runs B and D). §11. The spike's ~150/day (Friday night to Saturday) and the research estimate of ~8 posts/group/day were both too low. **One day of data:** the daily figure is not yet measured (`BACKLOG.md`, a week of real runs) |
+| Duplicates are severe | 3 duplicate pairs in 20 posts (15%). Two pairs were **within the same group**: different `post_id`, identical text. `post_id` dedup is not sufficient. **The real runs: 39 of 266 stored posts (14.7%) are hash duplicates, 12 of them in the same group as their canonical** (§11) |
 | `sale_post` means **rental**, not sale | 8/20 flagged. Titles: `להשכרה 3 חדרים`, `Room Only`. Rejecting on post type would lose 40% of the data |
 | Structured listings carry a price | thedoor: `sale_post.price` / `title` / `location`. memo23: `marketplacePrice`. `sale_post.price` is a **string with a currency symbol** (`"₪3,600"`) |
 | Model price equals native price | Two independent sources agreed exactly on both structured posts (₪3,560 / ₪8,700) |
@@ -138,10 +139,18 @@ items omit `width` and `height` too (9 in spike 1.1a), so the keys are never ass
   filtered per group locally (`DECISIONS.md` #78 W1, W6). The window applies per group inside one
   run: verified in spike 1.1a (`ASSUMPTIONS.md` P1, `SPIKE_1_1a.md` Q1).
 
-Expected cost (from spike 1.1a, `SPIKE_1_1a.md`): 36 runs/day, ~150 posts/day, $0.0015 per
-result and $0.005 per run start. **One run covering all 6 groups: ~$12–16/month**; six separate
-runs: ~$39–43/month. **Accepted by Ron, 2026-10-04.** The earlier "~1,500 posts/month ≈ $2.25"
-ignored the start fee and underestimated volume. Gemini Flash is not included.
+**Cost, from the real runs (§11).** The rate is confirmed on four runs: $0.0015 per returned row
+(rows older than `since` included) and $0.005 per run start. A normal run asks for about 45
+minutes (30 plus the 15-minute buffer), so at the afternoon rate it returns about 10–11 rows,
+about $0.021. Over a day, 36 runs cost $0.18 in start fees, and each post is billed about 1.5 times
+on average (the overlap). At 212 posts a day (the one-day lower bound), that is about 318 rows,
+$0.48, **about $0.66/day, about $20/month**; at about 14 new posts an hour for the 18 hours of
+runs plus the night, about 300 posts and 450 rows, **about $0.86/day, about $26/month**. Above the
+~$12–16/month Ron accepted on 2026-10-04 from the spike's weekend figures. **One day of data**: a
+week of real runs measures it (`BACKLOG.md`). Gemini Flash is not included. *The spike's
+projection, kept for the record: ~150 posts/day gave ~$12–16/month for one run covering all six
+groups and ~$39–43/month for six runs; the earlier "~1,500 posts/month ≈ $2.25" ignored the start
+fee and underestimated volume.*
 
 **The projection holds only with a short window.** It assumes each run asks for about 30 minutes
 plus the buffer. Under the earlier rule, `min(all watermarks) - buffer` with the watermark as the
@@ -266,7 +275,10 @@ thresholds are `ASSUMED` and get calibrated against a week of real data. Runs sk
 quiet hours do not count.
 
 **These thresholds need recalibrating (spike 1.1a, 2026-10-04).** A live group went 31 hours
-without a post, and the busiest group posts ~73/day while the quietest posts ~4/day. A single
+without a post, and the busiest group posts ~73/day while the quietest posts ~4/day. **The real
+runs agree:** in run A's 24 hours the groups returned from 7 to 50 posts (two cut off at 50);
+`5612809662118963` then returned no row in runs B, C and D, about 4 hours, after 18 posts in A
+(§11). A single
 threshold for all six groups will either miss failures or flag quiet groups. The run log's
 per-group reason may be a better signal than counting zeros.
 
@@ -280,3 +292,86 @@ group returned zero rows (`DECISIONS.md` #78 W5b). The thresholds are decided in
 Python 3.12 · pydantic v2 · uv · ruff · pytest · `google-genai`. The Gemini response schema is
 derived from the pydantic model at runtime, never maintained by hand. JSON logs with a `run_id` on
 every line.
+
+---
+
+## 11. The real runs that closed phase 1
+
+Four runs on 2026-10-04 from the laptop, through `run_once` (task 1.14). Reports with every figure:
+`data/runs/run_A_2026-10-04/` … `run_D_2026-10-04/REPORT.md` (gitignored). **Every figure here is
+from one day** (a Sunday, a working day in Israel). A week of real runs is in `BACKLOG.md`.
+
+| Run | What | Rows | New posts | Photos held | Cost (read after the run) |
+|---|---|---|---|---|---|
+| A | bootstrap, 24 h back | 212 (38, 49, 50, 18, 7, 50) | 212 | 415 (273 failed: the network dropped) | $0.323 |
+| B | normal, about 2 h later | 33 | 28 | 94 + 214 retried from stored links (#80) | $0.0545 |
+| C | normal, killed in the photo step | 30 | 0 stored | 4 orphan files | $0.05 |
+| D | the recovery | 34 (33 kept) | 26 | 95 | $0.056 |
+
+- **Volume.** More than 212 posts in 24 hours: `101875683484689` and `295395253832427` hit
+  `max_posts` 50 (their 50 newest covered about 4.7 h and about 19.6 h). New posts in the
+  afternoon: 28 in the 1 h 53 min between A's and B's starts, 26 in the 1 h 56 min between B's and
+  D's: **about 13–15 an hour**. Per group in 24 hours: 7 to 50+.
+- **Duplicates in the store:** 39 of 266 posts (**14.7%**) are hash duplicates of a canonical; 12
+  of the 39 are in the same group as their canonical. The 20-post sample's 15% holds.
+- **Rejected before the model:** `no_images` 25 of 266 (**9.4%**; 23 of 227 canonicals, 10.1%);
+  `no_text` 9 (**3.4%**; 4.0% of canonicals). Pending: 232.
+- **Content:** 68 `sale_post` (26%), 35 shared posts (13%), a phone number in 161 (61%).
+- **Media:** 973 photos, 17 videos, 8 reels. **Photos per post: 3.66 on average, at most 5**; 231
+  of 266 posts have at least one photo, and 134 of the 231 with their own media have exactly 5.
+  `photo_count` never exceeds 5 either: whether posts with more photos are cut at 5 by the actor
+  is UNKNOWN (`ASSUMPTIONS.md` P21).
+- **Photo download, one at a time:** about **1.36 s** per photo in run A, **2.2 s** in run B
+  (including 214 stored links), 0.78 s in run D; no 403, 429 or timeout. About 0.147 MB per photo:
+  120 MB for 818 photos.
+- **Store:** 266 posts and 818 photos in 3.3 MB of SQLite and 120 MB of image files.
+- **Network.** Run A's laptop network dropped during the download; 273 photos failed at once.
+  #80 now waits on such a drop, and run B recovered all of them from the stored links except 45
+  repost photos, which the repost rule never retries.
+- **Cost.** $0.0015 per returned row and $0.005 per start, on all four runs; the figure logged at
+  the end of a run is preliminary and can miss every row (`ASSUMPTIONS.md` P19). A row older
+  than `since` can be returned and is billed (run D). The monthly projection is in §3.
+
+---
+
+## 12. Tel Aviv areas and streets: candidate sources
+
+Research for Gate B (`ASSUMPTIONS.md` A1, `BASELINE.md` §7), 2026-10-04. Read from the sources
+themselves; nothing downloaded into the repo. **Not chosen**: Ron chooses at Gate B.
+
+The requirement: a closed list of areas, the Old North split north/south, and the streets of each
+area, a street that crosses several areas included, from an existing public source.
+
+| | Municipality open data | Municipality GIS (addresses) | CBS | Population Authority (data.gov.il) | OpenStreetMap |
+|---|---|---|---|---|---|
+| Publisher | Tel Aviv-Yafo Municipality | Tel Aviv-Yafo Municipality | Central Bureau of Statistics | Population and Immigration Authority | OSM contributors |
+| What | `שכונות` (neighbourhoods), `רובעים`, `תת רובעים`, `אזורים סטטיסטיים` datasets; the same names in GIS layer 511 | GIS layer 527 `כתובות`: 52,176 address points, each with a street code, street name and house number | `statistical_areas_2022` polygons: locality, statistical area, quarter, sub-quarter, a function code | The street register: every street of every locality, official name, street code, synonyms | Street geometry; neighbourhood polygons under the municipal names |
+| Format | Open-data portal; ArcGIS REST (JSON, GeoJSON) | ArcGIS REST, 2,000 records per request | File Geodatabase | CSV, XML | OSM data (PBF, Overpass, Nominatim) |
+| Terms | The portal's licence: "ניתן לשתף את המידע ולעשות בו כל שימוש" provided its conditions are met; as-is, no warranty, no guarantee it stays available; no named licence | **Not on the open-data portal.** The website's terms forbid copying, building a database from the content and automated access; GIS maps fall under them | No terms on the GIS page; not read in the readme | No licence on the dataset (empty field); the portal's general terms not read | ODbL: attribution, and share-alike for a distributed derived database |
+| Current | Neighbourhoods loaded 2024-11-18; the service published 2026-08-27 | Same service | 2022 (published 2022-10-02) | Updated weekly, last 2026-10-04 | Live |
+| Areas list | **Yes: 71 neighbourhoods** | — | Statistical areas and numbered quarters, no names in the layer | No | Yes, under the municipal names (completeness not counted: Overpass timed out) |
+| Old North split | **Yes: `הצפון הישן - החלק הצפוני` (30) and `הצפון הישן-החלק הדרומי` (31)**; the New North in three | — | No | No | Yes: `הצפון הישן - החלק הצפוני` is a polygon (`place=suburb`, way 803404213) |
+| Streets per area | **No** | **Derivable**: each address point placed in a neighbourhood polygon gives the streets of each area, with house-number ranges; a street that crosses areas appears in each | Main streets only, in a separate key file (`שיוך הרחובות העיקריים והשכונות לכל אזור סטטיסטי`), not read | No | **Derivable**: street lines placed against neighbourhood polygons |
+| Missing | Streets | An open licence | Area names; all streets | Geometry, areas | A count of its neighbourhoods; house numbers are sparse in OSM (not checked) |
+
+Also seen, not candidates: Hebrew Wikipedia defines the Old North as municipal quarter 3 by its
+boundary streets, with no internal split and no streets per part. Real-estate sites (Madlan, ad.co.il)
+use the municipal names but a **four-part** Old North (`החלק המרכזי` among them) and publish street
+lists per neighbourhood; commercial, terms not read. The municipality's GIS layer 510
+(`רובעים-למס`) is a tax zoning of 15 numbered zones, not the CBS quarters.
+
+**No single public source covers the requirement.** What would:
+1. **The areas and the Old North split:** the municipality's `שכונות` open dataset, 71
+   neighbourhoods, under the portal's licence.
+2. **Streets per area, derived** by placing streets in those polygons, from one of:
+   - OpenStreetMap streets: an open licence (ODbL; attribution, share-alike if distributed). OSM's
+     completeness for Tel Aviv was not measured.
+   - The municipality's address layer: complete, with house numbers, but outside the open-data
+     licence; using it needs the municipality's permission or Ron's reading of its terms.
+3. **Street names as posts write them:** the Population Authority's register with synonyms, for
+   matching spellings to a street.
+
+**For Ron to decide:** which of these; whether 71 neighbourhoods is the closed list or they are
+grouped (for example, by quarter); whether the municipality's two-part Old North is the split
+(Madlan's is four); how a derived street table is kept current; and, for the address layer, its
+terms.

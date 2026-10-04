@@ -1,7 +1,7 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11, 1.3, 1.12, 1.13 and 1.14 built. The real runs that close
-the DoD are not run yet (1.14).
+**Status:** ✅ **COMPLETE (2026-10-04).** Every task built; the four real runs met DoD items 1–3,
+and item 4 holds (see "DoD verdict" below). Phase 0 complete (2026-09-14). Gates A and E approved.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -16,6 +16,23 @@ aside. No model, no dashboard, no Telegram.
    the watermark correct.
 3. Killing a run mid-flight does not advance the watermark; the next run picks up the missed window.
 4. The `ASSUMED` items in §2 are resolved to `VERIFIED` or explicitly re-planned.
+
+**DoD verdict (2026-10-04).** Evidence: `data/runs/run_A_2026-10-04/` … `run_D_2026-10-04/`
+(`REPORT.md` in each, gitignored), `SESSION_LOG.md`, `RESEARCH.md` §11.
+
+1. **Met.** Run A (bootstrap) against all six groups stored 212 posts and 415 photos. The
+   laptop's network dropped during its download and 53 posts were left with no photo; run B
+   recovered all 53 from the stored links (`DECISIONS.md` #80). After four runs: 266 posts and
+   818 photos, every file referenced.
+2. **Met.** Run B started 1 h 43 min after A ended: 28 new posts, 5 re-fetched. Every post from
+   A kept its first `fetched_at` and its dedup result, no photo was downloaded again, no two
+   canonicals share a hash, `last_success_at` became B's start on all six groups, and no
+   watermark moved backwards.
+3. **Met.** Run C was killed with `taskkill /F` in the photo step: no watermark moved and nothing
+   reached the store; it left 4 orphan files. Run D asked from B's start minus 15 minutes,
+   stored C's window once, and referenced C's files. Limit: C's 30 post IDs were not compared
+   with D's row by row (C's dataset was not saved).
+4. **Met.** P1, P5, P9, P6, I6 and P2 were `VERIFIED` before the runs (§2); none is `ASSUMED`.
 
 **Task numbers.** 1.1a, 1.1, 1.2, 1.2b and 1.3 keep their numbers. 1.4–1.9 belonged to the old
 Phase 1 (classifier, policy, Telegram) and are **retired**: that work moved to phases 2–4. New
@@ -332,7 +349,7 @@ pin the spike's own `maxPosts` (30, read from its input fixture).
 
 ---
 
-## 1.14 Wiring `run_once`, and bootstrap — ✅ BUILT (2026-10-04); real runs open
+## 1.14 Wiring `run_once`, and bootstrap — ✅ COMPLETE (2026-10-04)
 
 Settled by `DECISIONS.md` #79. `run_once` in `tlv_hunter/pipeline.py` replaces `run_pipeline`
 (O1) and holds no logic of its own; the command is `tlv_hunter/jobs/run_once.py`:
@@ -404,9 +421,12 @@ coverage (D8), actor pricing (P6 rate).
 ## 3. End of phase
 
 Before planning phase 2:
-1. Update `RESEARCH.md` with what the real runs showed.
-2. Update `ASSUMPTIONS.md`: move the items above out of `ASSUMED`.
-3. Update `BACKLOG.md` and `SESSION_LOG.md`.
-4. Find and verify the public source for Tel Aviv areas and streets (`ASSUMPTIONS.md` A1). Gate B
-   cannot define the area field without it.
-5. Only then plan phase 2 in detail.
+1. ✅ Update `RESEARCH.md` with what the real runs showed (§11, 2026-10-04).
+2. ✅ Update `ASSUMPTIONS.md`: the §2 items were already `VERIFIED`; P7 contradicted, P21 added,
+   A1 split (2026-10-04).
+3. ✅ Update `BACKLOG.md` and `SESSION_LOG.md` (2026-10-04).
+4. **Researched, not chosen.** The public source for Tel Aviv areas and streets (`ASSUMPTIONS.md`
+   A1a, A1b; `RESEARCH.md` §12). The areas, with the Old North split north/south, are in the
+   municipality's open `שכונות` dataset; no public source publishes streets per area, which would
+   be derived. Ron chooses at Gate B, which cannot define the area field without it.
+5. Only then plan phase 2 in detail. **Not started.**

@@ -1685,3 +1685,86 @@ Item 4 (the `ASSUMED` items of §2) was closed before the runs and not re-checke
 
 Ron decides when to start the end of phase 1 (`PHASE_1.md` §3, `BACKLOG.md` item 1). After
 2026-10-08: the free GET on an expired run A link (`BACKLOG.md` item 2).
+
+---
+
+## 2026-10-04 (continued) — End of phase 1, and the source for Tel Aviv areas and streets
+
+### Done
+
+Approved by Ron: the end of phase 1 (`PHASE_1.md` §3). Docs and research only: no code, no paid
+run, no git. Phase 2 planning was not started, and Gate B was not opened.
+
+**Part 1, closing the phase:**
+- **Figures:** computed read-only from the store (counts only) and the run reports.
+- **`RESEARCH.md`:**
+  - New §11, the four real runs.
+  - Replaced: §1's volume row; §3's cost paragraph, now projected from the runs, with the spike's
+    projection kept for the record.
+  - Added to: §1's duplicates row and §9's group rates.
+  - Every run figure is marked as one day's data.
+- **`ASSUMPTIONS.md`:**
+  - P7 marked ❌ FALSE (too low); the daily volume is UNKNOWN.
+  - P21 added (UNKNOWN: whether the actor cuts posts at 5 photos).
+  - A1 split into A1a (✅ VERIFIED) and A1b (❌ FALSE as a published list).
+  - Evidence added to D2, D5 and I3.
+  - DoD item 4 checked: P1, P5, P9, P6, I6 and P2 are all VERIFIED; none is left.
+- **`PHASE_1.md`:** status complete; the DoD verdict per item, with where the evidence is; 1.14
+  complete; §3 steps 1–3 done, step 4 researched and not chosen, step 5 not started.
+- **`BASELINE.md`:** §12 (phase 1 complete); §14 (the area source row, the image download row).
+- **`CLAUDE.md`:** the current-phase line and the `PHASE_1.md` row.
+- **`BACKLOG.md`:**
+  - The end-of-phase item removed.
+  - Item 1 is the free GET on an expired link after 2026-10-08.
+  - Item 2 is phase 2 planning, not started, blocked on the area source.
+  - The open choice for the area source now names the candidates.
+
+**Part 2, the public source for areas and streets** (`RESEARCH.md` §12): research only. The
+sources were read through the `external-contract-verification` skill; no data was downloaded
+into the repo.
+- **Read:** the municipality's GIS service and open-data portal and their terms; the CBS's GIS
+  page, layer readme and methodology; the Population Authority's street register on data.gov.il;
+  OpenStreetMap (Nominatim, the ODbL page); Hebrew Wikipedia.
+- **Tooling:** two CBS PDFs were read through `pypdf`, run with `uv run --no-project --with pypdf`
+  in a throwaway environment, outside the project. Overpass timed out twice, so OSM's
+  neighbourhood count was not measured.
+
+### Verified
+
+- **The real runs** (one day, a Sunday):
+  - Volume: more than 212 posts in 24 h, two groups cut off at 50; about 13–15 new posts an hour
+    in the afternoon.
+  - Duplicates: 39 of 266 (14.7%), 12 of them in the same group as their canonical.
+  - Rejected: `no_images` 9.4%, `no_text` 3.4%.
+  - Photos: 3.66 per post on average, at most 5.
+  - Photo download: 1.36, 2.2 and 0.78 s per photo.
+  - Cost: $0.0015 per row and $0.005 per start, confirmed on four runs. Projected about
+    $20–26/month, against the ~$12–16 accepted.
+- **The areas source:** the municipality's `שכונות` open dataset (GIS layer 511) has 71
+  neighbourhoods, among them `הצפון הישן - החלק הצפוני` (30) and `הצפון הישן-החלק הדרומי` (31);
+  loaded 2024-11-18.
+- **The terms:** the open-data portal grants use as-is, with no named licence. The website's
+  general terms forbid copying, building a database from the content, and automated access.
+  Neighbourhoods, quarters, sub-quarters and statistical areas are open datasets; addresses and
+  street lines are not.
+- **The municipality's address layer (527):** 52,176 points with street code, street name and
+  house number, and no area field.
+- **The CBS layer `statistical_areas_2022`:** no neighbourhood or street names in its fields (read
+  in its readme, contradicting a search summary). The methodology mentions a separate key file
+  assigning *main* streets and neighbourhoods to statistical areas; that file was not read.
+- **OpenStreetMap:** `הצפון הישן - החלק הצפוני` is a polygon (way 803404213, `place=suburb`).
+
+### Found
+
+- **No single public source publishes streets per area.** The areas and the Old North split come
+  from the municipality's open dataset. Streets per area have to be derived: from OSM (open
+  licence) or from the municipality's address layer (not open-licensed).
+- **Sources differ on the Old North:** the municipality splits it in two; Madlan splits it in four.
+- **The 5-photo cap (P21):** no post has more than 5 media items, and `photo_count` never exceeds
+  5 either.
+- **The cost may be above the accepted figure:** about $20–26/month projected from one day.
+
+### Next
+
+Ron chooses the area and street source at Gate B (`RESEARCH.md` §12, the points listed there).
+Phase 2 planning waits for Ron's go. After 2026-10-08: the free GET on an expired run A link.

@@ -22,12 +22,12 @@ still unimplemented on 2026-10-02.
 
 ## Next sprint (in order)
 
-Phase 1, as detailed in `PHASE_1.md`.
+Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is not planned yet.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
-| 1 | The end of phase 1 (`PHASE_1.md` §3): `RESEARCH.md` and `ASSUMPTIONS.md` from what the real runs showed, the public source for Tel Aviv areas and streets (A1), then phase 2 planning | `PHASE_1.md` §3 | The four real runs A–D are done (2026-10-04, `SESSION_LOG.md`); DoD items 1–3 are met by them. Not started: Ron's go |
-| 2 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
+| 1 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
+| 2 | Planning phase 2 (`BASELINE.md` §12) | `PHASE_1.md` §3 step 5 | Not started: Ron's go. Gate B cannot define the area field until Ron chooses the source for areas and streets (`RESEARCH.md` §12, `ASSUMPTIONS.md` A1a, A1b) |
 
 ---
 
@@ -97,7 +97,7 @@ Left open on purpose until their phase is planned (`DECISIONS.md` #23).
 | Dashboard framework and how the site is served | Planning phase 3 |
 | Telegram library | Planning phase 4 |
 | How the scheduler runs inside the container. It must be interval-based (the interval is an admin setting) and support a manual run that resets the timer on success (`DECISIONS.md` #61). One run at a time: a run can last longer than the 30-minute interval, since the image download alone may take up to 30 minutes (#77 D5b). `run_once` takes no lock; a run overtaken by a later one fails at `advance` and moves no watermark (`DECISIONS.md` #79 O9) | Planning phase 5 |
-| Public source for Tel Aviv areas and streets (`ASSUMPTIONS.md` A1) | Before Gate B |
+| Public source for Tel Aviv areas and streets (`ASSUMPTIONS.md` A1a, A1b). Candidates in `RESEARCH.md` §12: the areas and the Old North split from the municipality's open `שכונות` dataset; streets per area derived from OpenStreetMap or from the municipality's address layer (not open-licensed); street spellings from the Population Authority's register | Before Gate B |
 | SQLite journal mode: the default rollback journal now; WAL is the candidate once the dashboard reads while a run writes (`DECISIONS.md` #65) | Planning phase 3 |
 | A shared post with its own caption: its `text` is the caption, and `sharedPost.text` (the shared listing) never reaches the model. Gate A unchanged (`DECISIONS.md` #71, H; `ASSUMPTIONS.md` P16) | Gate B (phase 2) |
 | Concurrent writes to `PostLifecycle`. `save_lifecycle` is a whole-record replace, last write wins: a user flagging a post while a run writes the same record loses one of the two changes. Phase 1 has one writer. A contract test pins the current behaviour (`DECISIONS.md` #65) | Planning phase 3 |
