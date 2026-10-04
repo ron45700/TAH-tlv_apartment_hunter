@@ -84,7 +84,7 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
 ```
 
 - **Schedule:** every 30 minutes by default. No scheduled runs between 01:00 and 07:00 Israel
-  time. The 07:00 run covers the whole night through the watermark. The hours live in config;
+  time. The 07:00 run covers the whole night: its window starts at the last successful run. The hours live in config;
   later they are editable by the admin from the dashboard.
 - **Interval and manual run** (`DECISIONS.md` #61, phase 5): the interval is an admin setting, and
   a change takes effect at once — the next run is the last run's start plus the new interval. The
@@ -92,8 +92,9 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   succeeds, the next scheduled run is its start plus the interval, and when it fails the timer is
   not reset. One run at a time: a manual request during a run is refused or waits, and two runs
   never overlap.
-- **Watermark:** per group, the highest post time seen, with a 10–15 minute overlap, advanced only
-  on a successful run.
+- **Watermark:** per group, the highest post time seen, never moving backwards. The run's window
+  starts at the last successful run's start minus a 15-minute overlap, the same for every group;
+  all groups advance together, only on a successful run (`DECISIONS.md` #78).
 - **Bootstrap:** the first run stores everything and alerts nothing.
 - **Dedup A (before the model):** post ID and hash of normalized text, checked within the batch
   and against history. A phone-only match is not a duplicate; the phone is a candidate signal for
@@ -279,6 +280,8 @@ signing up.
 - Key issuing
 - Run interval, 30 minutes by default, and a "run now" button (phase 5, `DECISIONS.md` #61)
 - Schedule hours (later)
+- `max_posts` (later, phase 6): one value for all groups; a value where groups × `max_posts`
+  reaches the charge cap's `maxItems` is refused on save
 
 ---
 
@@ -294,7 +297,7 @@ and stays valid. Gate A (`RawPost`) stays approved.
 | **3. Basic dashboard** | **Gate C** (filter rules, and the user, key, profile and viewed-post records) · users and keys · profile and filters · cards · viewed posts · rejected list · flagging | Ron filters and sees real apartments in a browser |
 | **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike | A real alert arrives according to Ron's profile |
 | **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
-| **6. Later** | memo23 failover · UI polish from Ron's screenshots · editing the quiet hours and the group list from the dashboard · Yad2 | |
+| **6. Later** | memo23 failover · UI polish from Ron's screenshots · editing the quiet hours, the group list and `max_posts` from the dashboard · Yad2 | |
 
 Phases 1–4 run on Ron's personal laptop in Docker.
 

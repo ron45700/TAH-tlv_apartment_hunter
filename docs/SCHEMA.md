@@ -5,7 +5,13 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-04 (task 1.12 review) — **Gate E download rule, wording only:** a
+**Last updated:** 2026-10-04 (task 1.13) — **`GroupWatermark` rules, rule text only:**
+`watermark`, `last_success_at` and `consecutive_failures` have their rules; the `posted_at` row
+says that "never run time" is about `watermark`, while the run's window starts from
+`last_success_at`. Approved by Ron (`DECISIONS.md` #78 W1, W5a, W5b). No field or type changed;
+`schema_version` stays 1.
+
+**Earlier on 2026-10-04 (task 1.12 review):** **Gate E download rule, wording only:** a
 repost's photos, retries included, are attempted only while the canonical holds no image
 (`DECISIONS.md` #77 D2, amended). Approved by Ron. No field or type changed; `schema_version`
 stays 1.
@@ -105,7 +111,7 @@ regardless. The question is: **will I filter, query, or dedup on it?** If not, i
 | `group_id` | `str` | `group_id` | Per-group watermark, silent-group detection. |
 | `group_title` | `str \| None` | ❌ (memo23 has it) | Displayed on the card. |
 | `permalink` | `str` | `post_url` | The link Ron clicks. |
-| `posted_at` | `datetime` (UTC) | `creation_time` — RFC 2822, `parsedate_to_datetime` | **The watermark is the max of this**, never run time. |
+| `posted_at` | `datetime` (UTC) | `creation_time` — RFC 2822, `parsedate_to_datetime` | **A group's `watermark` is the max of this**, never run time. The run's window starts from `last_success_at`, the last successful run's start (`DECISIONS.md` #78 W1). |
 | `fetched_at` | `datetime` (UTC) | — | **When we first saw it.** The gap from `posted_at` measures how slow we are. On re-fetch the rest of the record is overwritten but this value is **kept** — the watermark overlap re-fetches the same post almost every run, so overwriting would destroy the measurement. Set at fetch time. |
 | `raw` | `dict` | whole response item | Untouched. The basis for `reclassify` and for every future field. |
 
@@ -337,9 +343,11 @@ One record per group.
 |---|---|---|
 | `schema_version` | `int` | Starts at 1. On every record (`PHASE_1.md` §1.0) |
 | `group_id` | `str` | |
-| `watermark` | `datetime` UTC / `None` | `None` before the first run |
-| `last_success_at` | `datetime` UTC / `None` | |
-| `consecutive_failures` | `int` | Per group |
+| `watermark` | `datetime` UTC / `None` | The highest `posted_at` seen in the group; never moves backwards. `None` until the group returns its first post. Does not set the run's window (`DECISIONS.md` #78 W1) |
+| `last_success_at` | `datetime` UTC / `None` | The start of the last successful run, read from our clock before `fetch()` (#78 W5a). The run's window starts at the earliest of these, minus the buffer |
+| `consecutive_failures` | `int` | Per group: consecutive successful runs in which the group returned zero rows; reset to 0 when it returns any row (#78 W5b). Not a count of failed runs: nothing is written after a failed run |
+
+Every field changes only after a successful run, for all configured groups together (invariant 2).
 
 ---
 

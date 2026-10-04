@@ -44,7 +44,7 @@ def test_repo_collection_config_loads() -> None:
     collection = config.collection()
     assert collection.provider == "thedoor"
     assert collection.group_ids == HANDOFF_GROUP_IDS
-    assert collection.max_posts == 30
+    assert collection.max_posts == 50
     assert collection.sorting_order == "newest_posts"
     assert collection.fetch_all_comments is False
     assert collection.include_top_comment is False

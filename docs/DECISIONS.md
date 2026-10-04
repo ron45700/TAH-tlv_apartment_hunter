@@ -96,13 +96,18 @@ D (dedup B key). Recorded as invariant 1 in `CLAUDE.md`.
 ### 20 — One Apify run for all groups, not one run per group
 **Amended by #71 (2026-10-04):** the run is started with the regular (non-sync) call, not a
 synchronous one. "One run for all groups" stands.
+**Amended by #78 (2026-10-04):** the run's window starts at the last successful run's start minus
+the buffer, not at `min(all watermarks) - buffer`, and there is no per-group local filter. "One run
+for all groups" stands.
 
 `postsNewerThan` is a single value per run, but the watermark is per group. Resolution: one
 run with all 6 URLs, `postsNewerThan = min(all watermarks) - buffer`, filtered per
 group locally.
 
 *Why:* cheaper than 6 runs (memo23 also bills per start), the watermark stays per group as
-designed, dedup absorbs the wider overlap, and silent-group detection falls out for free.
+designed, and dedup absorbs the wider overlap. *Corrected 2026-10-04 (#78): this entry also said
+"silent-group detection falls out for free". It does not: a quiet group and a failed one both
+return zero rows (`ASSUMPTIONS.md` P5, `SPIKE_1_1a.md` Q2).*
 *Status:* the per-group behaviour of `postsNewerThan` is `ASSUMED` — verified in task 1.1a.
 
 ### 21 — `httpx` directly against Telegram, not `python-telegram-bot`
@@ -289,6 +294,9 @@ send `now - min(watermark) - buffer`, expressed in minutes.
 *Consequence:* the watermark itself keeps second resolution; only the actor input changes shape.
 No design change. Note that relative is measured from **run start**, so a delayed start shifts the
 window by the delay — one more reason the 10–15 minute overlap buffer must not shrink.
+
+*Amended by #78 (2026-10-04): the window is `now - (last successful run's start - buffer)`,
+expressed in minutes; the buffer is 15 minutes. Relative minutes and the reasoning above stand.*
 
 ### 37 — A post that normalizes to nothing is `no_text`, never an error
 An emoji-only post produces an empty normalized string. Hashing it would collide with every other
@@ -558,7 +566,9 @@ media fallback. The rules and why:
   `media` empty on all of them. Without the fallback, every shared post would be rejected as having
   no images, against the rule in `BASELINE.md` §5.
 - **`GroupWatermark` per group, with `consecutive_failures`.** The watermark is per group
-  (`RESEARCH.md` §4) and the failure count feeds silent-group detection.
+  (`RESEARCH.md` §4) and the failure count feeds silent-group detection. *The rules for
+  `last_success_at` and `consecutive_failures`, and what sets the run's window: #78
+  (2026-10-04).*
 
 ### 64 — Task 1.10 stores both Gate E records; the watermark has its own interface
 Approved by Ron, 2026-10-04.
@@ -742,7 +752,8 @@ with the reason given here, and he approved it.
 - **J. A group at `max_posts`.** `fetch()` logs a warning for every group whose row count, before
   the `since` filter, is at or above `max_posts` (`>=`; amended from "equals" in the task 1.1
   review, 2026-10-04): its window may be cut off. Log only. What the watermark
-  does then is an open point for task 1.13.
+  does then is an open point for task 1.13. *Settled by #78 W3 (2026-10-04): the group still
+  advances, `advance` reports it, and `max_posts` is 50.*
 - **Comments are not collected.** Both comment flags stay explicitly `false` (invariant 7);
   `RawPost.top_comment` is not touched.
 - **Cost:** `usageTotalUsd` is logged as read at the end of the run, with no wait for the final
@@ -970,6 +981,67 @@ the short `error` reasons; the function's input and output; tests through a fake
   `schema_version` stays 1.
 
 For D5c, D5d and the location, no reason was recorded.
+
+### 78 — Task 1.13: the per-group watermark
+Approved by Ron, 2026-10-04. **Amends #20 and #36's formula, `RESEARCH.md` §4 and `PHASE_1.md`
+1.13; settles #71 J; sets the rules of `last_success_at` and `consecutive_failures` (Gate E).**
+Each point was presented to Ron as a recommendation with the reason given here, and he approved
+it. The rest of the task 1.13 plan was approved as written.
+
+- **W1. The run's window starts at the last successful run's start minus the buffer.** The
+  group's `watermark` stays the highest `posted_at` seen and is still stored, but it no longer
+  sets the window. `SCHEMA.md`'s "never run time" still holds for `watermark`.
+  *Why:* under the documented rule (`min(all watermarks) - buffer`) every run reaches back to the
+  quietest group's last post (gaps of 26.7 h and 28.6 h in the spike data): about 107 rows per run
+  and about $179/month, against the ~$12–16/month Ron accepted. Invariant 2 holds:
+  `last_success_at` moves only after a successful run, so a failed run widens the next window.
+  A daily wide run covering 24 h, about $5/month, to heal a per-group miss within a day: phase 5,
+  the scheduler (`BACKLOG.md`). Recorded, not built.
+- **W2. The buffer is 15 minutes**, a module constant (`BUFFER` in `watermark/window.py`), not a
+  config key.
+  *Why:* about $2.5/month in rows billed twice; no reason to edit it from the dashboard.
+- **W3. `max_posts` goes from 30 to 50** in `config/collection.yaml`. A group at `max_posts` still
+  advances; `advance` returns the cut-off groups so that task 1.14 logs them with the `run_id`. A
+  group is cut off when it returned `max_posts` posts or more and its oldest is later than its own
+  window start (its watermark minus the buffer, never before the run's `since`). Holding the
+  watermark back is ruled out: posts arrive newest first, so the same window returns the same
+  newest posts.
+  *Why:* billing is per returned result, so under W1 a higher `max_posts` costs nothing on a
+  normal run and covers a longer outage (about 16 h of the busiest group instead of about 10).
+  50 and not more: the $0.50 cap derives `maxItems` 333, and 6 × 50 = 300 stays below it; above
+  55 a run after a long outage would fail, and keep failing. When group editing is planned:
+  groups × `max_posts` must stay below the cap's `maxItems` (a seventh group at 50 crosses it;
+  `BACKLOG.md`).
+- **W4. A group that fails inside a successful run is a known limit.** Detecting it from the run
+  log and holding back only the failed group is its own task (`BACKLOG.md`): it needs the run-log
+  endpoint verified under the skill, one small test run against an unreachable group (about
+  $0.01, approved by Ron when planned), and `fetch()` returning per-group status.
+  *Why:* that detection rests on a log format that is ASSUMED (`ASSUMPTIONS.md` P13); nothing is
+  built on ASSUMED.
+- **W5a. `last_success_at` is the start of the last successful run,** read from our clock before
+  `fetch()`.
+- **W5b. `consecutive_failures` counts consecutive successful runs in which the group returned
+  zero rows;** it resets to 0 when the group returns any row. The field is not renamed. The alert
+  thresholds are decided in phase 5: a healthy group can be silent for 31 h, about 49 runs
+  (`BACKLOG.md`). Rule text in `SCHEMA.md`; no field or type change; `schema_version` stays 1.
+  *Why:* nothing is written after a failed run, so the field cannot count failed runs.
+- **W6. No per-group local filter for storage:** every fetched post goes on, and dedup handles
+  repeats.
+  *Why:* under W1 the run's window is the same for every group.
+- **W7. A configured group with no record, outside bootstrap, raises an error that names the
+  group.** Records of groups no longer configured are left untouched and do not count toward the
+  window. When group editing is planned, adding a group needs a way to create its record without
+  a full bootstrap (`BACKLOG.md`).
+  *Why:* a loud failure is better than a run that silently skips a group.
+- **A row skipped under #71 D that is newer than its group's watermark:** no change. The watermark
+  advances past it when the group has a newer post; the row would fail to map the same way on
+  every run.
+- **Location.** `tlv_hunter/watermark/window.py`, a plain module with no storage of its own:
+  `run_since(records, group_ids)` and `advance(records, group_ids, posts, *, run_started_at,
+  since, max_posts) -> WatermarkAdvance` (the records and the cut-off groups). Task 1.13 writes
+  nothing; task 1.14 calls `WatermarkStore.save_all`. `CLAUDE.md` names it in one line.
+
+For W5a, the skipped row and the location, no reason was recorded.
 
 ---
 

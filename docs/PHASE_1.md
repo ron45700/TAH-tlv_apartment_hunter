@@ -1,6 +1,6 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11, 1.3 and 1.12 complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11, 1.3, 1.12 and 1.13 complete.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -293,24 +293,35 @@ and spike main through `dedup_a`.
 
 ---
 
-## 1.13 Per-group watermark
+## 1.13 Per-group watermark — ✅ COMPLETE (2026-10-04)
 
-The watermark **logic** only: when it advances. Its storage (`GroupWatermark`, `WatermarkStore`)
-was built in 1.10; all groups are written together through `WatermarkStore.save_all`, one
-transaction.
+`run_since(records, group_ids) -> datetime` and `advance(records, group_ids, posts, *,
+run_started_at, since, max_posts) -> WatermarkAdvance` in `tlv_hunter/watermark/window.py`, a
+plain module with no storage of its own (`DECISIONS.md` #78). It writes nothing: task 1.14 saves
+the returned records through `WatermarkStore.save_all`, one transaction, after a successful run
+only. Nothing calls it yet.
 
-Rules in `RESEARCH.md` §4. The run input is `min(all watermarks) - buffer`, filtered per group
-locally. The watermark advances only when the whole run succeeded.
+Rules in `RESEARCH.md` §4. Settled by #78:
 
-**Open point — a group at `max_posts`.** When a group returns `max_posts` rows or more in one
-run, its window may be cut off: older posts inside the window were not returned. `fetch()` logs a
-warning (`DECISIONS.md` #71 J) and changes nothing. What the watermark does then is decided when
-1.13 is planned.
+- **The run's window** (W1, W2): the configured groups' earliest `last_success_at`, minus a
+  15-minute buffer (`BUFFER`, a module constant). The watermark, the highest `posted_at` seen, is
+  stored but no longer sets the window. A configured group with no record raises, naming it (W7);
+  a bootstrap run supplies its own `since`, and `advance` creates the records.
+- **No per-group local filter** (W6): every fetched post goes on to dedup.
+- **After a successful run, every configured group** (W5a, W5b): `watermark` becomes the newest
+  `posted_at` of its posts, never backwards; `last_success_at` becomes the run's start, read from
+  our clock before `fetch()`; `consecutive_failures` resets to 0 if the group returned a row and
+  otherwise counts up. Records of groups no longer configured are left untouched (W7).
+- **A group at `max_posts`** (W3): it still advances, and `advance` reports it as cut off when its
+  oldest post is later than its own window start; 1.14 logs it with the `run_id`. `max_posts` is
+  50 in `config/collection.yaml`.
+- **A group that fails inside a successful run** (W4): a known limit; detecting it from the run log
+  is its own task (`BACKLOG.md`).
+- **A row skipped under #71 D:** no change.
 
-**Open point — a per-group failure inside a successful run.** Posts arrive newest first, so a group
-that fails midway would advance its watermark past posts it never returned (invariant 2). The run
-log reports per-group status, but its format is `ASSUMED` (`ASSUMPTIONS.md` P13). Decided when 1.13
-is planned.
+**Tests:** `tests/test_watermark_window.py`, no network, on the spike 1.1a datasets: one test per
+decision, bootstrap, the round trip through `SqliteWatermarkStore`, and the guards. The fetch tests
+pin the spike's own `maxPosts` (30, read from its input fixture).
 
 ---
 
@@ -332,7 +343,11 @@ the watermarks. Once alerts exist (phase 4), a bootstrap run sends none.
 3. Where the production constant for `tlv_hunter.sqlite3` lives.
 4. Where `ThedoorProvider` gets the Apify token (`APIFY_TOKEN` in `.env`); the provider takes it as
    a constructor argument.
-5. The store step: writing `dedup_a`'s result — each post through `upsert` /
+5. The watermark wiring (`DECISIONS.md` #78): `run_started_at` from our clock before `fetch()`;
+   `since` from `run_since`, or the bootstrap window under the bootstrap flag, and how long that
+   window is; `advance` after the store step; `save_all` only after a successful run; the cut-off
+   groups logged with the `run_id`.
+6. The store step: writing `dedup_a`'s result — each post through `upsert` /
    `upsert_with_lifecycle`, each record through `save_lifecycle` — and in what sequence. 1.3
    already calls `initial_lifecycle` and `recheck` (`DECISIONS.md` #73.6, #75 F2).
 

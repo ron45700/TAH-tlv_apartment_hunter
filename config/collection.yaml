@@ -6,7 +6,7 @@ group_ids:
   - "5612809662118963"
   - "733810383372996"
   - "295395253832427"
-max_posts: 30
+max_posts: 50
 sorting_order: newest_posts
 fetch_all_comments: false
 include_top_comment: false

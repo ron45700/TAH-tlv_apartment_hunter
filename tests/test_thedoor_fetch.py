@@ -33,7 +33,9 @@ MAX_POSTS_GROUP = "101875683484689"
 
 @pytest.fixture
 def config():
-    return YamlConfig(CONFIG_ROOT).collection()
+    # The repo config with the spike's maxPosts, so that the spike fixtures stay valid as captured.
+    spike_max_posts = load_spike_1_1a("_input")["maxPosts"]
+    return YamlConfig(CONFIG_ROOT).collection().model_copy(update={"max_posts": spike_max_posts})
 
 
 @dataclass
@@ -104,6 +106,12 @@ def _fetch(config, apify, clock, since=SINCE, group_ids=None):
 
 
 # --- input -----------------------------------------------------------------------------------
+
+
+def test_input_takes_max_posts_from_the_repo_config() -> None:
+    repo_config = YamlConfig(CONFIG_ROOT).collection()
+    built = build_actor_input(repo_config, repo_config.group_ids, SINCE, RUN_START)
+    assert built["maxPosts"] == repo_config.max_posts
 
 
 def test_input_is_the_spike_input(config) -> None:

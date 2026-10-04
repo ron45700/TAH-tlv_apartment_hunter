@@ -26,7 +26,7 @@ Phase 1, as detailed in `PHASE_1.md`.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
-| 1 | Tasks 1.13–1.14: watermark logic, `run_once` | `PHASE_1.md` | **Open, for 1.14 planning:** the store step — writing `dedup_a`'s result: each post through `upsert` / `upsert_with_lifecycle` and each record through `save_lifecycle`, in what sequence (task 1.3 already calls `initial_lifecycle` and `recheck`, `DECISIONS.md` #75 F2); which step calls `find_without_lifecycle` and what it does with a non-empty result (task 1.3 already builds a record for a stored canonical that has none, #75 F4); who creates the `store_root` directory (`SqliteRepository` does not, `local_json` does); where the production constant for `tlv_hunter.sqlite3` lives; where `ThedoorProvider` gets the Apify token (`APIFY_TOKEN` in `.env`; the provider takes it as a constructor argument) (`PHASE_1.md` 1.14); where `download_images` is called (after `dedup_a`, with `store_root`) and its result stored |
+| 1 | Task 1.14: `run_once` | `PHASE_1.md` | **Open, for 1.14 planning:** the watermark wiring (`DECISIONS.md` #78): read our clock before `fetch()` as `run_started_at`; `since` from `run_since(store.get_all(), group_ids)`, or the bootstrap window under the bootstrap flag, and how long that window is; `advance` after the store step and image download; `WatermarkStore.save_all(result.records)` only after a successful run; log `result.cut_off` with the `run_id`; the store step — writing `dedup_a`'s result: each post through `upsert` / `upsert_with_lifecycle` and each record through `save_lifecycle`, in what sequence (task 1.3 already calls `initial_lifecycle` and `recheck`, `DECISIONS.md` #75 F2); which step calls `find_without_lifecycle` and what it does with a non-empty result (task 1.3 already builds a record for a stored canonical that has none, #75 F4); who creates the `store_root` directory (`SqliteRepository` does not, `local_json` does); where the production constant for `tlv_hunter.sqlite3` lives; where `ThedoorProvider` gets the Apify token (`APIFY_TOKEN` in `.env`; the provider takes it as a constructor argument) (`PHASE_1.md` 1.14); where `download_images` is called (after `dedup_a`, with `store_root`) and its result stored |
 
 ---
 
@@ -35,9 +35,10 @@ Phase 1, as detailed in `PHASE_1.md`.
 | Decision | State of the code (checked 2026-10-04) | What has to change |
 |---|---|---|
 | #57 the name next to a phone number | Phones are extracted and stored once per post; no name is captured | Gate B defines it (`DECISIONS.md` #57) |
-| #63 Gate E: post lifecycle record, `GroupWatermark` | `PostLifecycle` and `GroupWatermark` exist and are stored (task 1.10); the initial record and the pre-model re-check are built by `premodel/rejects.py` (task 1.11); `last_published_at` from duplicates (never backwards; a phone-only match is not a duplicate) and `duplicate_of`, from which the repost log is derived, are computed by `dedup/stage_a.py` (task 1.3). Nothing stores any of it yet. The Gate A media fallback is in the mapper (task 1.1). The photo download, one retry, failures recorded in `images` and the identical-hash repost rule are in `images/download.py` (task 1.12); nothing calls it yet | Task 1.14: store what `dedup_a` returns. Task 1.13: when `GroupWatermark` advances, written through `WatermarkStore.save_all` |
+| #63 Gate E: post lifecycle record, `GroupWatermark` | `PostLifecycle` and `GroupWatermark` exist and are stored (task 1.10); the initial record and the pre-model re-check are built by `premodel/rejects.py` (task 1.11); `last_published_at` from duplicates (never backwards; a phone-only match is not a duplicate) and `duplicate_of`, from which the repost log is derived, are computed by `dedup/stage_a.py` (task 1.3). Nothing stores any of it yet. The Gate A media fallback is in the mapper (task 1.1). The photo download, one retry, failures recorded in `images` and the identical-hash repost rule are in `images/download.py` (task 1.12); nothing calls it yet | Task 1.14: store what `dedup_a` returns, and save what `advance` returns (#78) |
 | #64, #65 the SQLite store and `state/` | Built and tested (task 1.10). `pipeline.py` still calls `upsert` only, and nothing constructs `SqliteRepository` or `SqliteWatermarkStore` | Task 1.14: store posts through `upsert_with_lifecycle` (the initial record is built by `initial_lifecycle`, task 1.11), and construct both modules on `<store_root>/tlv_hunter.sqlite3` |
 | #67–#70, #72–#74 `no_images` means no media at all; a re-fetched pre-model reject, or `pending` post, is re-checked against both rules; media through an identical-hash repost; a repost of an archived post returns it to the state it had | Task 1.11 done: `pre_model_reason`, `initial_lifecycle` and `recheck` in `premodel/rejects.py` (#67, #72.1, #72.6, #73.1–#73.3). Task 1.3 done: `dedup_a` in `dedup/stage_a.py` calls them and applies #70 (stored duplicates included, #75 D1), #72.4, #72.5, #72.6 and #74 (#75 E1–E3). Nothing calls `dedup_a` yet. Task 1.12 done: the repost's photos (#70, #72.3, #73.5) in `images/download.py` | Task 1.14: write `dedup_a`'s result in the store step. #72.2 adds no code. #72.7: Gate D |
+| #78 the per-group watermark | Task 1.13 done: `run_since` and `advance` in `watermark/window.py`; `max_posts` 50 in `config/collection.yaml`. Nothing calls them yet | Task 1.14: the wiring in item 1 of the sprint |
 | #76, #77 photo download | Task 1.12 done: `download_images` in `images/download.py` (#76; #77 D1–D5d). Nothing calls it yet | Task 1.14: call it after `dedup_a` and store its result |
 | #77 D4b archiving deletes the image files and removes their `PostImage` entries | Nothing exists; task 1.12 already reads a record archived before #74 without counting its old entries (#77 D4) | Phase 5, the archive job |
 | #75 task 1.3: dedup stage A | Done: `dedup/stage_a.py` (`dedup_a`, reads only), `Repository.get` in both stores (F3). Nothing calls `dedup_a` yet | Task 1.14: call it after the pre-model rejects and write its result. Later rows: "Recorded for a later phase" (Gate B, Gate D, phase 3, phase 5) |
@@ -69,6 +70,11 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | The admin lists (rejected, pending, archive) show canonicals only (`DECISIONS.md` #75 B) | Phase 3 |
 | Whether a duplicate's retention follows its own clock or its canonical's (`DECISIONS.md` #75 B). Note: `dedup_a` raises when a stored duplicate points at a canonical that is not stored, so deleting a canonical before its duplicates would block the run | Phase 5 |
 | The phone as a candidate signal for dedup B; layer 3 of dedup A produces nothing (`DECISIONS.md` #75 C) | Gate D |
+| A daily wide run covering 24 h, about $5/month, to heal a per-group miss within a day (`DECISIONS.md` #78 W1) | Phase 5, the scheduler |
+| The alert thresholds on `consecutive_failures` (zero-row successful runs). A healthy group can be silent for 31 h, about 49 runs (`DECISIONS.md` #78 W5b, `RESEARCH.md` §9) | Phase 5 |
+| Detect a group that fails inside a successful run from the run log, and hold back only that group (`DECISIONS.md` #78 W4). Needs the run-log endpoint verified under the `external-contract-verification` skill, one small test run against an unreachable group (about $0.01; Ron approves it when planned), and `fetch()` returning per-group status (a provider contract change). Rests on P13, ASSUMED | Its own task, when Ron schedules it |
+| Groups × `max_posts` must stay below the charge cap's `maxItems` (333 at $0.50); a seventh group at 50 crosses it (`DECISIONS.md` #78 W3) | Planning group editing (phase 6) |
+| Adding a group needs a way to create its `GroupWatermark` without a full bootstrap; outside bootstrap a configured group with no record raises (`DECISIONS.md` #78 W7) | Planning group editing (phase 6) |
 
 ---
 
@@ -76,6 +82,8 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 
 | Limit | Effect |
 |---|---|
+| A group that fails inside a successful run advances like the others; its window is lost (`DECISIONS.md` #78 W4) | Posts missed for good, until the run-log task above exists |
+| A group at `max_posts` short of its window still advances; `advance` reports it (`DECISIONS.md` #78 W3) | The posts between its window start and its oldest returned post may be missed for good. A row skipped under #71 D lowers the count, and such a group can go unreported |
 | `dedup_a` finds a canonical's stored duplicates through the hashes of the canonical and of its batch duplicates (`DECISIONS.md` #75 D1). A stored duplicate with media whose text was edited later has a different hash and is not found | #70 can miss it, and a canonical with no media can return to `"rejected"` |
 
 ---
@@ -91,7 +99,6 @@ Left open on purpose until their phase is planned (`DECISIONS.md` #23).
 | How the scheduler runs inside the container. It must be interval-based (the interval is an admin setting) and support a manual run that resets the timer on success (`DECISIONS.md` #61). One run at a time: a run can last longer than the 30-minute interval, since the image download alone may take up to 30 minutes (#77 D5b) | Planning phase 5 |
 | Public source for Tel Aviv areas and streets (`ASSUMPTIONS.md` A1) | Before Gate B |
 | SQLite journal mode: the default rollback journal now; WAL is the candidate once the dashboard reads while a run writes (`DECISIONS.md` #65) | Planning phase 3 |
-| What the watermark does when a group returns `max_posts` rows or more in a run (the window may be cut off). `fetch()` only logs a warning (`DECISIONS.md` #71, J) | Planning task 1.13 (`PHASE_1.md` 1.13) |
 | A shared post with its own caption: its `text` is the caption, and `sharedPost.text` (the shared listing) never reaches the model. Gate A unchanged (`DECISIONS.md` #71, H; `ASSUMPTIONS.md` P16) | Gate B (phase 2) |
 | Concurrent writes to `PostLifecycle`. `save_lifecycle` is a whole-record replace, last write wins: a user flagging a post while a run writes the same record loses one of the two changes. Phase 1 has one writer. A contract test pins the current behaviour (`DECISIONS.md` #65) | Planning phase 3 |
 
@@ -112,6 +119,8 @@ Left open on purpose until their phase is planned (`DECISIONS.md` #23).
 |---|---|
 | memo23 failover | `BASELINE.md` §12, phase 6 |
 | Editing the schedule and the group list from the dashboard | `BASELINE.md` §12, phase 6 |
+| `max_posts` editable by the admin | `BASELINE.md` §11, §12 phase 6. Approved by Ron, 2026-10-04; recorded, not built. One value for all groups (the actor takes one `maxPosts` per run). On save, the system refuses a value where groups × `max_posts` reaches the charge cap's `maxItems`. Open, decided when planned: whether the charge cap itself is editable |
 | UI polish from Ron's screenshots | `BASELINE.md` §12, phase 6 |
 | Yad2 as an additional source | `DECISIONS.md` #60. Open points from the old plan: `RawPost` is Facebook-shaped (`group_id` required, `source` accepts two values); whether structured Yad2 listings pass through the model; dedup across sources; terms of use |
 | Comments scraping | Not planned |
+| Parallel image downloads, if runs prove too long | Not planned; recorded 2026-10-04 with Ron's approval. Ron chose the 30-minute budget instead (`DECISIONS.md` #77 D5b). Would need its own check for throttling (`ASSUMPTIONS.md` I11 covers sequential requests only), and must keep #77 D3's order inside each group |

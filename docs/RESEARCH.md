@@ -9,7 +9,8 @@ are in `SCHEMA.md`.
 
 **Compiled:** 2026-10-03 from `archive/HANDOFF.md` and `archive/MACRO_PLAN.md`, with the
 corrections made since (Gate A, task 1.2, Phase 0 build) folded in.
-**Updated:** 2026-10-04 with the results of spike 1.1a (`SPIKE_1_1a.md`).
+**Updated:** 2026-10-04 with the results of spike 1.1a (`SPIKE_1_1a.md`), and the watermark rules
+of task 1.13 (`DECISIONS.md` #78).
 
 ---
 
@@ -44,7 +45,7 @@ All verified against a real 20-post run on 2026-09-13 (cost: under $0.10).
 ```json
 {
   "url": ["https://www.facebook.com/groups/XXXX/"],
-  "maxPosts": 30,
+  "maxPosts": 50,
   "sortingOrder": "newest_posts",
   "fetchAllComments": false,
   "includeTopComment": false
@@ -132,26 +133,46 @@ items omit `width` and `height` too (9 in spike 1.1a), so the keys are never ass
   run ID. `maxTotalChargeUsd` caps the cost of a run.
 - **Our scheduler, not Apify's.** Apify's scheduler injects static input; `postsNewerThan` changes
   every run.
-- **One run for all groups.** `postsNewerThan` is one value per run while the watermark is per
-  group, so the run uses `min(all watermarks) - buffer` and the result is filtered per group
-  locally. The window applies per group inside one run: verified in spike 1.1a
-  (`ASSUMPTIONS.md` P1, `SPIKE_1_1a.md` Q1).
+- **One run for all groups.** `postsNewerThan` is one value per run. The run's window starts at
+  the last successful run's start minus the buffer, the same for every group, and nothing is
+  filtered per group locally (`DECISIONS.md` #78 W1, W6). The window applies per group inside one
+  run: verified in spike 1.1a (`ASSUMPTIONS.md` P1, `SPIKE_1_1a.md` Q1).
 
 Expected cost (from spike 1.1a, `SPIKE_1_1a.md`): 36 runs/day, ~150 posts/day, $0.0015 per
 result and $0.005 per run start. **One run covering all 6 groups: ~$12–16/month**; six separate
 runs: ~$39–43/month. **Accepted by Ron, 2026-10-04.** The earlier "~1,500 posts/month ≈ $2.25"
 ignored the start fee and underestimated volume. Gemini Flash is not included.
 
+**The projection holds only with a short window.** It assumes each run asks for about 30 minutes
+plus the buffer. Under the earlier rule, `min(all watermarks) - buffer` with the watermark as the
+highest `posted_at`, every run reached back to the quietest group's last post. Simulated over the
+spike control dataset (20 runs every 30 minutes, a 15-minute buffer, the 10.7 hours in which all
+six groups are covered, a Saturday): a median window of 26.7 h, about 107 rows per run, the busiest
+group at `max_posts` on every run, **about $179/month**. With the window at the last successful
+run's start minus the buffer: about 5.8 rows per run, **about $15/month**. Hence `DECISIONS.md`
+#78 W1. Billing is per returned result, so `max_posts` (50, #78 W3) costs nothing on a normal run.
+
 ---
 
 ## 4. Watermark rules
 
-1. The watermark is the **highest `posted_at` seen**, not the run time.
-2. Always subtract a **10–15 minute overlap**; dedup absorbs the repeats. Zero overlap loses posts
-   silently.
+*Amended 2026-10-04 by `DECISIONS.md` #78: the run's window no longer comes from the watermark.*
+
+1. A group's watermark is the **highest `posted_at` seen**, not the run time. It is stored, and it
+   never moves backwards, but it does not set the run's window: with one run for all groups, the
+   quietest group's last post would set every run's window (§3).
+2. **The run's window starts at the last successful run's start** (`last_success_at`, read from
+   our clock before `fetch()`), **minus a 15-minute overlap**; dedup absorbs the repeats. Zero
+   overlap loses posts silently, and the actor measures the relative window from its own start
+   (`ASSUMPTIONS.md` P1c).
 3. **Per group**, never global, and never per user.
 4. **Advance only on a successful run.** A throttled run that advances the window loses that window
-   for good.
+   for good. A failed run writes nothing, so the next window covers it.
+5. **A group at `max_posts` still advances.** Posts arrive newest first, so asking for the same
+   window again returns the same newest posts; holding the watermark back recovers nothing. The
+   group is reported for the run log.
+6. **A group that fails inside a successful run advances too.** Nothing in the data tells it apart
+   from a quiet group; the run log might (P13, ASSUMED). A known limit.
 
 ---
 
@@ -248,6 +269,9 @@ quiet hours do not count.
 without a post, and the busiest group posts ~73/day while the quietest posts ~4/day. A single
 threshold for all six groups will either miss failures or flag quiet groups. The run log's
 per-group reason may be a better signal than counting zeros.
+
+The counter is `GroupWatermark.consecutive_failures`: consecutive successful runs in which the
+group returned zero rows (`DECISIONS.md` #78 W5b). The thresholds are decided in phase 5.
 
 ---
 

@@ -1151,3 +1151,98 @@ Two changes and one doc fix, approved by Ron. No network, no git.
 ### Next
 
 Task 1.13, the per-group watermark logic (`BACKLOG.md` item 1).
+
+---
+
+## 2026-10-04 (continued) — BACKLOG row; task 1.13 plan presented
+
+### Done
+
+1. **`BACKLOG.md`, "Future (recorded, not planned)":** parallel image downloads, if runs prove too
+   long. Approved by Ron. Not planned: Ron chose the 30-minute budget (#77 D5b); it would need its
+   own throttling check (I11 covers sequential requests only) and must keep #77 D3's order inside
+   each group.
+2. **Task 1.13 plan presented, for Ron's decision. No code.** Nothing decided; no schema, field,
+   config or filter-rule change.
+
+### Verified (local, no network)
+
+- **`since = min(all watermarks) - buffer`, with the watermark as the highest `posted_at`, makes
+  every run as wide as the quietest group's silence.** In the spike control dataset the quietest
+  groups' longest gaps between posts are 28.6 h (`5612809662118963`) and 26.7 h
+  (`733810383372996`). A simulation over that dataset (20 runs, every 30 minutes, 15-minute
+  buffer, the 10.7 hours in which all six groups are covered; a Saturday) gives a median window of
+  26.7 h, **~107 rows per run**, and `101875683484689` at `max_posts` on every run. A window of
+  the last successful run's start minus the buffer gives ~5.8 rows per run. At $0.0015 per result
+  and $0.005 per start, 36 runs a day: **~$179/month against ~$15/month**. Ron accepted the
+  ~$12–16/month projection, which assumed a 30-minute-plus-buffer window. Spike run 1 itself
+  (24-hour window, 105 rows, $0.1625) is what a normal run looks like under the documented rule.
+  Script: scratchpad, not kept.
+- So a higher `max_posts` is free on a normal run only if the window is short; under the
+  documented rule it multiplies the cost of every run.
+- The spike log's per-group lines (`done … | Posts: N | Reason: …`, `Successful groups: 6/6`) were
+  seen only for groups that succeeded; what the actor prints for a group that fails is unobserved.
+- `fetch()` returns posts only; per-group row counts before the `since` filter are logged, not
+  returned. A cut-off test from the returned posts alone is possible: a group with `max_posts`
+  posts whose oldest is later than its own window start.
+
+### Next
+
+Ron decides the task 1.13 points (window basis, buffer, a group at `max_posts`, per-group failure,
+the rules for `last_success_at` and `consecutive_failures`, the local filter, a group with no
+record outside bootstrap). Then 1.13 is built.
+
+---
+
+## 2026-10-04 (continued) — Task 1.13: per-group watermark, built
+
+### Done
+
+Task 1.13 approved by Ron with decision #78 (W1–W7, the skipped row, the location), and one more
+`BACKLOG.md` row (phase 6: `max_posts` editable by the admin). No network, no git. `pipeline.py`
+untouched; nothing from 1.14.
+
+1. **`tlv_hunter/watermark/window.py`**, a plain module, no storage:
+   - `BUFFER = timedelta(minutes=15)` (W2).
+   - `run_since(records, group_ids) -> datetime`: the configured groups' earliest
+     `last_success_at` minus `BUFFER` (W1). Raises `MissingWatermarkError`, naming the groups, when
+     a configured group has no record or a record with no `last_success_at` (W7). Records of
+     groups no longer configured do not count.
+   - `advance(records, group_ids, posts, *, run_started_at, since, max_posts) -> WatermarkAdvance`
+     (`records`, one per configured group in configured order; `cut_off`, a `CutOff` per group at
+     `max_posts` short of its own window start). `watermark` = the newest `posted_at`, never
+     backwards; `last_success_at` = `run_started_at` (W5a); `consecutive_failures` resets on any
+     row, otherwise counts up (W5b). A configured group with no record gets one (bootstrap).
+   - The plan's `buffer` parameter is gone from both signatures: W2 made it a module constant.
+   - Guards: UTC on both datetimes; `since` before `run_started_at`; a run started before a
+     group's stored `last_success_at`; a post from a group not configured; duplicate records or
+     group IDs; empty group list; `max_posts` not positive.
+   - Cut-off test: `max_posts` posts or more, and the oldest later than the group's own window
+     start, `max(since, watermark - BUFFER)` (W3).
+2. **`config/collection.yaml`:** `max_posts` 30 → 50 (W3). The only config change.
+3. **Tests:** `tests/test_watermark_window.py`, 28 tests on the spike 1.1a datasets, one or more
+   per decision. `tests/test_thedoor_fetch.py`: the `config` fixture pins the spike's `maxPosts`
+   (30, read from its input fixture, fixtures not edited); new test that the repo value reaches the
+   actor input. `tests/test_config.py`: expects 50.
+4. **`fetch()`'s `max_posts` warning:** unchanged. Its text ("its window may be cut off") does not
+   assume the old window and still holds under W1.
+5. **Docs:** `BACKLOG.md` (sprint item 1 is now 1.14 with the watermark wiring; #63 row; new #78
+   row; the `max_posts` open choice removed; later-phase rows for the daily wide run, the
+   `consecutive_failures` thresholds, the run-log detection task, groups × `max_posts`, adding a
+   group without bootstrap; two known limits; the phase 6 `max_posts` row), `DECISIONS.md` (#78;
+   pointers in #20, #36, #63, #71 J; #20's "silent-group detection falls out for free" corrected
+   in place), `SCHEMA.md` (`GroupWatermark` rules, the `posted_at` row, header), `RESEARCH.md`
+   (header, §2 `maxPosts` example 50, §3 window bullet and cost paragraph, §4, §9 counter),
+   `PHASE_1.md` (status, 1.13 complete, 1.14 open point 5), `BASELINE.md` (§4 watermark bullet and
+   the 07:00 line, §11 Admin, §12 phase 6), `ASSUMPTIONS.md` (P1b and P1c wording, header; no
+   status changed), `CLAUDE.md` (one line), this log.
+
+### Verified
+
+`uv run pytest`: 462 passed. `uv run ruff check .`: all checks passed.
+`uv run ruff format --check .`: 80 files already formatted (after `ruff format` reformatted the two
+new files).
+
+### Next
+
+Task 1.14, `run_once` (`BACKLOG.md` item 1), including the watermark wiring.
