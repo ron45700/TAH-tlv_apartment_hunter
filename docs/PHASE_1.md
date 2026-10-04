@@ -1,6 +1,6 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10 and 1.1 complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1 and 1.11 complete.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -156,11 +156,17 @@ Follow the `external-contract-verification` skill before writing it.
 
 ---
 
-## 1.11 Pre-model rejects
+## 1.11 Pre-model rejects — ✅ COMPLETE (2026-10-04)
+
+Three pure functions in `premodel/rejects.py` (`DECISIONS.md` #73): `pre_model_reason(post)`,
+`initial_lifecycle(post)` and `recheck(existing, post)`. No storage: the store step is a 1.14 open
+point. Tests run on the spike 1.1a datasets (the control run has the one real `no_text` post) with
+no network.
 
 A post is set aside before any model call when:
 
-- it has no text (`no_text`), or
+- it has no text (`no_text`, read from the stored `post.no_text`: text normalize runs first,
+  `DECISIONS.md` #73.1), or
 - it has no media at all (`no_images`, `DECISIONS.md` #67). A post whose only media is video or
   reel is **not** rejected. A post that shares another post is checked first: it is rejected only
   if the shared post has no media either. This is the rejection rule; which media are downloaded
@@ -168,19 +174,27 @@ A post is set aside before any model call when:
 
 It is stored with its reason and is never classified. About 10% of the sample has no media.
 
-The initial `PostLifecycle` (`"pending"`, or `"rejected"` with its reason) is built here and stored
-through `Repository.upsert_with_lifecycle` (1.10), which never overwrites an existing record.
+The initial `PostLifecycle` (`"pending"`, or `"rejected"` with its reason) is built here
+(`initial_lifecycle`). It is not stored here (`DECISIONS.md` #73.6): the data path stores after
+dedup, and the store step is decided in 1.14.
 
-**Re-fetched with media** (`DECISIONS.md` #68): a post rejected as `no_images` and fetched again
-with media returns to `"pending"` and goes to the model. It does not stay rejected.
+**Re-fetched** (`DECISIONS.md` #72.1, the rule behind #68 and #69): a post rejected before the
+model (`no_text` or `no_images`) and fetched again (the same post) is checked again against
+**both** pre-model rules, on its current content. It returns to `"pending"`, and goes to the model,
+only if it now passes both; otherwise it stays `"rejected"` and its reason is updated to the first
+rule that applies. A `"pending"` post fetched again is re-checked the same way (#73.2). A post with a
+verdict (active, rejected by the model, flagged) and an archived post are left untouched (#73.2,
+#73.3). This is `recheck`.
 
-**Re-fetched with text** (`DECISIONS.md` #69): a post rejected as `no_text` and fetched again (the
-same post) with text returns to `"pending"` and goes to the model, the same as #68.
+**Each post alone** (`DECISIONS.md` #72.6): 1.11 evaluates each post on its own content. When a
+canonical and its repost are both new in the same run, 1.3 applies #70 afterwards; the end state is
+the same.
 
 **Media through a repost** (`DECISIONS.md` #70): when the canonical was rejected as `no_images` and
 a repost with an identical text hash arrives with media, the canonical returns to `"pending"` and
 goes to the model. The repost is found by dedup, so this part is built in 1.3; the repost's photos
-are downloaded in 1.12. A `no_text` post is never hashed, so it has no reposts.
+are downloaded in 1.12. A `no_text` post is never hashed, so it has no reposts. One that comes back
+with text goes through dedup like any post that arrived now (#72.2).
 
 ---
 
@@ -203,7 +217,22 @@ makes it active again.
 
 A repost with an identical text hash that has media, of a canonical rejected as `no_images`,
 returns the canonical to `"pending"` (`DECISIONS.md` #70). The repost stays a repost, and the
-canonical rule (earliest `posted_at`) is unchanged.
+canonical rule (earliest `posted_at`) is unchanged. Settled by #72:
+
+- A repost whose only media is video or reel also returns the canonical to `"pending"`; nothing is
+  downloaded (#72.4).
+- An archived canonical rejected as `no_images`: `"pending"` wins over "active again" (#72.5).
+- Canonical and repost new in the same run: 1.11 evaluates each alone, and 1.3 applies #70
+  afterwards (#72.6).
+- A `no_text` post that comes back with text goes through these rules like any post that arrived
+  now (#72.2).
+- #70 under dedup B is deferred to Gate D (#72.7).
+
+**Open points — decided when 1.3 is planned:**
+1. "A repost of an archived post makes it active again" does not distinguish a post that was
+   active from one rejected for another reason or never classified.
+2. A re-fetched post's `upsert` overwrites the stored derived fields (`is_canonical`,
+   `duplicate_of`), and an edited text changes the stored `text_hash`.
 
 **Test:** the 20 posts in random order return the same canonical set on every run.
 
@@ -215,12 +244,18 @@ At fetch time, for canonical non-rejected posts: download each image to disk, re
 path. A failed download must not fail the run or the post; it is recorded, and the post keeps its
 other images.
 
-**Open point — decided when 1.12 is planned.** The text above says images are downloaded "for
+**Open points — decided when 1.12 is planned:**
+
+1. The text above says images are downloaded "for
 canonical non-rejected posts". `SCHEMA.md` Gate E adds the repost exception (a repost with an
-identical text hash downloads its images when the canonical is archived, or all of its downloads
-failed, or the canonical has no media at all, `DECISIONS.md` #70; the repost's photos are recorded
-in the canonical's `images`) and says images are also downloaded for posts the model will reject. The plan for 1.12
-states exactly which posts get their images downloaded.
+identical text hash downloads its photos while the canonical has no successfully downloaded image —
+no `PostImage` with a `local_path` — or when the canonical is archived, `DECISIONS.md` #70, #72.3;
+the repost's photos are recorded in the canonical's `images`) and says images are also downloaded
+for posts the model will reject. "What we hold" is any `PostImage` with a `local_path` in the
+canonical's `images`, including one from an earlier repost, for every canonical (#73.5). The plan
+for 1.12 states exactly which posts get their images downloaded.
+2. When canonical and repost are new in the same run,
+whether the repost downloads depends on the order of downloads.
 
 ---
 
@@ -262,6 +297,8 @@ the watermarks. Once alerts exist (phase 4), a bootstrap run sends none.
 3. Where the production constant for `tlv_hunter.sqlite3` lives.
 4. Where `ThedoorProvider` gets the Apify token (`APIFY_TOKEN` in `.env`); the provider takes it as
    a constructor argument.
+5. The store step: the sequence of `get_lifecycle`, `upsert` / `upsert_with_lifecycle` and
+   `save_lifecycle`, and who calls the three 1.11 functions (`DECISIONS.md` #73.6).
 
 ---
 

@@ -56,7 +56,8 @@ def load_thedoor_items() -> list[dict[str, Any]]:
 
 
 def load_spike_1_1a(suffix: str = "") -> Any:
-    """Spike 1.1a run 1: the dataset (no suffix), `_run` (run object) or `_input` (its INPUT)."""
+    """Spike 1.1a: run 1's dataset (no suffix), `_run` (run object), `_input` (its INPUT), or
+    `_control` (the control run's dataset)."""
     return _load_fixture(SPIKE_1_1A_PREFIX.with_name(SPIKE_1_1A_PREFIX.name + suffix + ".json"))
 
 

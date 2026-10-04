@@ -716,3 +716,128 @@ Approved by Ron, 2026-10-04. No real Apify run.
 ### Next
 
 Task 1.11, pre-model rejects (`BACKLOG.md` item 1).
+
+---
+
+## 2026-10-04 (continued) — Decision #72 recorded; task 1.11 planned, not built
+
+### Done
+
+Docs only. No code, no test change, no git. Approved by Ron, 2026-10-04.
+
+- **`DECISIONS.md` #72, "Pre-model rejects: the seven open cases"**, with the reasons as presented
+  to Ron: re-evaluation of a re-fetched pre-model reject against both rules (1); a `no_text` post
+  that comes back with text goes through dedup normally (2); the identical-hash repost download
+  rule reads by what we hold (3); a video- or reel-only repost returns the canonical to `pending`
+  (4); `pending` wins over "active again" for an archived `no_images` canonical (5); 1.11 evaluates
+  each post alone, 1.3 applies #70 afterwards (6); #70 under dedup B deferred to Gate D (7).
+- **Pointers and rewording:** #63 (the repost bullet), #68, #69 and #70 point at #72; #70's
+  "Reposts" bullet reworded per #72.3, its old wording kept in the note.
+- **`SCHEMA.md`** Gate E "Reposts" reworded (#72.3), the Gate E reasons line, and the "Last
+  updated" header. No field or type change; `schema_version` stays 1.
+- **`PHASE_1.md`:** 1.11 (re-fetch rule is #72.1; #72.6; #72.2 pointer), 1.3 (#72.2, .4, .5, .6,
+  .7, and the open point on "active again"), 1.12 (the repost condition per #72.3).
+- **`BASELINE.md`:** header; §5 "active again" exception (#72.5); the "No text" and "No images"
+  rows (#72.1, #72.3, #72.4).
+- **`BACKLOG.md`:** the #67–#70 row now covers #72 and splits it across 1.11, 1.3 and 1.12; the
+  1.3 open point in "Next sprint"; a new section "Recorded for a later phase" with the four rows
+  (failure-alert reason and digest skipped rows in phase 5, the repost video link in phase 3 UI
+  design, #72.7 at Gate D).
+- **Files touched:** `docs/DECISIONS.md`, `docs/SCHEMA.md`, `docs/PHASE_1.md`, `docs/BASELINE.md`,
+  `docs/BACKLOG.md`, this log. `CLAUDE.md`, `RESEARCH.md`, `ASSUMPTIONS.md` unchanged: no line
+  found stale.
+
+### Verified
+
+- Fixture counts for the 1.11 tests, read today with the existing mapper and `annotate`:
+  - Spike 1.1a main (105 rows): 8 posts with no media (all `regular`), 0 `no_text`, 1 reel-only,
+    15 shared, all 15 with media after the fallback.
+  - Spike 1.1a control (180 rows): 22 with no media, **1 `no_text`** (a `sale_post`, blank text,
+    4 photos), 5 reel-only, 19 shared, all with media.
+  - All 105 main-run posts are also in the control run, with identical text and media.
+  - No video-only post and no post with neither text nor media in either dataset.
+
+### For Ron
+
+Cases #72 does not define, left as they are:
+
+1. **#72.3, "what we hold":** read as any `PostImage` with a `local_path` in the canonical's
+   `images`, including one that came from an earlier repost. The rule now applies to every
+   canonical, not only one rejected as `no_images`: an active canonical with only video gets the
+   photos of its next repost.
+2. **#72.3 within one run:** when canonical and repost are both new and the canonical has photos,
+   whether the repost downloads depends on whether the canonical's downloads ran first. For 1.12
+   planning.
+3. **Archive and `images`:** whether the archive job clears the `PostImage` entries or only the
+   files is not defined. #72.3's "or when the canonical is archived" covers the archived state,
+   not a canonical made active again whose entries still point at deleted files. Phase 5.
+4. **#72.1 and an archived post** whose kept reason is `no_text` or `no_images`: #72.1 speaks of
+   a rejected post. Also in the 1.11 plan.
+
+### Next
+
+Task 1.11 plan presented to Ron; waiting for his decisions before any code.
+
+---
+
+## 2026-10-04 (continued) — Task 1.11: pre-model rejects, built
+
+### Done
+
+Approved by Ron, 2026-10-04, with the changes recorded as `DECISIONS.md` #73. No git.
+
+- **Code:** `tlv_hunter/premodel/rejects.py` (new, with an empty `__init__.py`). Pure functions,
+  no storage (#73.6):
+  - `pre_model_reason(post)`: `"no_text"` (reads `post.no_text`), then `"no_images"`
+    (`not post.media`), else `None`. Raises `ValueError` when `no_text` is `None` (textnorm has
+    not run, #73.1). Nothing extra for shared posts: the mapper's fallback already puts
+    `sharedPost.media` in `media`.
+  - `initial_lifecycle(post)`: schema version 1, `pending` or `rejected` with the reason, no flag,
+    `last_published_at = posted_at`, `images = []`.
+  - `recheck(existing, post)`: re-checks both rules only when the record is `pending`, or
+    `rejected` with `no_text` / `no_images`; any other record is returned as is (#72.1, #73.2,
+    #73.3). Every other field is kept. Raises `ValueError` when the record belongs to another post,
+    the same guard as `upsert_with_lifecycle`.
+- **Tests:** `tests/test_premodel_rejects.py` (new, 34 tests). Real data:
+  - the 8 no-media posts of spike 1.1a main (97 pass);
+  - the control run's 1 `no_text` post (22 `no_images`, 157 pass);
+  - 6 reel-only posts;
+  - all 15 shared posts pass on their shared media;
+  - the 105 posts re-fetched unchanged in the control run.
+
+  Constructed from real posts:
+  - video-only;
+  - no text and no media (`no_text` first);
+  - emoji-only text;
+  - a shared post with both media lists emptied, through the mapper;
+  - each re-fetch transition;
+  - pending → `no_images` / `no_text`;
+  - the untouched records (active, the four model reasons, flagged, archived with `no_text`,
+    `no_images` or no reason).
+- `tests/conftest.py`: the `load_spike_1_1a` docstring names `_control`.
+- **Docs:**
+  - `BACKLOG.md`: 1.11 removed from the sprint; the 1.3, 1.12 and 1.14 open points; the #63,
+    #64/#65, #67–#73 and #49 rows; the archive-job row.
+  - `DECISIONS.md`: #73, and a pointer from #72.
+  - `BASELINE.md`: header; §4 order; the "No text" row.
+  - `PHASE_1.md`: status, 1.11 complete and reworded (not stored here), the 1.3, 1.12 and 1.14
+    open points.
+  - `CLAUDE.md`: one line on `premodel/`.
+  - This log.
+- **Files touched:** `tlv_hunter/premodel/__init__.py`, `tlv_hunter/premodel/rejects.py`,
+  `tests/test_premodel_rejects.py`, `tests/conftest.py`, `docs/BACKLOG.md`, `docs/DECISIONS.md`,
+  `docs/BASELINE.md`, `docs/PHASE_1.md`, `CLAUDE.md`, `docs/SESSION_LOG.md`. `pipeline.py`,
+  `SCHEMA.md` and the contracts unchanged.
+
+### Verified
+
+`uv run pytest`: 280 passed. `uv run ruff check .`: all checks passed.
+`uv run ruff format --check .`: 71 files already formatted.
+
+### Not verified
+
+Nothing calls the three functions yet; the store step is 1.14.
+
+### Next
+
+Task 1.3, dedup stage A and the repost log (`BACKLOG.md` item 1).

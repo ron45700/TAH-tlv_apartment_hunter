@@ -543,7 +543,8 @@ media fallback. The rules and why:
   is its original text and link, so downloading its images costs nothing important.
 - **An identical-hash repost downloads no images**, since they duplicate the canonical's, unless
   the canonical is archived (its images are gone) or all its downloads failed. *Extended by #70
-  (2026-10-04): also when the canonical has no media at all.*
+  (2026-10-04): also when the canonical has no media at all. Reworded by #72.3 (2026-10-04): while
+  the canonical has no successfully downloaded image, or when it is archived.*
 - **Flagged posts are kept whole and never deleted.** A flag marks a model mistake, and the full
   record, including `raw`, is what is needed to re-run the prompt on it. Images are deleted at
   archive like any post's, since the model never sees images.
@@ -649,7 +650,8 @@ A post rejected before the model as `no_images`, and fetched again with media, r
 `"pending"` and goes to the model. It does not stay rejected.
 
 The two questions left open here for task 1.11 planning were answered on 2026-10-04: a `no_text`
-post that comes back with text is #69; media that arrives through a repost is #70.
+post that comes back with text is #69; media that arrives through a repost is #70. The rule behind
+#68 and #69, re-checking both pre-model rules on the post's current content, is #72.1.
 
 *Why:* no reason recorded.
 
@@ -660,6 +662,8 @@ A post rejected before the model as `no_text`, and fetched again (the same post)
 to `"pending"` and goes to the model. Same behaviour as #68.
 
 *Why:* Ron does not expect this to happen, but if it does, the post should go to the model.
+
+*The general rule, both pre-model rules re-checked on the current content: #72.1 (2026-10-04).*
 
 ### 70 — Media that arrives through a repost
 Approved by Ron, 2026-10-04. **Extends #63 (the identical-hash repost rule) and #68.**
@@ -673,15 +677,21 @@ text hash (a repost) arrives with media.
 - The repost stays a repost: no card of its own, a line in the repost log, `last_published_at`
   updated. The canonical rule (earliest `posted_at`) is unchanged.
 - The card's link stays the canonical's permalink; the repost's link appears in the repost log.
-- `SCHEMA.md` Gate E, "Reposts": a repost with an identical text hash downloads its images when
-  the canonical is archived, or all of its images failed, **or the canonical has no media at all**.
+- `SCHEMA.md` Gate E, "Reposts": a repost with an identical text hash downloads its photos while
+  the canonical has no successfully downloaded image (no `PostImage` with a `local_path`), or when
+  the canonical is archived. *Reworded by #72.3 (2026-10-04); it read: "when the canonical is
+  archived, or all of its images failed, or the canonical has no media at all".*
 - The question does not exist for `no_text`: a `no_text` post is never hashed, so it has no
-  duplicates.
+  duplicates. (One that comes back with text goes through dedup like any post: #72.2.)
 
 No field or type changed; `schema_version` stays 1.
 
 *Why:* without it, a real apartment with photos stays in the rejected list; and it keeps the
 canonical rule intact.
+
+The cases this left open were settled by #72: a repost whose only media is video or reel (#72.4),
+an archived canonical (#72.5), canonical and repost new in the same run (#72.6), and dedup B
+(#72.7, deferred to Gate D).
 
 ### 71 — Task 1.1: thedoor `fetch()`
 Approved by Ron, 2026-10-04. **Amends #20.** Each point was presented to Ron as a recommendation
@@ -729,6 +739,72 @@ with the reason given here, and he approved it.
   figure.
 
 For C, E, G, J and the cost line, no reason was recorded.
+
+### 72 — Pre-model rejects: the seven open cases
+Approved by Ron, 2026-10-04. **Generalizes #68 and #69; rewords #70 and the Gate E "Reposts"
+rule.** Each point was presented to Ron as a recommendation with the reason given here, and he
+approved it.
+
+1. **Re-evaluation.** A post rejected before the model (`no_text` or `no_images`) that is fetched
+   again (the same post) is checked again against **both** pre-model rules, on its current
+   content. It returns to `"pending"` only if it now passes both; otherwise it stays `"rejected"`
+   and its reason is updated to the first rule that applies. This is the rule behind #68 and #69.
+   *Why:* a post with no media must not reach the model (#67); one rule covers both decisions.
+2. **A `no_text` post re-fetched with text whose hash matches a stored post:** no special rule.
+   Once it passes the check in (1) it goes through dedup like any post that arrived now; task
+   1.3's normal rules decide which is canonical.
+   *Why:* otherwise the same apartment gets two cards. Adds no code to task 1.11.
+3. **#70 and the Gate E "Reposts" rule read by what we hold**, not by the canonical's own media:
+   an identical-hash repost downloads its photos only while the canonical has no successfully
+   downloaded image (no `PostImage` with a `local_path`), or when the canonical is archived. This
+   replaces "all of its images failed" and "the canonical has no media at all" with the one
+   condition. `SCHEMA.md` Gate E "Reposts" and #70's wording updated. No field or type change;
+   `schema_version` stays 1.
+   *Why:* read by own media, every later repost downloads the same photos again.
+4. **A repost whose only media is video or reel:** the canonical returns to `"pending"` and
+   nothing is downloaded. Intended.
+   *Why:* consistent with #67 — the same as an ordinary video-only post. By (3), a later repost
+   with photos still downloads them.
+5. **An archived canonical rejected as `no_images`, when a repost with media arrives:**
+   `"pending"` wins over task 1.3's "active again".
+   *Why:* the post was never classified; `"active"` would claim a verdict nobody made (as in
+   #63).
+6. **Canonical and repost new in the same run:** task 1.11 evaluates each post alone; task 1.3
+   applies #70 afterwards. The end state is the same (`"pending"`).
+   *Why:* 1.11 stays simple and all cross-post logic sits in 1.3, in the same code that handles a
+   repost against history.
+7. **#70 under dedup B** (a repost with rewritten text): deferred to Gate D.
+   *Why:* dedup B's key is not defined yet.
+
+*Extended by #73 (2026-10-04): the re-check in (1) also applies to a `"pending"` post (#73.2), not
+to an archived one (#73.3); (3) is read as #73.5.*
+
+### 73 — Task 1.11: pre-model rejects
+Approved by Ron, 2026-10-04. **Amends `BASELINE.md` §4 (data path order); extends #72.1;
+settles the reading of #72.3.** Each point was presented to Ron as a recommendation with the reason
+given here, and he approved it.
+
+1. **Text normalize runs before the pre-model rejects** in the data path. The `no_text` rule reads
+   the stored `post.no_text`.
+   *Why:* `no_text` is computed once and the rule only reads it.
+2. **A `"pending"` post re-fetched with its text or media gone** is re-checked against both rules,
+   like #72.1. A post with a verdict (active, rejected by the model, flagged) is left untouched.
+   *Why:* otherwise an empty post reaches the model; a post with a verdict does not go back to it.
+3. **An archived post that kept a pre-model reason, re-fetched:** left untouched.
+4. **The code lives in `tlv_hunter/premodel/rejects.py`**, a plain module, not a seam. `CLAUDE.md`
+   names it in one line; the seam table is unchanged.
+5. **#72.3 as read:** "what we hold" is any `PostImage` with a `local_path` in the canonical's
+   `images`, including one from an earlier repost, and the rule covers every canonical.
+6. **No writes in task 1.11.** It delivers the pure functions only: `pre_model_reason(post)`,
+   `initial_lifecycle(post)` and `recheck(existing, post)`. `recheck` changes a record only when
+   its state is `"pending"`, or `"rejected"` with a pre-model reason (points 2 and 3). The store
+   step (the sequence of `get_lifecycle`, `upsert` / `upsert_with_lifecycle` and `save_lifecycle`,
+   and who calls the three functions) is an open point for task 1.14.
+   *Why:* the data path stores after dedup. A write at the pre-model step means task 1.3 cannot
+   adjust the record before it is stored (#72.6), and a re-fetched post's `upsert` would overwrite
+   the `is_canonical` / `duplicate_of` that dedup already stored.
+
+For 3, 4 and 5, no reason was recorded.
 
 ---
 

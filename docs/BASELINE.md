@@ -3,8 +3,9 @@
 **Status:** Approved by Ron, 2026-10-02. Amended 2026-10-03 after the cross-check of the other docs.
 Amended 2026-10-04: run interval and manual run (`DECISIONS.md` #61), viewed posts (#62), Gate E
 (#63), the SQLite file shared by `store` and `state` (#64, #65), "no images" means no media at
-all (#67, #68), a `no_text` post that comes back with text (#69), and media that arrives through a
-repost (#70).
+all (#67, #68), a `no_text` post that comes back with text (#69), media that arrives through a
+repost (#70), the pre-model rejects' open cases (#72), and text normalize before the pre-model
+rejects (#73).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -76,7 +77,7 @@ power-on after power loss, wired network.
 ## 4. Data path
 
 ```
-scheduler -> Apify (thedoor) -> provider normalize -> pre-model rejects -> text normalize
+scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-model rejects
           -> dedup A -> image download -> Gemini -> post-model rejects -> street/area
           -> dedup B -> store -> per-user evaluation -> Telegram alert
 ```
@@ -117,14 +118,16 @@ Provider inputs, the field map, traps, the duplicate rate and the group IDs are 
 | **Archived** | 25 days since last publication with no repost. Hidden. Images deleted; text and raw data kept. A post that was rejected keeps its rejection reason | Admin |
 | **Deleted** | 40 days since last publication. Removed entirely | — |
 
-A repost resets the clock. A repost of an archived post makes it active again.
+A repost resets the clock. A repost of an archived post makes it active again, except an archived
+post rejected for having no images: a repost with media returns it to pending, since it was never
+classified (`DECISIONS.md` #72.5).
 
 ### Rejection reasons
 
 | Reason | Decided | Notes |
 |---|---|---|
-| No text | Before the model | Not sent to the model. A post rejected for this and fetched again with text returns to pending and goes to the model (`DECISIONS.md` #69) |
-| No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again with media returns to pending and goes to the model (`DECISIONS.md` #67, #68). So does the post when a repost of it with identical text arrives with media: the repost's photos are downloaded and kept with the post, and the repost stays a repost (#70). Which media are downloaded (photos only) is a separate rule |
+| No text | Before the model | Not sent to the model. A post rejected before the model and fetched again is checked against both pre-model rules on its current content: it returns to pending and goes to the model only if it passes both; otherwise it stays rejected, with the first reason that applies. A pending post fetched again is re-checked the same way; a post with a verdict, or an archived one, is left as it is (`DECISIONS.md` #69, #72.1, #73) |
+| No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again is re-checked as in "No text" (`DECISIONS.md` #67, #68, #72.1). The post also returns to pending when a repost of it with identical text arrives with media, video or reel included: the repost's photos are downloaded and kept with the post while the post holds no downloaded image or when it is archived, and the repost stays a repost (#70, #72.3, #72.4). Which media are downloaded (photos only) is a separate rule |
 | Other city | By the model | The post names a city that is not Tel Aviv–Yafo. The named city is shown next to the post. Applies to all users. A nearby city mentioned as a landmark ("5 minutes from Givatayim") is not a rejection |
 | Seeking | By the model | The poster is looking for an apartment, not offering one |
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |

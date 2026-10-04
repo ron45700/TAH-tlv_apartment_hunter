@@ -5,7 +5,13 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-04 (task 1.1) — **Gate A shared-post fallback wording:** `width` /
+**Last updated:** 2026-10-04 (task 1.11 planning) — **Gate E, "Reposts" rule reworded:** an
+identical-hash repost downloads its photos while the canonical has no successfully downloaded image
+(no `PostImage` with a `local_path`), or when the canonical is archived. This replaces the "all of
+its images failed" and "no media at all" cases. Approved by Ron (`DECISIONS.md` #72.3). No field or
+type changed; `schema_version` stays 1.
+
+**Earlier on 2026-10-04 (task 1.1):** **Gate A shared-post fallback wording:** `width` /
 `height` of a shared media item are taken when present, `None` when absent, like own media.
 Approved by Ron (`DECISIONS.md` #71 G). No field or type changed; `schema_version` stays 1.
 
@@ -249,7 +255,7 @@ failover adapter is built.
 
 # GATE E — post lifecycle and `GroupWatermark`
 
-**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66, #67 and #70 ·
+**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66, #67, #70 and #72 ·
 **Lifecycle:** `BASELINE.md` §5
 
 ## Post lifecycle record (`PostLifecycle`)
@@ -299,9 +305,9 @@ Exactly one of `local_path` and `error` is set.
 - **Images (download):** photos only, no video or reels (a video shows its `page_url` link). One
   retry within the same run. A failed download fails neither the run nor the post.
 - Images are downloaded also for posts the model will reject, and deleted at archive like any post.
-- **Reposts:** a repost with an identical text hash downloads no images, except when the canonical
-  is archived, or all of its images failed, or the canonical has no media at all
-  (`DECISIONS.md` #70); then the repost's images are downloaded.
+- **Reposts:** a repost with an identical text hash downloads no images, except while the
+  canonical has no successfully downloaded image (no `PostImage` with a `local_path`), or when the
+  canonical is archived; then the repost's photos are downloaded (`DECISIONS.md` #70, #72.3).
 
 ## `GroupWatermark`
 
