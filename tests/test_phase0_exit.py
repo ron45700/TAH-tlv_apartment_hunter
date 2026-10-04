@@ -38,6 +38,9 @@ class SpyRepository:
         self.upserted.append(post)
         return self._inner.upsert(post)
 
+    def get(self, listing_id: str) -> RawPost | None:
+        return self._inner.get(listing_id)
+
     def upsert_with_lifecycle(self, post: RawPost, initial: PostLifecycle) -> RawPost:
         return self._inner.upsert_with_lifecycle(post, initial)
 

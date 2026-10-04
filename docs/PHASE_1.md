@@ -1,6 +1,6 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1 and 1.11 complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10, 1.1, 1.11 and 1.3 complete.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -32,7 +32,7 @@ Decided before code. These are the choices that, settled wrong now, leave stored
 | `raw` | The provider's JSON is stored whole and untouched for as long as the post exists. |
 | Time | tz-aware `datetime` in UTC everywhere. Conversion to Israel time happens only at display, and in the schedule's quiet hours. |
 | `listing_id` | `sha256(source_post_id)`, `source` excluded (`DECISIONS.md` #28). |
-| Canonical | For duplicates, the post with the earliest `posted_at` is canonical; the others point at it. |
+| Canonical | For duplicates, the earliest `posted_at` among posts that arrive together is canonical (a tie goes to the smaller `listing_id`); the others point at it. A stored canonical never changes (`DECISIONS.md` #75 A, D2). |
 | Retention | Archive at 25 days from last publication, delete at 40 (`BASELINE.md` §5). The jobs that do it are phase 5; the stored shape that lets them work is Gate E, now. |
 | `user_id` | On every personal record. Users are real from phase 3. |
 | Post vs verdict | Stored separately. A post record holds what the post says; what a given user's profile makes of it is never written onto the post. |
@@ -198,43 +198,57 @@ with text goes through dedup like any post that arrived now (#72.2).
 
 ---
 
-## 1.3 Dedup stage A, and the repost log
+## 1.3 Dedup stage A, and the repost log — ✅ COMPLETE (2026-10-04)
+
+`dedup_a(batch, repository) -> DedupResult` in `tlv_hunter/dedup/stage_a.py`, a plain module that
+reads the Repository and writes nothing (`DECISIONS.md` #75). It returns the batch with
+`is_canonical` and `duplicate_of` set, and the lifecycle records: one per post in the batch, plus
+every stored canonical outside the batch whose record changed. It calls `initial_lifecycle` and
+`recheck` itself (#75 F2). `Repository` gained `get(listing_id)` (#75 F3). Nothing calls
+`dedup_a` yet: the store step is 1.14.
 
 **Input:** batch of `RawPost` + Repository → **Output:** canonicals, and duplicates with
 `duplicate_of`.
 
 | Layer | Role |
 |---|---|
-| 1. `source_post_id` | Exact repeats, chiefly the watermark overlap |
-| 2. **`text_hash`** | **The primary key.** Caught 3/3 pairs in the sample |
-| 3. phone | One-directional signal only |
+| 1. `source_post_id` | Exact repeats, chiefly the watermark overlap. A repeat within the batch is kept once; a re-fetched post keeps its stored result and is never a duplicate of itself |
+| 2. **`text_hash`** | **The primary key.** Caught 3/3 pairs in the sample. A new post joins the stored canonical its hash reaches (the earliest, if two, #75 D4) |
+| 3. phone | Produces nothing in 1.3: a phone-only match is not a duplicate (#63). A candidate signal for Gate D (#75 C) |
 
 Compared **within the batch and against history**. A `no_text` post is never hashed.
 
 A duplicate of a post already stored is a **repost**: it creates no new card, updates the
 canonical's last publication time, and adds a line to its repost log. A repost of an archived post
-makes it active again.
+returns it to the state it had (`DECISIONS.md` #74): `"active"` if it was active; `"rejected"`
+with the same reason if it was rejected by the model or flagged; `"pending"` if it was rejected as
+`no_images` and the repost has media (#72.5), or if it was never classified. In phase 1 nothing is
+classified, so an archived post with no rejection reason returns to `"pending"`.
 
 A repost with an identical text hash that has media, of a canonical rejected as `no_images`,
-returns the canonical to `"pending"` (`DECISIONS.md` #70). The repost stays a repost, and the
-canonical rule (earliest `posted_at`) is unchanged. Settled by #72:
+returns the canonical to `"pending"` (`DECISIONS.md` #70); the repost may be a stored duplicate
+(#75 D1). The repost stays a repost, and the canonical rule is unchanged. Settled by #72 and #75:
 
 - A repost whose only media is video or reel also returns the canonical to `"pending"`; nothing is
   downloaded (#72.4).
-- An archived canonical rejected as `no_images`: `"pending"` wins over "active again" (#72.5).
+- An archived canonical rejected as `no_images`, with a repost that has media: `"pending"` (#72.5,
+  kept by #74).
 - Canonical and repost new in the same run: 1.11 evaluates each alone, and 1.3 applies #70
   afterwards (#72.6).
 - A `no_text` post that comes back with text goes through these rules like any post that arrived
   now (#72.2).
 - #70 under dedup B is deferred to Gate D (#72.7).
+- Only a duplicate new to the store, published after the archived post's `last_published_at`,
+  brings it back from archive; an archived `no_images` post whose repost has no media returns to
+  `"rejected"` (#75 E1–E3).
+- A re-fetched post keeps its stored `is_canonical` / `duplicate_of`, also after a text edit, so the
+  1.14 `upsert` writes them back unchanged; only `text_hash` follows the new text (#75). A
+  duplicate gets an ordinary lifecycle record from its own content (#75 B).
 
-**Open points — decided when 1.3 is planned:**
-1. "A repost of an archived post makes it active again" does not distinguish a post that was
-   active from one rejected for another reason or never classified.
-2. A re-fetched post's `upsert` overwrites the stored derived fields (`is_canonical`,
-   `duplicate_of`), and an edited text changes the stored `text_hash`.
-
-**Test:** the 20 posts in random order return the same canonical set on every run.
+**Tests:** `tests/test_dedup_stage_a.py`, against both stores, no network: the 20 posts in 50
+random orders give the same canonical set; the three known pairs; spike main then control (all 105
+main posts keep their result; the 4 late, older posts join the stored canonical); one test per
+#75 decision.
 
 ---
 
@@ -256,6 +270,8 @@ canonical's `images`, including one from an earlier repost, for every canonical 
 for 1.12 states exactly which posts get their images downloaded.
 2. When canonical and repost are new in the same run,
 whether the repost downloads depends on the order of downloads.
+3. Whether #72.3's "when the canonical is archived" is read before or after #74 returns the
+   canonical from archive: a post returned to `"active"` has had its images deleted.
 
 ---
 
@@ -292,13 +308,15 @@ Bootstrap is an explicit flag, never auto-detected: the first run stores everyth
 the watermarks. Once alerts exist (phase 4), a bootstrap run sends none.
 
 **Open points — decided when 1.14 is planned:**
-1. Which step calls `find_without_lifecycle`, and what it does with a non-empty result.
+1. Which step calls `find_without_lifecycle`, and what it does with a non-empty result. 1.3
+   already builds a record for a stored canonical that has none (#75 F4).
 2. Who creates the `store_root` directory: `SqliteRepository` does not, `local_json` does.
 3. Where the production constant for `tlv_hunter.sqlite3` lives.
 4. Where `ThedoorProvider` gets the Apify token (`APIFY_TOKEN` in `.env`); the provider takes it as
    a constructor argument.
-5. The store step: the sequence of `get_lifecycle`, `upsert` / `upsert_with_lifecycle` and
-   `save_lifecycle`, and who calls the three 1.11 functions (`DECISIONS.md` #73.6).
+5. The store step: writing `dedup_a`'s result — each post through `upsert` /
+   `upsert_with_lifecycle`, each record through `save_lifecycle` — and in what sequence. 1.3
+   already calls `initial_lifecycle` and `recheck` (`DECISIONS.md` #73.6, #75 F2).
 
 ---
 

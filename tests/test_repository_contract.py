@@ -68,6 +68,21 @@ def test_upsert_overwrites_record_but_keeps_first_fetched_at(
     assert stored[0].fetched_at == FETCHED_AT
 
 
+def test_get_returns_the_stored_post_or_none(make_repository: MakeRepository, posts) -> None:
+    repo = make_repository()
+    first = posts[0]
+    assert repo.get(first.listing_id) is None
+    repo.upsert(first)
+    repo.upsert(
+        first.with_changes(fetched_at=FETCHED_AT + timedelta(minutes=30), reactions_count=5)
+    )
+
+    back = make_repository().get(first.listing_id)
+    assert back == first.with_changes(reactions_count=5)
+    assert back.fetched_at == FETCHED_AT
+    assert repo.get(posts[1].listing_id) is None
+
+
 def test_find_by_hash(make_repository: MakeRepository, posts) -> None:
     repo = make_repository()
     for post in posts:

@@ -59,6 +59,10 @@ class SqliteRepository:
         with self._transaction() as conn:
             return _upsert(conn, post)
 
+    def get(self, listing_id: str) -> RawPost | None:
+        posts = self._select_posts("SELECT doc FROM raw_posts WHERE listing_id = ?", (listing_id,))
+        return posts[0] if posts else None
+
     def upsert_with_lifecycle(self, post: RawPost, initial: PostLifecycle) -> RawPost:
         if initial.listing_id != post.listing_id:
             raise ValueError(

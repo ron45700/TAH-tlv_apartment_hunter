@@ -841,3 +841,130 @@ Nothing calls the three functions yet; the store step is 1.14.
 ### Next
 
 Task 1.3, dedup stage A and the repost log (`BACKLOG.md` item 1).
+
+---
+
+## 2026-10-04 (continued) — Decision #74, and the task 1.3 plan
+
+### Done
+
+Docs only. No code, no test change, no git. #74 approved by Ron, 2026-10-04.
+
+- **`DECISIONS.md` #74, "A repost of an archived post returns it to the state it had"**: active →
+  `"active"`; rejected by the model or flagged → `"rejected"` with the same reason; rejected as
+  `no_images` with a repost that has media → `"pending"` (#72.5, unchanged); never classified →
+  `"pending"`. The consequence (no field says whether an archived post was classified; phase 1
+  returns an archived post with no reason to `"pending"`; Gate B settles phase 2) recorded, no
+  field added. A pointer from #72.
+- **`PHASE_1.md` 1.3:** "makes it active again" replaced by #74; the #72.5 bullet points at #74;
+  open point 1 removed, the remaining one kept.
+- **`BASELINE.md`:** header; §5, the sentence on a repost of an archived post.
+- **`BACKLOG.md`:** item 1 loses the "active again" open point; the #67–#73 row becomes #67–#74,
+  with #74 for task 1.3; a Gate B row in "Recorded for a later phase" for the consequence.
+- **Files touched:** `docs/DECISIONS.md`, `docs/PHASE_1.md`, `docs/BASELINE.md`,
+  `docs/BACKLOG.md`, this log. `SCHEMA.md` unchanged: no wording there states what a repost of an
+  archived post does (the `state` row and "an archived post keeps its reason" agree with #74).
+  `CLAUDE.md`, `RESEARCH.md`, `ASSUMPTIONS.md` unchanged: no line found stale. #72.5's own text
+  ("wins over task 1.3's 'active again'") is left as recorded, with the pointer.
+
+### Verified
+
+Fixture facts for the 1.3 plan, read today with the existing mapper and `annotate` (no network):
+
+- 20-post fixture: 3 hash groups, each a pair, all three within one group; no `posted_at` ties.
+- Spike main (105): 17 hash groups (13 pairs, 4 triples), 4 within one group; no ties; 6 phones
+  shared by posts with different hashes (phone-only matches).
+- Spike control (180): 23 hash groups (17 pairs, 5 triples, 1 of four), 8 within one group; no
+  ties; 10 phone-only matches; 1 `no_text`.
+- All 105 main posts are in the control run with unchanged `text_hash` and `posted_at`.
+- **4 control posts not in the main run share a hash with a main post and are older than it**:
+  the late-arriving older duplicate occurs in the fixtures (the control run's wider window).
+
+### For Ron
+
+Cases #74 does not define, left as they are:
+
+1. An archived canonical rejected as `no_images`, and a repost **with no media**: #74 names only
+   the repost with media.
+2. Which duplicates count as "a repost" for #74: one new to the store only, or also a stored
+   duplicate re-fetched by the watermark overlap.
+3. A new duplicate older than the archived post's `last_published_at`: the clock does not move
+   (never backwards), so the post returns to its state and the next archive job archives it again.
+4. A post returned to `"active"` from archive has had its images deleted. #72.3's re-download
+   condition reads "when the canonical is archived"; whether it is read before or after #74 changes
+   the state is a 1.12 point.
+5. An archived post with reason `no_text`: unreachable through layer 2, since a `no_text` post is
+   never hashed.
+
+### Next
+
+Task 1.3 plan presented to Ron; waiting for his decisions before any code.
+
+---
+
+## 2026-10-04 (continued) — Task 1.3: dedup stage A, built
+
+### Done
+
+Approved by Ron, 2026-10-04, with the decisions recorded as `DECISIONS.md` #75. No git.
+
+- **Code:**
+  - `tlv_hunter/dedup/stage_a.py` (new, with an empty `__init__.py`): `dedup_a(batch, repository)
+    -> DedupResult(posts, lifecycles)`. Reads only (#75 F1).
+    - Layer 1: a repeat within the batch kept once (first in provider order, logged); a re-fetched
+      post keeps its stored `is_canonical` / `duplicate_of` (sticky), also after a text edit.
+    - Layer 2: new posts grouped by hash; a group joins the stored canonical its hash reaches,
+      following stored duplicates to their canonical (the earliest if two, D4); otherwise the
+      earliest `posted_at`, tie to the smaller `listing_id` (A, D2). A `no_text` post is
+      `True / None` (D3); a stored `no_text` post back with text goes through as new (#72.2).
+    - Layer 3: nothing (C).
+    - Lifecycle, in order (F2): `initial_lifecycle` or `recheck` per batch post (a stored
+      canonical with no record gets `initial_lifecycle`, F4); per canonical, #74 with E1–E3, then
+      #70 / #72.4 over batch and stored duplicates (D1), then `last_published_at` as the max over
+      the record and the duplicates, never backwards.
+    - Raises `ValueError` on a stored post with `is_canonical=None` (D5), and on a `duplicate_of`
+      that does not reach a stored canonical.
+  - `Repository.get(listing_id) -> RawPost | None` in `store/base.py`, `store/sqlite.py`,
+    `store/local_json.py` (F3); the spy in `tests/test_phase0_exit.py` forwards it.
+- **Tests:** `tests/test_dedup_stage_a.py` (new, 35 tests × 2 stores = 70); one contract test for
+  `get` in `tests/test_repository_contract.py` (× 2).
+- **Docs:**
+  - `BACKLOG.md`: item 1.3 removed; the 1.12 open point (#72.3 vs #74) and the 1.14 store-step
+    wording; the #63, #67–#74 and #49 rows; a #75 row; five rows in "Recorded for a later phase"
+    (phase 3 UI earliest time, Gate B, phase 3 admin lists, phase 5 duplicate retention, Gate D
+    phone).
+  - `DECISIONS.md`: #75; pointers from #63, #64, #70, #74.
+  - `PHASE_1.md`: status; §1.0 canonical anchor; 1.3 complete, layer table, #75 bullets, tests;
+    the 1.12 open point 3; the 1.14 open points 1 and 5.
+  - `BASELINE.md`: header; §4 "Dedup A".
+  - `CLAUDE.md`: `get` in the `store/` seam row; one line on `dedup/stage_a.py`.
+  - This log.
+- **Files touched:** `tlv_hunter/dedup/__init__.py`, `tlv_hunter/dedup/stage_a.py`,
+  `tlv_hunter/store/base.py`, `tlv_hunter/store/sqlite.py`, `tlv_hunter/store/local_json.py`,
+  `tests/test_dedup_stage_a.py`, `tests/test_repository_contract.py`, `tests/test_phase0_exit.py`,
+  `docs/BACKLOG.md`, `docs/DECISIONS.md`, `docs/PHASE_1.md`, `docs/BASELINE.md`, `CLAUDE.md`,
+  `docs/SESSION_LOG.md`. `pipeline.py`, `SCHEMA.md`, the contracts and `premodel/` unchanged.
+
+### Verified
+
+`uv run pytest`: 352 passed. `uv run ruff check .`: all checks passed.
+`uv run ruff format --check .`: 74 files already formatted.
+
+On the fixtures: the 20 posts give 17 canonicals in all 50 orders; spike main then control keeps
+all 105 main results and records (except `last_published_at` moving forward); the 4 late, older
+control posts become duplicates of the stored canonical, where control alone would have made a
+different post canonical; real phone-only matches stay apart.
+
+### Not verified
+
+Nothing calls `dedup_a` yet; the store step is 1.14.
+
+### Notes
+
+- `CLAUDE.md` is listed in `.gitignore` (line 36), so its edit does not show in `git status`.
+- `dedup_a` raises when a stored duplicate points at a canonical that is not stored. Phase 5
+  retention must not delete a canonical before its duplicates (`BACKLOG.md`, phase 5 row).
+
+### Next
+
+Task 1.12, image download (`BACKLOG.md` item 1).

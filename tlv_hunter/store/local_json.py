@@ -31,6 +31,10 @@ class LocalJsonRepository:
         _atomic_write(path, json.dumps(post.model_dump(mode="json"), ensure_ascii=False, indent=2))
         return post
 
+    def get(self, listing_id: str) -> RawPost | None:
+        path = self._post_path(listing_id)
+        return _read(path) if path.exists() else None
+
     def upsert_with_lifecycle(self, post: RawPost, initial: PostLifecycle) -> RawPost:
         _require_same_post(post, initial)
         stored = self.upsert(post)

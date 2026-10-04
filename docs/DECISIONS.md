@@ -534,7 +534,8 @@ media fallback. The rules and why:
   Treating such a match as a repost would hide a different apartment and move its last
   publication time.
 - **`last_published_at` never moves backwards.** It drives the retention clock; a late-arriving
-  older duplicate must not shorten a post's life.
+  older duplicate must not shorten a post's life. *Since #75 A (2026-10-04), such a duplicate
+  does not become the canonical either.*
 - **Images: photos only, one retry, a failure fails nothing.** Videos are not analysed and are
   shown as their link. A failed run blocks the window (invariant 2), so a lost image must never
   fail the run or the post.
@@ -577,6 +578,8 @@ Approved by Ron, 2026-10-04.
 - **Guards** (approved in the 1.10 review, 2026-10-04): `upsert_with_lifecycle` raises `ValueError`
   when the record's `listing_id` differs from the post's; `save_all` raises `ValueError` on a
   duplicate `group_id`.
+
+*Amended by #75 F3 (2026-10-04): `Repository` gains `get(listing_id) -> RawPost | None`.*
 
 *Why:* `state/` is the seam already listed in `CLAUDE.md` for the watermark.
 `upsert_with_lifecycle` and `find_without_lifecycle` exist because two separate writes could leave
@@ -693,6 +696,9 @@ The cases this left open were settled by #72: a repost whose only media is video
 an archived canonical (#72.5), canonical and repost new in the same run (#72.6), and dedup B
 (#72.7, deferred to Gate D).
 
+*Extended by #75 D1 (2026-10-04): the repost with media may be a stored duplicate, not only one in
+the batch. "The canonical rule" reads as amended by #75 A.*
+
 ### 71 — Task 1.1: thedoor `fetch()`
 Approved by Ron, 2026-10-04. **Amends #20.** Each point was presented to Ron as a recommendation
 with the reason given here, and he approved it.
@@ -777,7 +783,8 @@ approved it.
    *Why:* dedup B's key is not defined yet.
 
 *Extended by #73 (2026-10-04): the re-check in (1) also applies to a `"pending"` post (#73.2), not
-to an archived one (#73.3); (3) is read as #73.5.*
+to an archived one (#73.3); (3) is read as #73.5. (5) is kept by #74, which replaces "active
+again" for every archived post.*
 
 ### 73 — Task 1.11: pre-model rejects
 Approved by Ron, 2026-10-04. **Amends `BASELINE.md` §4 (data path order); extends #72.1;
@@ -805,6 +812,80 @@ given here, and he approved it.
    the `is_canonical` / `duplicate_of` that dedup already stored.
 
 For 3, 4 and 5, no reason was recorded.
+
+### 74 — A repost of an archived post returns it to the state it had
+Approved by Ron, 2026-10-04. **Replaces task 1.3's "a repost of an archived post makes it active
+again"; keeps #72.5.**
+
+A repost of an archived post returns it to the state it had, not always `"active"`:
+
+- It was active (classified, not rejected): `"active"`.
+- It was rejected by the model (`other_city`, `seeking`, `for_sale`, `not_listing`) or flagged:
+  `"rejected"`, with the same reason.
+- It was rejected as `no_images` and the repost has media: `"pending"` (#72.5, unchanged).
+- It was never classified: `"pending"`.
+
+*Why:* a repost extends a post's life; it does not change what the system knows about it. An
+apartment in Netanya posted again is still in Netanya.
+
+**Consequence, recorded, not solved:** the lifecycle record has no field saying whether an archived
+post was classified. In phase 1 nothing is classified, so an archived post with no rejection reason
+returns to `"pending"`. In phase 2 the distinction comes from whether a classification record
+exists; settled at Gate B. No field is added now.
+
+*Which reposts bring a post back, and an archived `no_images` post whose repost has no media:
+#75 E1–E3 (2026-10-04).*
+
+### 75 — Task 1.3: dedup stage A
+Approved by Ron, 2026-10-04. **Amends the canonical anchor (`PHASE_1.md` §1.0) and #64 (F3);
+extends #70 (D1) and #74 (E1–E3).** Each point was presented to Ron as a recommendation with the
+reason given here, and he approved it. The rest of the task 1.3 plan was approved as presented,
+including: a re-fetched post keeps its stored `is_canonical` / `duplicate_of`, also after a text
+edit (only its `text_hash` changes); a stored `no_text` post that comes back with text goes
+through dedup as new (#72.2); a duplicate points at the canonical, never at another duplicate.
+
+- **A. A stored canonical never changes.** A post that arrives later with an earlier `posted_at`
+  becomes its duplicate. The canonical is the earliest `posted_at` among posts that arrive
+  together. The card shows the group's earliest publication time: a display rule, phase 3 UI
+  design.
+  *Why:* the card, its alerts and "viewed" records stay stable; moving the canonical would mean
+  moving everything accumulated on it, and a miss makes the apartment alert again as new.
+- **B. A duplicate gets an ordinary lifecycle record, built from its own content.** No new state;
+  Gate E unchanged. Phase 2 classifies only posts that are `"pending"` **and** canonical (Gate B),
+  and the admin lists show canonicals only (phase 3). Whether a duplicate's retention follows its
+  own clock or the canonical's: phase 5.
+  *Why:* no schema change.
+- **C. Layer 3 (phone) produces nothing in task 1.3.** The phone stays a candidate signal for
+  Gate D.
+  *Why:* a phone-only match is not a duplicate (#63) and nothing uses the result today.
+- **D1. #70 also looks at stored members of the group**, not only at the batch, so it holds on
+  every run.
+  *Why:* otherwise the canonical flips between `"pending"` and rejected on each re-fetch.
+- **D2. A tie on `posted_at`:** the smaller `listing_id` is canonical.
+  *Why:* the result must be the same on every run.
+- **D3. A `no_text` post** gets `is_canonical=True`, `duplicate_of=None`.
+- **D4. After a text edit, when one hash reaches two stored canonicals,** a new post joins the
+  earliest. Stored groups are never merged.
+  *Why:* consistent with A — what is stored does not move.
+- **D5. A stored post with `is_canonical=None` raises.**
+- **E1. (#74)** Only a duplicate new to the store counts as a repost that brings a post back from
+  archive; a stored duplicate fetched again does not.
+- **E2. (#74)** A new duplicate whose `posted_at` is not later than the archived post's
+  `last_published_at` does not bring it back.
+  *Why:* the clock cannot move backwards, so the post would return and be archived again at once.
+- **E3. (#74)** An archived `no_images` post whose repost has no media returns to `"rejected"`
+  with the same reason.
+- **F1. The code lives in `tlv_hunter/dedup/stage_a.py`**, a plain module, with no writes.
+  `CLAUDE.md` names it in one line.
+- **F2. Task 1.3 calls `initial_lifecycle` and `recheck` itself,** then, per canonical, #74, #70
+  and `last_published_at`, in that order.
+- **F3. `Repository` gains `get(listing_id) -> RawPost | None`,** in both stores, with contract
+  tests. Amends #64.
+  *Why:* without it dedup scans the whole store on every run.
+- **F4. A stored canonical with no lifecycle record:** task 1.3 builds it with
+  `initial_lifecycle`. Overlaps the task 1.14 open point on `find_without_lifecycle`.
+
+For D3, D5, E1, E3, F1, F2 and F4, no reason was recorded.
 
 ---
 

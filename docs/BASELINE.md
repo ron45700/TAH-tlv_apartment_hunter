@@ -4,8 +4,9 @@
 Amended 2026-10-04: run interval and manual run (`DECISIONS.md` #61), viewed posts (#62), Gate E
 (#63), the SQLite file shared by `store` and `state` (#64, #65), "no images" means no media at
 all (#67, #68), a `no_text` post that comes back with text (#69), media that arrives through a
-repost (#70), the pre-model rejects' open cases (#72), and text normalize before the pre-model
-rejects (#73).
+repost (#70), the pre-model rejects' open cases (#72), text normalize before the pre-model
+rejects (#73), the state a repost of an archived post returns to (#74), and dedup A's canonical
+rule (#75).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -94,8 +95,11 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
 - **Watermark:** per group, the highest post time seen, with a 10–15 minute overlap, advanced only
   on a successful run.
 - **Bootstrap:** the first run stores everything and alerts nothing.
-- **Dedup A (before the model):** post ID, hash of normalized text, phone as a one-directional
-  signal. Checked within the batch and against history.
+- **Dedup A (before the model):** post ID and hash of normalized text, checked within the batch
+  and against history. A phone-only match is not a duplicate; the phone is a candidate signal for
+  dedup B. The canonical is the earliest publication among posts that arrive together; a stored
+  canonical never changes, so an older copy that arrives later becomes its duplicate
+  (`DECISIONS.md` #75).
 - **Dedup B (after the model):** same apartment reposted with rewritten text. Key settled at Gate D.
 - **Reposts:** a repost does not create a new card and does not alert again. It updates the post's
   "last published" time and adds a line to a small repost log on the card, so it is easy to see
@@ -118,9 +122,11 @@ Provider inputs, the field map, traps, the duplicate rate and the group IDs are 
 | **Archived** | 25 days since last publication with no repost. Hidden. Images deleted; text and raw data kept. A post that was rejected keeps its rejection reason | Admin |
 | **Deleted** | 40 days since last publication. Removed entirely | — |
 
-A repost resets the clock. A repost of an archived post makes it active again, except an archived
-post rejected for having no images: a repost with media returns it to pending, since it was never
-classified (`DECISIONS.md` #72.5).
+A repost resets the clock. A repost of an archived post returns it to the state it had: active if
+it was active; rejected, with the same reason, if the model rejected it or a user flagged it;
+pending if it was never classified, or if it was rejected for having no images and the repost has
+media (`DECISIONS.md` #72.5, #74). A repost extends a post's life; it does not change what is known
+about it.
 
 ### Rejection reasons
 
