@@ -2,8 +2,9 @@
 
 **Status:** Approved by Ron, 2026-10-02. Amended 2026-10-03 after the cross-check of the other docs.
 Amended 2026-10-04: run interval and manual run (`DECISIONS.md` #61), viewed posts (#62), Gate E
-(#63), the SQLite file shared by `store` and `state` (#64, #65), and "no images" means no media at
-all (#67, #68).
+(#63), the SQLite file shared by `store` and `state` (#64, #65), "no images" means no media at
+all (#67, #68), a `no_text` post that comes back with text (#69), and media that arrives through a
+repost (#70).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -122,8 +123,8 @@ A repost resets the clock. A repost of an archived post makes it active again.
 
 | Reason | Decided | Notes |
 |---|---|---|
-| No text | Before the model | Not sent to the model |
-| No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again with media returns to pending and goes to the model (`DECISIONS.md` #67, #68). Which media are downloaded (photos only) is a separate rule |
+| No text | Before the model | Not sent to the model. A post rejected for this and fetched again with text returns to pending and goes to the model (`DECISIONS.md` #69) |
+| No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again with media returns to pending and goes to the model (`DECISIONS.md` #67, #68). So does the post when a repost of it with identical text arrives with media: the repost's photos are downloaded and kept with the post, and the repost stays a repost (#70). Which media are downloaded (photos only) is a separate rule |
 | Other city | By the model | The post names a city that is not Tel Aviv–Yafo. The named city is shown next to the post. Applies to all users. A nearby city mentioned as a landmark ("5 minutes from Givatayim") is not a rejection |
 | Seeking | By the model | The poster is looking for an apartment, not offering one |
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |

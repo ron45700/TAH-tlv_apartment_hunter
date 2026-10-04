@@ -17,6 +17,7 @@ from tlv_hunter.textnorm.annotate import annotate
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_ROOT = REPO_ROOT / "config"
 THEDOOR_20 = REPO_ROOT / "data" / "raw" / "thedoor_20posts_2026-09-13.json"
+SPIKE_1_1A_PREFIX = REPO_ROOT / "data" / "raw" / "thedoor_spike_1_1a_2026-10-04"
 SQLITE_FILENAME = "tlv_hunter.sqlite3"
 
 FETCHED_AT = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
@@ -44,15 +45,29 @@ def _block_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(socket, "getaddrinfo", _refuse_network)
 
 
+def _load_fixture(path: Path) -> Any:
+    if not path.is_file():
+        pytest.fail(f"fixture missing: {path}. data/ is gitignored; tests fail, never skip.")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def load_thedoor_items() -> list[dict[str, Any]]:
-    if not THEDOOR_20.is_file():
-        pytest.fail(f"fixture missing: {THEDOOR_20}. data/ is gitignored; tests fail, never skip.")
-    return json.loads(THEDOOR_20.read_text(encoding="utf-8"))
+    return _load_fixture(THEDOOR_20)
+
+
+def load_spike_1_1a(suffix: str = "") -> Any:
+    """Spike 1.1a run 1: the dataset (no suffix), `_run` (run object) or `_input` (its INPUT)."""
+    return _load_fixture(SPIKE_1_1A_PREFIX.with_name(SPIKE_1_1A_PREFIX.name + suffix + ".json"))
 
 
 @pytest.fixture
 def thedoor_items() -> list[dict[str, Any]]:
     return load_thedoor_items()
+
+
+@pytest.fixture
+def spike_items() -> list[dict[str, Any]]:
+    return load_spike_1_1a()
 
 
 @pytest.fixture

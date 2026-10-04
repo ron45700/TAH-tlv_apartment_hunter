@@ -125,15 +125,17 @@ items omit `width` and `height` too (9 in spike 1.1a), so the keys are never ass
 
 - **API paths:** the Apify API spec (`v2-2026-10-01`) lists `/v2/actors/…`; the older
   `/v2/acts/…` form still answers.
-- **Synchronous call** (`run-sync-get-dataset-items`), not webhooks. To also get cost and the run
-  log, start the run with the regular call and keep its run ID: the run object carries
-  `usageTotalUsd` and `chargedEventCounts`. `maxTotalChargeUsd` caps the cost of a run.
+- **The regular (non-sync) call**, not webhooks (`DECISIONS.md` #71): start the run, poll it to a
+  terminal status, read the dataset. The run ID gives the status, cost and log: the run object
+  carries `usageTotalUsd` and `chargedEventCounts` (preliminary right after the run ends,
+  `ASSUMPTIONS.md` P19). The sync call (`run-sync-get-dataset-items`) is not used: it returns no
+  run ID. `maxTotalChargeUsd` caps the cost of a run.
 - **Our scheduler, not Apify's.** Apify's scheduler injects static input; `postsNewerThan` changes
   every run.
 - **One run for all groups.** `postsNewerThan` is one value per run while the watermark is per
   group, so the run uses `min(all watermarks) - buffer` and the result is filtered per group
-  locally. Whether the window applies per group inside one run is not yet verified
-  (`ASSUMPTIONS.md` P1). If it does not: six separate runs.
+  locally. The window applies per group inside one run: verified in spike 1.1a
+  (`ASSUMPTIONS.md` P1, `SPIKE_1_1a.md` Q1).
 
 Expected cost (from spike 1.1a, `SPIKE_1_1a.md`): 36 runs/day, ~150 posts/day, $0.0015 per
 result and $0.005 per run start. **One run covering all 6 groups: ~$12–16/month**; six separate

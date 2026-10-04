@@ -94,8 +94,11 @@ D (dedup B key). Recorded as invariant 1 in `CLAUDE.md`.
 *Why:* a schema written without deliberation costs a full reclassification to fix.
 
 ### 20 — One Apify run for all groups, not one run per group
+**Amended by #71 (2026-10-04):** the run is started with the regular (non-sync) call, not a
+synchronous one. "One run for all groups" stands.
+
 `postsNewerThan` is a single value per run, but the watermark is per group. Resolution: one
-synchronous run with all 6 URLs, `postsNewerThan = min(all watermarks) - buffer`, filtered per
+run with all 6 URLs, `postsNewerThan = min(all watermarks) - buffer`, filtered per
 group locally.
 
 *Why:* cheaper than 6 runs (memo23 also bills per start), the watermark stays per group as
@@ -539,7 +542,8 @@ media fallback. The rules and why:
   model in the data path, so at download time no verdict exists. For a rejected post what matters
   is its original text and link, so downloading its images costs nothing important.
 - **An identical-hash repost downloads no images**, since they duplicate the canonical's, unless
-  the canonical is archived (its images are gone) or all its downloads failed.
+  the canonical is archived (its images are gone) or all its downloads failed. *Extended by #70
+  (2026-10-04): also when the canonical has no media at all.*
 - **Flagged posts are kept whole and never deleted.** A flag marks a model mistake, and the full
   record, including `raw`, is what is needed to re-run the prompt on it. Images are deleted at
   archive like any post's, since the model never sees images.
@@ -644,11 +648,87 @@ Approved by Ron, 2026-10-04.
 A post rejected before the model as `no_images`, and fetched again with media, returns to
 `"pending"` and goes to the model. It does not stay rejected.
 
-**Open, for task 1.11 planning:** (i) does the same hold for a `no_text` post that later has text;
-(ii) what happens when the media arrives through a repost (a different post with the same text
-hash) rather than the same post.
+The two questions left open here for task 1.11 planning were answered on 2026-10-04: a `no_text`
+post that comes back with text is #69; media that arrives through a repost is #70.
 
 *Why:* no reason recorded.
+
+### 69 — A rejected `no_text` post that comes back with text returns to `"pending"`
+Approved by Ron, 2026-10-04. **Extends #68.**
+
+A post rejected before the model as `no_text`, and fetched again (the same post) with text, returns
+to `"pending"` and goes to the model. Same behaviour as #68.
+
+*Why:* Ron does not expect this to happen, but if it does, the post should go to the model.
+
+### 70 — Media that arrives through a repost
+Approved by Ron, 2026-10-04. **Extends #63 (the identical-hash repost rule) and #68.**
+
+The case: the canonical post was rejected as `no_images`, and a different post with an identical
+text hash (a repost) arrives with media.
+
+- The canonical returns to `"pending"` and goes to the model.
+- The repost's photos are downloaded and recorded in the canonical's `images`
+  (`PostImage.listing_id` is the repost's `listing_id`, as the field already allows).
+- The repost stays a repost: no card of its own, a line in the repost log, `last_published_at`
+  updated. The canonical rule (earliest `posted_at`) is unchanged.
+- The card's link stays the canonical's permalink; the repost's link appears in the repost log.
+- `SCHEMA.md` Gate E, "Reposts": a repost with an identical text hash downloads its images when
+  the canonical is archived, or all of its images failed, **or the canonical has no media at all**.
+- The question does not exist for `no_text`: a `no_text` post is never hashed, so it has no
+  duplicates.
+
+No field or type changed; `schema_version` stays 1.
+
+*Why:* without it, a real apartment with photos stays in the rejected list; and it keeps the
+canonical rule intact.
+
+### 71 — Task 1.1: thedoor `fetch()`
+Approved by Ron, 2026-10-04. **Amends #20.** Each point was presented to Ron as a recommendation
+with the reason given here, and he approved it.
+
+- **A. The regular (non-sync) call.** Start the run, poll until a terminal status, read the
+  dataset. #20's "one run for all groups" stands; its word "synchronous" goes.
+  *Why:* the sync call gives no run ID, and a cut-off run could look successful and advance the
+  watermark (invariant 2).
+- **Charge cap.** `maxTotalChargeUsd` is sent on every run, from the config key
+  `max_total_charge_usd` (0.50). `fetch()` raises when the rows returned are at or above the run's
+  `options.maxItems`.
+  *Why:* a normal run costs at most $0.275; the cap stops a runaway run.
+- **C.** Config key `include_top_comment`, typed `Literal[False]`, always sent. The same pattern as
+  `fetch_all_comments`.
+- **D. A row that fails to map is skipped, not fatal.** Logged at error level with its `post_id`
+  and `group_id` (when readable) and the exception; the per-run log line carries the skipped
+  count. Post text and phone numbers are never logged.
+  *Why:* otherwise one broken post blocks every group's window permanently, the same concern as
+  #37.
+  **Amended 2026-10-04 (task 1.1 review), approved by Ron — a ceiling:** `fetch()` raises
+  `ProviderRunError` when more than half of the run's rows failed to map **and** at least 3 rows
+  failed. The count is over the rows of requested groups; rows dropped under E are excluded.
+  Below the ceiling, rows are skipped and logged as above.
+  *Why:* if the provider changes its response shape, every row fails, `fetch()` returns an empty
+  list as a success, and the watermark advances past a window that was never stored
+  (invariant 2). One broken post still must not block the window.
+- **E.** A row whose `group_id` was not requested is dropped and logged as a warning.
+- **F. Run deadline.** Config key `run_timeout_secs` (300). Past the deadline, `fetch()` aborts the
+  run and raises.
+  *Why:* the spike runs took about 30 s.
+- **G. Shared media sizes.** `width` / `height` are taken when a shared media item carries them and
+  are `None` when the keys are absent, the same as own media. `SCHEMA.md` Gate A amendment wording
+  updated. No type change; `schema_version` stays 1.
+- **H. A shared post with its own caption: unchanged.** Its `text` is the caption (Gate A as
+  approved). Recorded as a known gap (`ASSUMPTIONS.md` P16), for Gate B.
+- **I.** The stale references in the `external-contract-verification` skill are fixed.
+- **J. A group at `max_posts`.** `fetch()` logs a warning for every group whose row count, before
+  the `since` filter, is at or above `max_posts` (`>=`; amended from "equals" in the task 1.1
+  review, 2026-10-04): its window may be cut off. Log only. What the watermark
+  does then is an open point for task 1.13.
+- **Comments are not collected.** Both comment flags stay explicitly `false` (invariant 7);
+  `RawPost.top_comment` is not touched.
+- **Cost:** `usageTotalUsd` is logged as read at the end of the run, with no wait for the final
+  figure.
+
+For C, E, G, J and the cost line, no reason was recorded.
 
 ---
 

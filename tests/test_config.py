@@ -23,6 +23,9 @@ group_ids: ["35819517694"]
 max_posts: 30
 sorting_order: newest_posts
 fetch_all_comments: false
+include_top_comment: false
+max_total_charge_usd: 0.50
+run_timeout_secs: 300
 store_root: data/store
 """
 
@@ -44,6 +47,9 @@ def test_repo_collection_config_loads() -> None:
     assert collection.max_posts == 30
     assert collection.sorting_order == "newest_posts"
     assert collection.fetch_all_comments is False
+    assert collection.include_top_comment is False
+    assert collection.max_total_charge_usd == 0.50
+    assert collection.run_timeout_secs == 300
     assert collection.store_root == "data/store"
 
 
@@ -73,8 +79,27 @@ def test_fetch_all_comments_missing_is_rejected(tmp_path: Path) -> None:
         config.collection()
 
 
+@pytest.mark.parametrize(
+    ("line", "replacement"),
+    [
+        ("include_top_comment: false\n", "include_top_comment: true\n"),
+        ("include_top_comment: false\n", ""),
+        ("max_total_charge_usd: 0.50\n", ""),
+        ("max_total_charge_usd: 0.50\n", "max_total_charge_usd: 0\n"),
+        ("run_timeout_secs: 300\n", ""),
+        ("run_timeout_secs: 300\n", "run_timeout_secs: 0\n"),
+    ],
+)
+def test_run_limits_and_top_comment_flag_are_enforced(
+    tmp_path: Path, line: str, replacement: str
+) -> None:
+    config = _config_dir(tmp_path, VALID_COLLECTION.replace(line, replacement))
+    with pytest.raises(ValidationError):
+        config.collection()
+
+
 def test_unapproved_key_is_rejected(tmp_path: Path) -> None:
-    config = _config_dir(tmp_path, VALID_COLLECTION + "include_top_comment: false\n")
+    config = _config_dir(tmp_path, VALID_COLLECTION + "unapproved_key: false\n")
     with pytest.raises(ValidationError):
         config.collection()
 

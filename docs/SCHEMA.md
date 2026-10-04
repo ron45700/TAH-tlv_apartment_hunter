@@ -5,7 +5,15 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-04 (task 1.10) — **Gate E amended** (`DECISIONS.md` #66, #67), approved
+**Last updated:** 2026-10-04 (task 1.1) — **Gate A shared-post fallback wording:** `width` /
+`height` of a shared media item are taken when present, `None` when absent, like own media.
+Approved by Ron (`DECISIONS.md` #71 G). No field or type changed; `schema_version` stays 1.
+
+**Earlier on 2026-10-04:** **Gate E, "Reposts" rule:** a third case, approved by Ron
+(`DECISIONS.md` #70): an identical-hash repost also downloads its images when the canonical has no
+media at all. No field or type changed; `schema_version` stays 1.
+
+**Earlier on 2026-10-04 (task 1.10):** **Gate E amended** (`DECISIONS.md` #66, #67), approved
 by Ron: `flagged_by` is `str | None`; `PostImage` typed; consistency rules on `rejection_reason`,
 the flag and `PostImage`; `no_images` means no media at all, stated apart from the download rule;
 "Stub contracts" wording on where `GroupWatermark` is built; an explicit `listing_id` row on the
@@ -120,8 +128,10 @@ when a download failed, and a reason `media[]` is stored even though the URLs ro
 
 **Shared-post fallback (Gate A amendment, 2026-10-04).** When the post's own `media[]` is empty and
 `sharedPost` is present, `media[]` is mapped from `sharedPost.media[]`: `type` → `type`, `uri` →
-`uri`, `id` → `media_id`, `url` → `page_url`, and `width` / `height` are `None` (the shared items
-carry neither). No type changes. **Condition:** before task 1.1 relies on it, verify against the
+`uri`, `id` → `media_id`, `url` → `page_url`, and `width` / `height` are taken when the item
+carries them and are `None` when the keys are absent, the same as own media (most shared items
+carry neither; a `Reel` item in spike 1.1a carries both). *Wording amended 2026-10-04,
+`DECISIONS.md` #71 G.* No type changes. **Condition:** before task 1.1 relies on it, verify against the
 spike data that `sharedPost.media[].url` is a non-expiring Facebook page link like `page_url`, not a
 signed CDN link. *Checked 2026-10-04 against both spike datasets:* all 65 `sharedPost.media[].url`
 values are `www.facebook.com` page links (`photo/?fbid=…`, `video.php?v=…`, `reel/…`), the same
@@ -239,7 +249,7 @@ failover adapter is built.
 
 # GATE E — post lifecycle and `GroupWatermark`
 
-**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66 and #67 ·
+**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66, #67 and #70 ·
 **Lifecycle:** `BASELINE.md` §5
 
 ## Post lifecycle record (`PostLifecycle`)
@@ -290,7 +300,8 @@ Exactly one of `local_path` and `error` is set.
   retry within the same run. A failed download fails neither the run nor the post.
 - Images are downloaded also for posts the model will reject, and deleted at archive like any post.
 - **Reposts:** a repost with an identical text hash downloads no images, except when the canonical
-  is archived, or all of its images failed; then the repost's images are downloaded.
+  is archived, or all of its images failed, or the canonical has no media at all
+  (`DECISIONS.md` #70); then the repost's images are downloaded.
 
 ## `GroupWatermark`
 

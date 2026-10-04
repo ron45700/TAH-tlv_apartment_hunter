@@ -529,3 +529,190 @@ explicit `listing_id` row on the post lifecycle record (noted as #66 item 8; `sc
 unchanged. `PHASE_1.md` 1.14 and `BACKLOG.md`: open points on who calls `find_without_lifecycle`,
 who creates `store_root`, and where the `tlv_hunter.sqlite3` constant lives. `BACKLOG.md` #49 row
 brought up to date. No code or tests changed.
+
+---
+
+## 2026-10-04 (continued) — Decisions #69 and #70 (docs only)
+
+### Done
+
+Two decisions approved by Ron, 2026-10-04, answering the two questions left open under #68 for
+task 1.11 planning. Docs only; no code or tests changed.
+
+- **#69:** a post rejected as `no_text` and fetched again (the same post) with text returns to
+  `"pending"` and goes to the model. Extends #68.
+- **#70:** when the canonical was rejected as `no_images` and an identical-hash repost arrives with
+  media, the canonical returns to `"pending"`; the repost's photos are downloaded into the
+  canonical's `images` (`PostImage.listing_id` = the repost's); the repost stays a repost; the card
+  link stays the canonical's permalink. Gate E "Reposts" rule gains a third case.
+- **Files touched:** `DECISIONS.md` (#69, #70; #68's open paragraph replaced by a pointer; a note
+  on #63's identical-hash repost bullet), `SCHEMA.md` (Gate E "Reposts" rule, Gate E reasons line,
+  "Last updated"), `PHASE_1.md` (1.11 open questions replaced by the two rules; 1.3 gains the #70
+  state change; 1.12 open point names the third case), `BASELINE.md` (§5 "No text" and "No images"
+  rows, amendment line), `BACKLOG.md` (item 2 needs nothing; the #67 row is now #67–#70 with the
+  task split), this log.
+- **Task split (mine, from the data path in `BASELINE.md` §4):** 1.11 builds #67, #68, #69; 1.3
+  builds the #70 return to `"pending"`, because pre-model rejects run before dedup and only dedup
+  knows a post is a repost; 1.12 builds the #70 download.
+
+No field or type changed; `schema_version` stays 1.
+
+### For Ron
+
+Cases the wording leaves undefined. Not resolved.
+
+1. **A post returning to `"pending"`: are the pre-model rules run again?** A `no_text` post
+   re-fetched with text but with no media at all would meet #67's `no_images` rule, while #69 says
+   it returns to `"pending"`.
+2. **A `no_text` post re-fetched with text whose hash matches a stored post.** It now has
+   duplicates. Does it return to `"pending"` and go to the model, or become a repost of that
+   canonical (no card of its own)?
+3. **"The canonical has no media at all" (#70): its own media, or its `images` record?** Read as its
+   own media, every later identical-hash repost also downloads its photos, since the canonical's
+   own media stays empty.
+4. **A repost whose media is only video or reel.** By #67 the canonical has media through it and
+   returns to `"pending"`; by the download rule no photo is downloaded, so its `images` stays empty.
+   Confirm this is intended.
+5. **An archived canonical rejected as `no_images`.** `PHASE_1.md` 1.3 says a repost of an archived
+   post makes it active again; #70 says the canonical returns to `"pending"`. Which applies when
+   both hold?
+6. **Canonical and repost new in the same run.** Whether the canonical is first stored as
+   `"rejected"` and then moved to `"pending"`, or stored as `"pending"` directly. The end state is
+   the same; it decides whether 1.11 or 1.3 owns the case.
+7. **Not covered:** a repost found by dedup B in phase 2 (rewritten text). #70 names only an
+   identical text hash.
+
+### Next
+
+Task 1.1 plan (Part 2 of this session), awaiting Ron.
+
+---
+
+## 2026-10-04 (continued) — Task 1.1: thedoor `fetch()`; decision #71
+
+### Done
+
+Ron's decisions on the 1.1 plan recorded as `DECISIONS.md` #71 (amends #20: the regular call,
+not a synchronous one). No real Apify run.
+
+- **Code:** `providers/thedoor.py`:
+  - `ThedoorProvider.fetch()`: start the run with `maxTotalChargeUsd`, poll it to a terminal
+    status (`waitForFinish` ≤ 60 s), abort and raise past `run_timeout_secs`, raise unless
+    `SUCCEEDED` or when rows ≥ `options.maxItems`, read the dataset.
+  - Row handling: a row that fails to map is skipped and logged at error level (D); a row from a
+    group that was not requested is dropped with a warning (E); a group at `max_posts` gets a
+    warning (J). The `since` filter matches `FixtureProvider`. One info line per run: per-group
+    counts (zeros included), skipped, dropped, kept, `usageTotalUsd`.
+  - `build_actor_input` and `posts_newer_than` (#36, rounded up). `urllib_transport`, stdlib
+    only, token in the header only.
+  - Mapper: a shared post is detected by `sharedPost` present. Text falls back to
+    `sharedPost.text` when the post's own text is blank. Media falls back to `sharedPost.media`,
+    with `width` / `height` taken when present (G). `UnverifiedSharedPostError` removed.
+- **Config:** `include_top_comment` (`Literal[False]`), `max_total_charge_usd` (0.50),
+  `run_timeout_secs` (300) in `CollectionConfig` and `config/collection.yaml`.
+- **Tests:**
+  - `tests/test_thedoor_fetch.py` (new): fake transport over the spike 1.1a dataset and run
+    object. Covers the input (equal to the spike's stored `INPUT`), polling, failed statuses,
+    deadline and abort, failed abort, the cap, D, E, J, no text or phones in the logs, and the
+    real transport with `urlopen` faked.
+  - `tests/test_thedoor.py`: shared-post mapping on the spike fixture.
+  - `tests/test_config.py`: the three keys.
+  - `tests/test_fixture_policy.py`: a missing spike fixture fails.
+- **Abort endpoint** (Ron chose the free no-op check): one authenticated
+  `POST /v2/actor-runs/GcarNt1rhe8tuSDuV/abort` on the finished spike run. HTTP 200, the run
+  object under `data`, status unchanged. Saved as `data/raw/apify_abort_noop_2026-10-04.json`.
+- **Files touched:**
+  - Code and config: `tlv_hunter/providers/thedoor.py`, `tlv_hunter/config/base.py`,
+    `config/collection.yaml`.
+  - Tests: `tests/conftest.py`, `tests/test_config.py`, `tests/test_thedoor.py`,
+    `tests/test_thedoor_fetch.py` (new), `tests/test_fixture_policy.py`.
+  - Docs: `docs/BACKLOG.md`, `docs/DECISIONS.md` (#71, #20), `docs/SCHEMA.md` (G),
+    `docs/ASSUMPTIONS.md` (P15–P19, P6), `docs/PHASE_1.md` (1.1 complete, 1.13 and 1.14 open
+    points, P6 row), `docs/RESEARCH.md` (§3 call bullet), `docs/SPIKE_1_1a.md` (cost
+    correction), `.claude/skills/external-contract-verification/SKILL.md` (I), this log.
+  - `CLAUDE.md` unchanged: no line found stale.
+
+### Verified
+
+- `uv run pytest`: 241 passed. `uv run ruff check .`: all checks passed.
+  `uv run ruff format --check .`: 68 files already formatted.
+- Read today, without a token: actor build still `1.0.195` (`hePeml26EwGHFdamf`), input schema
+  and pricing unchanged since the spike. Apify API spec `v2-2026-10-01T153946Z`: the run, poll,
+  dataset and abort endpoints, `ActorJobStatus` values, bearer auth.
+- **Cost correction:** spike run 1 now reads 105 results charged and $0.1625. The 99 and
+  $0.1535 read at the end of the run were preliminary (`ASSUMPTIONS.md` P19).
+
+### Not verified
+
+- That abort stops a *running* run (P18). What a run does at the charge cap (P17). The control
+  run's final cost.
+- `fetch()` against the live API. Its first real run is the 1.14 DoD run.
+
+### For Ron
+
+1. **A row with no readable `group_id`** is treated as a row that fails to map (D, error, counted
+   as skipped), not as an unrequested group (E). That call is mine.
+2. **"Log the exception" (D)** is implemented as the exception type plus the missing key or the
+   failing field names, never the message. Some messages (pydantic, the price parser) can carry
+   post content.
+3. **The deadline** runs from the start of `fetch()` and covers starting and polling the run, not
+   the dataset read.
+4. **Still stale, not fixed:**
+   - `RESEARCH.md` §3 still says per-group behaviour is "not yet verified (P1)" with a six-run
+     fallback. P1 was verified in spike 1.1a.
+   - The skill:
+     - It still lists Firestore, in its description and under its links; the store is SQLite
+       (#44).
+     - Its anti-pattern "rather than the actor's own input page" conflicts with its own rule not
+       to use the Input tab.
+     - Its actor "OpenAPI definition" link is the store page. The machine-readable definition
+       read today is
+       `https://api.apify.com/v2/acts/thedoor~facebook-group-post-scraper/builds/default/openapi.json`.
+5. **J uses equality** with `max_posts`, as written. A count above it (never seen) is not warned.
+
+### Next
+
+Task 1.11, pre-model rejects (`BACKLOG.md` item 1).
+
+---
+
+## 2026-10-04 (continued) — Task 1.1 review: three fixes
+
+### Done
+
+Approved by Ron, 2026-10-04. No real Apify run.
+
+1. **A ceiling on D** (`DECISIONS.md` #71 D, amended). `fetch()` raises `ProviderRunError` when
+   more than half of the rows failed to map **and** at least 3 failed (`MIN_SKIPPED_TO_FAIL`).
+   The count is over the rows of requested groups, with rows dropped under E excluded. A row with
+   no readable `group_id` is a mapping failure (the call recorded in the previous entry), so it
+   counts on both sides. Below the ceiling, nothing changes.
+2. **J is `>=`** `max_posts`, not `==`. The warning names the row count. #71 J, `PHASE_1.md` 1.13
+   and the `BACKLOG.md` row now read "`max_posts` rows or more".
+3. **Stale wording:**
+   - `RESEARCH.md` §3 now states the per-group window as verified (P1, spike 1.1a); the six-run
+     fallback is gone. The six-run cost comparison stays, as a comparison.
+   - The skill: Firestore removed from the description and the links. The thedoor OpenAPI link is
+     now the machine-readable definition read for task 1.1. The anti-pattern line points at the
+     actor's OpenAPI definition instead of its input page. No rule changed.
+- **Tests** (`tests/test_thedoor_fetch.py`):
+  - The ceiling: 2 broken of 105 pass (the existing test), all broken raises, 2 of 3 does not
+    raise, 3 of 5 raises, and 3 broken with 4 dropped raises (3 of 3, not 3 of 7).
+  - J: with `max_posts` 28, the groups at 30 and at 28 are both warned.
+- **Files touched:** `tlv_hunter/providers/thedoor.py`, `tests/test_thedoor_fetch.py`,
+  `docs/DECISIONS.md`, `docs/BACKLOG.md`, `docs/PHASE_1.md`, `docs/RESEARCH.md`,
+  `.claude/skills/external-contract-verification/SKILL.md`, this log.
+
+### Verified
+
+`uv run pytest`: 246 passed. `uv run ruff check .`: all checks passed.
+`uv run ruff format --check .`: 68 files already formatted.
+
+### For Ron
+
+- The memo23 OpenAPI link in the skill still points at the store page. Its machine-readable
+  definition was not read, so it was left as is.
+
+### Next
+
+Task 1.11, pre-model rejects (`BACKLOG.md` item 1).

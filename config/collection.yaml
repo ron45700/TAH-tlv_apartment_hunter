@@ -9,4 +9,7 @@ group_ids:
 max_posts: 30
 sorting_order: newest_posts
 fetch_all_comments: false
+include_top_comment: false
+max_total_charge_usd: 0.50
+run_timeout_secs: 300
 store_root: data/store

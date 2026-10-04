@@ -1,6 +1,6 @@
 # Phase 1 — Collection (semi-macro)
 
-**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a and 1.10 complete.
+**Status:** in progress. Phase 0 complete (2026-09-14). Gates A and E approved. Tasks 1.2, 1.2b, 1.1a, 1.10 and 1.1 complete.
 **Rewritten:** 2026-10-03 to match `BASELINE.md`. The previous version is in git history.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Research:** `RESEARCH.md`
@@ -132,7 +132,12 @@ run leaves the store unchanged, first `fetched_at` preserved. *Met:* the exit te
 
 ---
 
-## 1.1 thedoor `fetch()`
+## 1.1 thedoor `fetch()` — ✅ COMPLETE (2026-10-04)
+
+`ThedoorProvider.fetch()` in `providers/thedoor.py`: one regular (non-sync) run for all groups,
+polled to a terminal status, with the charge cap, the run deadline and the row rules of
+`DECISIONS.md` #71. The mapper takes a shared post's text and media from `sharedPost`
+(Gate A amendment). Tests run against the spike 1.1a fixture through a fake transport.
 
 **Input:** group IDs, `since` → **Output:** `list[RawPost]`. The mapper already exists
 (`to_raw_post`); this adds the network call.
@@ -169,10 +174,13 @@ through `Repository.upsert_with_lifecycle` (1.10), which never overwrites an exi
 **Re-fetched with media** (`DECISIONS.md` #68): a post rejected as `no_images` and fetched again
 with media returns to `"pending"` and goes to the model. It does not stay rejected.
 
-**Open, decided when 1.11 is planned:**
-1. Does the same hold for a `no_text` post that later has text?
-2. What happens when the media arrives through a repost (a different post with the same text hash)
-   rather than the same post?
+**Re-fetched with text** (`DECISIONS.md` #69): a post rejected as `no_text` and fetched again (the
+same post) with text returns to `"pending"` and goes to the model, the same as #68.
+
+**Media through a repost** (`DECISIONS.md` #70): when the canonical was rejected as `no_images` and
+a repost with an identical text hash arrives with media, the canonical returns to `"pending"` and
+goes to the model. The repost is found by dedup, so this part is built in 1.3; the repost's photos
+are downloaded in 1.12. A `no_text` post is never hashed, so it has no reposts.
 
 ---
 
@@ -193,6 +201,10 @@ A duplicate of a post already stored is a **repost**: it creates no new card, up
 canonical's last publication time, and adds a line to its repost log. A repost of an archived post
 makes it active again.
 
+A repost with an identical text hash that has media, of a canonical rejected as `no_images`,
+returns the canonical to `"pending"` (`DECISIONS.md` #70). The repost stays a repost, and the
+canonical rule (earliest `posted_at`) is unchanged.
+
 **Test:** the 20 posts in random order return the same canonical set on every run.
 
 ---
@@ -205,8 +217,9 @@ other images.
 
 **Open point — decided when 1.12 is planned.** The text above says images are downloaded "for
 canonical non-rejected posts". `SCHEMA.md` Gate E adds the repost exception (a repost with an
-identical text hash downloads its images when the canonical is archived or all of its downloads
-failed) and says images are also downloaded for posts the model will reject. The plan for 1.12
+identical text hash downloads its images when the canonical is archived, or all of its downloads
+failed, or the canonical has no media at all, `DECISIONS.md` #70; the repost's photos are recorded
+in the canonical's `images`) and says images are also downloaded for posts the model will reject. The plan for 1.12
 states exactly which posts get their images downloaded.
 
 ---
@@ -219,6 +232,11 @@ transaction.
 
 Rules in `RESEARCH.md` §4. The run input is `min(all watermarks) - buffer`, filtered per group
 locally. The watermark advances only when the whole run succeeded.
+
+**Open point — a group at `max_posts`.** When a group returns `max_posts` rows or more in one
+run, its window may be cut off: older posts inside the window were not returned. `fetch()` logs a
+warning (`DECISIONS.md` #71 J) and changes nothing. What the watermark does then is decided when
+1.13 is planned.
 
 **Open point — a per-group failure inside a successful run.** Posts arrive newest first, so a group
 that fails midway would advance its watermark past posts it never returned (invariant 2). The run
@@ -242,6 +260,8 @@ the watermarks. Once alerts exist (phase 4), a bootstrap run sends none.
 1. Which step calls `find_without_lifecycle`, and what it does with a non-empty result.
 2. Who creates the `store_root` directory: `SqliteRepository` does not, `local_json` does.
 3. Where the production constant for `tlv_hunter.sqlite3` lives.
+4. Where `ThedoorProvider` gets the Apify token (`APIFY_TOKEN` in `.env`); the provider takes it as
+   a constructor argument.
 
 ---
 
@@ -254,7 +274,7 @@ Full register: `ASSUMPTIONS.md`.
 | P1: `postsNewerThan` applies per group in one multi-URL run | 1.1a | ✅ VERIFIED 2026-10-04 |
 | P5: all six groups return data | 1.1a | ✅ VERIFIED 2026-10-04. One group returned 0 rows because it was quiet; the run log shows per-group status (P13, ASSUMED) |
 | P9: `includeTopComment=false` suppresses `topComment` | 1.1a | ✅ VERIFIED 2026-10-04. 0 of 285 rows |
-| P6: real cost of a run | 1.1a | ✅ VERIFIED 2026-10-04. $0.1535 and $0.2525; ~$12–16/month projected, accepted by Ron |
+| P6: real cost of a run | 1.1a | ✅ VERIFIED 2026-10-04. $0.1535 and $0.2525 as read at the end of the runs; run 1's final figure, read later, is $0.1625 (`ASSUMPTIONS.md` P19). ~$12–16/month projected, accepted by Ron |
 | I6: images download from the signed links | 1.1a, 1.12 | ✅ VERIFIED 2026-10-04 at fetch time, 5 of 5. Link lifetime ≈ 4.4 days is ASSUMED (I7) |
 | P2: where a shared post's content sits | 1.1a, 1.1 | ✅ VERIFIED 2026-10-04. `sharedPost.text`, `sharedPost.media` |
 

@@ -196,6 +196,8 @@ to this account is $0.0015 per result, $0.005 per start event.
 
 - **Results charged are fewer than rows returned**: 99 of 105 and 165 of 180. The cause is
   UNKNOWN; it is in our favour. The projection below prices every returned row.
+  *Correction, 2026-10-04 (task 1.1):* these were preliminary figures. Read again, run 1 shows 105
+  results charged and **$0.1625**. The control run was not re-read (`ASSUMPTIONS.md` P19).
 - The platform set `maxItems: 333` on both runs by itself (= $0.50 / $0.0015).
 - The plan's estimate of $0.02 per start was wrong — it assumed the 4 GB shown in the actor's
   `defaultRunOptions`. See "Memory" below.

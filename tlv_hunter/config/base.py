@@ -11,6 +11,9 @@ class CollectionConfig(BaseModel):
     max_posts: int = Field(gt=0)
     sorting_order: Literal["newest_posts"]
     fetch_all_comments: Literal[False]
+    include_top_comment: Literal[False]
+    max_total_charge_usd: float = Field(gt=0)
+    run_timeout_secs: int = Field(gt=0)
     store_root: str
 
 
