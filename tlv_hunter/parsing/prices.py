@@ -21,3 +21,15 @@ def parse_native_price(raw: str) -> ParsedPrice:
     if currency is None:
         return UNPARSED_PRICE
     return ParsedPrice(int(match["amount"].replace(",", "")), currency)
+
+
+# No monthly rent in Tel Aviv is below this: a lower native price means no price
+# (DECISIONS.md #114).
+NATIVE_PRICE_FLOOR = 500
+
+
+def native_price_fallback(native_price: int | None) -> int | None:
+    """The provider's price, used only when the text gives none (#95, #114)."""
+    if native_price is None or native_price < NATIVE_PRICE_FLOOR:
+        return None
+    return native_price

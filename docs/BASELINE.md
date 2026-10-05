@@ -235,8 +235,8 @@ amendment of the same day had code decide it through a street table and a transl
 
 - **The model returns the areas:** municipal numbers from the closed list of 71, which is given in
   its instructions, stored on the post (#167). It also returns the streets and neighbourhood names
-  as written, kept for the card and for error analysis; a name the post does not contain is
-  dropped (#162). The model never touches the source text, so a wrong area is visible beside the
+  as written, kept for the card and for error analysis; a name or other city the post does not
+  contain is dropped (#162, #180). The model never touches the source text, so a wrong area is visible beside the
   original and can be counted and corrected.
 - **The areas** are a closed list: the municipality's open `שכונות` dataset (GIS layer 511), all
   71 entries, the Old North in its two parts, non-residential entries included (#81), in
@@ -245,8 +245,10 @@ amendment of the same day had code decide it through a street table and a transl
 - **The rules, given to the model as instructions** (#88, #112, #124, #167): a stated area decides;
   a street only refines inside it (for example, which part of the Old North); several possible
   areas are all returned (a long street such as Dizengoff, with nothing to settle it); nothing the
-  model can place returns no area. Colloquial names ("הצפון הישן", "לב העיר", "יפו") are given as
-  examples (#86). Filtering is always by area, never by street.
+  model can place returns no area. With no area name and no street, a well-known landmark that
+  places the apartment decides ("ליד שוק הכרמל"), every area it touches on a border; a general
+  distance phrase places nothing (#178). Colloquial names ("הצפון הישן", "לב העיר", "יפו") are
+  given as examples (#86). Filtering is always by area, never by street.
 - **Known limit** (#170): for a post with only a street, the area rests on what the model knows of
   Tel Aviv. The regression set measures it (95% on `areas`). A street table as an aid is recorded
   for later, only if the regression set shows the model weak on such posts (#169).

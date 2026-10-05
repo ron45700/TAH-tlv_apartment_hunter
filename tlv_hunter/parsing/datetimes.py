@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from email.utils import parsedate_to_datetime
 
 
@@ -15,3 +15,20 @@ def require_utc(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() != timedelta(0):
         raise ValueError("must be a tz-aware UTC datetime")
     return value
+
+
+def nearest_occurrence(day: int, month: int, reference: date) -> date | None:
+    """The date with this day and month nearest to `reference`, the year before, the same year or
+    the year after; a tie goes to the later one. None when the day exists in none of the three
+    years (31.11). DECISIONS.md #115, #179."""
+    candidates = []
+    for year in (reference.year - 1, reference.year, reference.year + 1):
+        try:
+            candidates.append(date(year, month, day))
+        except ValueError:
+            continue
+    if not candidates:
+        return None
+    return min(
+        candidates, key=lambda candidate: (abs(candidate - reference), -candidate.toordinal())
+    )

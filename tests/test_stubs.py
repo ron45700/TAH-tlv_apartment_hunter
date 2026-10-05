@@ -5,8 +5,6 @@ import pytest
 from pydantic import ValidationError
 
 from tests.conftest import CONFIG_ROOT, FETCHED_AT, SQLITE_FILENAME, THEDOOR_20
-from tlv_hunter.classify.base import Classifier
-from tlv_hunter.classify.classifier_stub import ClassifierStub
 from tlv_hunter.config.base import ConfigSource
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.contracts.decision_stub import DecisionStub
@@ -52,7 +50,6 @@ def test_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
     assert isinstance(FixtureProvider(THEDOOR_20, lambda: FETCHED_AT), Provider)
     assert isinstance(LocalJsonRepository(tmp_path), Repository)
     assert isinstance(YamlConfig(CONFIG_ROOT), ConfigSource)
-    assert isinstance(ClassifierStub(), Classifier)
     assert isinstance(AlwaysNotifyPolicyStub("ron"), Policy)
     assert isinstance(RecordingNotifierStub(), Notifier)
 

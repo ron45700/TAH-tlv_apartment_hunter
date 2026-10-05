@@ -409,8 +409,8 @@ rejection reason is derived by code and written on `PostLifecycle` with Gate E's
 user's evaluation is never written on the post (invariant 12).
 
 What the model returns is not exactly this record (code adds the provenance, `price_source`, the
-native fallback and the completed entry-date year, drops unmatched phone names, and drops a street
-or area name the post does not contain). The
+native fallback and the completed entry-date year, drops unmatched phone names, and drops a street,
+area name or other city the post does not contain). The
 response shape, `ListingExtraction`, is below, after this gate (#137, #151).
 
 ### `Marked[T]` — the state structure (#91, #109)
@@ -474,7 +474,7 @@ response shape, `ListingExtraction`, is below, after this gate (#137, #151).
 | `streets` | `list[str]` | The streets as written, in order of appearance; `[]` when none (#104). Stored never folded or normalized, for the card and for error analysis (#167) |
 | `stated_area_names` | `list[str]` | The neighbourhood names the text itself points at, as written; `[]` when none. Plain, not `Marked` (#111). Stored never folded or normalized, for the card and for error analysis (#167) |
 | `areas` | `list[int]` | Municipal numbers (`ms_shchuna`, 1–71), sorted, no repeats, **returned by the model** from the 71-entry list given in its instructions, by #88's rules given as instructions (#167). Known limit: for a post with only a street, it rests on what the model knows of Tel Aviv (#170) |
-| `other_city` | `str` / `None` | The city as written, only when it is not Tel Aviv-Yafo; a city used as a landmark is not one (`BASELINE.md` §5). Code derives the `other_city` rejection from it (#92) |
+| `other_city` | `str` / `None` | The city as written, only when it is not Tel Aviv-Yafo; a city used as a landmark is not one (`BASELINE.md` §5). A city the post's text does not contain is dropped (read as `None`) and counted, as #162 does for names (#180). Code derives the `other_city` rejection from it (#92) |
 
 **The area's colour** is derived from `areas`, with no field of its own (#110): one area, definite;
 two or more, unclear (orange), matching and alerting if any is chosen; empty and the post gave a
@@ -493,8 +493,9 @@ street or an area name, unclear, no alert; empty and the post gave no location, 
 - **A value that is not written is never filled in** (#106). The model never derives a value from
   another (no rooms from the size, no total from a per-roommate price), and never computes one
   ("3.50*3.50" is not 12.25 sqm) (#162). The one exception: "דירת N שותפים" (#161).
-- **A street or area name the post does not contain is dropped** by code before the `Listing` is
-  written, and counted in the report (#162).
+- **A street, area name or other city the post does not contain is dropped** by code before the
+  `Listing` is written, and counted in the report (#162, #180). The match is exact: a name in a
+  different case is dropped (#179).
 - **The source text is never touched** (#163, invariant 14): the classification job never writes a
   `RawPost`.
 - **The rejection** is derived by code from `other_city` and `post_nature`, in Gate E's order, and
@@ -502,7 +503,9 @@ street or an area name, unclear, no alert; empty and the post gave no location, 
   (#92).
 - **The area rules** (#88, #112, #124) are instructions to the model (#167): a stated area decides;
   a street only refines inside it; several possible areas are all returned; nothing the model can
-  place returns no area. Filtering is by area, never by street.
+  place returns no area. With no area name and no street, a well-known landmark that places the
+  apartment decides, every area it touches when it lies on a border; a general distance phrase
+  places nothing (#178). Filtering is by area, never by street.
 - **Not carried over from the research schema** (`data/raw/research_listing_model_2026-09-13.py.txt`,
   `ASSUMPTIONS.md` C5), since the approved content does not list them: `confidence`, `flags`,
   `language`, `total_roommates`, `has_living_room`, `price_includes_bills`, a `duration`, and
@@ -631,7 +634,7 @@ below.
 | `immediate` | `bool` | `True` for "immediate"; then `day`, `month` and `year` are `None` |
 | `day` | `int` / `None` | 1–31. Start / middle / end of a month: 1 / 15 / the last day; a month with no day: 1; "end of February": 28 (#96, #123). Required when `immediate` is `False` |
 | `month` | `int` / `None` | 1–12. Required when `immediate` is `False` |
-| `year` | `int` / `None` | Only when the post writes it; otherwise code completes it (#115) |
+| `year` | `int` / `None` | Only when the post writes it; a two-digit year is 20YY (#178). Otherwise code completes it (#115) |
 
 `PhoneNamePair`: `phone: str` (as written in the post), `name: str` (as written).
 

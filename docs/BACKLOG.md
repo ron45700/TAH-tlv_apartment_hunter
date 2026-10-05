@@ -24,13 +24,14 @@ still unimplemented on 2026-10-02.
 
 Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is being planned: Gate B approved on
 2026-10-05 (`DECISIONS.md` #81–#125); the model provider is OpenAI, for now (#126); `PHASE_2.md`
-approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 and 2.3 (reduced) built (#174, #175).
+approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 and 2.3 (reduced) built and accepted (#174–#176); tasks 2.4 and 2.5 built on their approved plans (#178–#183), waiting for review.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
 | 1 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
 | 2 | Ron reads the spike's cost in the OpenAI dashboard and compares it with the usage-metadata total, $0.0273 (`docs/SPIKE_2_1_2026-10-05.md` §5) | `ASSUMPTIONS.md` O2, P19's lesson | Ron, some minutes after the run (2026-10-05) |
-| 3 | Ron reviews the code of task 2.2 (`Listing` storage, the Gate E fields, #89) and of the reduced task 2.3 (`reference/areas.yaml` and its reader); then the plan for task 2.4 is written | `PHASE_2.md` 2.2, 2.3, §4; `SESSION_LOG.md` 2026-10-05 | Ron, then the plan. No 2.4 code before its plan is approved |
+| 3 | Ron reviews the code of tasks 2.4 (the classifier) and 2.5 (`classify_pending`), with the deviations listed under each plan | `PHASE_2.md` 2.4, 2.5, §4; `SESSION_LOG.md` 2026-10-05 | Ron. No model call has been made with this code |
+| 4 | Task 2.6, the regression set: its plan, then the labelling page (no model needed). Its two passes are the first real calls of the classifier (about $0.02), on their own go | `PHASE_2.md` 2.6, §4 | The plan, then Ron |
 
 ---
 
@@ -38,21 +39,11 @@ approved, the spike run (#126–#156); the model decides the area (#167); tasks 
 
 | Decision | State of the code (checked 2026-10-04) | What has to change |
 |---|---|---|
-| #57 the name next to a phone number | Phones are extracted and stored once per post; no name is captured | Settled by #105 (Gate B approved, #125): the model returns name-number pairs; a name is kept only when its number equals one already extracted. Built in phase 2 (`PHASE_2.md` 2.4), after the response model's names (#137) |
-| #81–#83, #119, #167 the 71 areas, and the model deciding the area | `reference/areas.yaml` and `areas/reference.py` built (task 2.3, reduced), waiting for review | Phase 2 (2.4): the instructions carry the 71 and the area rules (#88, #112, #124) and #86's rows as examples |
-| #89–#106, #108, #109, #114, #115, #117, #118, #123, #125 the `Listing` record and its fields | `Listing` and its storage built (task 2.2), waiting for review | Phase 2 (2.4): the classifier with the response model (#137, #151, `areas` in it since #167), the native-price floor (#114), the entry-date year and the month rule (#115, #123), the code that derives the rejection (#92) |
-| #126–#130, #146–#150 OpenAI as the provider; `gpt-6-luna`; `OPENAI_API_KEY` in the entry point only; `store: false`; effort from `none`; the reported model value logged; explicit caching | The spike's throwaway script only (`scratch/`) | Phase 2: the classifier's call (2.4) |
-| #138–#141, #152 `classify_pending`; three failed runs and the Gate E failure fields (`schema_version` 2); never beside `run_once`; an edited post keeps its `Listing` | Nothing exists | Phase 2 (2.5) |
-| #142, #143, #171, #172 the regression set; the labelling page (areas picked from the 71) and the review report (errors per field; corrected posts join the regression set), in `data/labeling/` | Nothing exists | Phase 2 (2.6, 2.7) |
+| #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Nothing exists | Phase 2 (2.6, 2.7) |
 | #144 reclassify, manual, replace with a diff report | Nothing exists | Phase 2 (2.9) |
 | #145 Gate D after the first paid run | Nothing exists | Phase 2 (2.10) |
-| #157 effort `none`, temperature 0 | The spike's throwaway script only | Phase 2 (2.4), confirmed on the regression set run twice (2.6) |
-| #159–#162 sublet, one amount for several charges, "דירת N שותפים", a name not in the text dropped, the model never computes | Nothing exists | Phase 2 (2.4): the prompt and the checks in code |
-| #163 invariant 14: classification never touches the source text | `save_classification` never writes `raw_posts`; a contract test pins it on both stores (task 2.2) | Phase 2 (2.5): the job, with its own test |
-| #89 closes #74's open point: a reposted archived post with no rejection reason returns to `"active"` if a classification record exists, `"pending"` if not | Built in `dedup/stage_a.py` (task 2.2), waiting for review | Nothing more |
 | #77 D4b archiving deletes the image files and removes their `PostImage` entries | Nothing exists; task 1.12 already reads a record archived before #74 without counting its old entries (#77 D4) | Phase 5, the archive job |
 | #47 profiles live in the database; no per-user group subscriptions | `config/users/ron.yaml` holds `user_id` and subscribed groups; the config interface exposes them | Remove the per-user YAML and its interface methods when the user records arrive in phase 3. Until then it is unused, not wrong |
-| #49 lifecycle and rejection reasons | `PostLifecycle` and its storage exist (task 1.10); the pre-model state and reason (task 1.11) and the repost changes (task 1.3) are stored by `run_once` (task 1.14) | Model-decided reasons in phase 2 |
 | #46 archive and deletion | Nothing exists | Stored shape approved at Gate E (#63); the jobs in phase 5 |
 | #45 sniper removed | Not in the package. Research copies may sit in `data/raw/` (gitignored) | Nothing in code. Ron may delete the research copies |
 | #51, #52 filter model and alert rules | `policy` is a stub | Gate C in phase 3; alerts in phase 4 |
@@ -74,7 +65,6 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | #70 under dedup B: a repost with rewritten text (`DECISIONS.md` #72.7) | Gate D |
 | Image files with no `PostImage` pointing at them: written by a run that failed after the download and before the store step, for a post that never comes back. A sweep of unreferenced files under `<store_root>/images/` (`DECISIONS.md` #77, plan §3) | Phase 5 |
 | The repost log shows the earliest `posted_at` of the post and its duplicates: the stored canonical can be later than a duplicate that arrived after it (`DECISIONS.md` #75 A). The card's main time is the last publication (#122). A display rule | Phase 3 UI design |
-| Phase 2 classifies only posts that are `pending` **and** canonical (`is_canonical`); a duplicate's own record can be `pending`, since it is built from its own content (`DECISIONS.md` #75 B) | Phase 2 (`PHASE_2.md` task 2.5) |
 | The admin lists (rejected, pending, archive) show canonicals only (`DECISIONS.md` #75 B) | Phase 3 |
 | Whether a duplicate's retention follows its own clock or its canonical's (`DECISIONS.md` #75 B). Note: `dedup_a` raises when a stored duplicate points at a canonical that is not stored, so deleting a canonical before its duplicates would block the run | Phase 5 |
 | The phone as a candidate signal for dedup B; layer 3 of dedup A produces nothing (`DECISIONS.md` #75 C) | Gate D |
@@ -85,6 +75,7 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | Detect a group that fails inside a successful run from the run log, and hold back only that group (`DECISIONS.md` #78 W4). Needs the run-log endpoint verified under the `external-contract-verification` skill, one small test run against an unreachable group (about $0.01; Ron approves it when planned), and `fetch()` returning per-group status (a provider contract change). Rests on P13, ASSUMED | Its own task, when Ron schedules it |
 | Groups × `max_posts` must stay below the charge cap's `maxItems` (333 at $0.50); a seventh group at 50 crosses it (`DECISIONS.md` #78 W3) | Planning group editing (phase 6) |
 | Adding a group needs a way to create its `GroupWatermark` without a full bootstrap; outside bootstrap a configured group with no record raises (`DECISIONS.md` #78 W7) | Planning group editing (phase 6) |
+| The first real refusal, 429, 5xx or timeout from the model is captured into `data/raw/`, and the documentation-based tests compared with it (`DECISIONS.md` #181, `ASSUMPTIONS.md` O13) | When it happens |
 | `DECISIONS.md` #11 says the first run "sends one summary"; `BASELINE.md` §4 says a bootstrap run alerts nothing. Not resolved | Ron decides when phase 4 is planned |
 | Which size the sqm filter uses in a room search: the apartment's or the room's (`DECISIONS.md` #99). Approved by Ron, 2026-10-05 | Gate C |
 | Grouping of the 71 areas in the area filter (`DECISIONS.md` #82). Approved by Ron, 2026-10-05 | Gate C |

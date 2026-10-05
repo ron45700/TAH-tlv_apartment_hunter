@@ -1638,6 +1638,8 @@ other field at least 90%; no value filled in where the label says not written. *
 a post Ron marks as ambiguous is not counted.
 *Why (the bar, the draft's):* it follows the cost of each mistake.
 
+*Amended by #177 (2026-10-05): streets and area names as written are not compared.*
+
 ### 143 — Labelling and corrections through local static pages in `data/labeling/`
 Points 17 and 18, Ron's request. A labelling page, generated as a static HTML file in
 `data/labeling/`, with no server and no network: per post, the original text and controls for the
@@ -1649,6 +1651,9 @@ code reads from there. The other fields are corrected afterwards from the model'
 review report (`PHASE_2.md` 2.7) uses the same mark-and-export mechanism for corrections,
 **replacing the hand-written CSV** of the draft. The file names are fixed in `PHASE_2.md`.
 No reason recorded.
+
+*Amended by #177 (2026-10-05): no labelling controls for streets and area names; the areas are
+picked from the 71 (#171).*
 
 ### 144 — Reclassify: manual, replace with a diff report; no bulk reclassify planned
 Point 20, as recommended: started by hand only; the new `Listing` replaces the old, after a diff
@@ -1842,6 +1847,88 @@ No reason recorded except for point 2.
 labels of #119, a source block) and one module, `tlv_hunter/areas/reference.py`, the only reader of
 `reference/`. `PHASE_1.md`'s YAML anchor is reworded to allow it. Nothing else from the plan of
 2026-10-05 (superseded by #167). No reason recorded.
+
+**Ron's review of tasks 2.2 and 2.3, and the regression set's location fields, 2026-10-05.**
+
+### 176 — The code of tasks 2.2 and 2.3 is accepted
+As built and committed, including the deviation that reads version-1 lifecycle records through
+`PostLifecycle.from_stored_json` instead of a before-validator (`PHASE_2.md` 2.2). No reason
+recorded.
+
+### 177 — The regression set labels `areas` blind; streets and area names are not compared
+`areas` is the only location field labelled blind: Ron picks from the 71 (#171). Streets and area
+names as written are not labelled blind and are not compared. They are shown in the review report
+(`PHASE_2.md` 2.7), where Ron marks one wrong if it is. **Amends #142** (streets and area names
+leave the "every other field at least 90%" bar) **and #143** (no controls for them on the
+labelling page). **Closes `PHASE_2.md` §4's open point** on how streets and area names would be
+compared. No reason recorded.
+
+**Ron's answers to the plans for tasks 2.4 and 2.5, 2026-10-05.**
+
+Approved by Ron, 2026-10-05: the 14 points of `PHASE_2.md` §4.
+
+### 178 — The classifier's instructions, version 1
+The text proposed in `docs/INSTRUCTIONS_V1_DRAFT.md` is approved with all 11 "proposed" rows kept,
+plus two additions:
+1. **A two-digit year is 20YY** ("1.11.26" is 2026).
+2. **A landmark can place the apartment.** A well-known landmark that places the apartment
+   ("ליד שוק הכרמל", "מול קניון רמת אביב") decides the area when the post gives no area name and no
+   street. A landmark on a border returns every area it touches. A general distance phrase
+   ("5 minutes from the sea") still places nothing. `stated_area_names` is unchanged: a landmark
+   is still not an area name. **Extends #88** (as instructions to the model, #167).
+
+The text enters the package as `tlv_hunter/classify/instructions.txt`; the draft is deleted.
+*Why (Ron), the landmark:* the model should understand a post as a person does, and a wrong area is
+visible beside the original text. No other reason recorded.
+
+### 179 — Task 2.4: the plan approved, with Ron's answers
+1. The layout: `contracts/listing_extraction.py`, `postmodel/rejects.py`, `ClassificationError`;
+   `classify/classifier_stub.py` deleted.
+2. `openai==3.24.0`, pinned exactly, with the SDK's schema helper and a test comparing the derived
+   schema with the spike's `schema_sent.json`.
+3. `prompt_version` covers everything sent except the post (the instructions, the schema, the model,
+   the effort, the temperature, the output limit), pinned by a fingerprint test.
+4. Output limit 2,000 tokens; timeout 60 s.
+5. The six completion points, as proposed:
+   - the publication date is the post's own `posted_at`;
+   - a tie between two years goes to the later one;
+   - an impossible date is `"unclear"`;
+   - a repeated phone-name pair is stored once, and a blank name is dropped;
+   - a blank `other_city` reads as `None`;
+   - #162's match is exact, so a name in a different case is dropped.
+
+No reason recorded.
+
+### 180 — #162's check also covers `other_city`
+A city the model returns that does not appear in the post's text is dropped (read as `None`) and
+counted, like a street or an area name. **Extends #162.**
+*Why (Ron):* an invented city would reject a Tel Aviv post for everyone, the costliest error.
+
+### 181 — Failure shapes never observed are tested from the documentation
+A refusal, a 429, a 5xx and a timeout were not seen in the spike. Their tests rest on the
+documentation and the SDK (`ASSUMPTIONS.md` O13). The first real one is captured into `data/raw/`
+when it happens. No reason recorded.
+
+### 182 — Task 2.5: the plan approved, with Ron's answers
+1. **The command:** `--cap` required with no default, `--limit` optional, exit codes 0 (every post
+   attempted), 1 (failed), 2 (stopped early with the store consistent).
+2. **The attempts:**
+   - 3 for a network error, a timeout, a 429 for rate or a 5xx, waiting 2 s then 10 s, or
+     `Retry-After` when longer up to 60 s;
+   - 2 for an invalid or incomplete answer; 1 for a refusal.
+3. **The job also stops**, with the post not counted, on a quota or credit error, a refused key, a
+   refused request (400) and an unknown model (404).
+4. **The dropped names: option A.** One JSON-lines file per run, `<store_root>/classify_runs/<run_id>.jsonl`,
+   one line per post written, with the dropped streets, area names and `other_city` (#180).
+5. **The record is read again right before the write**; an answer for a post no longer pending is
+   discarded.
+6. **`jobs/common.py`** holds what both commands share. `CLAUDE.md` says: "the two job commands are
+   the only code that constructs the production store".
+
+No reason recorded.
+
+### 183 — `other_city` stays on the labelling page, labelled blind
+#177 covers streets and area names only. No reason recorded.
 
 ---
 

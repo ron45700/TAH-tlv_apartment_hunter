@@ -1,12 +1,17 @@
 import hashlib
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
 import pytest
 
-from tlv_hunter.parsing.datetimes import parse_rfc2822_utc, require_utc
+from tlv_hunter.parsing.datetimes import nearest_occurrence, parse_rfc2822_utc, require_utc
 from tlv_hunter.parsing.ids import compute_listing_id
-from tlv_hunter.parsing.prices import ParsedPrice, parse_native_price
+from tlv_hunter.parsing.prices import (
+    NATIVE_PRICE_FLOOR,
+    ParsedPrice,
+    native_price_fallback,
+    parse_native_price,
+)
 
 OBSERVED_PRICES = {
     "2178554076041449": ("₪9,000", 9000),
@@ -99,3 +104,37 @@ def test_listing_ids_are_distinct_across_the_20_posts(thedoor_items) -> None:
 def test_empty_source_post_id_raises() -> None:
     with pytest.raises(ValueError):
         compute_listing_id("")
+
+
+@pytest.mark.parametrize(("native", "expected"), [(None, None), (0, None), (499, None), (500, 500)])
+def test_native_price_fallback_ignores_a_price_below_500(native, expected) -> None:
+    """DECISIONS.md #114: a constant, not config."""
+    assert NATIVE_PRICE_FLOOR == 500
+    assert native_price_fallback(native) == expected
+
+
+@pytest.mark.parametrize(
+    ("day", "month", "reference", "expected"),
+    [
+        (1, 10, date(2026, 10, 5), date(2026, 10, 1)),  # #115: "1.10" in a post of 5.10
+        (1, 11, date(2026, 10, 5), date(2026, 11, 1)),
+        (15, 12, date(2027, 1, 10), date(2026, 12, 15)),  # December in a post of January
+        (1, 2, date(2026, 12, 20), date(2027, 2, 1)),
+        (28, 2, date(2026, 10, 5), date(2027, 2, 28)),
+        (29, 2, date(2027, 10, 5), date(2028, 2, 29)),
+    ],
+)
+def test_nearest_occurrence(day, month, reference, expected) -> None:
+    assert nearest_occurrence(day, month, reference) == expected
+
+
+def test_nearest_occurrence_tie_goes_to_the_later_year() -> None:
+    """DECISIONS.md #179: 31.8.2027 is 183 days after 1.3.2027 and 183 days before 1.3.2028."""
+    reference = date(2027, 8, 31)
+    assert reference - date(2027, 3, 1) == date(2028, 3, 1) - reference
+    assert nearest_occurrence(1, 3, reference) == date(2028, 3, 1)
+
+
+def test_nearest_occurrence_of_a_day_that_does_not_exist_is_none() -> None:
+    assert nearest_occurrence(31, 11, date(2026, 10, 5)) is None
+    assert nearest_occurrence(29, 2, date(2026, 10, 5)) is None  # no 29.2 in 2025-2027

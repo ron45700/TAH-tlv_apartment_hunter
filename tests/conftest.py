@@ -10,7 +10,7 @@ import pytest
 
 from tlv_hunter.contracts.listing import LISTING_SCHEMA_VERSION, Listing
 from tlv_hunter.contracts.raw_post import RawPost
-from tlv_hunter.jobs.run_once import SQLITE_FILENAME
+from tlv_hunter.jobs.common import SQLITE_FILENAME
 from tlv_hunter.providers.thedoor import to_raw_post
 from tlv_hunter.store.base import Repository
 from tlv_hunter.store.local_json import LocalJsonRepository
@@ -21,6 +21,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_ROOT = REPO_ROOT / "config"
 THEDOOR_20 = REPO_ROOT / "data" / "raw" / "thedoor_20posts_2026-09-13.json"
 SPIKE_1_1A_PREFIX = REPO_ROOT / "data" / "raw" / "thedoor_spike_1_1a_2026-10-04"
+# Spike 2.1's raw OpenAI responses and its 20 posts (DECISIONS.md #156). The answers predate #167
+# and carry no `areas`: a test that needs a version-1 answer adds it in memory, never in the file.
+OPENAI_SPIKE = REPO_ROOT / "data" / "raw" / "openai_spike_2026-10-05"
+OPENAI_SPIKE_POSTS = REPO_ROOT / "data" / "spike_openai_2026-10-05" / "posts.json"
 
 FETCHED_AT = datetime(2026, 9, 14, 12, 0, tzinfo=UTC)
 
@@ -69,6 +73,38 @@ def _load_fixture(path: Path) -> Any:
 
 def load_thedoor_items() -> list[dict[str, Any]]:
     return _load_fixture(THEDOOR_20)
+
+
+def load_openai_spike(name: str) -> Any:
+    """One file of spike 2.1, by its name without `.json` (`none_t0_p1_01`, `probe_incomplete`)."""
+    return _load_fixture(OPENAI_SPIKE / f"{name}.json")
+
+
+def spike_answer(name: str) -> dict[str, Any]:
+    """The JSON answer of one spike response, from its message item (a reasoning item can come
+    first at effort `low`)."""
+    response = load_openai_spike(name)["response"]
+    (message,) = [item for item in response["output"] if item["type"] == "message"]
+    return json.loads(message["content"][0]["text"])
+
+
+def load_openai_spike_posts() -> list[dict[str, Any]]:
+    return _load_fixture(OPENAI_SPIKE_POSTS)
+
+
+def post_with_text(base: RawPost, text: str, **changes: Any) -> RawPost:
+    """`base` with another text, annotated again (hash, phones), as a pending canonical."""
+    fresh = base.with_changes(
+        text=text,
+        text_source="text",
+        no_text=None,
+        text_hash=None,
+        phones=None,
+        is_canonical=None,
+        duplicate_of=None,
+        **changes,
+    )
+    return annotate(fresh).with_changes(is_canonical=True)
 
 
 def load_spike_1_1a(suffix: str = "") -> Any:

@@ -4,6 +4,7 @@ version = "0.0.0"
 description = "Personal monitor for public Tel Aviv apartment Facebook groups."
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "openai==3.24.0",
     "pydantic>=2.9,<3",
     "pyyaml>=6.0.2,<7",
 ]

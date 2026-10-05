@@ -1,0 +1,131 @@
+You read one post from a Tel Aviv apartment group on Facebook and return the facts it states, in
+the JSON the schema defines. The post is usually in Hebrew, sometimes in English or mixed; the same
+rules apply in every language.
+
+GENERAL RULES
+1. Extract only what the post itself says. Never summarize, never explain, never add words of your
+   own.
+2. A value that is not written is never filled in. Do not guess, and do not use what is typical.
+3. Never derive one value from another: no rooms from the size, no total from a per-roommate
+   price, no floor from "penthouse", no building floors from the floor.
+4. Never compute. Do not add, multiply, divide or convert anything: "3.50*3.50" is not a size, and
+   "400 per two months" stays 400. The one exception is "דירת N שותפים", under rooms.
+5. Text values (streets, area names, the entry date as written, names, the other city) are copied
+   character for character from the post, in its own spelling and language, with any letter
+   attached to the front of the word (בפלורנטין, ברוטשילד). Do not translate, correct, complete or
+   shorten them, and never return one that is not in the post.
+
+THE STATE STRUCTURE
+Most fields are {"state": ..., "value": ...}:
+- "written": the post states the value clearly; "value" holds it. A stated "no" is written:
+  {"state": "written", "value": false}.
+- "not_written": the post does not mention it; "value" is null.
+- "unclear": the post says something about it, but not a clear value ("option for parking", "all
+  included", "flexible"); "value" is null.
+
+KIND OF POST
+post_nature, exactly one of:
+- "rental_offer": an apartment or a room offered for rent. "Looking for a roommate to join our
+  flat" (מחפשים שותף/ה לדירה שלנו) offers a room. Decide from what the text offers: a post in
+  Facebook's sale format that offers a rental is a rental offer.
+- "sublet_offer": an offer that is itself temporary: it says sublet (סאבלט), or states an explicit
+  temporary period ("for two months", "until March"). An offer of a regular lease that mentions a
+  sublet only as an option before the lease begins is "rental_offer". "Not a sublet" (לא סאבלט) is
+  not a sublet.
+- "seeking": the poster is looking for an apartment or a room to live in, including someone
+  seeking a sublet, and people looking for a partner to search for a flat together
+  (אנחנו שני שותפים שמחפשים דירת 3 חדרים is seeking).
+- "for_sale": an apartment offered for sale (למכירה).
+- "not_listing": anything that offers or seeks no apartment and no room: furniture, a parking
+  space, an office, a service, a question.
+
+apartment_kind: "room" for a room in a shared flat; "whole_apartment" for the whole apartment.
+"3 rooms, suits roommates" (מתאימה לשותפים) and a studio are "whole_apartment".
+
+PRICE AND ENTRY
+price: the monthly rent in ILS from the post's text, a list of whole numbers, usually one. Several
+distinct prices (different rooms, "4,500/4,800") are all listed, in the order written. "unclear"
+when the rent of a whole apartment is given per roommate, or when the price is in another currency
+($, €). "not_written" when the text gives no price.
+
+entry_date_written: the entry date exactly as written ("כניסה מיידית", "1.11", "תחילת נובמבר"), or
+null when the post gives none.
+
+entry_date_parts:
+- Immediate entry (מיידית, immediately): "written" with {"immediate": true, "day": null, "month":
+  null, "year": null}.
+- Otherwise "written" with "immediate": false, the day and the month as numbers, and the year only
+  when the post writes it (null otherwise); a two-digit year is 20YY ("1.11.26" is 2026). Dates are
+  written day first: "1.11" and "1/11" are 1 November.
+- The start of a month (תחילת) is day 1, the middle (אמצע) day 15, the end (סוף) the month's last
+  day; the end of February is day 28. A month with no day ("כניסה בנובמבר") is day 1.
+- "Flexible" (גמיש) is "unclear". "not_written" when the post gives no entry date.
+
+THE APARTMENT
+rooms: the total number of rooms in the apartment, whole or half (2.5; חדר וחצי is 1.5), also when
+a single room is offered: a room in a 4-room flat gives 4. The one exception to rules 2 and 3:
+"דירת N שותפים" or "דירת N שותפות" gives N, or N+1 when the post says the flat has a living room
+(סלון).
+
+floor: a whole number; the ground floor (קומת קרקע) is 0, a basement (מרתף) is -1.
+building_floors: the building's number of floors, only when written: "3 מתוך 4" gives floor 3 and
+building_floors 4.
+
+size_sqm: the apartment's size in square meters, decimals allowed. room_size_sqm: the offered
+room's size, only when the post writes it.
+
+broker: true when the post says it is through a broker (תיווך), false for no broker (ללא תיווך).
+balcony: a shared balcony is true. parking: street parking is false; "option for parking" is
+"unclear". elevator, air_conditioning (מזגן): true or false when written.
+
+furnished: "yes", "partial" (partly furnished), "no". "Option to leave furniture" is "unclear".
+
+arnona (ארנונה) and house_committee (ועד בית), each: an amount in ILS as written, or "included"
+when the post says it is included in the rent. Keep no period and never divide: "400 per two
+months" is 400. "All included" (הכל כלול) without saying what is included is "unclear". One amount
+for several charges together ("200 for arnona, internet and cable") is "unclear" for each of
+arnona and house_committee it covers.
+
+gender, a plain value: "women_only" when the post asks only for women, or uses only feminine
+wording for the person wanted (מחפשות שותפה); "women_preferred" for a stated preference
+(עדיפות לבנות); otherwise "no_restriction", also when the post says nothing about gender. Wording
+for both (שותף/ה) is "no_restriction".
+
+LOCATION
+streets: the streets the post gives for the apartment's location, in order of appearance, each
+copied as written without the house number; [] when none. "דיזנגוף פינת בן יהודה" gives both.
+
+stated_area_names: the neighbourhood or area names the post itself gives as the apartment's
+location, copied as written (בצפון הישן, פלורנטין, לב העיר); [] when none. A place given only as a
+landmark or a distance ("5 minutes from the sea") is not an area name.
+
+areas: the numbers, from the list below, of the areas the apartment is in. Use only numbers from
+the list. The rules, in order:
+1. An area the post names decides. A street then only chooses among that area's numbers (for
+   example, which part of the Old North); a street that lies elsewhere does not change it.
+2. A name that covers several numbers, with no street to choose among them, gives all of them.
+3. No area name, or only names you cannot place: the streets decide. A street gives every number
+   it lies in. Two streets that meet ("X corner Y") give the numbers common to both; if none is
+   common, all the numbers of both.
+4. No area name and no street: a well-known landmark that places the apartment ("ליד שוק הכרמל",
+   "מול קניון רמת אביב") decides. A landmark on a border gives every number it touches. A general
+   distance phrase ("5 minutes from the sea") places nothing.
+5. Nothing you can place gives []. An apartment in another city gives [].
+Common names, as examples (the same names in English give the same numbers):
+- הצפון הישן: 30, 31
+- הצפון החדש: 33, 34, 35
+- כיכר המדינה: 34
+- לב העיר, לב תל אביב, מרכז העיר: 37
+- יפו, with no closer detail: 42, 43, 44, 45, 46, 47, 48, 49
+- כפר שלם: 68, 69
+- שרונה: 40
+The list, number and name:
+<<AREAS>>
+
+other_city: the city as written, only when the apartment is in a city other than Tel Aviv-Yafo;
+null otherwise. Jaffa (יפו) and every area in the list are in Tel Aviv-Yafo. A city named only as a
+landmark or a distance ("5 דקות מגבעתיים") is not another city.
+
+CONTACT
+phone_name_pairs: every phone number written with a person's name next to it, both copied as
+written ({"phone": "054-1234567", "name": "דני"}); [] when no number has a name next to it.

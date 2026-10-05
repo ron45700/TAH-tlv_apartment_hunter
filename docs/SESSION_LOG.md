@@ -2262,3 +2262,178 @@ approved (#174).
   written, ignoring surrounding whitespace).
 - Ron reads the spike's cost in the OpenAI dashboard and compares it with $0.0273.
 - After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — Ron accepts 2.2 and 2.3; the plans for tasks 2.4 and 2.5
+
+### Done
+
+Plans only. No code, no paid call, no git, no download. The real store was not opened.
+
+**Decisions** (recorded first, as Ron asked):
+- **#176:** the code of 2.2 and 2.3 accepted, `from_stored_json` included.
+- **#177:** `areas` is the only location field labelled blind. Streets and area names are neither
+  labelled nor compared; Ron judges them in the review report. Notes added on #142 and #143.
+
+**Docs:**
+- `PHASE_2.md`:
+  - The status line.
+  - 2.2 and 2.3 marked accepted.
+  - 2.6 and 2.7 changed for #177.
+  - **The plan for task 2.4:** layout, the call, the completion rules, the rejection module, tokens
+    and cost, tests, order, conflicts.
+  - **The plan for task 2.5:** the command, the loop, the attempts table, the cap, the log, the
+    dropped-names record, #140, tests, order, conflicts.
+  - §4 replaced by 14 open points.
+- **`docs/INSTRUCTIONS_V1_DRAFT.md` (new):** the full proposed instructions text, and a 64-row
+  table: each rule, its decision, its sentence. 11 rows are marked proposed. The file is to be
+  deleted when the text moves into the package.
+- `BACKLOG.md`: the header line; next row 3; the regression set's pending row (#177).
+
+### Verified
+
+- **Prompt size:** the proposed instructions render to 8,722 characters with the 71 areas (from
+  `load_areas()`), against the spike's 4,790. The token estimate is a range from that count; the
+  prefix was not tokenized.
+- **The spike's raw responses carry no `areas`** (they predate #167). The fixture keys were read
+  with a script, and no post content was printed.
+- `openai` is not a project dependency; the spike ran it through `uv run --with`.
+
+### Found while planning
+
+- **Tests and fixtures:**
+  - The spike's answers cannot serve unchanged as version 1 answers in tests; the plan adds
+    `areas` in memory.
+  - A refusal, a 429, a 5xx and a timeout were never observed, so their tests rest on the
+    documentation.
+- **Settings and records:**
+  - `Listing` has no field for the setting (effort, temperature). Proposed: `prompt_version` covers
+    the whole request apart from the post, pinned by a fingerprint test.
+  - The names dropped by #162 have no approved record for the review report. Proposed: a
+    JSON-lines file per run.
+- **Rules:**
+  - A blank `other_city` string would reject a Tel Aviv post. Proposed: read as `None`.
+  - `CLAUDE.md` names `run_once` the only constructor of the production store; `classify_pending`
+    needs it too.
+  - #177's wording could also take `other_city` off the labelling page. The plan keeps it, and asks
+    Ron.
+
+### Next
+
+- Ron answers `PHASE_2.md` §4 (14 points), and reads `docs/INSTRUCTIONS_V1_DRAFT.md`.
+- Then the code of task 2.4, starting with the `external-contract-verification` skill on the
+  Responses API. Then 2.5.
+- Ron reads the spike's cost in the OpenAI dashboard and compares it with $0.0273.
+- After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — Ron's answers; tasks 2.4 and 2.5 built
+
+### Done
+
+There were no paid calls and no git. The real store was not opened.
+
+**Decisions**, recorded first:
+- **#178:** the instructions approved with all 11 proposed rows, plus two additions:
+  - a two-digit year is 20YY;
+  - a well-known landmark places the apartment when there is no area name and no street.
+- **#179:** the 2.4 plan approved.
+- **#180:** #162's check also covers `other_city`.
+- **#181:** the failure shapes the spike never saw are tested from the documentation.
+- **#182:** the 2.5 plan approved, with option A for the dropped names.
+- **#183:** `other_city` stays labelled blind.
+- Notes on #142 and #143 (from #177).
+
+**The `external-contract-verification` skill, reading only.** No call was made. Read: the
+error-codes, structured-outputs, rate-limits and spend-limits guides, and the source of `openai`
+3.24.0 (`_exceptions.py`, `_client.py`, the schema helper). Recorded as `ASSUMPTIONS.md` O13
+(ASSUMED). Two findings:
+- the error-codes page now lists `credit_balance_exhausted`, not `insufficient_quota`;
+- `openai` 3.24.0 depends on `httpx2`.
+
+**Code, task 2.4:**
+- `pyproject.toml`, `uv.lock`: `openai==3.24.0`.
+- `contracts/listing_extraction.py`: `ListingExtraction`, `EntryDateParts`, `PhoneNamePair`.
+- `parsing/prices.py`: `NATIVE_PRICE_FLOOR`, `native_price_fallback`.
+- `parsing/datetimes.py`: `nearest_occurrence`.
+- `classify/`:
+  - `base.py`: the protocol returns `Listing`; `ClassificationError` and its kinds.
+  - `instructions.txt`: the approved text.
+  - `instructions.py`: the renderer, the setting, `PROMPT_VERSION` "1" and its fingerprint.
+  - `complete.py`, `cost.py`, `transport.py`, `openai_classifier.py`.
+  - `classifier_stub.py` deleted.
+- `postmodel/rejects.py`: `model_reason`, `classified_lifecycle`, `failed_lifecycle`.
+
+**Code, task 2.5:**
+- `jobs/common.py`, moved from `run_once.py`, which now uses it.
+- `classification_run.py`: the loop and the attempts table.
+- `jobs/classify_pending.py`: the command.
+
+**Tests:**
+- New:
+  - `test_listing_extraction.py`, `test_classify_complete.py`, `test_classify_instructions.py`;
+  - `test_openai_classifier.py`, `test_openai_transport.py`, `test_postmodel_rejects.py`;
+  - `test_classification_run.py`, `test_classify_pending_job.py`.
+- Extended: `test_parsing.py`.
+- Changed: `test_stubs.py` (the classifier stub is gone); `conftest.py` (the spike 2.1 fixtures,
+  `post_with_text`, `SQLITE_FILENAME` from `jobs/common.py`).
+
+**Docs:**
+- `DECISIONS.md`, `ASSUMPTIONS.md` (O13).
+- `SCHEMA.md`: `other_city`, the dropped-names rule, the area rules, the year.
+- `BASELINE.md` §7.
+- `PHASE_2.md`:
+  - status;
+  - "built" notes and deviations under both plans;
+  - the rule table moved in from the draft, with the two additions;
+  - the size, 9,025 characters;
+  - §4.
+- `CLAUDE.md`: the phase line, the commands, the `classify/` row, the instructions, `postmodel/`,
+  and the job commands.
+- `docs/INSTRUCTIONS_V1_DRAFT.md` deleted (the text is in the package).
+- `BACKLOG.md`.
+
+### Verified
+
+- **`uv run pytest`:** 873 passed in 146 s, 200 more than the 673 before.
+  - The first full run gave 872 passed and 1 failed: `test_no_module_outside_config_reads_yaml_directly`,
+    which greps source text, found "areas.yaml" in a docstring of `classify/instructions.py`.
+  - That module reads no YAML. The docstring was reworded, and the run repeated clean.
+- **`uv run ruff check .`:** all checks passed. **`uv run ruff format --check .`:** 110 files
+  already formatted.
+
+- **The derived schema** equals the spike's `schema_sent.json` except for `areas` and the `value`
+  descriptions; a test pins this.
+- **All 120 spike answers** validate once `areas` is added. Without it they are refused.
+- **The 20 `none_t0` answers** complete into `Listing`s through a fake transport, each with its own
+  post read in place.
+- **`run_once`'s 57 tests** pass unchanged after the move to `jobs/common.py`.
+
+### Deviations from the approved plans
+
+Listed under each plan in `PHASE_2.md`:
+- the billed usage goes on the meter's `CallRecord`, not on the error;
+- `classify_completed` sits beside `classify`;
+- the setting lives in `instructions.py`;
+- the classifier refuses to start on a fingerprint mismatch;
+- a `not_found` kind;
+- the current 429 codes;
+- code reads a year below 100 as 20YY;
+- `job_logging()` and `log_failure()` helpers;
+- the error text is cut at 200 characters;
+- a discarded failure is not counted;
+- `--cap` above 0;
+- no dropped-names file when nothing is written.
+
+### Found
+
+- **`CLAUDE.md` is gitignored** (`.gitignore` line 36), though it calls itself "checked into the
+  codebase": its edits do not show in `git status`.
+- **The prefix ב replaces the ה** of "הצפון הישן" ("בצפון הישן"). If the model returns the name
+  without the prefix, #162's exact match drops it. The instructions ask for the name as written, with
+  prefix letters.
+
+### Next
+
+- Ron reviews the code of 2.4 and 2.5.
+- The plan for 2.6, the regression set; its passes are the first real calls, on their own go.
+- Ron reads the spike's cost in the OpenAI dashboard and compares it with $0.0273.
+- After 2026-10-08: the free GET on an expired run A link.
