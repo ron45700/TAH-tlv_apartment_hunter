@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from tests.conftest import FETCHED_AT
+from tests.conftest import FETCHED_AT, make_listing
 from tlv_hunter.contracts.post_lifecycle import (
     POST_LIFECYCLE_SCHEMA_VERSION,
     PostImage,
@@ -15,6 +15,10 @@ from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.store.base import Repository
 
 MakeRepository = Callable[[], Repository]
+
+
+def written(value):
+    return {"state": "written", "value": value}
 
 
 def _pending(post: RawPost, **changes) -> PostLifecycle:
@@ -28,6 +32,8 @@ def _pending(post: RawPost, **changes) -> PostLifecycle:
         "flag_note": None,
         "last_published_at": post.posted_at,
         "images": [],
+        "classification_failures": 0,
+        "last_classification_error": None,
     }
     return PostLifecycle(**{**fields, **changes})
 
@@ -308,3 +314,105 @@ def test_find_lifecycles_with_image_errors_on_an_empty_store(
     make_repository: MakeRepository,
 ) -> None:
     assert make_repository().find_lifecycles_with_image_errors(("network: ",)) == []
+
+
+# --- task 2.2: Listing storage (DECISIONS.md #131; invariant 14) ---
+
+
+def _canonical(post: RawPost) -> RawPost:
+    return post.with_changes(is_canonical=True, duplicate_of=None)
+
+
+def test_get_listing_of_an_unclassified_post_is_none(
+    make_repository: MakeRepository, posts
+) -> None:
+    repo = make_repository()
+    repo.upsert_with_lifecycle(posts[0], _pending(posts[0]))
+    assert repo.get_listing(posts[0].listing_id) is None
+
+
+def test_save_classification_writes_both_and_round_trips_through_a_fresh_instance(
+    make_repository: MakeRepository, posts
+) -> None:
+    post = posts[0]
+    make_repository().upsert_with_lifecycle(post, _pending(post))
+    listing = make_listing(
+        post.listing_id, areas=[30, 31], price=written([4500]), price_source="text"
+    )
+    active = _pending(post, state="active")
+    make_repository().save_classification(listing, active)
+
+    fresh = make_repository()
+    assert fresh.get_listing(post.listing_id) == listing
+    assert fresh.get_lifecycle(post.listing_id) == active
+
+
+def test_save_classification_replaces_an_earlier_listing(
+    make_repository: MakeRepository, posts
+) -> None:
+    post = posts[0]
+    repo = make_repository()
+    repo.upsert_with_lifecycle(post, _pending(post))
+    repo.save_classification(
+        make_listing(post.listing_id, areas=[37]), _pending(post, state="active")
+    )
+    second = make_listing(post.listing_id, areas=[52], prompt_version="test-2")
+    repo.save_classification(second, _pending(post, state="active"))
+    assert make_repository().get_listing(post.listing_id) == second
+
+
+def test_save_classification_requires_a_stored_post(make_repository: MakeRepository, posts) -> None:
+    repo = make_repository()
+    with pytest.raises(KeyError):
+        repo.save_classification(make_listing(posts[0].listing_id), _pending(posts[0]))
+    assert repo.get_listing(posts[0].listing_id) is None
+
+
+def test_save_classification_refuses_a_pair_of_two_posts(
+    make_repository: MakeRepository, posts
+) -> None:
+    repo = make_repository()
+    for post in posts[:2]:
+        repo.upsert_with_lifecycle(post, _pending(post))
+    with pytest.raises(ValueError, match="different posts"):
+        repo.save_classification(make_listing(posts[0].listing_id), _pending(posts[1]))
+    assert repo.get_listing(posts[0].listing_id) is None
+
+
+def test_save_classification_never_touches_the_stored_post(
+    make_repository: MakeRepository, posts
+) -> None:
+    """Invariant 14: classification never touches the source text (DECISIONS.md #163)."""
+    repo = make_repository()
+    for post in posts:
+        repo.upsert_with_lifecycle(post, _pending(post))
+    before = {post.listing_id: post.model_dump_json() for post in make_repository().query()}
+    for post in posts:
+        repo.save_classification(make_listing(post.listing_id), _pending(post, state="active"))
+    after = {post.listing_id: post.model_dump_json() for post in make_repository().query()}
+    assert after == before
+
+
+def test_find_pending_canonicals_returns_exactly_the_pending_canonicals(
+    make_repository: MakeRepository, posts
+) -> None:
+    repo = make_repository()
+    pending, active, archived, rejected, duplicate, canonical_no_result = posts[:6]
+    for post in (pending, active, archived, rejected):
+        repo.upsert_with_lifecycle(_canonical(post), _pending(post))
+    repo.save_lifecycle(_pending(active, state="active"))
+    repo.save_lifecycle(_pending(archived, state="archived"))
+    repo.save_lifecycle(_pending(rejected, state="rejected", rejection_reason="seeking"))
+    repo.upsert_with_lifecycle(
+        duplicate.with_changes(is_canonical=False, duplicate_of=pending.listing_id),
+        _pending(duplicate),
+    )
+    repo.upsert_with_lifecycle(_canonical(posts[6]), _pending(posts[6]))
+    repo.upsert(_canonical(canonical_no_result))  # no lifecycle record: not pending
+
+    found = make_repository().find_pending_canonicals()
+    assert [post.listing_id for post in found] == sorted([pending.listing_id, posts[6].listing_id])
+
+
+def test_find_pending_canonicals_on_an_empty_store(make_repository: MakeRepository) -> None:
+    assert make_repository().find_pending_canonicals() == []

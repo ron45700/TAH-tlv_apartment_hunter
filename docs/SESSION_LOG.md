@@ -1768,3 +1768,497 @@ into the repo.
 
 Ron chooses the area and street source at Gate B (`RESEARCH.md` §12, the points listed there).
 Phase 2 planning waits for Ron's go. After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 — Gate B content recorded; the Gate B draft; the 71 areas
+
+### Done
+
+Docs only: no code, no paid call, no git. Ron settled the area source and the content of Gate B
+with the review chat. This session recorded them and drafted the names and types; nothing in the
+draft is approved.
+
+- **`DECISIONS.md`:**
+  - #81–#107, one per approved item, with Ron's reasons where given and "no reason recorded"
+    elsewhere.
+  - Pointer notes on #50 ("kept as text" is stale since #63), #53 (amended by #87), #57 (settled by
+    #105), #71 H (kept by #107) and #74 (closed by #89).
+- **`SCHEMA.md`:** a Gate B section marked "DRAFT - awaiting Ron". It contains:
+  - The proposed record, `Listing`, and the `Marked[T]` state structure.
+  - The 71 areas, verbatim.
+  - The translation table.
+  - A proposal for where the area files live (`reference/`, created for none of them).
+  - The "For Ron's decision" list, 13 points.
+  - The gate table shows B as a draft.
+- **`BASELINE.md`:**
+  - §4: the data path, with code deciding the rejection and the area.
+  - §6: price list, entry-date comparable value, floor, size, furnished.
+  - §7: rewritten to #81–#88.
+  - §9 point 5: "the model could not place" reworded.
+  - §13: the flagged-posts row corrected to §5. It was a stale row: §5, `SCHEMA.md` Gate E,
+    #63 and invariant 3 all say a flagged post is kept whole, `raw` included.
+  - §14: the area-source row and "Open for Ron".
+- **`CLAUDE.md`:** the current-phase line; the entry-date trap reworded per #96.
+- **`ASSUMPTIONS.md`:**
+  - A1a: chosen by Ron and re-read.
+  - A1b: source chosen (OSM); its completeness is UNKNOWN.
+  - P16: kept as a known limit, with the store count.
+- **`BACKLOG.md`:** the rows listed under "Next".
+- **`RESEARCH.md`:** not changed. The review chat's figures are below, verified; none was written
+  there.
+
+### Verified
+
+- **Layer 511** (`https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/511`), read
+  under the `external-contract-verification` skill: 71 features, `ms_shchuna` 1–71 with no gap,
+  every `date_import` `18/11/2024 00:59:04`. Fixtures saved: `data/raw/tlv_gis_layer511_rows_2026-10-05.json`
+  (no geometry) and `data/raw/tlv_gis_layer511_meta_2026-10-05.json`. Five names have the geresh
+  or parenthesis at the logical start: 5, 7, 17, 18, 49.
+- **The review chat's figures**, recounted read-only from the store (SQLite opened `mode=ro`,
+  script in the session scratchpad):
+
+  | Figure | Review chat | Recount |
+  |---|---|---|
+  | `sale_post` with a `native_price` | 68 of 266 | 68 of 266. No other post type has one |
+  | `native_price` not found in the text | 24 | 24, matching the digits plainly, with `,` / `.` / space thousands separators, or as `Nk` |
+  | Below 500 | 3 | 3 (1, 1, 6) |
+  | Above 15,000 | 5 | **4** (16,000, 16,500, 16,800, 20,000); 5 if 15,000 itself is counted |
+  | Mostly English | 27 | **Not reproduced exactly:** 29 have more Latin than Hebrew letters; 21 above 60% Latin. Definition-dependent |
+  | `sharedPost` present | 35 | 35 |
+  | Own caption and shared text both | 1 | 1 |
+  | A phone | 161 | 161 |
+  | More than one phone | 5 | 5 |
+
+### Found
+
+- **13 points for Ron** in the Gate B draft's "For Ron's decision" list. The main ones:
+  - Whether the final areas are stored or computed (no field for them is approved).
+  - Who applies the translation table, the model or code (#104 against #87's reason).
+  - A stated area that maps to several entries: definite or unclear.
+  - `native_price` values of 1 and 6 as the fallback price.
+  - Who computes the comparable entry date.
+  - No period on arnona and house committee.
+  - "No restriction" against "not written" for gender.
+- `CLAUDE.md` is gitignored (`.gitignore`'s last section), so its change is not in `git status`.
+
+### Next
+
+- Ron approves or corrects the Gate B names and types and answers the "For Ron's decision" list.
+- The rest of phase 2 planning waits for Ron's go: `PHASE_2.md`, model and SDK, where
+  classification runs, the regression set, Gate D, the reclassify job, the derivation script.
+- After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — Gate B answers applied; the phase 2 plan, drafted
+
+### Done
+
+Docs and a written plan only: no code, no paid call, no git. Gemini, OSM and the street register
+were read from their documentation and open APIs, at no cost.
+
+**Part 1, Ron's answers on Gate B:**
+- **`DECISIONS.md`:**
+  - #108–#119: Ron's answers to the 13 points; point 13 goes to the phase 2 plan.
+  - #120–#122: three card rules the review chat had left out.
+  - Pointer notes on #75 A, #85, #86, #87, #91, #95, #96, #103 and #104.
+- **`SCHEMA.md`, Gate B:** the answers applied:
+  - `Listing` named; an unclear field keeps no value.
+  - `areas` stored, with the colour derived from it.
+  - `stated_area_names` replaces `stated_areas`; code applies the translation table.
+  - The native-price floor of 500; the entry date's parts and its nearest year.
+  - `gender` plain; sizes decimal; a basement is -1.
+  - The five display labels.
+  - **Still a draft**, with two open points; the old list is replaced by them.
+- **`BASELINE.md`:**
+  - §6: the last-publication time, "1 of N", room size, gender, the year never shown.
+  - §7: areas stored at classification time, the translation table applied by code, the colour
+    rule.
+  - §14: open items.
+- **`BACKLOG.md`:**
+  - Next: Gate B's two points; the phase 2 plan.
+  - Pending rows renumbered to the new decisions.
+  - Gate C row: no orange for a user who chose every entry a name covers.
+  - Phase 3 UI rows: main time, "1 of N", room size, the year. The row on showing both
+    publications is replaced; the #75 A row is changed.
+  - Known limits: no period on arnona; table changes not re-derived.
+
+**Part 2, the plan:**
+- **`PHASE_2.md`:** new, marked "DRAFT - awaiting Ron". It contains:
+  - Goal, DoD, anchors, order of work.
+  - Tasks 2.1–2.10, with options and recommendations.
+  - The items to close, and a "For Ron's decision" list of 22.
+- **`RESEARCH.md`:** §13 (Gemini documentation), §14 (the street register, the OSM extract).
+- **`ASSUMPTIONS.md`:**
+  - G1–G9 and A1c added.
+  - C3 no longer applies.
+  - I3 given the cost estimate.
+- **`CLAUDE.md`:** the phase line; a `PHASE_2.md` row.
+
+### Verified
+
+- **Gemini documentation, read 2026-10-05** (`RESEARCH.md` §13):
+  - Current stable Flash: `gemini-3.8-flash`; Flash-Lite: `gemini-3.5-flash-lite`.
+  - Prices: 3.8 Flash $0.75 / $3.75 per 1M tokens through 2026, doubling on 2027-01-01;
+    3.5 Flash-Lite $0.30 / $2.50.
+  - The free tier's terms forbid personal information and allow human review. The paid tier does
+    not train on prompts.
+  - Gemini 3 docs strongly recommend temperature 1.0.
+  - 3.8 Flash's thinking cannot go below "low".
+  - AI Studio's project spend cap is experimental and lags about 10 minutes.
+  - `google-genai` 2.28.0 is on PyPI.
+- **The street register:**
+  - 2,768 official Tel Aviv names and 4,655 synonyms, updated 2026-10-05.
+  - The Geofabrik extract is 120 MB, dated 2026-10-03.
+- **The store, read-only:**
+  - 195 pending canonicals; text averages 523 characters.
+  - Candidate regression cases counted.
+  - #45's case is in `data/raw/test_posts.json`, not in the store.
+
+### Found
+
+- **Gate B: two points still open.**
+  - An entry date with a month and no day.
+  - A stated area name that maps to nothing, with a street the table places.
+- **Temperature:** `BASELINE.md` §4's `temperature=0` conflicts with the Gemini 3 documentation.
+  For Ron (`PHASE_2.md` §4, items 4 and 22).
+- **Matching street and area names as written** needs either exact matching or amending invariant
+  8 to allow a lookup key (`PHASE_2.md` §2.3). For Ron.
+- **Cost:** 3.8 Flash would cost about as much as collection, or more from 2027 (I3).
+- **No field counts failed classification attempts.** A post that always fails would be billed on
+  every run (`PHASE_2.md` §2.5).
+
+### Next
+
+- Ron answers Gate B's two points, then Gate B is marked approved.
+- Ron reviews `PHASE_2.md` and its 22 points.
+- The spike (2.1) needs its own go.
+- After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — Gate B approved; OpenAI as the provider; the phase 2 plan rewritten
+
+### Done
+
+Docs and a written plan only: no code, no paid call, no git. The OpenAI documentation was read,
+at no cost. `.env` was not opened.
+
+- **`DECISIONS.md`:**
+  - #123–#125: a month with no day is the 1st; "end of February" the 28th; an unmapped area name
+    lets the street decide; Gate B approved.
+  - #126–#130: OpenAI as the provider; `gpt-6-luna` first; `OPENAI_API_KEY` in the entry point
+    only; provider-neutral rules; the revised spike.
+  - #131–#145: Ron's answers to the 22 points of the draft plan.
+  - Pointer notes on #22, #61, #88, #96 and #115.
+- **`SCHEMA.md`:**
+  - Gate B marked approved; its open points removed; #123, #124 and the lookup key applied.
+  - Gate A's three Gemini mentions made neutral.
+  - Two proposals added, not approved: the model's response (`ListingExtraction`) and the Gate E
+    failure fields.
+- **`CLAUDE.md`:**
+  - Invariant 8 widened (#135) and made neutral.
+  - The opening line, the phase line, `OPENAI_API_KEY`, the Hebrew trap's wording, the
+    `PHASE_2.md` row.
+- **`BASELINE.md`:**
+  - §4: the data path and the model line, which is settled after the spike.
+  - §6: the month rule. §7: #124. §12: neutral. §14: open items.
+- **`RESEARCH.md`:**
+  - §15 new (OpenAI).
+  - §13 marked an alternative, with Ron's AI Studio figures.
+  - A note on §5.
+- **`ASSUMPTIONS.md`:**
+  - O1–O11 added.
+  - I3 re-estimated for `gpt-6-luna`.
+- **`PHASE_2.md`:** rewritten to the decisions. Approved parts are marked; WAITING parts are
+  listed in §4.
+- **`BACKLOG.md`:**
+  - Next: rows 2 and 3.
+  - Pending rows for #126–#145.
+  - The concurrency row.
+  - A Future row for Gemini's free tier.
+- **The `external-contract-verification` skill** (`.claude/`, gitignored): OpenAI links added;
+  Gemini marked as the alternative.
+
+### Verified (from the documentation; no call made)
+
+- **The model:**
+  - `gpt-6-luna` is listed as a current model, as an alias only, with no dated snapshot.
+  - Prices: $0.10 input, $0.01 cached, $0.125 cache write, $0.50 output per 1M tokens; batch half.
+    These match the review chat's read.
+  - Reasoning effort defaults to `medium`; `none` is available.
+  - Temperature is accepted only at `none`.
+- **Strict structured outputs:** every field required, `additionalProperties: false`, `$defs` and
+  `anyOf` supported, `format: date` supported.
+- **Caching:**
+  - Prompt caching is implicit by default and would write each post into the cache. An explicit
+    breakpoint avoids that.
+  - The minimum cacheable prefix is 1,024 tokens; a prefix lives 30 minutes.
+- **Data:**
+  - API data is not used for training.
+  - Abuse-monitoring logs keep up to 30 days.
+  - The Responses API stores responses for 30 days unless `store: false`.
+- **Limits:**
+  - Tier 1: 500 requests and 500,000 tokens a minute; the free tier does not support the model.
+  - The hard spend limit is not instantaneous.
+- **SDK:** `openai` 3.24.0.
+- **Not read:** the Services Agreement (HTTP 403).
+
+### Found
+
+- **Spike estimate:** about $0.10, at worst $0.30, against the $2 cap.
+- **Running cost:** about $1–11 a month for `gpt-6-luna`; estimates until measured.
+- **Retention:** posts with phone numbers sit in OpenAI's abuse-monitoring logs up to 30 days.
+  Only an approved Zero Data Retention request avoids that. For Ron.
+- **The model alias** can change what answers without notice; Gate B's `model_name` records what
+  was sent. For Ron.
+
+### Next
+
+- Ron answers `PHASE_2.md` §4: the spike's go, the two sets of names, the first run's cap, and
+  the OpenAI points.
+- Before the spike, Ron reads the organization's usage tier.
+- After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — Ron's answers to `PHASE_2.md` §4; spike 2.1 run
+
+### Done
+
+The spike was paid and run on Ron's go; there is no package code and no git. `.env` was not opened
+by hand: the script read the key from the environment and never printed it.
+
+- **`DECISIONS.md`:**
+  - #146–#156: the abuse log accepted, `store: false`, effort from `none`, the reported model value
+    logged, explicit caching, the response model's names, the Gate E failure fields, the $1 cap, the
+    `data/labeling/` files, the dedicated project, the spike's go.
+  - Notes on #137 and #139.
+- **`SCHEMA.md`:**
+  - `ListingExtraction` approved.
+  - Gate E amended: `classification_failures`, `last_classification_error`, `schema_version` 2.
+    Docs only; the code comes with task 2.5.
+- **`PHASE_2.md`:** statuses, the spike's result, the prefix finding, the measured cost, §4.
+- **`BASELINE.md`:** §4's model line (`store: false`, caching, effort, the abuse log); §14.
+- **`CLAUDE.md`:** the phase line.
+- **`BACKLOG.md`:** the next rows (the dashboard check, the setting), pending rows, and a regression
+  row for the 20 spike posts.
+- **The spike:**
+  - **Scripts** (throwaway, under `scratch/`): `spike_2_1_select.py`, `spike_2_1_openai.py`,
+    `spike_2_1_analyse.py`, run with `uv run --with openai==3.24.0`.
+  - **Calls:** 123, no errors and no cap stop.
+  - **Under `data/`:** the raw responses in `data/raw/openai_spike_2026-10-05/`; the posts, their
+    `listing_id`s, the results and the review page in `data/spike_openai_2026-10-05/`.
+  - **Report:** `docs/SPIKE_2_1_2026-10-05.md`.
+- **`ASSUMPTIONS.md`:**
+  - O1, O3, O5, O7 and O10 verified; O4 and O11 in part.
+  - O12 added (❌ FALSE: temperature 0 is not deterministic).
+  - I3 measured; O2 and O6 notes.
+
+### Verified
+
+- **The schema** derived from the approved `ListingExtraction` passed strict mode unchanged; 120 of
+  120 answers validated.
+- **Caching:** a 2,514-token prefix (instructions and schema), written once, then read. The post
+  was never cached.
+- **Reasoning:** 0 tokens at `none`; 153 a call on average at `low`.
+- **Cost:** $0.00019 per post at `none`, $0.00029 at `low`; $0.0273 in all by the usage metadata.
+- **Model:** every response reported `gpt-6-luna`, with no dated version.
+- **Probes:**
+  - `incomplete`: billed, cut JSON.
+  - `allOf`: 400 `invalid_json_schema`.
+  - A wrong key: 401 `invalid_api_key`.
+
+### Found
+
+- **Temperature 0 is not deterministic:** one post's `post_nature` changed between passes.
+- **Area names come back with Hebrew prefix letters** ("בצפון הישן"). The lookup key or the table
+  has to handle them.
+- **Two of the crude case labels were wrong:** the "seeking" and "Jaffa" picks are sale posts, and
+  the model said `for_sale` every time.
+- **Monthly estimate:** about $1.2–2.6, from the measured tokens.
+
+### Next
+
+- Ron reads the dashboard figure and compares it with $0.0273.
+- Ron chooses the setting (recommended: `none` with temperature 0, confirmed on the regression
+  set) and how prefix letters are handled.
+- Ron and the review chat judge the answers in `data/spike_openai_2026-10-05/review.html`.
+- The first paid run waits for its own go.
+- After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — Ron's decisions after the spike; plans for tasks 2.2 and 2.3
+
+### Done
+
+Docs only: no code, no paid call, no git, no download.
+
+- **`DECISIONS.md`:**
+  - #157 the setting: effort `none`, temperature 0.
+  - #158 prefix letters handled by code.
+  - #159 sublet only when the offer is temporary.
+  - #160 one amount for several charges is unclear.
+  - #161 "דירת N שותפים".
+  - #162 a name not in the text is dropped; the model never computes.
+  - #163 the source text is never touched.
+  - #164 no go for the first paid run.
+  - #165 a real seeking post and a real Jaffa post in the regression set.
+  - #166 the spike's prompt is a first version.
+  - Notes on #93, #101, #106, #135 and #148.
+- **`CLAUDE.md`:** invariant 14 (#163); a domain trap on prefix letters (#158).
+- **`SCHEMA.md`, Gate B:**
+  - `post_nature` (#159), `rooms` (#161), `arnona` (#160).
+  - The rules: never computes, names not in the text dropped, matching with prefixes, the source
+    text untouched.
+- **`BASELINE.md`:** §4 the setting; §7 the prefixes and dropped names; §14; the header.
+- **`PHASE_2.md`:**
+  - Status, anchors, 2.4, 2.5, 2.6 and 2.8 updated.
+  - **The plans for tasks 2.2 and 2.3**, under their sections, marked WAITING.
+  - §4 replaced by the 16 points the plans need.
+- **`BACKLOG.md`:** next row 3, pending rows for #157–#163, a regression row for #165.
+
+### Answers to the review chat's two questions about the spike (nothing changed)
+
+1. **Do the agreement figures count 3 and 3.0 as the same answer?** Yes. The figures in
+   `docs/SPIKE_2_1_2026-10-05.md` compare the answers after validation against the pydantic
+   model, where 3 and 3.0 are equal. Recounted from the raw responses (read-only), comparing the
+   JSON text field by field, pass 1 against pass 2:
+
+   | Setting | Fields differing as raw text | By value (the report's figure) | Only 3 against 3.0 | Posts identical as raw text |
+   |---|---|---|---|---|
+   | `none_default` | 21 | 14 | 7 | 7 of 20 |
+   | `none_t0` | 11 | 8 | 3 | 12 of 20 |
+   | `low` | 11 | 9 | 2 | 12 of 20 |
+
+   So the report's agreement (10, 14 and 13 identical posts; 96.96%, 98.26%, 98.04% of fields)
+   already treats 3 and 3.0 as the same. Looking at the raw files by eye shows more differences
+   than the report counts, and those extra ones are only 3 against 3.0.
+
+2. **What does `prompt_cache_retention: "24h"` mean when the request set `ttl: "30m"`?** Every
+   response echoes `prompt_cache_options` as sent (`mode: "explicit"`, `ttl: "30m"`) and also
+   `prompt_cache_retention: "24h"`. The documentation (read 2026-10-05, `RESEARCH.md` §15 sources)
+   says:
+   - For GPT-5.6 and later, `prompt_cache_options.ttl` "controls the minimum cache lifetime, not
+     this maximum application-state retention period".
+   - A prefix stays usable at least 30 minutes after its last use, "though OpenAI may retain it
+     longer".
+   - Prompt caching may store encrypted key/value tensors in GPU-local storage as application
+     state, "not retained after the 24-hour expiration".
+   - "When Zero Data Retention is not enabled for an organization, all queries use extended prompt
+     caching" (`24h`).
+
+   So "24h" is the maximum time the cached state may be kept: the organization has no Zero Data
+   Retention (#146). Only the instructions and the schema are cached (#150), never a post.
+
+### Found while planning
+
+- **#65 forbids automatic migration**, and a `listings` table changes the store's layout. Plan A
+  proposes an explicit, hand-run migration command.
+- **The existing normalization keeps hyphens.** Folding them in the shared steps would change
+  every stored `text_hash`; plan B proposes a key-only step (against #135's wording).
+- **`PHASE_1.md`'s anchor says no module reads YAML directly.** Plan B proposes one reader for
+  `reference/`.
+- **The 15 m buffer needs metres,** so `pyproj` too, beyond #133's two libraries.
+- **`osmium`, `shapely` and `pyproj` all have Windows and Linux wheels** for Python 3.12 (PyPI,
+  2026-10-05).
+
+### Next
+
+- Ron answers `PHASE_2.md` §4 (16 points).
+- Ron reads the spike's cost in the OpenAI dashboard and compares it with $0.0273.
+- After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — The model decides the area; task 2.2 and a reduced task 2.3 built
+
+### Done
+
+There were no paid calls, no downloads and no git. The real store was not opened, only a copy of
+it.
+
+**Decisions:**
+- **#167:** the model decides the area. It supersedes #84, #85, #87, #133–#136 and #158, and
+  parts of #86, #110 and #111.
+- **#168:** what leaves phase 2; invariant 8 goes back to "a hash only".
+- **#169:** a street table as an aid, for later.
+- **#170:** the known limit for a post with only a street.
+- **#171:** the labelling page picks areas from the 71.
+- **#172, #173:** reporting a wrong classification, in phase 2 and in phase 3.
+- **#174:** task 2.2 approved with Ron's answers.
+- **#175:** task 2.3, reduced.
+- Superseded and partial notes on the entries they replace (none deleted).
+
+**Code, task 2.2:**
+- `tlv_hunter/contracts/listing.py` (new): `Listing`, `Marked`, `PhoneName`, with the approved
+  validators.
+- `tlv_hunter/contracts/post_lifecycle.py`:
+  - `classification_failures` and `last_classification_error`; `schema_version` 2.
+  - `from_stored_json`, which reads version-1 documents as version 2.
+  - A record built at any other version is refused.
+- `tlv_hunter/store/base.py`, `local_json.py`, `sqlite.py`: `save_classification`, `get_listing`,
+  `find_pending_canonicals`. SQLite gets a `listings` table under its own layout row,
+  `store.listings` 1, created when absent.
+- `tlv_hunter/dedup/stage_a.py`: #89. An archived post with no reason that is reposted returns to
+  `"active"` when it has a `Listing`. The lookup is lazy: only for such posts.
+- `tlv_hunter/premodel/rejects.py`: `initial_lifecycle` passes the two new fields.
+
+**Code, task 2.3 reduced:**
+- `reference/areas.yaml`: 71 entries from the fixture, the five labels, a source block.
+- `tlv_hunter/areas/reference.py`: `load_areas()`, the only reader of `reference/`.
+
+**Tests:**
+- New: `tests/test_listing.py`, `tests/test_reference_areas.py`.
+- Contract tests for the three methods, on both stores. Among them: `save_classification` leaves
+  every stored `RawPost` identical (invariant 14), and a crash inside it rolls back.
+- SQLite: a layout-1 file opens with its posts and records byte-identical; a layout mismatch on
+  `store.listings` is refused; an orphan `listings` row is refused.
+- Dedup #89, active and pending.
+- Version-1 records, read and written back.
+- Updated for the change: the lifecycle helpers (version 2), `test_premodel_rejects`,
+  `test_stubs`, `test_config` (the YAML anchor), `test_watermark_store` (three layout rows), and
+  `get_listing` passed through in two test wrappers.
+
+**Docs:**
+- `SCHEMA.md`: `areas` from the model and in `ListingExtraction`; the matching rules removed;
+  colloquial names as examples.
+- `CLAUDE.md`: invariant 8; the store row; `areas/reference.py`; the domain trap; the phase line.
+- `PHASE_1.md`: the YAML anchor reworded.
+- `BASELINE.md`: §4, §7 and §14 rewritten for #167.
+- `PHASE_2.md`:
+  - 2.2 built, with its deviations; 2.3 rewritten as reduced.
+  - 2.4, 2.6, 2.7, 2.8 and 2.9 updated; §3 and §4.
+  - The superseded 2.3 kept in an appendix, since the file is not in git yet.
+- `ASSUMPTIONS.md`: A1b and A1c no longer needed.
+- `RESEARCH.md`: a note on §14.
+- `BACKLOG.md`: next, pending, Gate C and phase 3 rows, a known limit, Future.
+
+### Verified
+
+- **`uv run pytest`:** 673 passed in 368 s.
+- **`uv run ruff check .`:** all checks passed. **`uv run ruff format --check .`:** 92 files
+  already formatted.
+- **Before the change,** a run that overlapped my edits gave 601 passed and 1 failed
+  (`test_stub_names_say_stub`, which pins #33's stub-era rule); it was not a clean baseline.
+- **On a copy of `data/store/tlv_hunter.sqlite3`**, opened with the new code:
+  - 266 posts, 266 lifecycle records and 6 watermarks byte-identical.
+  - Layout rows `state` 1, `store` 1, and the new `store.listings` 1.
+  - All 266 records read as version 2 with 0 and `None`.
+  - `find_pending_canonicals` returns 195.
+  - The real file's SHA-256 was the same before and after.
+
+### Deviations from the approved plan
+
+- **Version-1 records are read through `PostLifecycle.from_stored_json`,** not a before-validator.
+  A before-validator makes pydantic validate stored JSON in strict Python mode, which refused the
+  datetime strings: 21 tests failed that way before the change. The approved effect is unchanged.
+  A record built in code must now be version 2 with both fields.
+- **`test_stub_names_say_stub`** no longer asserts that `contracts/listing.py` is absent.
+- **`Marked` uses Python 3.12 type parameters** (ruff UP046).
+
+### Conflicts found
+
+None open. Three rules were changed as Ron decided, each with its test: invariant 8 (#168),
+`PHASE_1.md`'s YAML anchor (#175), and #33's stub-era file rule. The real store gains the empty
+`listings` table and its layout row the first time anything opens it with this code: option C,
+approved (#174).
+
+### Next
+
+- Ron reviews the code of tasks 2.2 and 2.3.
+- Then the plan for task 2.4.
+- Open in `PHASE_2.md` §4: how the regression set compares streets and area names (proposed: as
+  written, ignoring surrounding whitespace).
+- Ron reads the spike's cost in the OpenAI dashboard and compares it with $0.0273.
+- After 2026-10-08: the free GET on an expired run A link.

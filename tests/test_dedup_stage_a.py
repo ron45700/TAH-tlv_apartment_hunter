@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FETCHED_AT, KNOWN_DUPLICATE_PAIRS, load_spike_1_1a
+from tests.conftest import FETCHED_AT, KNOWN_DUPLICATE_PAIRS, load_spike_1_1a, make_listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import Media, RawPost
 from tlv_hunter.dedup.stage_a import DedupResult, dedup_a
@@ -400,6 +400,23 @@ def test_a_repost_returns_an_archived_post_to_its_state(repo, posts, reason, fla
     assert (record.state, record.rejection_reason) == (state, reason)
     assert record.flagged_by == flag.get("flagged_by")
     assert record.last_published_at == later.posted_at
+
+
+def test_a_repost_returns_an_archived_classified_post_to_active(repo, posts) -> None:
+    """#89: with no rejection reason, a Listing means the post was active."""
+    earlier, later = _pair(posts)
+    stored = _seed(repo, earlier, state="archived")
+    repo.save_classification(make_listing(stored.listing_id), repo.get_lifecycle(stored.listing_id))
+    record = _record(dedup_a([later], repo), earlier)
+    assert (record.state, record.rejection_reason) == ("active", None)
+
+
+def test_a_repost_returns_an_archived_unclassified_post_to_pending(repo, posts) -> None:
+    """#89: with no rejection reason and no Listing, the post was never classified."""
+    earlier, later = _pair(posts)
+    _seed(repo, earlier, state="archived")
+    record = _record(dedup_a([later], repo), earlier)
+    assert (record.state, record.rejection_reason) == ("pending", None)
 
 
 def test_an_archived_no_images_post_with_a_media_repost_returns_to_pending(repo, posts) -> None:

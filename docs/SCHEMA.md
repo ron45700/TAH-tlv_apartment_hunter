@@ -5,7 +5,31 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-04 (#80) — **Gate E download rule, wording only:** a network error waits on a fixed
+**Last updated:** 2026-10-05 (task 2.2) — **The model decides the area** (`DECISIONS.md` #167):
+`areas` moves into `ListingExtraction`, still stored on `Listing` as approved; the area rules and
+the translation table's rows become instructions; the lookup key and the prefix rule are
+superseded (#168). Approved by Ron. No field or type of `Listing` changed.
+
+**Earlier on 2026-10-05 (spike day):** **Approved by Ron:** the model's response
+(`ListingExtraction`, `DECISIONS.md` #151) and the Gate E classification-failure fields with
+`PostLifecycle` `schema_version` 2 (#152). Docs only; no code yet.
+
+**Earlier on 2026-10-05:** **Gate B approved by Ron** (`DECISIONS.md` #123–#125): a
+month with no day is the 1st, "end of February" the 28th; an unmapped area name lets the street
+decide. Lookup keys for street and area names (#135). Two proposals added, not approved: the
+model's response (`ListingExtraction`, #137) and the Gate E classification-failure fields (#139).
+Rules name "the model", not a provider (#129).
+
+**Earlier on 2026-10-05:** **Gate B: names and types approved by Ron, with his changes
+(`DECISIONS.md` #108–#119).** `areas` added, `stated_areas` replaced by `stated_area_names`,
+`gender` plain, sizes decimal, unclear keeps no value, the native price floor. Still a draft: two
+open points remain. Gates A and E untouched.
+
+**Earlier on 2026-10-05:** **Gate B draft added, not approved.** Its content was approved in
+substance by Ron (`DECISIONS.md` #81–#107); the names and types in it are a proposal awaiting Ron.
+No approved field or type changed; Gates A and E untouched.
+
+**Earlier, 2026-10-04 (#80):** **Gate E download rule, wording only:** a network error waits on a fixed
 schedule instead of the one retry within a run; a failed photo is also retried from the stored link
 while its post is less than 4 days old. Approved by Ron (`DECISIONS.md` #80). No field or type changed;
 `schema_version` stays 1.
@@ -62,8 +86,8 @@ Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 | Gate | Covers | Status |
 |---|---|---|
 | A | `RawPost` | ✅ Approved 2026-09-14 |
-| E | Post lifecycle record (state, rejection reason, flag, last publication, images) and `GroupWatermark` | ✅ Approved 2026-10-04 |
-| B | `Listing` | ⬜ Not opened — phase 2 |
+| E | Post lifecycle record (state, rejection reason, flag, last publication, images, classification failures) and `GroupWatermark` | ✅ Approved 2026-10-04; classification-failure fields approved 2026-10-05 (#139, #152) |
+| B | `Listing`, and the model's response `ListingExtraction` | ✅ Approved 2026-10-05 (#81–#125; the response #137, #151) |
 | D | Dedup stage B key | ⬜ Not opened — phase 2 |
 | C | Filter rules, and the user, key and profile records | ⬜ Not opened — phase 3 |
 
@@ -90,7 +114,7 @@ the provider said.
 not promote, we run a script over stored `raw` and backfill it. No model call, no cost, no lost
 history.
 
-This is **not** true of `Listing`, where every new field costs a Gemini call per post across all
+This is **not** true of `Listing`, where every new field costs a model call per post across all
 history. Hence: promote conservatively here, deliberate exhaustively at Gate B.
 
 **The only exception** is data determined at fetch time and absent from `raw`: `source` and
@@ -138,7 +162,7 @@ the provider-failover scenario. Excluding it lets dedup layer 1 work across prov
 
 | Field | Type | Source | Rationale |
 |---|---|---|---|
-| `text` | `str` | `text`, falling back to `sharedPost` | What is sent to Gemini **verbatim**. |
+| `text` | `str` | `text`, falling back to `sharedPost` | What is sent to the model **verbatim**. |
 | `text_source` | `str` | derived | `"text"` / `"shared_post"` / `"none"`. When a post comes out `no_text`, this separates "empty share" from "post that is entirely an image" — two different cases Ron will want to tell apart in the admin's rejected list. |
 | `post_type` | `str` | `post_type` | Observed: `regular`, `sale_post`, `shared`, `shared_reel`, `__reel__` (spike 1.1a, 2026-10-04). Not used to detect a shared post: `shared`, `shared_reel` and `__reel__` can all carry a `sharedPost`, so a shared post is detected by `sharedPost` being present. |
 
@@ -233,7 +257,7 @@ The pair `(no_text, text_hash)` resolves the ambiguity: `no_text=True` with `tex
 |---|---|---|---|
 | `text_hash` | `str \| None` | Phase 0 | sha256 of aggressively normalized text. Dedup layer 2, the primary key. `None` when `no_text` is `True` — two empty strings must never collide — or when textnorm has not run. |
 | `phones` | `list[str] \| None` | Phase 0 | Dedup layer 3, a one-directional signal. ~50% coverage. **Stored normalized**: digits only, `+972` converted to a leading `0`, so `050-9184537` and `+972509184537` both become `0509184537`. One stored format is what makes an equality lookup in the store possible; nothing is lost, since the card always shows the full original text and `raw` keeps the rest. An identical number within one post is stored once, in order of first appearance (`DECISIONS.md` #57). `find_by_phone` normalizes its input before comparing. `None` means not extracted; `[]` means extracted and none found. |
-| `no_text` | `bool \| None` | Phase 0 | Stored, and rejected with the reason "no text" (`BASELINE.md` §5). **Not sent to Gemini** — we do not analyse images. Seen only in the admin's rejected list. True when the text is absent, whitespace-only, **or normalizes to nothing** (an emoji-only post). A post that normalizes to nothing must never raise: a failed run does not advance the watermark, so one throwaway post would block the window permanently. `text_source` still records where the text came from — `"text"` with `no_text=True` means it arrived and was unusable. |
+| `no_text` | `bool \| None` | Phase 0 | Stored, and rejected with the reason "no text" (`BASELINE.md` §5). **Not sent to the model** — we do not analyse images. Seen only in the admin's rejected list. True when the text is absent, whitespace-only, **or normalizes to nothing** (an emoji-only post). A post that normalizes to nothing must never raise: a failed run does not advance the watermark, so one throwaway post would block the window permanently. `text_source` still records where the text came from — `"text"` with `no_text=True` means it arrived and was unusable. |
 | `is_canonical` | `bool \| None` | Phase 1 (task 1.3) | Dedup result. A property of the post, not of any user, so it lives here and not on `Decision`. |
 | `duplicate_of` | `str \| None` | Phase 1 (task 1.3) | The canonical `listing_id` this post duplicates. `None` is ambiguous on its own — read it together with `is_canonical`. |
 
@@ -276,8 +300,8 @@ failover adapter is built.
 
 # GATE E — post lifecycle and `GroupWatermark`
 
-**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66, #67, #70, #72, #76
-and #77 ·
+**Approved:** 2026-10-04 · **Reasons:** `DECISIONS.md` #63, amended by #66, #67, #70, #72, #76,
+#77, and #139 / #152 (2026-10-05) ·
 **Lifecycle:** `BASELINE.md` §5
 
 ## Post lifecycle record (`PostLifecycle`)
@@ -290,9 +314,13 @@ function of `raw`, and these fields change after fetch.
 an explicit `listing_id` row, the key the record already had. No other field was added or removed;
 `schema_version` stays 1.
 
+**Amended 2026-10-05** (`DECISIONS.md` #139, #152), approved by Ron: `classification_failures` and
+`last_classification_error`; `schema_version` goes to 2. A stored record at version 1 reads as 0
+and `None`. Docs only until task 2.5 (`PHASE_2.md`).
+
 | Field | Type | Rule |
 |---|---|---|
-| `schema_version` | `int` | Starts at 1. On every record (`PHASE_1.md` §1.0) |
+| `schema_version` | `int` | 1 until #152's fields are built, then 2; a version-1 record reads with the two new fields at 0 and `None`. On every record (`PHASE_1.md` §1.0) |
 | `listing_id` | `str` | The post this record belongs to, and the record's key |
 | `state` | `"pending"` / `"active"` / `"rejected"` / `"archived"` | On store: `"pending"`, or `"rejected"` if a pre-model reject applies. In phase 2 the model moves it to `"active"` or `"rejected"`. A repost record has no card of its own; that is `is_canonical` / `duplicate_of` from Gate A, not a state |
 | `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `None` | One reason, the first that applies, in that order. `None` when `state` is `"pending"` or `"active"`; required when `"rejected"`; optional when `"archived"` (an archived post keeps its reason) |
@@ -301,6 +329,8 @@ an explicit `listing_id` row, the key the record already had. No other field was
 | `flag_note` | `str` / `None` | Optional short note from the flagger |
 | `last_published_at` | `datetime` UTC | The latest `posted_at` of the post and all its duplicates (any dedup layer: A now, B in phase 2). A phone-only match is not a duplicate. Never moves backwards |
 | `images` | `list[PostImage]` | One entry per photo attempted: a failed download is recorded too. See below |
+| `classification_failures` | `int` | Starts at 0. Plus 1 for each run of the classification job in which the post failed after that run's retries; at 3 the job skips the post, which shows in the admin's pending list with its reason. Not counted for a failed reclassify (the old `Listing` stays), nor when the job stops for its own cap or the project's spend limit. Left as it is after a later success; set back to 0 by hand only (the admin's "retry" in phase 3) (#139, #152) |
+| `last_classification_error` | `str` / `None` | A short reason for the latest failure (`"timeout"`, `"schema: …"`, `"refusal"`, `"incomplete"` and so on). `None` while there has been none. Left as it is after a later success (#139, #152) |
 
 ### `PostImage`
 
@@ -357,6 +387,261 @@ One record per group.
 | `consecutive_failures` | `int` | Per group: consecutive successful runs in which the group returned zero rows; reset to 0 when it returns any row (#78 W5b). Not a count of failed runs: nothing is written after a failed run |
 
 Every field changes only after a successful run, for all configured groups together (invariant 2).
+
+---
+
+# GATE B — `Listing`
+
+**Approved:** 2026-10-05 · **Reasons:** `DECISIONS.md` #81–#107 (content), #108–#119 (names and
+types), #123–#125 (the last two points). The stubs below (`ListingStub`) are replaced by it, not
+extended. The model's response shape, `ListingExtraction`, follows this gate (#151).
+
+**Schema version:** 1
+
+## The record
+
+A **separate record per post, keyed by `listing_id`** (#89), like `PostLifecycle`. Not added to
+`RawPost`: Gate A stays a pure function of `raw`. The record's existence means the post was
+classified.
+
+It holds what the model extracted (#92), the areas included (#167), and its provenance (#90). It holds no rejection and no user's view of the post: the
+rejection reason is derived by code and written on `PostLifecycle` with Gate E's values (#92); a
+user's evaluation is never written on the post (invariant 12).
+
+What the model returns is not exactly this record (code adds the provenance, `price_source`, the
+native fallback and the completed entry-date year, drops unmatched phone names, and drops a street
+or area name the post does not contain). The
+response shape, `ListingExtraction`, is below, after this gate (#137, #151).
+
+### `Marked[T]` — the state structure (#91, #109)
+
+| Field | Type | Rule |
+|---|---|---|
+| `state` | `"written"` / `"not_written"` / `"unclear"` | |
+| `value` | `T` / `None` | Required when `state` is `"written"`; `None` when `"not_written"` or `"unclear"`: nothing read is kept for an unclear field |
+
+"No" is a written value (`state="written"`, `value=False`), never `"not_written"`.
+
+### Provenance
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1 |
+| `listing_id` | `str` | The post this record belongs to, and the record's key |
+| `model_name` | `str` | The model identifier as sent in the call |
+| `prompt_version` | `str` | Changes whenever the prompt changes, with or without a schema change |
+| `classified_at` | `datetime` UTC | When the model's answer was received |
+
+### Kind of post
+
+| Field | Type | Rule |
+|---|---|---|
+| `post_nature` | `"rental_offer"` / `"sublet_offer"` / `"seeking"` / `"for_sale"` / `"not_listing"` | Plain, not `Marked`: there is no "unclear" (#93). A sublet is a post that says so or states an explicit temporary period, and only when the offer itself is temporary: a sublet offered as an option before a regular lease is `"rental_offer"` (#159); someone seeking a sublet is `"seeking"`. `"seeking"`, `"for_sale"` and `"not_listing"` lead to the Gate E reasons of the same names, derived by code (#92). `"sublet_offer"` is not a rejection |
+| `apartment_kind` | `Marked["room" / "whole_apartment"]` | `"room"` is a room in a shared flat. "3 rooms, suits roommates" and a studio are `"whole_apartment"` (#94) |
+
+### Price and entry
+
+| Field | Type | Rule |
+|---|---|---|
+| `price` | `Marked[list[int]]` | ILS, usually one item. From the text. Only when the text has no price at all, from `RawPost.native_price`, and only if it is at least 500 (a constant, not config; below it the post has no price) (#114). When both exist and differ, the text wins. A per-roommate price for a whole apartment, or another currency: `"unclear"`, and an unclear text price stays unclear even when a `native_price` exists (#95, #114). Filtering uses the lowest; the card shows `X/Y` (#95) |
+| `price_source` | `"text"` / `"native"` / `None` | `None` exactly when `price.state` is `"not_written"` |
+| `entry_date_written` | `str` / `None` | The entry date exactly as written, never replaced (#96). `None` when the post gives none |
+| `entry_date` | `Marked["immediate" / date]` | The comparable value next to it. The model gives the day and month (and the year when written), or "immediate"; start / middle / end of a month are the 1st / 15th / last day (#96); a month with no day is the 1st, written; "end of February" is the 28th (#123). Code completes a missing year with the occurrence nearest to the post's publication date, before or after, on the UTC date (#115). "Flexible": `"unclear"`. A calendar `date`, not a `datetime`. The year is never displayed |
+
+### The apartment
+
+| Field | Type | Rule |
+|---|---|---|
+| `rooms` | `Marked[float]` | Whole or half numbers only. Always the total in the apartment, also for a room (#97). "דירת N שותפים / שותפות" gives N, or N+1 when the post says there is a living room: Ron's explicit exception to #106 (#161). On a room post the card shows "1 of N" (#120) |
+| `floor` | `Marked[int]` | Ground floor = 0; a basement is -1 (#98, #118) |
+| `building_floors` | `Marked[int]` | Only when written (#98). `floor` shows as `X/Y` only when this is `"written"` (#106) |
+| `size_sqm` | `Marked[float]` | The apartment's size (#99, #118) |
+| `room_size_sqm` | `Marked[float]` | The room's size, only when written (#99, #118). Card: #121 |
+| `broker` | `Marked[bool]` | (#100) |
+| `balcony` | `Marked[bool]` | A shared balcony is `True` (#100) |
+| `parking` | `Marked[bool]` | Street parking is `False`; "option for parking" is `"unclear"` (#100) |
+| `elevator` | `Marked[bool]` | (#100) |
+| `air_conditioning` | `Marked[bool]` | (#100) |
+| `furnished` | `Marked["yes" / "partial" / "no"]` | "Option to leave furniture": `"unclear"` (#102) |
+| `arnona` | `Marked[int / "included"]` | An amount in ILS, or `"included"` in the price. "All included": `"unclear"`; one amount covering several charges ("200 for arnona, internet and cable"): `"unclear"` (#160). Stored as written, with no period: "400 per two months" is 400; never divided (#101, #116) |
+| `house_committee` | `Marked[int / "included"]` | As `arnona` (#101, #116) |
+| `gender` | `"no_restriction"` / `"women_preferred"` / `"women_only"` | Plain, not `Marked`. A post that says nothing about gender is `"no_restriction"`. No "men only" value. Feminine-only wording (`מחפשות שותפה`) is `"women_only"` (#103, #117) |
+
+### Location
+
+| Field | Type | Rule |
+|---|---|---|
+| `streets` | `list[str]` | The streets as written, in order of appearance; `[]` when none (#104). Stored never folded or normalized, for the card and for error analysis (#167) |
+| `stated_area_names` | `list[str]` | The neighbourhood names the text itself points at, as written; `[]` when none. Plain, not `Marked` (#111). Stored never folded or normalized, for the card and for error analysis (#167) |
+| `areas` | `list[int]` | Municipal numbers (`ms_shchuna`, 1–71), sorted, no repeats, **returned by the model** from the 71-entry list given in its instructions, by #88's rules given as instructions (#167). Known limit: for a post with only a street, it rests on what the model knows of Tel Aviv (#170) |
+| `other_city` | `str` / `None` | The city as written, only when it is not Tel Aviv-Yafo; a city used as a landmark is not one (`BASELINE.md` §5). Code derives the `other_city` rejection from it (#92) |
+
+**The area's colour** is derived from `areas`, with no field of its own (#110): one area, definite;
+two or more, unclear (orange), matching and alerting if any is chosen; empty and the post gave a
+street or an area name, unclear, no alert; empty and the post gave no location, not written.
+
+### Contact
+
+| Field | Type | Rule |
+|---|---|---|
+| `phone_names` | `list[PhoneName]` | Kept pairs only: a pair returned by the model is kept only when its number, normalized by the one phone normalization (`textnorm`), equals a number in `RawPost.phones` (#105). `[]` when none |
+
+`PhoneName`: `phone: str` (normalized, as in `RawPost.phones`), `name: str` (as written).
+
+### Rules with no field of their own
+
+- **A value that is not written is never filled in** (#106). The model never derives a value from
+  another (no rooms from the size, no total from a per-roommate price), and never computes one
+  ("3.50*3.50" is not 12.25 sqm) (#162). The one exception: "דירת N שותפים" (#161).
+- **A street or area name the post does not contain is dropped** by code before the `Listing` is
+  written, and counted in the report (#162).
+- **The source text is never touched** (#163, invariant 14): the classification job never writes a
+  `RawPost`.
+- **The rejection** is derived by code from `other_city` and `post_nature`, in Gate E's order, and
+  written to `PostLifecycle.rejection_reason`. A rule change re-derives; it does not reclassify
+  (#92).
+- **The area rules** (#88, #112, #124) are instructions to the model (#167): a stated area decides;
+  a street only refines inside it; several possible areas are all returned; nothing the model can
+  place returns no area. Filtering is by area, never by street.
+- **Not carried over from the research schema** (`data/raw/research_listing_model_2026-09-13.py.txt`,
+  `ASSUMPTIONS.md` C5), since the approved content does not list them: `confidence`, `flags`,
+  `language`, `total_roommates`, `has_living_room`, `price_includes_bills`, a `duration`, and
+  `"men_only"` / `"men_preferred"`.
+
+## The 71 areas (#81)
+
+Read 2026-10-05 from the municipality's GIS service, layer 511 `שכונות`
+(`https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/511`), under the
+`external-contract-verification` skill: 71 features, `ms_shchuna` 1–71 with no gap, all loaded
+`18/11/2024 00:59:04`. Saved as `data/raw/tlv_gis_layer511_rows_2026-10-05.json` (attributes, no
+geometry) and `data/raw/tlv_gis_layer511_meta_2026-10-05.json`. `shem_shchuna` is verbatim. The
+display label is the same name, except for the five entries whose geresh or parenthesis the source
+places at the logical start; those carry a hand-corrected label next to the verbatim name (#119).
+
+| `ms_shchuna` | `shem_shchuna` (verbatim) | Display label, where it differs |
+|---|---|---|
+| 1 | גלילות | |
+| 2 | צוקי אביב | |
+| 3 | אזור שדה דב | |
+| 4 | נופי ים | |
+| 5 | 'תכנית ל | תכנית ל' |
+| 6 | כוכב הצפון | |
+| 7 | 'רמת אביב ג | רמת אביב ג' |
+| 8 | אפקה | |
+| 9 | נוה אביבים וסביבתה | |
+| 10 | רמת-אביב | |
+| 11 | אוניברסיטת ת"א | |
+| 12 | מרכז הירידים | |
+| 13 | פארק הירקון | |
+| 14 | תל ברוך צפון | |
+| 15 | תל ברוך | |
+| 16 | מעוז אביב | |
+| 17 | 'נאות אפקה ב | נאות אפקה ב' |
+| 18 | 'נאות אפקה א | נאות אפקה א' |
+| 19 | הדר-יוסף | |
+| 20 | קרית שאול | |
+| 21 | המשתלה | |
+| 22 | גני צהלה, רמות צהלה | |
+| 23 | צהלה | |
+| 24 | נוה שרת | |
+| 25 | רביבים | |
+| 26 | נוה דן | |
+| 27 | רמת החייל | |
+| 28 | עתידים | |
+| 29 | נמל תל-אביב | |
+| 30 | הצפון הישן - החלק הצפוני | |
+| 31 | הצפון הישן-החלק הדרומי | |
+| 32 | בבלי | |
+| 33 | הצפון החדש - החלק הצפוני | |
+| 34 | הצפון החדש-סביבת ככר המדינה | |
+| 35 | הצפון החדש-החלק הדרומי | |
+| 36 | צמרות איילון | |
+| 37 | לב תל-אביב | |
+| 38 | כרם התימנים | |
+| 39 | נוה צדק | |
+| 40 | גני שרונה | |
+| 41 | מונטיפיורי | |
+| 42 | צפון יפו | |
+| 43 | גבעת הרצל, אזור המלאכה-יפו | |
+| 44 | יפו העתיקה,נמל יפו | |
+| 45 | עג'מי וגבעת עליה | |
+| 46 | צהלון ושיכוני חסכון | |
+| 47 | יפו ג' ונוה גולן | |
+| 48 | מכללת יפו תל אביב ודקר | |
+| 49 | (יפו ד' (גבעת התמרים | יפו ד' (גבעת התמרים) |
+| 50 | נוה עופר | |
+| 51 | אזור תעסוקה-צומת חולון | |
+| 52 | פלורנטין | |
+| 53 | נוה שאנן | |
+| 54 | שפירא | |
+| 55 | פארק החורשות | |
+| 56 | קרית שלום | |
+| 57 | נחלת יצחק | |
+| 58 | ביצרון ורמת ישראל | |
+| 59 | תל-חיים | |
+| 60 | רמת הטייסים | |
+| 61 | אורות | |
+| 62 | יד אליהו | |
+| 63 | התקוה | |
+| 64 | עזרא והארגזים | |
+| 65 | לבנה,ידידיה | |
+| 66 | פארק דרום | |
+| 67 | כפיר | |
+| 68 | נוה ברבור, כפר שלם מערב | |
+| 69 | נוה אליעזר וכפר שלם מזרח | |
+| 70 | נוה חן | |
+| 71 | ניר אביב | |
+
+## Colloquial names (#86, #167)
+
+Examples in the model's instructions, not a table in code (#167). The starting content:
+
+| Written | Entries |
+|---|---|
+| הצפון הישן | 30, 31 |
+| הצפון החדש | 33, 34, 35 |
+| כיכר המדינה | 34 |
+| לב העיר, לב תל אביב, מרכז העיר | 37 |
+| יפו, with no detail | 42–49 |
+| כפר שלם | 68, 69 |
+| שרונה | 40 |
+
+The 71 areas live in `reference/areas.yaml`, read only through `tlv_hunter/areas/reference.py`
+(#175).
+
+---
+
+# The model's response (`ListingExtraction`)
+
+**Approved:** 2026-10-05 (`DECISIONS.md` #137, #151). A separate pydantic response model next to
+`Listing`, its JSON schema derived at runtime (#22), and a contract test asserting that every
+`Listing` field is either in this model with the same name and type, or in the code-filled list
+below.
+
+| Field | Type | Rule |
+|---|---|---|
+| `post_nature`, `apartment_kind`, `price`, `entry_date_written`, `rooms`, `floor`, `building_floors`, `size_sqm`, `room_size_sqm`, `broker`, `balcony`, `parking`, `elevator`, `air_conditioning`, `furnished`, `arnona`, `house_committee`, `gender`, `streets`, `stated_area_names`, `areas` (#167), `other_city` | As in `Listing` | The same names, types and rules. `price` here is the text's price only; the native fallback is code's (#114) |
+| `entry_date_parts` | `Marked[EntryDateParts]` | What the model reads; code turns it into `Listing.entry_date` (#115). "Flexible": `"unclear"` |
+| `phone_name_pairs` | `list[PhoneNamePair]` | Every name-number pair the post gives, unfiltered; code keeps a pair only when its number matches `RawPost.phones` (#105). `[]` when none |
+
+`EntryDateParts`:
+
+| Field | Type | Rule |
+|---|---|---|
+| `immediate` | `bool` | `True` for "immediate"; then `day`, `month` and `year` are `None` |
+| `day` | `int` / `None` | 1–31. Start / middle / end of a month: 1 / 15 / the last day; a month with no day: 1; "end of February": 28 (#96, #123). Required when `immediate` is `False` |
+| `month` | `int` / `None` | 1–12. Required when `immediate` is `False` |
+| `year` | `int` / `None` | Only when the post writes it; otherwise code completes it (#115) |
+
+`PhoneNamePair`: `phone: str` (as written in the post), `name: str` (as written).
+
+**Code-filled `Listing` fields** (in `Listing`, not in the response): `schema_version`,
+`listing_id`, `model_name`, `prompt_version`, `classified_at`, `price_source`, `entry_date`,
+`phone_names`.
+
+The provider's structured-output rules (`RESEARCH.md` §15): every field required (an optional
+value is a `null` union), `additionalProperties: false` on every object, the root an object.
+Whether the schema pydantic derives passes them is the spike's first question.
 
 ---
 

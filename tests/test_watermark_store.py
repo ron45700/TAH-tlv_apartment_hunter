@@ -92,7 +92,7 @@ def test_shares_one_file_with_the_store(db_path: Path, posts) -> None:
     assert SqliteWatermarkStore(db_path).get_all() == [_mark("g1")]
     with closing(sqlite3.connect(db_path)) as conn:
         rows = conn.execute("SELECT module, version FROM layout_version ORDER BY module").fetchall()
-    assert rows == [("state", 1), ("store", 1)]
+    assert rows == [("state", 1), ("store", 1), ("store.listings", 1)]
 
 
 def test_refuses_a_sqlite_older_than_the_minimum(

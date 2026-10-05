@@ -3,6 +3,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
+from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.textnorm.phones import canonical_phone
@@ -13,6 +14,10 @@ from tlv_hunter.textnorm.phones import canonical_phone
 MIN_SQLITE_VERSION = (3, 38, 0)
 LAYOUT_MODULE = "store"
 LAYOUT_VERSION = 1
+# The listings table has its own layout row, created when absent, so a store at layout 1 opens
+# unchanged and needs no migration (DECISIONS.md #65; task 2.2, option C).
+LISTINGS_LAYOUT_MODULE = "store.listings"
+LISTINGS_LAYOUT_VERSION = 1
 
 _CREATE_LAYOUT_VERSION = (
     "CREATE TABLE IF NOT EXISTS layout_version (module TEXT PRIMARY KEY, version INTEGER NOT NULL)"
@@ -21,6 +26,10 @@ _CREATE_TABLES = (
     "CREATE TABLE raw_posts (listing_id TEXT PRIMARY KEY, text_hash TEXT, doc TEXT NOT NULL)",
     "CREATE INDEX raw_posts_text_hash ON raw_posts (text_hash)",
     "CREATE TABLE post_lifecycle ("
+    "listing_id TEXT PRIMARY KEY REFERENCES raw_posts (listing_id), doc TEXT NOT NULL)",
+)
+_CREATE_LISTINGS_TABLES = (
+    "CREATE TABLE listings ("
     "listing_id TEXT PRIMARY KEY REFERENCES raw_posts (listing_id), doc TEXT NOT NULL)",
 )
 
@@ -41,21 +50,33 @@ class SqliteRepository:
         self._path = Path(path)
         with self._transaction() as conn:
             conn.execute(_CREATE_LAYOUT_VERSION)
-            row = conn.execute(
-                "SELECT version FROM layout_version WHERE module = ?", (LAYOUT_MODULE,)
-            ).fetchone()
-            if row is None:
-                for statement in _CREATE_TABLES:
-                    conn.execute(statement)
-                conn.execute(
-                    "INSERT INTO layout_version (module, version) VALUES (?, ?)",
-                    (LAYOUT_MODULE, LAYOUT_VERSION),
-                )
-            elif row[0] != LAYOUT_VERSION:
-                raise RuntimeError(
-                    f"{self._path}: module {LAYOUT_MODULE!r} expects layout version "
-                    f"{LAYOUT_VERSION}, found {row[0]}; no automatic migration"
-                )
+            self._ensure_layout(conn, LAYOUT_MODULE, LAYOUT_VERSION, _CREATE_TABLES)
+            self._ensure_layout(
+                conn, LISTINGS_LAYOUT_MODULE, LISTINGS_LAYOUT_VERSION, _CREATE_LISTINGS_TABLES
+            )
+
+    def _ensure_layout(
+        self,
+        conn: sqlite3.Connection,
+        module: str,
+        version: int,
+        statements: tuple[str, ...],
+    ) -> None:
+        """Create the tables of a layout row that is absent; refuse a version mismatch."""
+        row = conn.execute(
+            "SELECT version FROM layout_version WHERE module = ?", (module,)
+        ).fetchone()
+        if row is None:
+            for statement in statements:
+                conn.execute(statement)
+            conn.execute(
+                "INSERT INTO layout_version (module, version) VALUES (?, ?)", (module, version)
+            )
+        elif row[0] != version:
+            raise RuntimeError(
+                f"{self._path}: module {module!r} expects layout version "
+                f"{version}, found {row[0]}; no automatic migration"
+            )
 
     def upsert(self, post: RawPost) -> RawPost:
         with self._transaction() as conn:
@@ -98,7 +119,7 @@ class SqliteRepository:
             row = conn.execute(
                 "SELECT doc FROM post_lifecycle WHERE listing_id = ?", (listing_id,)
             ).fetchone()
-        return None if row is None else PostLifecycle.model_validate_json(row[0])
+        return None if row is None else PostLifecycle.from_stored_json(row[0])
 
     def find_without_lifecycle(self) -> list[RawPost]:
         return self._select_posts(
@@ -120,7 +141,44 @@ class SqliteRepository:
                 "= wanted.column1) ORDER BY l.listing_id",
                 tuple(prefixes),
             ).fetchall()
-        return [PostLifecycle.model_validate_json(doc) for (doc,) in rows]
+        return [PostLifecycle.from_stored_json(doc) for (doc,) in rows]
+
+    def save_classification(self, listing: Listing, lifecycle: PostLifecycle) -> None:
+        if listing.listing_id != lifecycle.listing_id:
+            raise ValueError(
+                f"listing {listing.listing_id} and lifecycle record {lifecycle.listing_id} "
+                "belong to different posts"
+            )
+        with self._transaction() as conn:
+            exists = conn.execute(
+                "SELECT 1 FROM raw_posts WHERE listing_id = ?", (listing.listing_id,)
+            ).fetchone()
+            if exists is None:
+                raise KeyError(listing.listing_id)
+            conn.execute(
+                "INSERT INTO listings (listing_id, doc) VALUES (?, ?) "
+                "ON CONFLICT (listing_id) DO UPDATE SET doc = excluded.doc",
+                (listing.listing_id, listing.model_dump_json()),
+            )
+            conn.execute(
+                "INSERT INTO post_lifecycle (listing_id, doc) VALUES (?, ?) "
+                "ON CONFLICT (listing_id) DO UPDATE SET doc = excluded.doc",
+                (lifecycle.listing_id, lifecycle.model_dump_json()),
+            )
+
+    def get_listing(self, listing_id: str) -> Listing | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT doc FROM listings WHERE listing_id = ?", (listing_id,)
+            ).fetchone()
+        return None if row is None else Listing.model_validate_json(row[0])
+
+    def find_pending_canonicals(self) -> list[RawPost]:
+        return self._select_posts(
+            "SELECT p.doc FROM raw_posts p JOIN post_lifecycle l ON l.listing_id = p.listing_id "
+            "WHERE l.doc ->> '$.state' = 'pending' AND p.doc ->> '$.is_canonical' = 1 "
+            "ORDER BY p.listing_id"
+        )
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]:
         if text_hash is None:

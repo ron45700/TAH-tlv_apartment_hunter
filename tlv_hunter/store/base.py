@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import Protocol, runtime_checkable
 
+from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 
@@ -26,6 +27,19 @@ class Repository(Protocol):
     def find_lifecycles_with_image_errors(self, prefixes: Sequence[str]) -> list[PostLifecycle]:
         """The records with at least one image entry whose `error` starts with one of `prefixes`,
         ordered by listing_id. Which errors to ask for is the caller's rule (DECISIONS.md #80)."""
+        ...
+
+    def save_classification(self, listing: Listing, lifecycle: PostLifecycle) -> None:
+        """Write the Listing and the post's lifecycle record together (DECISIONS.md #131). Replaces
+        an earlier Listing; the lifecycle record is a whole-record replace. KeyError if the post is
+        not stored, ValueError if the two belong to different posts. Never writes the RawPost
+        (invariant 14)."""
+        ...
+
+    def get_listing(self, listing_id: str) -> Listing | None: ...
+
+    def find_pending_canonicals(self) -> list[RawPost]:
+        """The canonical posts whose lifecycle state is "pending", ordered by listing_id (#75 B)."""
         ...
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]: ...

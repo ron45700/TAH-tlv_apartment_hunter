@@ -125,10 +125,15 @@ def test_path_like_user_id_is_rejected(tmp_path: Path) -> None:
 
 
 def test_no_module_outside_config_reads_yaml_directly() -> None:
+    """PHASE_1.md's anchor, reworded by DECISIONS.md #175: the config interface, and
+    areas/reference.py as the one reader of reference/."""
     package = REPO_ROOT / "tlv_hunter"
+    allowed = {package / "areas" / "reference.py"}
     offenders = []
     for path in package.rglob("*.py"):
         if path.parent.name == "config" and path.parent.parent == package:
+            continue
+        if path in allowed:
             continue
         source = path.read_text(encoding="utf-8")
         if re.search(r"^\s*(import|from)\s+yaml\b", source, re.MULTILINE) or re.search(

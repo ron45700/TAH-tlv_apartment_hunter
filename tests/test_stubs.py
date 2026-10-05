@@ -43,7 +43,8 @@ def test_stub_names_say_stub() -> None:
     contracts = Path(__file__).resolve().parent.parent / "tlv_hunter" / "contracts"
     assert (contracts / "listing_stub.py").is_file()
     assert (contracts / "decision_stub.py").is_file()
-    assert not (contracts / "listing.py").exists()
+    # contracts/listing.py exists since Gate B was approved (DECISIONS.md #125, task 2.2);
+    # ListingStub stays for policy/ and notify/ until phases 3 and 4.
     assert not (contracts / "decision.py").exists()
 
 

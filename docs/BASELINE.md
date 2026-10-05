@@ -7,6 +7,13 @@ all (#67, #68), a `no_text` post that comes back with text (#69), media that arr
 repost (#70), the pre-model rejects' open cases (#72), text normalize before the pre-model
 rejects (#73), the state a repost of an archived post returns to (#74), and dedup A's canonical
 rule (#75).
+Amended 2026-10-05: the source of areas and streets and who decides the area (`DECISIONS.md`
+#81–#88), and the Gate B content that touches §4, §6 and §7 (#89–#107); §13's row on flagged posts
+corrected to §5. Amended again 2026-10-05: Ron's answers on Gate B (#108–#119) in §6 and §7, and
+three card rules (#120–#122) in §6. Amended again 2026-10-05: Gate B's last two points (#123,
+#124) in §6–§7; OpenAI as the model provider and provider-neutral rules (#126, #129) in §4 and §12. Then the
+spike's decisions: the setting (#157) in §4, prefix letters and names not in the text (#158, #162)
+in §7. Then the model decides the area (#167–#170): §4 and §7 rewritten.
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -80,7 +87,8 @@ power-on after power loss, wired network.
 ```
 scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-model rejects
           -> dedup A -> image download -> store ("pending")
-          -> Gemini -> post-model rejects -> street/area -> dedup B -> update the stored post
+          -> the model (extraction, the area included) -> rejection derived by code
+          -> dedup B -> update the stored post
           -> per-user evaluation -> Telegram alert
 ```
 
@@ -108,8 +116,17 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
 - **Reposts:** a repost does not create a new card and does not alert again. It updates the post's
   "last published" time and adds a line to a small repost log on the card, so it is easy to see
   that an apartment has been pushed for a while and is still not rented.
-- **Model:** Gemini Flash, `temperature=0`, structured output, schema derived from the pydantic
-  model. The original text is sent verbatim.
+- **Model:** the provider is OpenAI, for now (`DECISIONS.md` #126); `gpt-6-luna` is the first
+  model to try (#127). The model and its settings (reasoning effort, temperature) are settled after
+  the spike: reasoning effort `none`, temperature 0, confirmed on the regression set run twice;
+  `low` is the fallback (#157). Structured output,
+  schema derived from the pydantic model (#22). The original text is sent verbatim. Every call
+  sends `store: false` (#147); the instructions are cached with an explicit breakpoint, and a post
+  is never written to the cache (#150). OpenAI's 30-day abuse-monitoring log is accepted (#146). The model returns facts only; code derives the
+  rejection and its reason from them (`DECISIONS.md` #92), so a rule change needs no
+  reclassification.
+- **Street and area:** the model returns the areas itself, from the 71 in its instructions, and
+  the streets and neighbourhood names as written (§7, `DECISIONS.md` #167).
 
 Provider inputs, the field map, traps, the duplicate rate and the group IDs are in
 `docs/RESEARCH.md`.
@@ -161,28 +178,39 @@ Fields and rules: `SCHEMA.md`, Gate E (`DECISIONS.md` #63).
 - The poster's full original text, unchanged
 - Images
 - Link to the original post
-- Price
+- Price. A post can give several prices: all are shown, as "X/Y", and filtering uses the lowest
+  (`DECISIONS.md` #95)
 - Entry date, as the poster wrote it. "כניסה מיידית" counts as a stated entry date; it is not
-  only for calendar dates
+  only for calendar dates. A comparable value (immediate, or a date) is stored next to the text
+  for filtering; it never replaces it (#96). Its year, completed by code when the post gives none,
+  is never displayed (#115). A month with no day counts as its 1st (#123)
 - Location: street and or area
 - Listing kind, and a sublet mark when it is one
 - Phone, when present. Every distinct number in the post is shown; an identical number appears
   once. If the post gives a name with the number it is shown as `name-number`
   (`דני-0541234567`); with no name, the number alone
-- Publication time and the repost log
+- Publication time: the **last** publication (the latest repost), shown relative: minutes up to an
+  hour, hours up to 24 h, days after that. Earlier publications, the first included, are in the
+  repost log (#122)
 
 **Marked fields** (each shows one of the states below):
 - Broker: yes / no
-- Number of rooms (always the total in the apartment, also for a room in a shared flat)
-- Floor
-- Size in sqm
+- Number of rooms (always the total in the apartment, also for a room in a shared flat). On a room
+  post: "1 of N" when the total is written, a room with no "of" when it is not; the "1" comes from
+  the listing kind, not from the text (#120)
+- Floor (ground = 0). Shown as "floor/floors" only when the building's floor count is written
+  (#98, #106)
+- Size in sqm: the apartment's; the room's too, only when written (#99). On a room post: "X sqm
+  for the room, of Y" when both are written; "X sqm for the room" when only the room's is (#121)
 - Balcony (not written is shown as "not known")
 - Parking (not written is shown as "none")
 - Arnona and house committee, as two separate fields
 - "Women only"
 - "Women preferred" (עדיפות לבנות). This is not "women only": it is a mark on the card and hides
-  nothing
-- Elevator, furnished, air conditioning (card only, never a filter)
+  nothing. Both come from one gender field with no "not written" state: a post that says nothing
+  about gender has no restriction (#117)
+- Elevator, air conditioning (card only, never a filter)
+- Furnished: yes / partially / no (card only, never a filter; #102)
 
 ### Field states
 
@@ -191,7 +219,7 @@ Fields and rules: `SCHEMA.md`, Gate E (`DECISIONS.md` #63).
 | Present and matches | | Green / lit |
 | Present and does not match the user's preference | | Red |
 | Not written | The poster did not mention it | Grey / off |
-| Unclear | The poster wrote something ambiguous ("option for parking", "all included") | Orange |
+| Unclear | The poster wrote something ambiguous ("option for parking", "all included"). Nothing read is kept for it (#109); the original text is on the card | Orange |
 | Important and missing | Price or entry date not written | Its own colour, stronger than grey. Chosen at UI stage |
 
 Balcony and parking are both **stored** as "not written"; the difference above is a display rule
@@ -201,18 +229,32 @@ only, so it can change without reclassifying.
 
 ## 7. Location
 
-- The model extracts the street as written and decides the area, using the street together with
-  hints in the text ("2 minutes from the sea", "Dizengoff corner Ben Yehuda").
-- A street on the border between two areas belongs to both.
-- **Street known, area uncertain.** A long street that crosses several areas (Dizengoff and the
-  like), with no hint that settles it: the post carries all the areas the street passes through
-  and the area is marked **unclear** (orange). It matches a user's area filter if any of those
-  areas is one the user chose.
-- **Area not understood.** The post says something about location but the model cannot tell where
-  in Tel Aviv it is: no area is assigned. Shown at the bottom, never alerted.
-- Areas come from a closed list, including a north/south split of the Old North. The list and a
-  street-to-area reference are taken from an existing public source, not invented. Source:
-  `UNKNOWN` until verified (§14).
+**Amended 2026-10-05** (`DECISIONS.md` #81–#83, #167–#170): the model decides the area. *An earlier
+amendment of the same day had code decide it through a street table and a translation table
+(#84–#88, #110, #111); superseded by #167.*
+
+- **The model returns the areas:** municipal numbers from the closed list of 71, which is given in
+  its instructions, stored on the post (#167). It also returns the streets and neighbourhood names
+  as written, kept for the card and for error analysis; a name the post does not contain is
+  dropped (#162). The model never touches the source text, so a wrong area is visible beside the
+  original and can be counted and corrected.
+- **The areas** are a closed list: the municipality's open `שכונות` dataset (GIS layer 511), all
+  71 entries, the Old North in its two parts, non-residential entries included (#81), in
+  `reference/areas.yaml`. Any grouping is a display rule, decided at Gate C (#82). An area is
+  identified by its municipal number; the name is a label (#83).
+- **The rules, given to the model as instructions** (#88, #112, #124, #167): a stated area decides;
+  a street only refines inside it (for example, which part of the Old North); several possible
+  areas are all returned (a long street such as Dizengoff, with nothing to settle it); nothing the
+  model can place returns no area. Colloquial names ("הצפון הישן", "לב העיר", "יפו") are given as
+  examples (#86). Filtering is always by area, never by street.
+- **Known limit** (#170): for a post with only a street, the area rests on what the model knows of
+  Tel Aviv. The regression set measures it (95% on `areas`). A street table as an aid is recorded
+  for later, only if the regression set shows the model weak on such posts (#169).
+- **The colour comes from the stored areas** (#110, #112, #113): one area, definite; two or more,
+  unclear (orange), matching and alerting if any is chosen, also when one stated name covers
+  several entries (Gate C may drop the orange for a user who chose all of them); none, and the
+  post gave a street or an area name, unclear and never alerted; none, and no location given, not
+  written. Shown at the bottom, never alerted, when unclear with no area.
 
 ---
 
@@ -253,8 +295,8 @@ A post alerts a user when all of these hold:
 3. It passes every critical condition of that user.
 4. It has an explicit price.
 5. Its location is understood: either a definite area, or a street whose possible areas include
-   one the user chose (alerted with the area marked orange). A post with no location, or one the
-   model could not place, does not alert.
+   one the user chose (alerted with the area marked orange). A post with no location, or one that
+   could not be placed (§7), does not alert.
 
 Preferences never block an alert. If a category the user made critical is not written in the
 post, the alert is still sent and names the missing item.
@@ -297,7 +339,7 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 | Phase | Contents | Done means |
 |---|---|---|
 | **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · **Gate E** (post lifecycle fields) · SQLite store · thedoor fetch · pre-model rejects · dedup A · repost log · image download · per-group watermark | A real run stores posts and images with no duplicates, and a second run does not repeat them |
-| **2. Classification** | **Gate B** (field schema from §5–§7) · Gemini · post-model rejects · street and area · **Gate D** and dedup B · reclassify job | Every post has fields and a state |
+| **2. Classification** | **Gate B** (field schema from §5–§7) · the model · post-model rejects · street and area · **Gate D** and dedup B · reclassify job | Every post has fields and a state |
 | **3. Basic dashboard** | **Gate C** (filter rules, and the user, key, profile and viewed-post records) · users and keys · profile and filters · cards · viewed posts · rejected list · flagging | Ron filters and sees real apartments in a browser |
 | **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike | A real alert arrives according to Ron's profile |
 | **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
@@ -326,7 +368,7 @@ everything. The field list can start lean.
 | #5 Everything in GCP | Home server + Tailscale; GCP is the fallback |
 | #9 Telegram push only, no dashboard in v1 | Dashboard first, then bot and Mini App |
 | #12 / #16 Sniper in shadow / dormant | Removed |
-| #13 Nothing is ever deleted (invariant 3) | Archive at 25 days, full deletion at 40, flagged posts kept as text |
+| #13 Nothing is ever deleted (invariant 3) | Archive at 25 days, full deletion at 40; flagged posts kept whole, `raw` included, images deleted at archive (§5) |
 | #15 `new_north` included at launch | Areas are chosen per user |
 | #17 v1 pushes every post (calibration mode) | Alerts only on profile match; calibration is done through the rejected list and flagging |
 | #21 `httpx`, push-only bot | The bot also listens (account linking). Library choice reopened |
@@ -352,14 +394,16 @@ bootstrap mode, Gate A.
 |---|---|
 | A Telegram Mini App loads from a tailnet-only HTTPS address on a phone with Tailscale on | `ASSUMED` — spike in Phase 4. If it fails, the plain site still works |
 | Tailscale device sharing covers the number of friends on the free plan | `UNKNOWN` |
-| Public source for Tel Aviv areas, the Old North split, and streets per area | Researched 2026-10-04 (`RESEARCH.md` §12, `ASSUMPTIONS.md` A1a, A1b). The areas and the Old North split: `VERIFIED` in the municipality's open `שכונות` dataset (71 neighbourhoods). Streets per area: no public source publishes them; derivable. Ron chooses at Gate B |
+| Public source for Tel Aviv areas, the Old North split, and streets per area | Chosen by Ron 2026-10-05 (`DECISIONS.md` #81, #84). The areas and the Old North split: `VERIFIED`, the municipality's open `שכונות` dataset (71 entries, re-read 2026-10-05). Streets per area: not needed since the model decides the area (#167); a street table is recorded for later (#169) |
 | Image download from the signed Facebook links works at fetch time | `VERIFIED` 2026-10-04 from the laptop: spike 1.1a, 5 of 5; then the task 1.12 check, 632 of 632, all JPEG; then the four real runs, 818 photos held (`ASSUMPTIONS.md` I6, `RESEARCH.md` §11). From the home server itself: still unverified |
 | Apify spike: time window per group, all groups return data, comment flag honoured, real cost | `VERIFIED` 2026-10-04 (`SPIKE_1_1a.md`) |
 | Shared-post content path | `VERIFIED` 2026-10-04: `sharedPost.text` and `sharedPost.media` |
 
 ### Open for Ron
 
-None as of 2026-10-02. The contact name next to a phone number is a new requirement for Gate B.
+The review of tasks 2.2 and 2.3's code, then the plan for task 2.4 (`PHASE_2.md` §4); the first
+paid run's go comes after the build and a passing regression set (#164). Gate B, the
+model's response and the Gate E failure fields are approved (#125, #151, #152).
 
 ### Recorded, not verified
 

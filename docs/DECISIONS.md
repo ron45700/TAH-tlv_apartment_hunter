@@ -9,7 +9,7 @@ holds, say so explicitly and change the entry — do not quietly work around it.
 Superseded decisions are kept, marked, and left in place. Deleting them would lose the fact that
 the question was considered at all.
 
-**Last updated:** 2026-10-04
+**Last updated:** 2026-10-05
 
 > Written in English like every document in `docs/`.
 >
@@ -119,6 +119,8 @@ dependency that drags the design toward a webhook prematurely.
 ### 22 — The Gemini response schema is derived from pydantic at runtime
 Never hand-written, never maintained in parallel. Two sources of truth for a schema drift, and the
 drift is silent.
+
+*Holds for any provider: the model provider is OpenAI since #126 (2026-10-05).*
 
 ### 23 — Semi-macro planning one phase ahead only
 Detailed planning of later phases rests on assumptions that Phase 1 has not yet resolved — the same
@@ -447,6 +449,9 @@ Any user can flag a post as not what it claims. It moves to rejected for everyon
 flagger's name, and the admin can restore it. Flagged posts are kept as text, past the retention
 period, as the regression set. Replaces `calibration.jsonl`.
 
+*"Kept as text" is stale: since #63 (2026-10-04) a flagged post is kept whole, `raw` included; only
+its images are deleted at archive. Noted 2026-10-05.*
+
 ### 51 — The filter model
 **Supersedes #41 and #15.** Listing kind is a hard filter; area and price are fixed critical;
 "women only" is critical by default and can be turned off; the rest are preferences that a user
@@ -462,6 +467,9 @@ A street that crosses several areas with nothing to settle it carries all of the
 unclear; it still matches and alerts if one of them was chosen. A location the model cannot place
 gets no area and never alerts. Areas come from a closed list taken from a public source.
 `BASELINE.md` §7.
+
+*Amended by #87 (2026-10-05): the model extracts the streets and the neighbourhoods the text points
+at; code decides the area, by the rules of #88. The source of the list: #81.*
 
 ### 54 — Field states
 **Extends #8.** Present, not written, unclear, and a separate stronger mark when price or entry
@@ -482,6 +490,8 @@ to use is decided when phase 4 is planned.
 ### 57 — Phones: every distinct number, an identical one once, with the name when given
 **Extends #38.** Closes the question #38 left open. The name next to a number is a new requirement
 for Gate B, since the phone itself is extracted without the model.
+
+*Settled by #105 (2026-10-05).*
 
 ### 58 — Sublet is a basic flag; "women only" is negative only
 A post is a sublet or it is not, with no duration. "Women only" hides a post; "women preferred" is
@@ -514,6 +524,8 @@ Not through an Apify provider. The design stays open to it.
   never overlap (invariant 2).
 - Built in phase 5, with the scheduler. No schema change now: the stored interval and the last-run
   record are approved when phase 5 is built.
+
+*The classification job is covered by "one run at a time" too (#140, 2026-10-05).*
 
 ### 62 — Each user sees which posts they have already viewed
 - "Viewed" is per user and never written on the post (invariant 12). It is a separate per-user
@@ -752,7 +764,8 @@ with the reason given here, and he approved it.
   are `None` when the keys are absent, the same as own media. `SCHEMA.md` Gate A amendment wording
   updated. No type change; `schema_version` stays 1.
 - **H. A shared post with its own caption: unchanged.** Its `text` is the caption (Gate A as
-  approved). Recorded as a known gap (`ASSUMPTIONS.md` P16), for Gate B.
+  approved). Recorded as a known gap (`ASSUMPTIONS.md` P16), for Gate B. *Kept as a known limit
+  at Gate B by #107 (2026-10-05).*
 - **I.** The stale references in the `external-contract-verification` skill are fixed.
 - **J. A group at `max_posts`.** `fetch()` logs a warning for every group whose row count, before
   the `since` filter, is at or above `max_posts` (`>=`; amended from "equals" in the task 1.1
@@ -854,6 +867,8 @@ post was classified. In phase 1 nothing is classified, so an archived post with 
 returns to `"pending"`. In phase 2 the distinction comes from whether a classification record
 exists; settled at Gate B. No field is added now.
 
+*Closed by #89 (2026-10-05): the classification record's existence means the post was classified.*
+
 *Which reposts bring a post back, and an archived `no_images` post whose repost has no media:
 #75 E1–E3 (2026-10-04).*
 
@@ -868,7 +883,8 @@ through dedup as new (#72.2); a duplicate points at the canonical, never at anot
 - **A. A stored canonical never changes.** A post that arrives later with an earlier `posted_at`
   becomes its duplicate. The canonical is the earliest `posted_at` among posts that arrive
   together. The card shows the group's earliest publication time: a display rule, phase 3 UI
-  design.
+  design. *Display rule amended by #122 (2026-10-05): the card's main time is the last
+  publication; the earliest belongs to the repost log.*
   *Why:* the card, its alerts and "viewed" records stay stable; moving the canonical would mean
   moving everything accumulated on it, and a miss makes the apartment alert again as new.
 - **B. A duplicate gets an ordinary lifecycle record, built from its own content.** No new state;
@@ -1190,6 +1206,642 @@ approved it.
   batch.
 
 For U1, U6, U7, the minimum version and the names, no reason was recorded.
+
+---
+
+## Decisions from 2026-10-05
+
+Approved by Ron, 2026-10-05, settled with the review chat: the source of areas and streets, and the
+content of Gate B. **Approved in substance only:** English field names and exact types are not
+approved; they are proposed in `SCHEMA.md` (the Gate B draft) and approved separately. Where an
+entry says "no reason recorded", none was given.
+
+### 81 — The closed list of areas is the municipality's `שכונות` dataset, all 71 entries
+GIS layer 511, all 71 entries, with the Old North in its two parts (30 and 31). Non-residential
+entries stay in the list. **Settles the source in `BASELINE.md` §7 and the choice left open in
+`ASSUMPTIONS.md` A1a.**
+*Why:* the only verified open source with the split Ron asked for; pruning makes the list differ
+from its source.
+
+### 82 — The model classifies to the 71 entries; any grouping is a display rule
+Any grouping of the entries is decided at Gate C.
+*Why:* merging later is free; splitting later costs a reclassification.
+
+### 83 — An area is identified by its municipal number
+The number is `ms_shchuna` in layer 511; the name is a label.
+*Why:* a spelling fix must not break classified posts.
+
+### 84 — Streets per area are derived from OpenStreetMap
+The table is derived from OpenStreetMap. Its completeness is checked against the Population
+Authority's street register before the table is relied on. The municipality's address layer (GIS
+layer 527) is not used, because of its terms (`RESEARCH.md` §12). **Settles the choice left open in
+`ASSUMPTIONS.md` A1b.** No other reason recorded.
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; no street table is derived in phase 2 (#168). A street table as an aid is recorded for later (#169).
+
+### 85 — A manual corrections file overrides the derived street table
+Small and maintained by Ron. It overrides the derived table and survives regeneration. No reason
+recorded.
+
+*Amended by #110 (2026-10-05): a correction reaches only posts classified after it.*
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; there is no corrections file (#168).
+
+### 86 — A translation table from colloquial names to list entries
+It starts with:
+
+| Written | Entries |
+|---|---|
+| הצפון הישן | 30, 31 |
+| הצפון החדש | 33, 34, 35 |
+| כיכר המדינה | 34 |
+| לב העיר, לב תל אביב, מרכז העיר | 37 |
+| יפו, with no detail | 42–49 |
+| כפר שלם | 68, 69 |
+| שרונה | 40 |
+
+It stays open and grows from real posts only. An area name the model cannot map is stored as
+unclear, so that such cases can be collected. No reason recorded.
+
+*Amended by #111 (2026-10-05): code applies the table; an unmapped name is stored as written and maps to nothing.*
+
+*Partly superseded by #167 (2026-10-05): the rows become examples in the model's instructions, not a table in code.*
+
+### 87 — The model extracts; code decides the area
+**Amends `BASELINE.md` §7 and #53. Resolves the mismatch between §4 (street and area as a step
+after the model) and §7 (the model decides the area).** The model extracts the streets as written
+and the neighbourhoods the text itself points at; code decides the final areas.
+*Why:* a table fix costs no model call, and a wrong area can be traced to the model or to the
+table.
+
+*Amended by #110 (2026-10-05): the areas are stored on `Listing`, computed at classification time.*
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; code no longer computes it.
+
+### 88 — The area rules, in order
+1. An area stated in the post decides. A street only refines inside it (for example, which part of
+   the Old North), and is shown on the card.
+2. A stated area and a street the table places elsewhere: the stated area wins, with no orange.
+3. A street with no stated area: the table decides. If it gives several areas, the post carries all
+   of them, marked unclear.
+4. Two streets ("X corner Y"): the areas common to both. If there is no common area, all the areas
+   of both, marked unclear.
+5. A street not in the table and no stated area: the area is unclear. No alert, as in
+   `BASELINE.md` §7.
+6. Filtering is always by area, never by street.
+
+No reason recorded.
+
+*Clarified by #124 (2026-10-05): an area name that maps to nothing does not decide; the street does.*
+
+*Since #167 (2026-10-05) these rules are instructions to the model, not code.*
+
+### 89 — The classification is its own record per post
+Keyed by `listing_id`. The record's existence means the post was classified. **Closes the open
+point of #74:** an archived post with no rejection reason that is reposted returns to `"active"` if
+it has a classification record, and to `"pending"` if it does not. No reason recorded.
+
+### 90 — The classification record carries its provenance
+The schema version, the model name, the prompt version and the classification time.
+*Why:* the prompt will change often without a schema change.
+
+### 91 — Every marked field is a state and a value, in one structure
+The state is written, not written, or unclear. "No" is a written value. One structure serves every
+such field. **Extends #54:** the colours of `BASELINE.md` §6 stay display rules over these states.
+No reason recorded.
+
+*Amended by #109 (2026-10-05): an unclear field keeps no value.*
+
+### 92 — The model returns facts; code derives the rejection and its reason
+The reasons are Gate E's (`SCHEMA.md`).
+*Why:* a rule change needs no reclassification.
+
+### 93 — Post nature
+One of: rental offer, sublet offer, seeking, for sale, not a listing. It has no "unclear" value.
+A sublet is **not** a rejection: it is hidden through the listing-kind filter, as `BASELINE.md`
+§8 says. A post is a sublet when it says so, or when it states an explicit temporary period.
+Someone seeking a sublet is "seeking". **Keeps #58** (a sublet has no duration). No reason
+recorded.
+
+*Refined by #159 (2026-10-05): a sublet offered as an option before a regular lease is a rental offer.*
+
+### 94 — Apartment kind
+Room in a shared flat, or whole apartment, in the state structure (#91). "3 rooms, suits
+roommates" and a studio are whole apartments. No reason recorded.
+
+### 95 — Price
+A list of prices in ILS, usually one, with its source. The model reads the text. When the text has
+no price, the provider's `native_price` is used. When both exist and differ, the text wins. The
+card shows "X/Y"; filtering uses the lowest. A price per roommate for a whole apartment, or a price
+in another currency, is unclear. No reason recorded.
+
+*Amended by #114 (2026-10-05): a `native_price` below 500 is ignored; an unclear text price stays unclear.*
+
+### 96 — Entry date
+The text as written, plus a comparable value: immediate, or a date. "Start", "middle" or "end of
+November" give the 1st, the 15th or the last day. A missing year means the nearest such date after
+the post's publication. "Flexible" is unclear. **Rewords the `entry_date` trap in `CLAUDE.md`:**
+the original text is never replaced; the comparable value sits next to it. No reason recorded.
+
+*Amended by #115 (2026-10-05): the model returns the parts; the year is the nearest occurrence, before or after.*
+
+*Extended by #123 (2026-10-05): a month with no day is the 1st; "end of February" is the 28th.*
+
+### 97 — Rooms
+A number, halves allowed, always the total in the apartment. No reason recorded.
+
+### 98 — Floor
+A number, with the ground floor as 0, plus the building's floor count only when it is written. No
+reason recorded.
+
+### 99 — Size
+The apartment's size in sqm, plus the room's size only when it is written. No reason recorded.
+
+### 100 — Broker, balcony, parking, elevator, air conditioning
+Each is yes or no. A shared balcony is yes. Street parking is no. "Option for parking" is unclear.
+No reason recorded.
+
+### 101 — Arnona and house committee
+Each is an amount, or "included in the price". "All included" is unclear. "400 per two months" is
+stored as 400: the model never divides. No reason recorded.
+
+*Refined by #160 (2026-10-05): one amount covering several charges is unclear.*
+
+### 102 — Furnished
+Yes, yes partially, or no. "Option to leave furniture" is unclear. No reason recorded.
+
+### 103 — Gender, one field
+No restriction, women preferred, or women only. There is no "men only" value. Feminine-only wording
+(`מחפשות שותפה`) is women only. **Keeps #58** (women only hides; women preferred is a mark).
+*Why, for the feminine wording (Ron):* it always means that. Otherwise no reason recorded.
+
+*Amended by #117 (2026-10-05): a plain field; silence is "no restriction".*
+
+### 104 — Streets, neighbourhoods and city
+Streets: a list, as written. Neighbourhoods the text points at: a list of municipal numbers (#83).
+The city, as written, only when it is not Tel Aviv-Yafo. No reason recorded.
+
+*Amended by #111 (2026-10-05): the model returns the names as written, not numbers.*
+
+### 105 — Names next to phones
+The model returns name-number pairs. A name is kept only when its number equals one the code
+already extracted. **Settles #57.** No reason recorded.
+
+### 106 — A value that is not written is never filled in
+"3/4" or "X of Y" is shown only when the second part is in the post. No reason recorded.
+
+*Exception by #161 (2026-10-05): "דירת N שותפים" gives rooms = N (N+1 with a living room). Extended by #162: a name not in the text is dropped.*
+
+### 107 — A shared post with its own caption stays a known limit
+Its `text` is the caption; `sharedPost.text` does not reach the model. **Keeps #71 H**
+(`ASSUMPTIONS.md` P16). No reason recorded.
+
+**Ron's answers to the Gate B draft, 2026-10-05.**
+
+Approved by Ron, 2026-10-05: his answers to the 13 points of the Gate B draft's "For Ron's
+decision" list, and three card rules the review chat had left out of the earlier message. Point 13
+(the model's response against the stored record) was not decided: it belongs to the phase 2 plan
+(`PHASE_2.md`).
+
+### 108 — Gate B names and types approved as proposed, except where changed below
+The record is `Listing`. Every name and type in the draft stands unless #109–#119 changes it. No
+reason recorded.
+
+### 109 — An unclear `Marked` field keeps no value
+When `state` is `"unclear"`, `value` is `None`. Nothing read is kept. **Amends #91.** No reason
+recorded.
+
+### 110 — The final areas are stored on `Listing`, in one field
+`areas`: the municipal numbers, computed by code at classification time by #88's rules. There is no
+separate "unclear" field: the colour is derived from the list.
+- One area: definite.
+- Two or more: unclear (orange). The post matches, and alerts, if any of them is chosen.
+- Empty, and the post gave a street or an area name: unclear, no alert.
+- Empty, and the post gave no location: not written.
+
+A change to the translation table or the corrections file applies only to posts classified from
+then on. Existing posts are **not** re-derived, and no re-derive mechanism is planned (Ron: not a
+disaster). **Amends #87** (the area is still decided by code; it is now stored) and **#85** (a
+correction reaches only posts classified after it).
+*Why (Ron):* it is one field and saves repeated computation.
+
+*Partly superseded by #167 (2026-10-05): `areas` is returned by the model, not computed by code; it is still stored on `Listing`, and the colour still comes from its length.*
+
+### 111 — Code applies the translation table; the model returns area names as written
+The model returns the neighbourhood names as written: `stated_area_names`, a list of strings, `[]`
+when none, plain (not `Marked`). It replaces `stated_areas`. Code maps the names to entries through
+the translation table. **Amends #104** (no longer municipal numbers from the model) **and #86**
+("stored as unclear" becomes: the name is stored as written, and maps to nothing).
+*Why:* the table must grow from real posts, and with numbers an unmapped name would not be stored
+at all; a new row needs no model call.
+
+*Partly superseded by #167 (2026-10-05): no translation table is applied by code; `stated_area_names` stays, as written, for the card and error analysis.*
+
+### 112 — A stated area that maps to several entries, with no street to refine it, is unclear
+Orange, by #110's rule (two or more areas). Gate C gets a row: no orange for a user who chose every
+entry the name covers, a per-user display rule. No other reason recorded.
+
+*Since #167 (2026-10-05), an instruction to the model.*
+
+### 113 — The two meanings of "unclear" for the area are intended
+Several candidate areas (matches, alerts, orange) and no area at all (no alert). Confirmed by Ron.
+No reason recorded.
+
+### 114 — A `native_price` below 500 ILS is ignored
+Below 500 the post has no price from `native_price`. A constant, not config. It applies to the
+native fallback only, never to a price read from the text. When the text's price is unclear and a
+`native_price` exists, the price stays unclear: the fallback is used only when the text has no
+price at all. **Amends #95.**
+*Why:* no monthly rent in Tel Aviv is below 500. For the rest, no reason recorded.
+
+### 115 — The entry date: the model returns the parts; code completes the year
+The model returns the day and the month (and the year, when written), or "immediate". Code
+completes a missing year with the occurrence **nearest** to the post's publication date, before or
+after: "1.10" in a post of 5.10 is this year. Computed on the UTC date, no exception to invariant 9.
+The stored field does not change. The year is never displayed. **Amends #96** ("the nearest date
+after the publication" becomes "the nearest").
+No reason recorded.
+
+*Extended by #123 (2026-10-05).*
+
+### 116 — Arnona and house committee keep no period
+"400 per two months" and "400 a month" are both stored as 400. Accepted as a known limit. No
+reason recorded.
+
+### 117 — Gender is a plain field; silence is "no restriction"
+`"no_restriction"`, `"women_preferred"` or `"women_only"`, not `Marked`. A post that says nothing
+about gender is `"no_restriction"`. Ron had approved this earlier; it was missing from the review
+chat's earlier message, an omission, not an open question. **Amends #103** (no state structure).
+No reason recorded.
+
+### 118 — Sizes are decimals; a basement is floor -1
+`size_sqm` and `room_size_sqm` are decimal numbers. `floor` stays a whole number; a basement is -1.
+**Extends #98, #99.** No reason recorded.
+
+### 119 — Five area names get a hand-corrected display label
+Entries 5, 7, 17, 18 and 49, whose geresh or parenthesis the source places at the logical start.
+The source name is kept verbatim next to the label. **Extends #83** (the name is a label).
+No reason recorded.
+
+### 120 — Rooms on a room post
+Shown as "1 of N" when the apartment's total is written, and as a room with no "of" when it is
+not. The "1" comes from the apartment kind, not from the text. A display rule. Approved by Ron
+2026-10-05; omitted from the review chat's earlier message. No reason recorded.
+
+### 121 — Size on a room post
+"X sqm for the room, of Y" when both sizes are written; "X sqm for the room" when only the room's
+is. A display rule. Approved by Ron 2026-10-05; omitted from the review chat's earlier message. No
+reason recorded.
+
+### 122 — The card's main time is the last publication
+The latest repost's time, shown relative: minutes up to an hour, hours up to 24 h, days after
+that. Earlier publications are in the repost log. **Amends #75 A's display rule** (the card no
+longer shows the group's earliest publication as its main time; the earliest time belongs to the
+repost log). Approved by Ron 2026-10-05; omitted from the review chat's earlier message. No reason
+recorded.
+
+**Gate B closed, the provider, and the phase 2 plan, 2026-10-05.**
+
+Approved by Ron, 2026-10-05: his answers to Gate B's two open points, the move to OpenAI as the
+model provider, and his answers to the 22 points of the phase 2 draft (`PHASE_2.md`). Where an
+item says "proposed", only the proposal exists; the names wait for Ron.
+
+### 123 — An entry month with no day is the 1st; "end of February" is the 28th
+"כניסה בנובמבר" gives the 1st of the month, state written. "End of February" gives the 28th, in
+any year. The year is completed as in #115. **Extends #96 and #115.** No reason recorded.
+
+### 124 — An unmapped area name with a placed street: the street decides
+When the post's area names map to nothing in the translation table and a street is in the street
+table, the street decides, as if no area were stated (#88.3). The unmapped name is still stored in
+`stated_area_names` and reported (#111). **Clarifies #88.1.** No reason recorded.
+
+*Since #167 (2026-10-05), an instruction to the model.*
+
+### 125 — Gate B approved
+With #123 and #124 applied, Gate B (`Listing`) is approved, 2026-10-05: content #81–#107, names
+and types #108–#119, the last two points #123–#124. The model's response shape is not part of
+it: its names are proposed separately (#137). No reason recorded.
+
+### 126 — The model provider is OpenAI, for now
+Classification uses the OpenAI API. Gemini stays a researched alternative (`RESEARCH.md` §13); its
+free tier is a possible later switch, not planned. **Replaces the Gemini choice of `BASELINE.md`
+§4** (the model line there is settled after the spike). #22 holds unchanged: the response schema
+is derived from pydantic at runtime.
+*Why (Ron):* he already has a funded OpenAI API account, and this saves opening a Google project.
+He will watch the number of calls and the cost of a real working day.
+
+### 127 — The first model to try is `gpt-6-luna`
+The cheapest model on OpenAI's pricing page as the review chat read it on 2026-10-05; verified
+against the documentation the same day (`RESEARCH.md` §15). If it misses the regression bar, the
+next model and its price go back to Ron: no other model is picked without him. No reason
+recorded.
+
+### 128 — `OPENAI_API_KEY` is read only in the entry point, never logged
+It is in `.env`. Like `APIFY_TOKEN` (#79), only the command's entry point reads it, and it never
+appears in a log line. No reason recorded.
+
+### 129 — Rules name "the model", not a provider
+Where a rule named Gemini (`CLAUDE.md` invariants 8 and 11 and the seams, `BASELINE.md` §2 and
+§4, `SCHEMA.md`), it now says "the model". History entries and research keep their wording. No
+reason recorded.
+
+### 130 — The spike, revised
+`gpt-6-luna` only, about 20 hard posts from the store. It answers: is the schema accepted; tokens
+per post (input, cached, output, reasoning); the real cost per post; the behaviour at the
+temperature settings the model allows; what failures look like. **Cap $2, enforced by the script
+from the usage metadata.** The plan and its cost are presented; it runs only on Ron's separate go.
+**Replaces points 2, 3, 4, 5, 19 and 22 of the phase 2 draft** (the tier, the Gemini model, the
+temperature, the Gemini spike, the first run's cap, and the model line). No reason recorded.
+
+### 131 — `Listing` and the lifecycle record are written in one transaction
+Point 6 of the draft, as recommended: one Repository method writes both, plus `get_listing` and a
+query for pending canonicals. A seam contract change (`CLAUDE.md`).
+*Why:* a `Listing` saved with the lifecycle still `"pending"` would be classified and billed
+again; the reverse leaves an `"active"` post with no fields.
+
+### 132 — The area files live in `reference/`
+Point 7, as recommended: `reference/` in git, holding `areas.yaml`, `area_aliases.yaml`,
+`street_areas.generated.yaml` and `street_areas.corrections.yaml`.
+*Why:* no personal data, they need history, and `config/` holds collection settings only.
+
+### 133 — The street derivation: Geofabrik, `osmium` and `shapely`, a 15 m border buffer
+Point 8, as recommended: streets from Geofabrik's `israel-and-palestine` extract, not Overpass;
+`osmium` (pyosmium) and `shapely` in a dev-only dependency group, outside the package; a street
+within about 15 m of a border belongs to both areas, tuned on known border streets.
+*Why:* a file is repeatable and can be kept with its date (Overpass timed out twice); standard
+local libraries, no server; streets drawn on a boundary touch both polygons only by rounding.
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; no derivation and no `osmium`, `shapely` or `pyproj` (#168).
+
+### 134 — The completeness bar is 95%
+Point 9, as recommended: at least 95% of the register's official Tel Aviv streets found in OSM,
+every miss listed for Ron. Below it, Ron chooses between corrections by hand and another source.
+No reason recorded.
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; no completeness check (#168).
+
+### 135 — Written names are matched through a lookup key; invariant 8 widened
+Point 10, option B. **Amends invariant 8:** normalized text exists only to compute a hash, or a
+lookup key for street and area names. It is still never stored, never displayed and never sent to
+the model. One normalization, the existing one (`textnorm`). The derivation reports every
+collision among Tel Aviv street names (two names giving one key) before the table is relied on.
+*Why (the draft's):* the same function on both sides cannot drift, and it absorbs spelling
+variants without one row per variant.
+
+*Extended by #158 (2026-10-05): exact key first, then leading Hebrew prefix letters stripped; collisions reported.*
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; no lookup key; invariant 8 returns to its original wording (#168).
+
+### 136 — The unmatched share is reported, with no alarm level, in phase 2
+Point 11, as recommended. No reason recorded.
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; no unmatched share (#168).
+
+### 137 — The model's response is a separate pydantic model, with a drift test
+Point 12, as recommended: a response model next to `Listing`; a contract test asserts that every
+`Listing` field is either in the response model with the same type or in an explicit list of
+code-filled fields. Its own field names (the entry-date parts, the phone pair) are **proposed**
+in `SCHEMA.md` and wait for Ron (invariant 1).
+*Why:* the two shapes really differ, and the test turns drift into a failing test, which is what
+#22 guards against.
+
+*Names approved by #151 (2026-10-05).*
+
+### 138 — Classification runs as a separate job, `classify_pending`
+Point 13, as recommended. Run by hand after a collection run in phases 2–4; the phase 5 scheduler
+runs it after each collection run.
+*Why:* the model can never touch collection or the watermark; a failed post stays pending for the
+next run; the first paid run over the stored posts is the same command.
+
+### 139 — A post that fails classification three times stops being retried
+Point 14, option A, **a Gate E amendment**: two fields on `PostLifecycle`, a count of failed
+classification runs and the last error. After 3 failed runs the job skips the post, which then
+shows in the admin's pending list with its reason. Names and types are **proposed** in
+`SCHEMA.md` and wait for Ron.
+*Why (the draft's):* otherwise a post that always fails is paid for on every run, forever.
+
+*Names, types and rules approved by #152 (2026-10-05).*
+
+### 140 — The job and `run_once` never run at once
+Point 15, as recommended: in phase 2 both are started by hand, never together; phase 5's "one run
+at a time" (#61) covers the job too. The concurrent-write choice stays with phase 3. No reason
+recorded.
+
+### 141 — A post edited after classification keeps its `Listing`
+Point 16, as recommended, as a post with a verdict keeps its state (#73.2). No reason recorded.
+
+### 142 — The regression set: about 50 posts, deciding fields labelled blind
+Point 17: about 50 posts; labelling option C (Ron labels the deciding fields without seeing the
+model's answer, and corrects the rest from it). The pass bar as proposed: `post_nature` and
+`other_city` no error; `apartment_kind`, `price`, `gender`, `areas` at least 95% exact; every
+other field at least 90%; no value filled in where the label says not written. **Added by Ron:**
+a post Ron marks as ambiguous is not counted.
+*Why (the bar, the draft's):* it follows the cost of each mistake.
+
+### 143 — Labelling and corrections through local static pages in `data/labeling/`
+Points 17 and 18, Ron's request. A labelling page, generated as a static HTML file in
+`data/labeling/`, with no server and no network: per post, the original text and controls for the
+deciding fields only (post nature, apartment kind, price, gender, entry date, streets, area names,
+other city), radio buttons for closed values, short inputs for the rest, and an "ambiguous" mark.
+It never shows the model's answer for those fields. Progress is kept in the browser; an export
+button downloads one file with every answer, which Ron moves into `data/labeling/` once and the
+code reads from there. The other fields are corrected afterwards from the model's output. The
+review report (`PHASE_2.md` 2.7) uses the same mark-and-export mechanism for corrections,
+**replacing the hand-written CSV** of the draft. The file names are fixed in `PHASE_2.md`.
+No reason recorded.
+
+### 144 — Reclassify: manual, replace with a diff report; no bulk reclassify planned
+Point 20, as recommended: started by hand only; the new `Listing` replaces the old, after a diff
+report is written to `data/`; flagged posts keep their flag and state. A change to a table still
+applies to new posts only (#110). Ron does not expect to reclassify 40 days of posts: no bulk
+estimate is part of the phase's DoD. No reason recorded.
+
+### 145 — Gate D is settled after the first paid run
+Point 21, as recommended: a read-only script lists about 30 candidate pairs after the first paid
+run; Ron judges them; dedup B is built in phase 2 only if rewritten reposts are common, otherwise
+Gate D waits until after phase 3 with the measured rate recorded.
+*Why:* a key designed before classified data is a guess, and a missed duplicate costs one model
+call, not a correctness failure.
+
+**Ron's answers to `PHASE_2.md` §4, and the spike's go, 2026-10-05.**
+
+### 146 — The 30-day abuse-monitoring log is accepted
+No Zero Data Retention request is made. OpenAI's abuse-monitoring logs may keep the posts sent to
+the model, phone numbers included, for up to 30 days (`ASSUMPTIONS.md` O6).
+*Why (Ron):* the posts are public, and the API does not train on them.
+
+### 147 — Every call sends `store: false`
+The Responses API would otherwise store each response for 30 days (O6). No reason recorded.
+
+### 148 — Reasoning effort starts at `none`
+`low` only if accuracy at `none` is not enough. Decided on the spike's numbers, together with
+temperature, which exists only at `none` (O4). No reason recorded.
+
+*Settled by #157 (2026-10-05): effort `none`, temperature 0.*
+
+### 149 — `model_name` keeps its rule; the reported version is logged too
+`Listing.model_name` stays "the model identifier as sent in the call" (#108). The model value the
+response itself reports is also logged, since `gpt-6-luna` is an alias with no dated snapshot
+(O1). No reason recorded.
+
+### 150 — Explicit prompt caching, one breakpoint after the instructions
+A post is never written to the cache (O7). No reason recorded.
+
+### 151 — The response model's names are approved
+`ListingExtraction`, as proposed in `SCHEMA.md` (#137): `entry_date_parts` (`immediate`, `day`,
+`month`, `year`) and `phone_name_pairs` (`phone`, `name`). No reason recorded.
+
+### 152 — The Gate E classification-failure fields are approved
+`classification_failures` (`int`) and `last_classification_error` (`str` / `None`) on
+`PostLifecycle`, with the rules proposed in `SCHEMA.md` (#139): left as they are after a later
+success; reset by hand only; a failed reclassify not counted; `schema_version` 2, a version-1
+record reading as 0 and `None`. Docs only now; the code comes with task 2.5. No reason recorded.
+
+### 153 — The first paid run's cap is $1
+Its go is separate and not given. No reason recorded.
+
+### 154 — The review report and `corrections.json` live in `data/labeling/`
+Beside the labelling page: `data/labeling/review.html` and `data/labeling/corrections.json`. The
+proposed shape of `labels.json` and `corrections.json` is approved (`PHASE_2.md` 2.6). No reason
+recorded.
+
+### 155 — The key belongs to a dedicated OpenAI project
+The key in `.env` belongs to a project Ron opened for this app. The account holds about $9 of
+credit. The usage tier is not confirmed: if a call is refused for the tier, the run stops and is
+reported, with no workaround. No reason recorded.
+
+### 156 — The spike runs, as planned
+Ron's go for `PHASE_2.md` 2.1: `gpt-6-luna` only, the 20 posts, three settings, two passes each,
+three failure probes, 123 calls, a $2 cap enforced by the script before every call and never
+raised. If strict mode rejects the derived schema, the throwaway response model may be adjusted
+until it passes, every change recorded; a change to an approved name or shape is listed for Ron,
+not kept. One reasonable first prompt, not tuned for accuracy. No reason recorded.
+
+**Ron's decisions after the spike, 2026-10-05.**
+
+### 157 — The setting: effort `none`, temperature 0
+Confirmed on the regression set by running it twice (temperature 0 is not deterministic,
+`ASSUMPTIONS.md` O12). `low` stays the fallback. **Settles #148.** No reason recorded.
+
+### 158 — Hebrew prefix letters on street and area names are handled by code
+The model keeps returning names as written. Matching tries the exact lookup key first; only when
+that fails, it strips leading Hebrew prefix letters (ב, ל, מ, ה, ו, ש, כ and their combinations)
+and tries again, so names that begin with one of these letters (בבלי, התקוה, לבנה) are not harmed.
+Every collision this creates among the 71 names, the translation table and the street table is
+reported. **Extends #135.**
+*Why (Ron):* the result is deterministic and can be checked against the text; the spike showed the
+model changing a name unasked.
+
+**Status: superseded by #167 (2026-10-05):** the model decides the area; no prefix-letter rule (#168).
+
+### 159 — A sublet is only an offer that is itself temporary
+A sublet offered as an option before a regular lease (the spike's post 5) is a rental offer.
+**Refines #93.** No reason recorded.
+
+### 160 — One amount covering several charges is unclear
+"200 for arnona, internet and cable" makes `arnona` and `house_committee` unclear, like "all
+included". **Refines #101.** No reason recorded.
+
+### 161 — "דירת N שותפים" gives rooms = N
+"דירת N שותפים" or "דירת N שותפות" gives `rooms` = N; N+1 when the post says there is a living
+room. Ron's rule, **an explicit exception to #106** (a value not written is never filled in). No
+reason recorded.
+
+### 162 — A name the post does not contain is dropped; the model never computes
+A check in code: a street or area name the model returns that does not appear in the post's text
+is dropped from the `Listing` and counted in the report. The prompt says the model never computes
+a value (the spike once turned "3.50*3.50" into 12.25 sqm). **Extends #106 and invariant 11.** No
+reason recorded.
+
+*Kept by #167 (2026-10-05): the check that drops a name not in the text stays.*
+
+### 163 — Classification never touches the source text
+The model receives a copy and returns a separate answer; the classification job never writes a
+`RawPost`; the card always shows the stored original. A new invariant in `CLAUDE.md`, with a test:
+the stored `RawPost` is identical before and after a classification run. Ron's rule; no further
+reason recorded.
+
+### 164 — The first paid run has no go yet
+It comes after the build and a passing regression set, in `PHASE_2.md`'s order. No reason
+recorded.
+
+### 165 — The regression set holds a real "seeking" post and a real Jaffa post from the store
+The spike's two were for-sale posts picked by a wrong pattern. No reason recorded.
+
+### 166 — The spike's prompt is a first version
+Input for task 2.4, not approved text. No reason recorded.
+
+**Ron's decisions of 2026-10-05: the model decides the area, reporting a wrong classification,
+and tasks 2.2 and 2.3.**
+
+### 167 — The model decides the area
+**A change of direction. Supersedes #84, #85, #87, #133, #134, #135, #136 and #158, and the parts
+of #86, #110 and #111 described below.** The model returns the areas itself: municipal numbers
+from the 71-entry list (#81), which is given in its instructions. `areas` moves into the model's
+response (`ListingExtraction`) and is still stored on `Listing` as approved (`list[int]`, the colour
+derived from its length, #110). `streets` and `stated_area_names` stay, as written, for the card
+and for error analysis; the check that drops a name not found in the post's text stays (#162). The
+area rules of #88, #112 and #124 become instructions to the model: a stated area decides; a street
+only refines inside it; several possible areas are all returned; nothing the model can place
+returns no area. The translation table's rows (#86) become examples in the instructions, not a
+table in code.
+*Why (Ron):* deterministic matching will keep failing on how posters write, where a person or a
+model understands at once; the model never touches the source text, so a wrong area is visible
+beside the original text and can be counted and corrected.
+
+### 168 — What leaves phase 2 with #167
+The OSM street table, the corrections file, the alias file, the derivation script, the three
+downloads, `osmium` / `shapely` / `pyproj`, the completeness check, the lookup key, the
+prefix-letter rule, the hyphen step and the unmatched share. **Invariant 8 returns to its
+original wording:** normalized text exists only to compute a hash (the lookup-key widening of #135
+is withdrawn). Why: #167's.
+
+### 169 — A street table as an aid, recorded for later
+Only if the regression set shows the model is weak on posts that give a street and no area.
+`BACKLOG.md`, Future. No reason recorded.
+
+### 170 — Known limit: a post with only a street
+Its area rests on what the model knows of Tel Aviv. Measured by the regression set's 95% bar on
+`areas` (#142). No reason recorded.
+
+### 171 — The labelling page: areas picked from the 71
+Ron picks the areas from the 71 (multi-select, searchable) instead of only writing names
+(`PHASE_2.md` 2.6). No reason recorded.
+
+### 172 — Reporting a wrong classification, phase 2
+In the review report (`PHASE_2.md` 2.7), the corrections export also yields a count of errors per
+field, so weak fields are visible, and every corrected post joins the regression set. Ron's
+requirement; no further reason recorded.
+
+### 173 — Reporting a wrong classification, phase 3 (Gate C and the UI design)
+A "wrong classification" action on a card, naming the field. The post moves to the rejected list
+for everyone, with its own reason. The admin sees the reports grouped by field, corrects by hand
+and restores, or leaves the post out. A correction is stored apart from the model's answer, so the
+card shows the corrected value and the model's answer stays for error analysis. It needs a new
+rejection reason and a corrections record: their schema is settled at Gate C. Ron's requirement;
+no code now.
+
+### 174 — Task 2.2: the plan approved, with Ron's answers
+1. The method names `save_classification`, `get_listing` and `find_pending_canonicals`: approved.
+2. **The layout: option C.** The `listings` table has its own layout row (`store.listings`) and is
+   created when absent. Layout 1 is untouched, #65 stands, and there is no migration command and
+   no manual step. *Why (Ron):* no extra steps, on the laptop or on the server.
+3. Reading version-1 lifecycle records as version 2 in memory: approved.
+4. The proposed validators (prices above 0, `areas` sorted with no repeats, phone names in the
+   stored phone format): approved.
+5. #89 is built in dedup in this task.
+6. `ListingStub` is replaced in steps: `classify/` in task 2.4; `policy/` and `notify/` in phases 3
+   and 4.
+7. No migration runs on the real store: the new code opens the existing store and leaves its posts
+   and records untouched, with a test on a layout-1 file.
+
+No reason recorded except for point 2.
+
+### 175 — Task 2.3, reduced
+`reference/areas.yaml` (the 71 entries from the layer-511 fixture, names verbatim, the five display
+labels of #119, a source block) and one module, `tlv_hunter/areas/reference.py`, the only reader of
+`reference/`. `PHASE_1.md`'s YAML anchor is reworded to allow it. Nothing else from the plan of
+2026-10-05 (superseded by #167). No reason recorded.
 
 ---
 

@@ -12,6 +12,10 @@ corrections made since (Gate A, task 1.2, Phase 0 build) folded in.
 **Updated:** 2026-10-04 with the results of spike 1.1a (`SPIKE_1_1a.md`), the watermark rules
 of task 1.13 (`DECISIONS.md` #78), the four real runs that closed phase 1 (§11), and the
 candidate sources for Tel Aviv areas and streets (§12).
+**Updated:** 2026-10-05 for the phase 2 plan: the Gemini API documentation (§13), the street
+register and the OSM extract (§14). Later the same day: the OpenAI API documentation (§15), the
+provider since `DECISIONS.md` #126; §13 kept as a researched alternative, with Ron's AI Studio
+figures.
 
 ---
 
@@ -195,6 +199,10 @@ hashing, so that two posts with the same content but different nikud, quote mark
 emoji produce the same hash. It is aggressive on purpose. Its output is never stored, never
 displayed, and never sent to the model.
 
+*Since `DECISIONS.md` #135 (2026-10-05) the same normalization also gives the lookup key for
+matching street and area names to the reference tables (invariant 8, widened). The key is never
+stored, displayed or sent to the model either.*
+
 ---
 
 ## 6. Dedup findings
@@ -375,3 +383,191 @@ lists per neighbourhood; commercial, terms not read. The municipality's GIS laye
 grouped (for example, by quarter); whether the municipality's two-part Old North is the split
 (Madlan's is four); how a derived street table is kept current; and, for the address layer, its
 terms.
+
+---
+
+## 13. Gemini API: what the documentation says (read 2026-10-05)
+
+**A researched alternative.** The provider is OpenAI since `DECISIONS.md` #126 (§15); Gemini's
+free tier is a possible later switch, not planned.
+
+Read under the `external-contract-verification` skill for the phase 2 plan. **Documentation only:
+no call was made.** Each item is tagged in `ASSUMPTIONS.md` G1–G9: what a response would show
+stays `ASSUMED` or `UNKNOWN` until one is seen. Pages and their "last updated" dates: models and pricing 2026-10-01,
+billing 2026-09-28, thinking 2026-09-25, structured outputs and token counting 2026-09-23, batch
+mode 2026-09-17, rate limits 2026-09-02, terms 2026-04-28 (all under
+`ai.google.dev/gemini-api/`).
+
+**Models.** Stable Flash models: `gemini-3.8-flash` (the newest), `gemini-3.7-flash`,
+`gemini-3.6-flash`, `gemini-3.5-flash`. Stable Flash-Lite: `gemini-3.5-flash-lite`,
+`gemini-3.1-flash-lite`. `gemini-3-flash-preview` is a preview. The 2.5 models are "not
+deprecated", but access is limited "to users who have actively used them in the past"; for new
+projects the page names "3.5 Flash-Lite or 3.8 Flash".
+
+**Price, paid tier, per 1M tokens (standard / batch):**
+
+| Model | Input | Output, thinking included |
+|---|---|---|
+| `gemini-3.8-flash` | $0.75 / $0.375 through 2026-12-31; $1.50 / $0.75 from 2027-01-01 | $3.75 / $1.875 through 2026-12-31; $7.50 / $3.75 from 2027-01-01 |
+| `gemini-3.6-flash` | Same as 3.8 Flash | Same as 3.8 Flash |
+| `gemini-3.5-flash-lite` | $0.30 / $0.15 | $2.50 / $1.25 |
+
+Every model also has a free tier. "Used to improve our products": **Yes** on the free tier, **No**
+on the paid tier, for every model.
+
+**Terms, data use.** Unpaid quota: Google uses submitted content and responses "to provide,
+improve, and develop Google products", human reviewers "may read, annotate, and process your API
+input and output", and "Do not submit sensitive, confidential, or personal information to the
+Unpaid Services." Paid Services (the API through a Cloud project with an active billing account):
+prompts and responses are not used to improve products, are processed under the Data Processing
+Addendum, and are logged "for a limited period of time" for abuse detection and legal
+disclosures. The EEA / Switzerland / UK exception (paid terms on the free tier) does not cover
+Israel.
+
+**Thinking.** On by default. `thinking_level` per model: `gemini-3.8-flash` default medium,
+levels low / medium / high (**no "minimal"**); `gemini-3.6-flash` and `gemini-3.5-flash` default
+medium, minimal available; `gemini-3.5-flash-lite` default **minimal**. Thinking tokens are billed
+as output. The page advises minimal or low thinking for classification.
+
+**Temperature.** "For all Gemini 3 models, we strongly recommend keeping the temperature parameter
+at its default value of 1.0"; below 1.0 "may lead to unexpected behavior, such as looping or
+degraded performance". The migration notes advise removing a low temperature set for
+determinism. This contradicts `BASELINE.md` §4's `temperature=0`, which was set for an earlier
+Flash generation.
+
+**Structured output.** A JSON Schema subset: types string, number, integer, boolean, object,
+array, and null through a type array; `enum`, `format` (date-time, date, time), `minimum` /
+`maximum`, `items`, `prefixItems`, `minItems` / `maxItems`, `properties`, `required`,
+`additionalProperties`, `title`, `description`. The examples also use `anyOf` and `$ref`, and pass
+`Model.model_json_schema()` from pydantic. Limits: "Not all JSON Schema features are supported",
+and "Very large or deeply nested schemas may be rejected". The docs advise validating values in
+the application: output is valid JSON, not necessarily right.
+
+**API surface and SDK.** The doc examples now use the Interactions API
+(`client.interactions.create(..., response_format={...})`). The Python SDK `google-genai` 2.28.0
+(PyPI, 2026-10-02, Python ≥ 3.10) still documents `models.generate_content` with
+`GenerateContentConfig.response_json_schema`, `response_schema` and `temperature`. The thinking
+page says the Interactions API can keep server-side state (`store: true`).
+
+**Rate limits and spend.** Per project, not per key; requests per day reset at midnight Pacific.
+The per-model numbers are not published: they are shown in AI Studio for the project's tier. Tier
+1 (an active billing account) has a spend-based limit of $10 per 10 minutes and a monthly billing
+cap of $250. A project spend cap can be set in AI Studio ("Experimental"); billing data can lag
+"up to around 10 minutes" and overages beyond the cap are possible, batch jobs included. New
+accounts default to Prepay.
+
+**Rate limits read by Ron in AI Studio, 2026-10-05, for `gemini-3.5-flash-lite`:** free tier 500
+requests a day and about 10 a minute (derived from the tier comparison); Tier 1 150,000 a day,
+4,000 a minute, 4M tokens a minute. Ron's existing Google project is Tier 1, so a free-tier run
+would need a separate project with no billing.
+
+**Batch.** 50% of the standard price, a target turnaround of 24 hours, jobs expire after 48 hours;
+structured output is supported in batch requests.
+
+**Tokens.** "A token is equivalent to about 4 characters" (for English; Hebrew not stated). The
+real counts come back in each response's usage metadata.
+
+## 14. The street register and the OpenStreetMap extract (read 2026-10-05)
+
+*Not used in phase 2 since `DECISIONS.md` #167 (the model decides the area); kept for #169, a street
+table as an aid, if the regression set calls for it.*
+
+For the street table (`DECISIONS.md` #84). Read only; nothing downloaded into the repo.
+
+- **The Population Authority's register** on data.gov.il: two datasets, both updated
+  2026-10-05, no licence stated. `רשימת רחובות ישראל` (resource
+  `9ad3862c-8391-4b2f-84a4-2d4c68625f4b`): `סמל_ישוב`, `שם_ישוב`, `סמל_רחוב`, `שם_רחוב`;
+  **2,768 rows for Tel Aviv-Yafo** (locality code 5000). `רשימת רחובות בישראל - קובץ עם
+  סינונימיים` (resource `bf185c7f-1a4e-4662-88c5-fa118a244bda`): `city_code`, `street_code`,
+  `street_name`, `street_name_status` (`official` or `synonym of N`), `official_code`; **7,423
+  rows for code 5000: 2,768 official names and 4,655 synonyms** (for example `בן יהודה סמ` and
+  `בן יהודה סמטה` for `סמ בן יהודה`). The register also lists places that are not streets (for
+  example `דיזנגוף סנטר`). Both readable through the CKAN `datastore_search` API.
+- **OpenStreetMap:** Geofabrik's `israel-and-palestine` extract, ODbL 1.0, 120 MB as PBF, last
+  modified 2026-10-03. The public Overpass API timed out twice on 2026-10-04 (§12).
+- **Layer 511's geometry** is stored in EPSG:2039 (Israeli TM Grid). Whether the service returns
+  it in WGS84 on request (`outSR=4326`) was not tried.
+
+## 15. OpenAI API: what the documentation says (read 2026-10-05)
+
+The model provider since `DECISIONS.md` #126. Read under the `external-contract-verification`
+skill from `developers.openai.com/api/docs` (`platform.openai.com/docs` redirects there): the
+models page, the `gpt-6-luna` model page, pricing, and the guides on structured outputs,
+reasoning, prompt caching, batch, rate limits, spend limits, data controls ("your data"), the
+GPT-6 family and the Responses migration. The pages carry no "last updated" date. **No call was
+made.** Each item is tagged in `ASSUMPTIONS.md` O1–O11. The Services Agreement itself
+(`openai.com/policies/services-agreement/`) returned HTTP 403 to every fetch, so it was not read.
+
+**The model.** `gpt-6-luna`, "GPT-6 Luna", presented as the family's model "for cost-sensitive,
+high-volume workloads". Listed among the current flagship models, next to `gpt-6-astra` and
+`gpt-6.1-sol`. Its snapshot list holds only the alias `gpt-6-luna`: no dated snapshot is listed.
+Context window 1,050,000 tokens, maximum output 128,000, knowledge cutoff 2026-05-18. Text and
+image in, text out. Endpoints include `v1/responses`, `v1/chat/completions` and `v1/batch`.
+Structured outputs: supported.
+
+**Price, per 1M tokens** (the model page and the pricing page agree; the figures the review chat
+read are confirmed):
+
+| | Input | Cached input | Cache writes | Output |
+|---|---|---|---|---|
+| Standard | $0.10 | $0.01 | $0.125 | $0.50 |
+| Batch, Flex | $0.05 | $0.005 | $0.0625 | $0.25 |
+
+Cached input is 10% of input; a cache write is 1.25× input. A prompt over 272K input tokens is
+priced at 2× input and 1.5× output for the whole request (not reachable here). Fast mode is 2×.
+Among the flagship models on the pricing page it is the cheapest; the "All models" table was not
+read.
+
+**Reasoning.** `reasoning.effort` on `gpt-6-luna`: `none`, `low`, `medium` (**the default**),
+`high`, `xhigh`, `max`. Reasoning tokens are billed as output and count against
+`max_output_tokens`; a response cut by `max_output_tokens` comes back `incomplete`, possibly
+after reasoning tokens were billed with no visible output. The usage object reports
+`reasoning_tokens`.
+
+**Temperature.** The GPT-6 guide: "When reasoning effort is not `none`, remove `temperature`,
+`top_p`, and `top_logprobs`." So temperature is accepted only at effort `none`. The docs do not
+recommend a value for this model.
+
+**Structured outputs.** A JSON Schema subset, "strict": types string, number, boolean, integer,
+object, array, enum, `anyOf`; string `pattern` and `format` (`date-time`, `time`, `date`,
+`duration`, `email`, `hostname`, `ipv4`, `ipv6`, `uuid`); number `multipleOf`, `minimum`,
+`maximum` and exclusive forms; array `minItems`, `maxItems`. Rules: the root must be an object,
+not `anyOf`; **every field must be required** (an optional value is a union with `null`);
+`additionalProperties: false` on every object; definitions (`$defs`) and recursion are supported;
+keys come back in schema order. Not supported: `allOf`, `not`, `dependentRequired`,
+`dependentSchemas`, `if` / `then` / `else`. Limits: 5,000 object properties and 10 levels of
+nesting; 120,000 characters of property names, definition names and enum values; 1,000 enum values
+in all. The first request with a new schema has extra latency. A safety refusal comes back as a
+`refusal` instead of the JSON. The Python SDK takes a pydantic model directly:
+`client.responses.parse(..., text_format=Model)` returns `output_parsed`.
+
+**Prompt caching.** On by default. For GPT-5.6 and later: the minimum cacheable prefix is 1,024
+visible input tokens; a write costs 1.25× input, a read 0.1×. Two modes through
+`prompt_cache_options.mode`: **implicit** (the breakpoint at the end of the latest eligible
+message, so the post itself would be written to the cache on every call) and **explicit**
+(breakpoints only where the request marks them with `prompt_cache_breakpoint`, content after the
+last one is billed as plain input with no write charge). A cached prefix lives at least 30
+minutes after its last write or read (`prompt_cache_options.ttl`, only `"30m"`). Caches are per
+organization, on individual machines; above about 15 requests a minute routing can miss.
+`cached_tokens` and `cache_write_tokens` are reported in the usage.
+
+**Data use and retention** (the data-controls guide): "data sent to the OpenAI API is not used to
+train or improve OpenAI models (unless you explicitly opt in)". Abuse-monitoring logs, which can
+hold prompts and responses, are kept "for up to 30 days" by default for every endpoint, longer if
+the law requires. **The Responses API stores application state for 30 days by default** ("or when
+the `store` parameter is set to `true`"; "Responses are stored by default … To disable storage …
+set `store: false`"). `/v1/batches` keeps its files "until deleted"; a batch's output file is
+deleted 30 days after completion. Zero Data Retention and Modified Abuse Monitoring exist, by
+prior approval only.
+
+**Rate limits and spend.** Per organization and project. For `gpt-6-luna`: the free tier is "not
+supported"; Tier 1: 500 requests and 500,000 tokens a minute, a batch queue of 5,000,000 tokens.
+Tier 1 qualifies at $5 paid, with a $100 monthly usage limit; Tier 2 at $50, $500 a month. A
+**hard spend limit** can be set per organization or project: requests then fail with a 429
+(`project_spend_limit_exceeded`), but "enforcement is not instantaneous, so recorded spend can
+slightly exceed" it. Responses carry `x-ratelimit-*` headers and, on a 429, `Retry-After`.
+
+**Batch.** 50% off, a separate and higher rate-limit pool, a fixed 24-hour completion window;
+`/v1/responses` is a supported batch endpoint.
+
+**Python SDK.** `openai` 3.24.0 on PyPI (2026-10-02), Python ≥ 3.10.

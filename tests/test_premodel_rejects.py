@@ -138,7 +138,7 @@ def test_unannotated_post_raises(spike_items) -> None:
 def test_initial_lifecycle_of_a_passing_post(spike_posts) -> None:
     post = _with_photos(spike_posts)
     assert initial_lifecycle(post) == PostLifecycle(
-        schema_version=1,
+        schema_version=2,
         listing_id=post.listing_id,
         state="pending",
         rejection_reason=None,
@@ -147,6 +147,8 @@ def test_initial_lifecycle_of_a_passing_post(spike_posts) -> None:
         flag_note=None,
         last_published_at=post.posted_at,
         images=[],
+        classification_failures=0,
+        last_classification_error=None,
     )
 
 

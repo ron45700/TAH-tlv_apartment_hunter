@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from tlv_hunter.contracts.listing import LISTING_SCHEMA_VERSION, Listing
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.jobs.run_once import SQLITE_FILENAME
 from tlv_hunter.providers.thedoor import to_raw_post
@@ -74,6 +75,47 @@ def load_spike_1_1a(suffix: str = "") -> Any:
     """Spike 1.1a: run 1's dataset (no suffix), `_run` (run object), `_input` (its INPUT), or
     `_control` (the control run's dataset)."""
     return _load_fixture(SPIKE_1_1A_PREFIX.with_name(SPIKE_1_1A_PREFIX.name + suffix + ".json"))
+
+
+NOT_WRITTEN = {"state": "not_written", "value": None}
+CLASSIFIED_AT = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
+
+
+def make_listing(listing_id: str, **changes: Any) -> Listing:
+    """A valid Listing with every Marked field not written; `changes` override any field."""
+    fields: dict[str, Any] = {
+        "schema_version": LISTING_SCHEMA_VERSION,
+        "listing_id": listing_id,
+        "model_name": "gpt-6-luna",
+        "prompt_version": "test-1",
+        "classified_at": CLASSIFIED_AT,
+        "post_nature": "rental_offer",
+        "apartment_kind": NOT_WRITTEN,
+        "price": NOT_WRITTEN,
+        "price_source": None,
+        "entry_date_written": None,
+        "entry_date": NOT_WRITTEN,
+        "rooms": NOT_WRITTEN,
+        "floor": NOT_WRITTEN,
+        "building_floors": NOT_WRITTEN,
+        "size_sqm": NOT_WRITTEN,
+        "room_size_sqm": NOT_WRITTEN,
+        "broker": NOT_WRITTEN,
+        "balcony": NOT_WRITTEN,
+        "parking": NOT_WRITTEN,
+        "elevator": NOT_WRITTEN,
+        "air_conditioning": NOT_WRITTEN,
+        "furnished": NOT_WRITTEN,
+        "arnona": NOT_WRITTEN,
+        "house_committee": NOT_WRITTEN,
+        "gender": "no_restriction",
+        "streets": [],
+        "stated_area_names": [],
+        "areas": [],
+        "other_city": None,
+        "phone_names": [],
+    }
+    return Listing.model_validate({**fields, **changes}, strict=False)
 
 
 @pytest.fixture

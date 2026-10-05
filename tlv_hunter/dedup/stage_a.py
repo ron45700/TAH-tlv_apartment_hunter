@@ -5,7 +5,7 @@ Layer 3, the phone, produces nothing here (#75 C).
 """
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -113,7 +113,7 @@ def _lifecycles(
             for post in duplicates
             if post.listing_id in in_batch and stored[post.listing_id] is None
         ]
-        record = _returned_from_archive(before, new_reposts)
+        record = _returned_from_archive(before, new_reposts, reader.has_listing)
         record = _media_through_repost(record, duplicates)
         latest = max([record.last_published_at, *(post.posted_at for post in duplicates)])
         record = _replace(record, last_published_at=latest)
@@ -137,16 +137,18 @@ def _duplicates(canonical: RawPost, batch: tuple[RawPost, ...], reader: "_Reader
     return list(found.values())
 
 
-def _returned_from_archive(record: PostLifecycle, new_reposts: list[RawPost]) -> PostLifecycle:
+def _returned_from_archive(
+    record: PostLifecycle, new_reposts: list[RawPost], has_listing: Callable[[str], bool]
+) -> PostLifecycle:
     """#74: a repost of an archived post returns it to the state it had. Only a duplicate new to
-    the store and published after the archived clock counts (#75 E1, E2). Phase 1 has no
-    classified post, so no reason means never classified (#74)."""
+    the store and published after the archived clock counts (#75 E1, E2). With no reason, the
+    post was active if it has a Listing and never classified if not (#89)."""
     if record.state != "archived":
         return record
     if not any(post.posted_at > record.last_published_at for post in new_reposts):
         return record
     if record.rejection_reason is None:
-        return _replace(record, state="pending")
+        return _replace(record, state="active" if has_listing(record.listing_id) else "pending")
     # A model reason, a flag, or a pre-model one: `"rejected"` with the same reason. A
     # `no_images` post goes on to #70, which returns it to `"pending"` when a repost has media
     # (#72.5); without media it stays rejected (#75 E3).
@@ -170,6 +172,7 @@ class _Reader:
         self._posts: dict[str, RawPost | None] = {}
         self._hashes: dict[str, list[RawPost]] = {}
         self._lifecycles: dict[str, PostLifecycle | None] = {}
+        self._classified: dict[str, bool] = {}
 
     def get(self, listing_id: str) -> RawPost | None:
         if listing_id not in self._posts:
@@ -186,6 +189,11 @@ class _Reader:
         if listing_id not in self._lifecycles:
             self._lifecycles[listing_id] = self._repository.get_lifecycle(listing_id)
         return self._lifecycles[listing_id]
+
+    def has_listing(self, listing_id: str) -> bool:
+        if listing_id not in self._classified:
+            self._classified[listing_id] = self._repository.get_listing(listing_id) is not None
+        return self._classified[listing_id]
 
     def canonical_of(self, post: RawPost) -> RawPost:
         if post.is_canonical:

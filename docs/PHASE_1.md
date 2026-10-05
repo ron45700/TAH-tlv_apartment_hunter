@@ -55,7 +55,7 @@ Decided before code. These are the choices that, settled wrong now, leave stored
 | Retention | Archive at 25 days from last publication, delete at 40 (`BASELINE.md` §5). The jobs that do it are phase 5; the stored shape that lets them work is Gate E, now. |
 | `user_id` | On every personal record. Users are real from phase 3. |
 | Post vs verdict | Stored separately. A post record holds what the post says; what a given user's profile makes of it is never written onto the post. |
-| `config` interface | Collection settings are read through one interface. No module reads a YAML file directly. |
+| `config` interface | Collection settings are read through one interface. No module reads a YAML file directly, except `areas/reference.py`, the one reader of `reference/` (reworded 2026-10-05, `DECISIONS.md` #175). |
 | Shared collection | One run serves everyone. The group list, `maxPosts`, `sortingOrder` and the schedule are shared. The watermark is per group, never per user. |
 
 ---

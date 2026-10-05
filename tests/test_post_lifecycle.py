@@ -1,5 +1,6 @@
 """Gate E records: the approved field sets and rules (SCHEMA.md, Gate E)."""
 
+import json
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
@@ -17,7 +18,7 @@ FLAG = {"flagged_by": "ron", "flagged_at": datetime(2026, 10, 4, 9, 0, tzinfo=UT
 
 def _lifecycle(**overrides: Any) -> dict[str, Any]:
     fields: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "listing_id": "a" * 64,
         "state": "pending",
         "rejection_reason": None,
@@ -26,6 +27,8 @@ def _lifecycle(**overrides: Any) -> dict[str, Any]:
         "flag_note": None,
         "last_published_at": datetime(2026, 10, 4, 8, 0, tzinfo=UTC),
         "images": [],
+        "classification_failures": 0,
+        "last_classification_error": None,
     }
     return {**fields, **overrides}
 
@@ -44,7 +47,8 @@ def _watermark(**overrides: Any) -> dict[str, Any]:
 def test_field_sets_are_exactly_approved() -> None:
     assert set(PostLifecycle.model_fields) == {
         "schema_version", "listing_id", "state", "rejection_reason", "flagged_by", "flagged_at",
-        "flag_note", "last_published_at", "images",
+        "flag_note", "last_published_at", "images", "classification_failures",
+        "last_classification_error",
     }  # fmt: skip
     assert set(PostImage.model_fields) == {"listing_id", "media_id", "local_path", "error"}
     assert set(GroupWatermark.model_fields) == {
@@ -147,3 +151,51 @@ def test_records_are_frozen() -> None:
         PostLifecycle(**_lifecycle()).state = "active"
     with pytest.raises(ValidationError):
         GroupWatermark(**_watermark()).consecutive_failures = 1
+
+
+# --- Gate E amendment: classification failures, schema_version 2 (DECISIONS.md #139, #152) ---
+
+
+def _version_1_doc(**overrides: Any) -> str:
+    """A lifecycle document as phase 1 stored it: schema_version 1, no failure fields."""
+    doc = PostLifecycle.model_validate(_lifecycle()).model_dump(mode="json")
+    del doc["classification_failures"], doc["last_classification_error"]
+    return json.dumps({**doc, "schema_version": 1, **overrides})
+
+
+def test_a_stored_version_1_record_reads_as_version_2_with_no_failures() -> None:
+    record = PostLifecycle.from_stored_json(_version_1_doc())
+    assert record.schema_version == 2
+    assert record.classification_failures == 0
+    assert record.last_classification_error is None
+    assert record.last_published_at == datetime(2026, 10, 4, 8, 0, tzinfo=UTC)
+
+
+def test_a_stored_version_2_record_reads_unchanged() -> None:
+    record = PostLifecycle.model_validate(
+        _lifecycle(classification_failures=3, last_classification_error="timeout")
+    )
+    assert PostLifecycle.from_stored_json(record.model_dump_json()) == record
+
+
+def test_a_stored_version_1_record_cannot_carry_version_2_fields() -> None:
+    with pytest.raises(ValueError, match="version-1 record"):
+        PostLifecycle.from_stored_json(_version_1_doc(classification_failures=0))
+
+
+def test_a_version_2_record_needs_both_new_fields() -> None:
+    fields = _lifecycle()
+    del fields["classification_failures"]
+    with pytest.raises(ValidationError):
+        PostLifecycle.model_validate(fields)
+
+
+@pytest.mark.parametrize("version", [0, 1, 3])
+def test_a_record_built_at_another_version_is_refused(version) -> None:
+    with pytest.raises(ValidationError, match="schema_version"):
+        PostLifecycle.model_validate(_lifecycle(schema_version=version))
+
+
+def test_classification_failures_cannot_be_negative() -> None:
+    with pytest.raises(ValidationError, match="negative"):
+        PostLifecycle.model_validate(_lifecycle(classification_failures=-1))

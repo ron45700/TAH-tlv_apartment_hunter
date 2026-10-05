@@ -18,6 +18,7 @@ from tests.conftest import (
     load_thedoor_items,
 )
 from tlv_hunter.config.yaml_config import YamlConfig
+from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.images.download import ImageResponse
@@ -54,6 +55,9 @@ class SpyRepository:
 
     def get_lifecycle(self, listing_id: str) -> PostLifecycle | None:
         return self._inner.get_lifecycle(listing_id)
+
+    def get_listing(self, listing_id: str) -> Listing | None:
+        return self._inner.get_listing(listing_id)
 
     def find_without_lifecycle(self) -> list[RawPost]:
         return self._inner.find_without_lifecycle()

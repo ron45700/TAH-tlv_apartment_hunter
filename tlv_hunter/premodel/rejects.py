@@ -35,6 +35,8 @@ def initial_lifecycle(post: RawPost) -> PostLifecycle:
         flag_note=None,
         last_published_at=post.posted_at,
         images=[],
+        classification_failures=0,
+        last_classification_error=None,
     )
 
 

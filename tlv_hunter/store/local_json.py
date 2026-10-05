@@ -4,12 +4,14 @@ import uuid
 from collections.abc import Sequence
 from pathlib import Path
 
+from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.textnorm.phones import canonical_phone
 
 RAW_POSTS_COLLECTION = "raw_posts"
 POST_LIFECYCLE_COLLECTION = "post_lifecycle"
+LISTINGS_COLLECTION = "listings"
 
 
 class LocalJsonRepository:
@@ -17,12 +19,15 @@ class LocalJsonRepository:
 
     For tests only. Each file write is atomic, but a write spanning two files is not:
     `upsert_with_lifecycle` writes the post, then the lifecycle record, and a crash between the
-    two leaves a post with no record. `find_without_lifecycle` finds such posts.
+    two leaves a post with no record. `find_without_lifecycle` finds such posts. Likewise
+    `save_classification` writes the Listing, then the lifecycle record; a crash between the two
+    leaves a Listing beside a "pending" record, which is classified again.
     """
 
     def __init__(self, root: Path) -> None:
         self._posts_dir = Path(root) / RAW_POSTS_COLLECTION
         self._lifecycle_dir = Path(root) / POST_LIFECYCLE_COLLECTION
+        self._listings_dir = Path(root) / LISTINGS_COLLECTION
 
     def upsert(self, post: RawPost) -> RawPost:
         path = self._post_path(post.listing_id)
@@ -53,7 +58,7 @@ class LocalJsonRepository:
         path = self._lifecycle_path(listing_id)
         if not path.exists():
             return None
-        return PostLifecycle.model_validate_json(path.read_text(encoding="utf-8"))
+        return PostLifecycle.from_stored_json(path.read_text(encoding="utf-8"))
 
     def find_without_lifecycle(self) -> list[RawPost]:
         return [post for post in self.query() if not self._lifecycle_path(post.listing_id).exists()]
@@ -62,7 +67,7 @@ class LocalJsonRepository:
         if not self._lifecycle_dir.is_dir():
             return []
         records = (
-            PostLifecycle.model_validate_json(path.read_text(encoding="utf-8"))
+            PostLifecycle.from_stored_json(path.read_text(encoding="utf-8"))
             for path in sorted(self._lifecycle_dir.glob("*.json"))
         )
         return [
@@ -73,6 +78,35 @@ class LocalJsonRepository:
                 for image in record.images
             )
         ]
+
+    def save_classification(self, listing: Listing, lifecycle: PostLifecycle) -> None:
+        if listing.listing_id != lifecycle.listing_id:
+            raise ValueError(
+                f"listing {listing.listing_id} and lifecycle record {lifecycle.listing_id} "
+                "belong to different posts"
+            )
+        if not self._post_path(listing.listing_id).exists():
+            raise KeyError(listing.listing_id)
+        self._listings_dir.mkdir(parents=True, exist_ok=True)
+        _atomic_write(
+            self._listing_path(listing.listing_id),
+            json.dumps(listing.model_dump(mode="json"), ensure_ascii=False, indent=2),
+        )
+        self._write_lifecycle(lifecycle)
+
+    def get_listing(self, listing_id: str) -> Listing | None:
+        path = self._listing_path(listing_id)
+        if not path.exists():
+            return None
+        return Listing.model_validate_json(path.read_text(encoding="utf-8"))
+
+    def find_pending_canonicals(self) -> list[RawPost]:
+        found = []
+        for post in self.query():
+            record = self.get_lifecycle(post.listing_id)
+            if post.is_canonical and record is not None and record.state == "pending":
+                found.append(post)
+        return found
 
     def find_by_hash(self, text_hash: str | None) -> list[RawPost]:
         if text_hash is None:
@@ -93,6 +127,9 @@ class LocalJsonRepository:
 
     def _lifecycle_path(self, listing_id: str) -> Path:
         return self._lifecycle_dir / f"{listing_id}.json"
+
+    def _listing_path(self, listing_id: str) -> Path:
+        return self._listings_dir / f"{listing_id}.json"
 
     def _write_lifecycle(self, record: PostLifecycle) -> None:
         self._lifecycle_dir.mkdir(parents=True, exist_ok=True)

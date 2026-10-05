@@ -1,0 +1,160 @@
+# The closed list of Tel Aviv-Yafo areas (DECISIONS.md #81, #83, #119; SCHEMA.md, Gate B).
+# An area is its municipal number (ms_shchuna); `name` is shem_shchuna verbatim, and
+# `label`, on five entries only, is a hand-corrected display label (#119).
+# Read only through tlv_hunter/areas/reference.py.
+source:
+  dataset: שכונות
+  publisher: Tel Aviv-Yafo Municipality
+  layer: 511
+  url: https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/511
+  read: '2026-10-05'
+  date_import: 18/11/2024 00:59:04
+  fixture: data/raw/tlv_gis_layer511_rows_2026-10-05.json
+areas:
+- number: 1
+  name: גלילות
+- number: 2
+  name: צוקי אביב
+- number: 3
+  name: אזור שדה דב
+- number: 4
+  name: נופי ים
+- number: 5
+  name: '''תכנית ל'
+  label: תכנית ל'
+- number: 6
+  name: כוכב הצפון
+- number: 7
+  name: '''רמת אביב ג'
+  label: רמת אביב ג'
+- number: 8
+  name: אפקה
+- number: 9
+  name: נוה אביבים וסביבתה
+- number: 10
+  name: רמת-אביב
+- number: 11
+  name: אוניברסיטת ת"א
+- number: 12
+  name: מרכז הירידים
+- number: 13
+  name: פארק הירקון
+- number: 14
+  name: תל ברוך צפון
+- number: 15
+  name: תל ברוך
+- number: 16
+  name: מעוז אביב
+- number: 17
+  name: '''נאות אפקה ב'
+  label: נאות אפקה ב'
+- number: 18
+  name: '''נאות אפקה א'
+  label: נאות אפקה א'
+- number: 19
+  name: הדר-יוסף
+- number: 20
+  name: קרית שאול
+- number: 21
+  name: המשתלה
+- number: 22
+  name: גני צהלה, רמות צהלה
+- number: 23
+  name: צהלה
+- number: 24
+  name: נוה שרת
+- number: 25
+  name: רביבים
+- number: 26
+  name: נוה דן
+- number: 27
+  name: רמת החייל
+- number: 28
+  name: עתידים
+- number: 29
+  name: נמל תל-אביב
+- number: 30
+  name: הצפון הישן - החלק הצפוני
+- number: 31
+  name: הצפון הישן-החלק הדרומי
+- number: 32
+  name: בבלי
+- number: 33
+  name: הצפון החדש - החלק הצפוני
+- number: 34
+  name: הצפון החדש-סביבת ככר המדינה
+- number: 35
+  name: הצפון החדש-החלק הדרומי
+- number: 36
+  name: צמרות איילון
+- number: 37
+  name: לב תל-אביב
+- number: 38
+  name: כרם התימנים
+- number: 39
+  name: נוה צדק
+- number: 40
+  name: גני שרונה
+- number: 41
+  name: מונטיפיורי
+- number: 42
+  name: צפון יפו
+- number: 43
+  name: גבעת הרצל, אזור המלאכה-יפו
+- number: 44
+  name: יפו העתיקה,נמל יפו
+- number: 45
+  name: עג'מי וגבעת עליה
+- number: 46
+  name: צהלון ושיכוני חסכון
+- number: 47
+  name: יפו ג' ונוה גולן
+- number: 48
+  name: מכללת יפו תל אביב ודקר
+- number: 49
+  name: (יפו ד' (גבעת התמרים
+  label: יפו ד' (גבעת התמרים)
+- number: 50
+  name: נוה עופר
+- number: 51
+  name: אזור תעסוקה-צומת חולון
+- number: 52
+  name: פלורנטין
+- number: 53
+  name: נוה שאנן
+- number: 54
+  name: שפירא
+- number: 55
+  name: פארק החורשות
+- number: 56
+  name: קרית שלום
+- number: 57
+  name: נחלת יצחק
+- number: 58
+  name: ביצרון ורמת ישראל
+- number: 59
+  name: תל-חיים
+- number: 60
+  name: רמת הטייסים
+- number: 61
+  name: אורות
+- number: 62
+  name: יד אליהו
+- number: 63
+  name: התקוה
+- number: 64
+  name: עזרא והארגזים
+- number: 65
+  name: לבנה,ידידיה
+- number: 66
+  name: פארק דרום
+- number: 67
+  name: כפיר
+- number: 68
+  name: נוה ברבור, כפר שלם מערב
+- number: 69
+  name: נוה אליעזר וכפר שלם מזרח
+- number: 70
+  name: נוה חן
+- number: 71
+  name: ניר אביב
