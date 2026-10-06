@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from tests.test_classify_complete import PROVENANCE, extraction
-from tlv_hunter.classification_run import ClassifyRunResult, classify_pending
+from tlv_hunter.classification_run import ClassifyRunResult, attempt_post, classify_pending
 from tlv_hunter.classify.base import ClassificationError
 from tlv_hunter.classify.complete import Completed, complete
 from tlv_hunter.classify.cost import CallRecord, CapReached, CostMeter, Usage
@@ -366,3 +366,12 @@ def test_the_outcomes_carry_their_calls(setup) -> None:
     result, _ = run(repository, classifier, limit=1)
     assert [call.outcome for call in result.outcomes[0].calls] == ["invalid", "ok"]
     assert result.spent == pytest.approx(2 * USAGE.cost())
+
+
+def test_attempt_post_returns_the_last_error_and_writes_nothing(posts) -> None:
+    """The attempts alone, shared with the regression runner (PHASE_2.md 2.6)."""
+    meter = CostMeter(cap=1.0)
+    error = ClassificationError("invalid", "x")
+    classifier = ScriptedClassifier(meter, {posts[0].listing_id: [error, error]})
+    result, attempts = attempt_post(posts[0], classifier, Sleeps())
+    assert (result, attempts) == (error, 2)

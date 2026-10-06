@@ -12,6 +12,7 @@ import pytest
 from tests.conftest import CONFIG_ROOT
 from tests.test_classification_run import store_pending
 from tests.test_openai_classifier import FakeTransport, spike_response
+from tlv_hunter.classify.instructions import PROMPT_VERSION
 from tlv_hunter.classify.transport import TransportError
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.jobs.classify_pending import RUNS_DIRECTORY, main
@@ -167,7 +168,7 @@ def test_the_dropped_names_file_has_one_line_per_post_written(tmp_path: Path, po
     assert [line["listing_id"] for line in written] == [p.listing_id for p in stored]
     assert written[0] == {
         "listing_id": stored[0].listing_id,
-        "prompt_version": "1",
+        "prompt_version": PROMPT_VERSION,
         "dropped_streets": ["רחוב שאינו בטקסט"],
         "dropped_area_names": [],
         "dropped_other_city": "עיר שאינה בטקסט",

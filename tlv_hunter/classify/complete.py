@@ -70,7 +70,7 @@ def complete(extraction: ListingExtraction, post: RawPost, provenance: Provenanc
         raise ValueError("phones is None: textnorm must run before classification")
     if any(number not in AREA_NUMBERS for number in extraction.areas):
         raise AnswerError("areas are municipal numbers 1-71")
-    price, price_source = _price(extraction, post)
+    price, price_source = price_with_fallback(extraction.price, post.native_price)
     streets, dropped_streets = _in_text(extraction.streets, post.text)
     area_names, dropped_area_names = _in_text(extraction.stated_area_names, post.text)
     other_city, dropped_other_city = _other_city(extraction.other_city, post.text)
@@ -83,7 +83,7 @@ def complete(extraction: ListingExtraction, post: RawPost, provenance: Provenanc
         **{field: getattr(extraction, field) for field in _COPIED},
         price=price,
         price_source=price_source,
-        entry_date=_entry_date(extraction.entry_date_parts, post.posted_at.date()),
+        entry_date=entry_date_from_parts(extraction.entry_date_parts, post.posted_at.date()),
         streets=streets,
         stated_area_names=area_names,
         areas=sorted(set(extraction.areas)),
@@ -98,17 +98,22 @@ def complete(extraction: ListingExtraction, post: RawPost, provenance: Provenanc
     )
 
 
-def _price(extraction: ListingExtraction, post: RawPost) -> tuple[_Price, str | None]:
-    """The text wins; an unclear text price stays unclear; native only when the text has none."""
-    if extraction.price.state != "not_written":
-        return extraction.price, "text"
-    native = native_price_fallback(post.native_price)
+def price_with_fallback(
+    price: _Price, native_price: int | None
+) -> tuple[_Price, Literal["text", "native"] | None]:
+    """The text wins; an unclear text price stays unclear; native only when the text has none.
+    Also applied to Ron's labels by the regression runner, which labels the text only (#187)."""
+    if price.state != "not_written":
+        return price, "text"
+    native = native_price_fallback(native_price)
     if native is None:
-        return extraction.price, None
+        return price, None
     return _Price(state="written", value=[native]), "native"
 
 
-def _entry_date(parts: Marked[EntryDateParts], published: date) -> _EntryDate:
+def entry_date_from_parts(parts: Marked[EntryDateParts], published: date) -> _EntryDate:
+    """The comparable entry date (#96, #115, #178, #179). Also applied to Ron's labels by the
+    regression runner, which labels the parts (#187)."""
     if parts.state != "written" or parts.value is None:
         return _EntryDate(state=parts.state, value=None)
     value = parts.value

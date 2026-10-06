@@ -3,9 +3,14 @@
 **Status:** approved by Ron, 2026-10-05 (`DECISIONS.md` #126–#175). The spike (2.1) ran; the setting
 is effort `none`, temperature 0 (#157). **The model decides the area** (#167): the street table and
 its machinery left the phase (#168; the old 2.3 is in the appendix). Tasks 2.2 and 2.3 (reduced)
-are built and accepted (#176). **Tasks 2.4 and 2.5 are built** on their approved plans
-(#178–#183) and wait for review; no model call was made. The first paid run comes after the
-build and a passing regression set (#164). No code before a task's plan is approved; no paid call
+are built and accepted (#176). Tasks 2.4 and 2.5 are built and accepted (#184). **Task 2.6:**
+the set (46 posts after #196), the labelling page and the regression runner are built. **Its first
+run (2026-10-06, prompt version 1) failed the bar**; after #198–#201 two runs with **version 2** (at
+effort `none` and at `low`) **also failed it, on `areas` by reach**. **Version 3** (the known places,
+#205, and an age sentence, #206) **passed `areas` in both passes** (0 errors of 30 by reach) but
+`gender` failed in pass 2 and pass 1 was incomplete (one post, 2.6 below). **Task 2.7**, the review
+report, is built. The first paid run over the store (2.8) was approved with conditions (#208) and
+**was not made: a condition failed** (`SESSION_LOG.md`, 2026-10-06). No code before a task's plan is approved; no paid call
 before its own go.
 **Rewritten:** 2026-10-05, from the draft of the same day, after Ron's answers. Not yet in git.
 **Owner:** Ron
@@ -334,6 +339,13 @@ these deviations:
   `httpx2.MockTransport`.
 
 The size, as approved: **9,025 characters** rendered (step 6).
+
+**Version 2 of the instructions (#200, 2026-10-06):** five sentences added to version 1, nothing
+else changed (areas lean towards more; a general phrase beside a precise place; feminine wording
+about the roommates who stay is not a restriction; a date followed by "flexible" is the date; an
+entry that depends on an undated event is unclear). 9,815 characters rendered; `PROMPT_VERSION`
+"2". The classifier's guard now compares the prompt at the production setting, so a regression run
+at another effort is still held to the approved text (#201).
 
 **Scope:** `classify(RawPost) -> Listing`, one call per post; the completion rules; the module that
 derives the rejection; their tests. **No job, no store write, no paid call.** The first real call
@@ -948,6 +960,223 @@ are outside the bar, and Ron marks a wrong one in the review report.
 prompt or model change, with the result saved next to the prompt version. **If `gpt-6-luna`
 misses the bar:** back to Ron with the next model and its price (#127).
 
+### The set and the labelling page — built 2026-10-05, waiting for review
+
+**The proposed set:** 52 posts in `data/labeling/regression_set.json`, ids and cases only (the list
+is in `SESSION_LOG.md`, 2026-10-05). It holds the spike's 20, with the "seeking" and "Jaffa" labels
+corrected to "for sale". Two of the 52 are pre-model rejects (`no_images`), never sent in
+production: the only mostly-English post, and the only "seeking a roommate to search with".
+
+**Built:**
+
+| File | What |
+|---|---|
+| `tlv_hunter/labeling/regression_set.py` (new) | The set file, and each post's text from the store or `data/raw/test_posts.json` |
+| `tlv_hunter/labeling/labels.py` (new) | `labels.json`: `read_labels`, completeness, stale labels |
+| `tlv_hunter/labeling/page.py`, `label_page.html` (new) | The page: the texts, their hashes and the 71 areas, embedded as JSON; markup, style and script inline |
+| `tlv_hunter/jobs/label_page.py` (new) | The command; free. `uv run python -m tlv_hunter.jobs.label_page` |
+| `tlv_hunter/store/sqlite.py` | `SqliteRepository(path, read_only=True)` |
+
+**How the page works:**
+- One post at a time, with a list of every post and its status, and a "next not complete" button.
+- No control is preselected. A post is complete when post nature, apartment kind, price, gender,
+  entry date and areas are labelled, or when it is marked ambiguous.
+- Progress is kept in the browser's local storage. A banner says when the browser refuses it.
+
+**Deviations, for review:**
+- **`labels.json` carries `text_sha256` per post.** It is the SHA-256 of the exact text labelled,
+  so the runner can refuse a label whose post text changed. This field is not in the proposed shape.
+- **The entry date is labelled as `entry_date_parts`** (day, month, and the year only when
+  written), not as `entry_date`. A label holds the year only when the post writes it, as the
+  model's answer does.
+- **The price is labelled from the text only.** The page shows no provider field.
+- **`null` means not labelled yet.** "No area" is an explicit `[]`. `other_city` is always
+  labelled: empty means Tel Aviv-Yafo.
+- **The page shows no case label:** a case such as "seeking" would give the answer away.
+- **The store is opened read-only,** through a new `read_only` option on `SqliteRepository`.
+  - It never creates the file, adds no layout row, and any write raises.
+  - The real store's SHA-256 was the same before and after.
+  - `CLAUDE.md`'s sentence on who constructs the production store is extended for it.
+- **The command lives in `jobs/`**, beside the two job commands, for the store path they share.
+
+### Plan for the regression runner — approved (#186–#196); built and run 2026-10-06
+
+**Built 2026-10-06:** `tlv_hunter/jobs/regression_run.py` (the command), and four plain modules
+in `tlv_hunter/labeling/`: `overrides.py` (#196), `regression.py` (the checks before any call),
+`compare.py` (the truth, the comparison, the bar) and `run_report.py`. The plan below holds, with
+#188–#196 and these deviations:
+- **`--check`:** every refusal, then a stop. It reads no key and makes no call.
+- **`--cap` defaults to $0.10** (#194) instead of being required.
+- **`regression_set.json` entries carry `truth`:** `"blind"` (the default, all 52 today) or
+  `"review"` for a post that joined from the review (#195). The labelling page leaves out a
+  `"review"` post.
+- **`label_overrides.json` (#196), proposed name and shape:**
+  - `format_version`, `approved`, and `labels_sha256`, the `labels.json` it was reviewed against;
+    another `labels.json` makes the runner refuse;
+  - `nature_only` (the natures and the reason);
+  - `removed`, `label_changes` and `not_compared`: each entry has its position, `listing_id`,
+    field, value where one applies, and reason;
+  - positions are checked against their `listing_id`, and a label change is validated as
+    `labels.json` is.
+- **The fields measured from the review** (#193): `entry_date_written`, `rooms`, `floor`,
+  `building_floors`, `size_sqm`, `room_size_sqm`, `broker`, `balcony`, `parking`, `elevator`,
+  `air_conditioning`, `furnished`, `arnona`, `house_committee`, `phone_names`. They are not
+  compared: the provenance, `price_source` (code's), and the streets and area names (#177).
+  `entry_date` is labelled blind and held to 90%, since #142 names it in no other bar.
+- **Verdicts:**
+  - "incomplete": a post failed after its attempts, or the run stopped;
+  - "fail": a field under its bar, or a value filled in where the truth says not written;
+  - "pass on the measured fields": no field fails, but some were not measured (until a review
+    exists);
+  - "pass".
+- **Exit code 0 whatever the verdict;** the verdict is in the log and the report.
+- **Ambiguous posts are not sent to the model.** There were none.
+- **Shared code made public:**
+  - `classification_run.py`: `attempt_post` (the attempts, writing nothing) and `RunStop`;
+  - `classify/complete.py`: `price_with_fallback` and `entry_date_from_parts`, so a label goes
+    through the classifier's own rules;
+  - `SqliteRepository.get_listing` in read-only mode returns `None` on a store with no `listings`
+    table (the real store has none yet).
+- **The report lists every answer that changed between the passes** (O12), on all compared fields
+  and the review's.
+
+**The run of 2026-10-06** (`data/labeling/runs/v1-7cebac22-d807e1baa0a0/`, Ron's go):
+- 46 posts, two passes, 92 calls, all answered on the first attempt.
+- **$0.019597** by the usage metadata, of the $0.10 cap.
+- **Pass 1 fails** on `areas` (11 errors of 30, 63%).
+- **Pass 2 fails** on `areas` (11 of 30) and on `price` (2 of 31, 93.5%).
+- No value was filled in where the truth says not written.
+- The results per field, the mismatches and their reading are in `SESSION_LOG.md`, 2026-10-06.
+
+**The two runs of version 2, 2026-10-06** (Ron's go; #198–#201; `data/labeling/runs/`):
+
+| | `none`, temperature 0 | `low`, no temperature |
+|---|---|---|
+| Folder | `v2-none-11cbdce8-14b9a3e72c0a` | `v2-low-fe24bbc5-fdcdef213c8c` |
+| Calls | 93 (one retry) | 92 |
+| Cost, usage metadata | $0.020218 | $0.041000 |
+| Cost a classified post | $0.00022 | $0.00045 |
+| Mean seconds a call | 3.3 | 8.1 |
+| Pass 1 | fail: `areas` 4 of 30 wrong (86.7%), `gender` 2 of 32 (93.8%) | fail: `areas` 6 of 30 (80%) |
+| Pass 2 | incomplete (position 24 invalid twice); `areas` 6 of 30 | fail: `areas` 6 of 30 |
+| Posts changed between the passes | 19 of 46 | 27 of 46 |
+
+Every other field passed in both `low` passes and in `none` pass 2. No value was filled in where
+the truth says not written. Version 1 re-scored under the same rules had 8 of 30 wrong on `areas`
+in both passes. The mismatches and their reading are in `SESSION_LOG.md`, 2026-10-06.
+
+**Built after the runs:** `results.json` records a failed post's error detail (field paths and
+types, never a value): position 24's cause was not recorded.
+
+**Version 3 and its run, 2026-10-06** (#202–#208; `v3-none-8b469eae-474573e21e9e`):
+
+- **Known places** (`reference/known_places.yaml`, #205): 48 places, each with coordinates from
+  OpenStreetMap (named object, date), and the areas from layer 511 (a point query per place,
+  checked against its polygons). A place within 40 m of a boundary lists both areas. Rendered into
+  the instructions by `classify/instructions.py`; loaded by `areas/reference.py`.
+- **Instructions:** version 3 = version 2 + the known places + "an age preference (25-35) is not a
+  gender restriction". 11,698 characters, against 9,815 (about 870 more tokens of prefix).
+- **The run:** 46 posts, two passes, effort `none`, 93 calls, **$0.020588** by the usage metadata
+  ($0.00022 a classified post).
+
+| | Pass 1 | Pass 2 |
+|---|---|---|
+| Verdict | incomplete (position 24 invalid twice: `rooms`) | fail (`gender` 2 of 32) |
+| `areas` by reach | **0 of 30 wrong** | **0 of 30 wrong** |
+| `areas` exact / returned a post | 23 of 30 / 1.20 | 24 of 30 / 1.20 |
+| `post_nature`, `other_city` | no error | no error |
+| `gender` | 1 of 32 | **2 of 32 (93.8%)** |
+| `price` | 0 of 30 | 1 of 30 |
+
+20 of 46 posts changed between the passes. 14 of the 30 posts compared on `areas` name a place in
+the list, so they no longer test the model's own knowledge (`SESSION_LOG.md`).
+
+
+**Command:** `tlv_hunter/jobs/regression_run.py`, PAID. It reads `OPENAI_API_KEY` too. #128 makes
+`classify_pending` the only reader today, so this needs Ron's approval.
+
+```bash
+uv run --env-file .env python -m tlv_hunter.jobs.regression_run --cap 0.10   # PAID
+```
+
+**Before any call, it refuses to start when:**
+- a post in the set has no label;
+- a label is incomplete and not marked ambiguous;
+- a label is stale: its `text_sha256` differs from the post's text now, or the post is gone;
+- the classifier's fingerprint check fails (2.4).
+
+It names every post it refused for.
+
+**Where it reads:**
+- the store, read-only;
+- #45's post: the runner builds a `RawPost` from `data/raw/test_posts.json`. `posted_at` is
+  proposed as 2026-09-13, the day the fixture was captured: the year completion needs a date.
+
+**It writes nothing to the store.** A regression run is a test, not the classification of record.
+
+**The two passes** (#157, O12):
+- Pass 1 over all posts in set order, then pass 2.
+- Each call goes through `OpenAIClassifier.classify_completed` with the attempts table of 2.5.
+  The per-post attempt loop in `classification_run.py` is split from its store writes so both
+  commands share it.
+- A post that still fails after its attempts makes its pass incomplete. An incomplete pass is
+  reported and not judged.
+
+**The comparison, per field** (`tlv_hunter/labeling/compare.py`, a plain module):
+
+| Field | Compared as |
+|---|---|
+| `post_nature`, `gender` | Exact |
+| `apartment_kind` | State and value |
+| `price` | State and value. The label first goes through `native_price_fallback`, the classifier's own rule, so a post with no price in its text and a native price compares like the `Listing`. *Proposed:* the amounts in written order |
+| entry date | The label's parts are completed with the classifier's own code, the nearest occurrence to `posted_at`, then compared with `Listing.entry_date` |
+| `areas` | By reach (#198): at least one number in common, or both empty. The exact match and the average length are reported as information |
+| `other_city` | *Proposed:* "Tel Aviv-Yafo or another city" (`None` against a value) is the bar. The string as written is shown, not compared: "בחולון" and "חולון" are the same city |
+
+The bar (#142, #177):
+- `post_nature` and `other_city`: no error.
+- `apartment_kind`, `price` and `gender`: at least 95% exact. With about 50 posts that is at most
+  2 errors.
+- **`areas`: at least 90% by reach, not exact (#198, amends #142):** the model's areas and the
+  label's share at least one number, or both are empty. Reported, not a bar: the exact-match rate,
+  and the average number of areas returned a post.
+- No value filled in where the label says not written: zero.
+- A post marked ambiguous is not counted. It is listed apart.
+- *Proposed:* **each pass must pass on its own,** and every answer that changed between the passes
+  is listed.
+- **Every other field at least 90%:** the fields that are not labelled blind have no truth until
+  Ron's review. *Proposed:* the first run measures the deciding fields only. The other fields are
+  measured from Ron's corrections of pass 1 in the review report (2.7): a field Ron did not correct
+  counts as right. Later runs compare with that accepted answer.
+
+**The report.** One folder per run: `data/labeling/runs/v<prompt_version>-<fingerprint 8>-<run_id>/`.
+- `results.json`: per post and pass, the completed `Listing`, the dropped names, the reported model
+  value, the tokens and the cost.
+- `report.html`, static like the labelling page:
+  - the bar per field, with pass or fail per pass;
+  - every mismatch: the post's text, the label and the model's value;
+  - the answers that changed between passes;
+  - the ambiguous posts.
+- One summary line on stderr. The key and post text never reach the log.
+
+**The cost, estimated:** 52 posts × 2 passes = 104 calls.
+- The instructions were 9,025 characters in version 1 and 9,815 in version 2 (the spike's were
+  4,790), so about 4,300–4,800 input
+  tokens a call, nearly all read from the cache after the first call.
+- About $0.0002–0.0003 a call: **about $0.02–0.04 for the run.**
+- The worst case the cap check uses, computed offline for the 51 stored posts: $0.0030–0.0033 a
+  call.
+
+**Proposed cap: $0.10.** About three times the estimate. The check stops before any call that could
+pass it, and the project's spend limit is the second line.
+
+**Tests, offline:** the refusals (no label, incomplete, stale), the comparison per field (native
+fallback, year completion, areas as a set, `other_city`), the bar with the ambiguous rule and the
+two passes, an incomplete pass, the report files. The fake transport is from 2.4.
+
+**Order of work:** split the attempt loop; `compare.py`; the command; tests; `CLAUDE.md` (the key
+reader, the commands).
+
 ---
 
 ## 2.7 Ron's review report — approved (#143, #154)
@@ -972,6 +1201,89 @@ A command reads the store read-only and writes one static HTML file; no server, 
   `data/labeling/` and read from there. It replaces the draft's hand-written CSV.
 - **From the corrections** (#172): a count of errors per field, so weak fields are visible, and
   every corrected post joins the regression set.
+
+### Plan for task 2.7 — approved (#195); built 2026-10-06
+
+**Built 2026-10-06:** `tlv_hunter/jobs/review_page.py` (the command), and in
+`tlv_hunter/labeling/`: `corrections.py` (`corrections.json`, the errors per field, the corrected
+classification), `review.py` (the cards, the dropped names, joining the set) and
+`review_page.html`. The plan below holds, with these deviations:
+- **`--run <folder>`** reviews a regression run's pass 1 instead of the store. #193 measures the
+  other fields from that review, and the store holds no classification yet.
+- **A stale correction stops the command:** its post's text changed since the review. Nothing is
+  written.
+- **Progress is kept in the browser per classification** (`listing_id` and `classified_at`), so a
+  new classification of a post starts afresh. The page does not refill itself from an earlier
+  `corrections.json`; it shows its errors per field at the top.
+- **The controls:**
+  - areas are typed as numbers, with their names shown;
+  - prices are typed as whole numbers separated by spaces;
+  - phone names are typed as "phone | name", one per line.
+- **Only stored posts join the set** (#195): the set reads their text from the store.
+- **`price_source` follows a corrected price** in the corrected classification: none when not
+  written, kept otherwise, or "text" when there was none.
+
+
+**Command:** `tlv_hunter/jobs/review_page.py`. It writes `data/labeling/review.html` and opens the
+store read-only (`read_only=True`, built for 2.6).
+
+```bash
+uv run python -m tlv_hunter.jobs.review_page
+```
+
+**What the page shows.** One card per post with a `Listing`, in `listing_id` order:
+- the original text, set as text and never parsed as HTML;
+- every field with its state;
+- the areas with their numbers and display names;
+- the rejection reason from `PostLifecycle`;
+- `prompt_version`, `model_name` and `classified_at`.
+
+Beside the text: the streets and area names as written (#177), and the names #162 and #180
+dropped.
+
+**Filters** (approved, #143): rejected or active, any field unclear, any name dropped. *Proposed
+additions:* "in the regression set" and "not reviewed yet".
+
+**The dropped names:**
+- read from every `<store_root>/classify_runs/*.jsonl`;
+- for each post, the line of its current `Listing`: the newest file holding that `listing_id`
+  with the same `prompt_version`. The line has no time of its own, so files are ordered by
+  modification time;
+- a table of every dropped name and its count, by kind (street, area name, city).
+
+**Corrections**, by the labelling page's mechanism (#143):
+- Per field: a "wrong" mark and the right value, with a control matching the field's type: the
+  states, a number, yes or no, the closed values, the 71 for `areas`, and free text for a street
+  or area name.
+- A **"reviewed"** mark per post. A post reviewed with nothing corrected means the model was right
+  on every field. The error rate needs that denominator.
+- Progress in the browser; an export to `corrections.json`, moved into `data/labeling/`.
+
+**Proposed shape of `corrections.json`:** `format_version` 1, `exported_at`, and per `listing_id`:
+- `text_sha256`;
+- the reviewed `Listing`'s `prompt_version`, `model_name` and `classified_at`, so a correction is
+  never applied to a newer classification;
+- `reviewed`;
+- `fields`: the field name and the right value, in `Listing`'s shape;
+- `note`.
+
+**From the corrections** (#172), in `tlv_hunter/labeling/corrections.py`, a plain module:
+- **The errors per field:** the corrections of that field over the posts reviewed. The next page
+  shows it at the top; the command also prints it.
+- **Corrected posts join the regression set.** *Proposed:* the command appends them to
+  `regression_set.json`, with the case "corrected in review: <fields>", and prints the ids added.
+  Their truth is the corrected `Listing`, not a blind label. *Alternative:* they appear unlabelled
+  on the next labelling page, and Ron labels them blind.
+
+**The store is never written:** a correction lives only in `corrections.json` in phase 2. The
+stored corrections record is phase 3's (#173, Gate C).
+
+**Tests, offline:**
+- the page: text verbatim, escaping, nothing loaded from outside, every field shown;
+- the dropped-names reader;
+- the corrections reader and the error counts;
+- appending to the set;
+- the store's SHA-256 is the same before and after.
 
 ---
 
@@ -1050,15 +1362,18 @@ now the alternative.
 
 ## 4. For Ron's decision
 
-Answered 2026-10-05: the 2.2 plan (#174), the reduced 2.3 (#175), the model deciding the area
-(#167), the code of 2.2 and 2.3 (#176), the regression set's location fields (#177, #183), the
-instructions (#178) and the plans for 2.4 and 2.5 (#179–#182). Open now, not resolved here:
+Answered: everything through #208 (2026-10-06). Open now, not resolved here:
 
-1. **Review of the code of tasks 2.4 and 2.5** (`SESSION_LOG.md`, 2026-10-05), with the deviations
-   listed under each plan.
-2. **The next task:** the regression set (2.6, the labelling page first, no model needed), then the
-   first real calls, which are the regression set's two passes (paid, about $0.02), on their own
-   go.
+1. **The first run over the store (2.8) was not made:** pass 1 of the version 3 run was incomplete
+   (position 24, a seeking post that came back invalid twice), and #208 required no incomplete
+   pass. Ron decides: go anyway (the failure is one post that the pre-model rejects never send, and
+   a failed post only counts one failed run, #139), or another regression run first.
+2. **`gender` fails at 93.8% in pass 2** (positions 34 and 35): the wording names both sexes, or the
+   roommates who stay. No instruction change was made (#207).
+3. **The known places:** their list and areas, and the places whose area surprised me
+   (`SESSION_LOG.md`). Ron adds and corrects entries from error reports.
+4. **The review of a run's pass 1** (`review_page --run <folder>`), which measures the fields not
+   labelled blind (#193).
 
 ---
 

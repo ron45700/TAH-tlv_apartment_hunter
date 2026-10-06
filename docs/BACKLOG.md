@@ -24,14 +24,15 @@ still unimplemented on 2026-10-02.
 
 Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is being planned: Gate B approved on
 2026-10-05 (`DECISIONS.md` #81–#125); the model provider is OpenAI, for now (#126); `PHASE_2.md`
-approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 and 2.3 (reduced) built and accepted (#174–#176); tasks 2.4 and 2.5 built on their approved plans (#178–#183), waiting for review.
+approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6: the set (46 posts, #186, #196), the labelling page and the runner built; version 3 of the instructions (the known places, #205) passed `areas` by reach in both passes on 2026-10-06; `gender` failed once and a pass was incomplete. Task 2.7, the review report, built. The first run over the store (2.8) was approved with conditions (#208) and was not made: a condition failed.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
 | 1 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
 | 2 | Ron reads the spike's cost in the OpenAI dashboard and compares it with the usage-metadata total, $0.0273 (`docs/SPIKE_2_1_2026-10-05.md` §5) | `ASSUMPTIONS.md` O2, P19's lesson | Ron, some minutes after the run (2026-10-05) |
-| 3 | Ron reviews the code of tasks 2.4 (the classifier) and 2.5 (`classify_pending`), with the deviations listed under each plan | `PHASE_2.md` 2.4, 2.5, §4; `SESSION_LOG.md` 2026-10-05 | Ron. No model call has been made with this code |
-| 4 | Task 2.6, the regression set: its plan, then the labelling page (no model needed). Its two passes are the first real calls of the classifier (about $0.02), on their own go | `PHASE_2.md` 2.6, §4 | The plan, then Ron |
+| 3 | **The first run over the store (2.8): Ron's decision.** Pass 1 of the version 3 regression run was incomplete (position 24, a seeking post, invalid twice), so #208's condition failed and the run was not made. Go anyway, or one more regression run first. Then `classify_pending --cap 1.00` after a dated backup of the store; `run_once` must not be running (it was not, 2026-10-06) | `DECISIONS.md` #207, #208; `PHASE_2.md` 2.8, §4; `SESSION_LOG.md` 2026-10-06 | Ron |
+| 4 | Ron reads `reference/known_places.yaml` (48 places) and the places whose area surprised me, and adds or corrects entries; the list is in git | `DECISIONS.md` #205; `SESSION_LOG.md` 2026-10-06 | Ron |
+| 5 | Ron reviews a run's pass 1 (`review_page --run v3-none-8b469eae-474573e21e9e`) and moves `corrections.json` into `data/labeling/`: it measures the fields not labelled blind (#193) | `PHASE_2.md` 2.7 | Ron |
 
 ---
 
@@ -39,7 +40,7 @@ approved, the spike run (#126–#156); the model decides the area (#167); tasks 
 
 | Decision | State of the code (checked 2026-10-04) | What has to change |
 |---|---|---|
-| #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Nothing exists | Phase 2 (2.6, 2.7) |
+| #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Built: the set, the labelling page, the runner (`label_overrides.json`, #196) and the review report (2026-10-06). Version 3 passed `areas` in both passes; `gender` failed in pass 2 and pass 1 was incomplete | Ron's decision on 2.8 (item 3); the review of pass 1. The row leaves when Ron accepts the set |
 | #144 reclassify, manual, replace with a diff report | Nothing exists | Phase 2 (2.9) |
 | #145 Gate D after the first paid run | Nothing exists | Phase 2 (2.10) |
 | #77 D4b archiving deletes the image files and removes their `PostImage` entries | Nothing exists; task 1.12 already reads a record archived before #74 without counting its old entries (#77 D4) | Phase 5, the archive job |
@@ -87,11 +88,6 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | Rooms on a room post: "1 of N" when the total is written, a room with no "of" when it is not; the "1" comes from the apartment kind (`DECISIONS.md` #120). Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | Size on a room post: "X sqm for the room, of Y" when both are written; "X sqm for the room" when only the room's is (`DECISIONS.md` #121). Not stated: a room post that gives only the apartment's size. Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | The entry date's year is never displayed (`DECISIONS.md` #115). Approved by Ron, 2026-10-05 | Phase 3 UI design |
-| Regression set: English posts (27 of 266 stored posts are mostly English, by the review chat's count; not reproduced exactly, see `SESSION_LOG.md` 2026-10-05). Approved by Ron, 2026-10-05 | Building the regression set (phase 2) |
-| Regression set: "seeking a roommate for our flat" (an offer) against "seeking a roommate to search with" (seeking). Approved by Ron, 2026-10-05 | Building the regression set (phase 2) |
-| Regression set: the 20 posts of spike 2.1 (`data/spike_openai_2026-10-05/listing_ids.json`; 19 from the store, #45's case from `data/raw/test_posts.json`). Approved by Ron, 2026-10-05 | Building the regression set (phase 2) |
-| Regression set: a real "seeking" post and a real Jaffa post from the store (`DECISIONS.md` #165); the spike's two were sale posts. Approved by Ron, 2026-10-05 | Building the regression set (phase 2) |
-| Regression set: #45's untested seeking case, `אנחנו שני שותפים שמחפשים דירת 3 חדרים` (`ASSUMPTIONS.md` C2, `RESEARCH.md` §7). Approved by Ron, 2026-10-05 | Building the regression set (phase 2) |
 
 ---
 

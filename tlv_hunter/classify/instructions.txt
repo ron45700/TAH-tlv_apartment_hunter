@@ -60,6 +60,9 @@ entry_date_parts:
 - The start of a month (תחילת) is day 1, the middle (אמצע) day 15, the end (סוף) the month's last
   day; the end of February is day 28. A month with no day ("כניסה בנובמבר") is day 1.
 - "Flexible" (גמיש) is "unclear". "not_written" when the post gives no entry date.
+- A date followed by "flexible" ("10.10 גמיש") is the date, written. "Flexible" with no date stays
+  "unclear".
+- An entry that depends on an event with no date (a permit, the end of a renovation) is "unclear".
 
 THE APARTMENT
 rooms: the total number of rooms in the apartment, whole or half (2.5; חדר וחצי is 1.5), also when
@@ -89,7 +92,9 @@ arnona and house_committee it covers.
 gender, a plain value: "women_only" when the post asks only for women, or uses only feminine
 wording for the person wanted (מחפשות שותפה); "women_preferred" for a stated preference
 (עדיפות לבנות); otherwise "no_restriction", also when the post says nothing about gender. Wording
-for both (שותף/ה) is "no_restriction".
+for both (שותף/ה) is "no_restriction". Feminine wording about the roommates who stay (נשארות שתי
+שותפות) is not a restriction; only wording about the person wanted counts. An age preference
+(25-35) is not a gender restriction.
 
 LOCATION
 streets: the streets the post gives for the apartment's location, in order of appearance, each
@@ -111,6 +116,11 @@ the list. The rules, in order:
    "מול קניון רמת אביב") decides. A landmark on a border gives every number it touches. A general
    distance phrase ("5 minutes from the sea") places nothing.
 5. Nothing you can place gives []. An apartment in another city gives [].
+Lean towards more areas, not fewer. When the location is given by a street, a corner, a square or a
+landmark that may lie in more than one area, or near the border between areas, return every area
+it could be in. Return one area only when the post names that area or the place clearly lies inside
+it. A general phrase (מרכז תל אביב, מרכז העיר) beside a precise street or square does not replace
+it: return the areas of the precise place as well.
 Common names, as examples (the same names in English give the same numbers):
 - הצפון הישן: 30, 31
 - הצפון החדש: 33, 34, 35
@@ -121,6 +131,12 @@ Common names, as examples (the same names in English give the same numbers):
 - שרונה: 40
 The list, number and name:
 <<AREAS>>
+
+Known places. These places, written as people write them, lie in the areas listed; a place on the
+boundary of two areas lists both. A place from this list that the post gives as the apartment's
+location (rule 4) places it in those areas: return them. Use this list, not your own memory of where
+these places are.
+<<PLACES>>
 
 other_city: the city as written, only when the apartment is in a city other than Tel Aviv-Yafo;
 null otherwise. Jaffa (יפו) and every area in the list are in Tel Aviv-Yafo. A city named only as a

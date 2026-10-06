@@ -1,5 +1,6 @@
 """What is specific to SqliteRepository. The shared contract is in test_repository_contract.py."""
 
+import hashlib
 import json
 import sqlite3
 from contextlib import closing
@@ -234,3 +235,70 @@ def test_foreign_key_refuses_an_orphan_listing_row(db_path: Path) -> None:
         conn.execute("PRAGMA foreign_keys = ON")
         with pytest.raises(sqlite3.IntegrityError):
             conn.execute("INSERT INTO listings (listing_id, doc) VALUES ('missing', '{}')")
+
+
+# --- read_only: the local pages of tasks 2.6 and 2.7 read the real store and change nothing ---
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_read_only_reads_what_was_written(db_path: Path, posts) -> None:
+    repo = SqliteRepository(db_path)
+    repo.upsert_with_lifecycle(posts[0], _pending(posts[0]))
+    reader = SqliteRepository(db_path, read_only=True)
+    assert reader.get(posts[0].listing_id) == posts[0]
+    assert reader.find_pending_canonicals() == repo.find_pending_canonicals()
+
+
+def test_read_only_never_creates_a_missing_file(db_path: Path) -> None:
+    with pytest.raises(sqlite3.OperationalError):
+        SqliteRepository(db_path, read_only=True)
+    assert not db_path.exists()
+
+
+def test_read_only_opens_a_layout_1_store_and_adds_no_layout_row(db_path: Path, posts) -> None:
+    _layout_1_file(db_path, posts[:2])
+    before = _sha256(db_path)
+    reader = SqliteRepository(db_path, read_only=True)
+    assert reader.get(posts[0].listing_id) == posts[0]
+    assert _sha256(db_path) == before
+    assert _rows(db_path, "SELECT module, version FROM layout_version") == [("store", 1)]
+    assert [path.name for path in db_path.parent.iterdir()] == [db_path.name]
+
+
+def test_read_only_refuses_every_write_and_leaves_the_file_untouched(db_path: Path, posts) -> None:
+    SqliteRepository(db_path).upsert_with_lifecycle(posts[0], _pending(posts[0]))
+    before = _sha256(db_path)
+    reader = SqliteRepository(db_path, read_only=True)
+    with pytest.raises(sqlite3.OperationalError, match="readonly"):
+        reader.upsert(posts[1])
+    with pytest.raises(sqlite3.OperationalError, match="readonly"):
+        reader.save_classification(make_listing(posts[0].listing_id), _pending(posts[0]))
+    assert _sha256(db_path) == before
+
+
+def test_read_only_refuses_a_file_with_no_store_layout(db_path: Path) -> None:
+    with closing(sqlite3.connect(db_path)) as conn:
+        conn.execute("CREATE TABLE layout_version (module TEXT PRIMARY KEY, version INTEGER)")
+        conn.commit()
+    with pytest.raises(RuntimeError, match="no layout row for module 'store'"):
+        SqliteRepository(db_path, read_only=True)
+
+
+@pytest.mark.parametrize("module", ["store", "store.listings"])
+def test_read_only_refuses_a_layout_version_mismatch(db_path: Path, module: str) -> None:
+    SqliteRepository(db_path)
+    with closing(sqlite3.connect(db_path)) as conn:
+        conn.execute("UPDATE layout_version SET version = 2 WHERE module = ?", (module,))
+        conn.commit()
+    with pytest.raises(RuntimeError, match=rf"'{module}' expects layout version 1, found 2"):
+        SqliteRepository(db_path, read_only=True)
+
+
+def test_read_only_get_listing_on_a_store_with_no_listings_table_is_none(
+    db_path: Path, posts
+) -> None:
+    _layout_1_file(db_path, posts[:1])
+    assert SqliteRepository(db_path, read_only=True).get_listing(posts[0].listing_id) is None

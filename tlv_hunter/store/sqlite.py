@@ -39,15 +39,29 @@ class SqliteRepository:
 
     Datetimes live inside the documents, serialized and validated by the pydantic models; none is
     passed to sqlite3 as a parameter. One connection per operation.
+
+    `read_only=True` opens an existing file with SQLite's read-only mode, for the local pages of
+    tasks 2.6 and 2.7: it creates nothing, adds no layout row, and every write raises
+    `sqlite3.OperationalError`. A missing file raises instead of being created.
     """
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, read_only: bool = False) -> None:
         if sqlite3.sqlite_version_info < MIN_SQLITE_VERSION:
             raise RuntimeError(
                 f"SQLite {sqlite3.sqlite_version} is too old; module {LAYOUT_MODULE!r} needs "
                 f"{'.'.join(map(str, MIN_SQLITE_VERSION))} or later"
             )
         self._path = Path(path)
+        self._read_only = read_only
+        self._has_listings = True
+        if read_only:
+            with self._connect() as conn:
+                self._check_layout(conn, LAYOUT_MODULE, LAYOUT_VERSION, required=True)
+                # A store no writer has opened since task 2.2 has no listings table yet.
+                self._has_listings = self._check_layout(
+                    conn, LISTINGS_LAYOUT_MODULE, LISTINGS_LAYOUT_VERSION, required=False
+                )
+            return
         with self._transaction() as conn:
             conn.execute(_CREATE_LAYOUT_VERSION)
             self._ensure_layout(conn, LAYOUT_MODULE, LAYOUT_VERSION, _CREATE_TABLES)
@@ -63,20 +77,30 @@ class SqliteRepository:
         statements: tuple[str, ...],
     ) -> None:
         """Create the tables of a layout row that is absent; refuse a version mismatch."""
-        row = conn.execute(
-            "SELECT version FROM layout_version WHERE module = ?", (module,)
-        ).fetchone()
-        if row is None:
+        if not self._check_layout(conn, module, version, required=False):
             for statement in statements:
                 conn.execute(statement)
             conn.execute(
                 "INSERT INTO layout_version (module, version) VALUES (?, ?)", (module, version)
             )
-        elif row[0] != version:
+
+    def _check_layout(
+        self, conn: sqlite3.Connection, module: str, version: int, *, required: bool
+    ) -> bool:
+        """Whether the layout row exists; a version mismatch, or a required row absent, raises."""
+        row = conn.execute(
+            "SELECT version FROM layout_version WHERE module = ?", (module,)
+        ).fetchone()
+        if row is None:
+            if required:
+                raise RuntimeError(f"{self._path}: no layout row for module {module!r}")
+            return False
+        if row[0] != version:
             raise RuntimeError(
                 f"{self._path}: module {module!r} expects layout version "
                 f"{version}, found {row[0]}; no automatic migration"
             )
+        return True
 
     def upsert(self, post: RawPost) -> RawPost:
         with self._transaction() as conn:
@@ -167,6 +191,8 @@ class SqliteRepository:
             )
 
     def get_listing(self, listing_id: str) -> Listing | None:
+        if not self._has_listings:
+            return None
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT doc FROM listings WHERE listing_id = ?", (listing_id,)
@@ -201,7 +227,12 @@ class SqliteRepository:
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        conn = sqlite3.connect(self._path, autocommit=True)
+        if self._read_only:
+            # mode=ro never creates the file; the URI form is the only way to pass it.
+            target = f"{self._path.resolve().as_uri()}?mode=ro"
+            conn = sqlite3.connect(target, uri=True, autocommit=True)
+        else:
+            conn = sqlite3.connect(self._path, autocommit=True)
         try:
             conn.execute("PRAGMA foreign_keys = ON")
             yield conn

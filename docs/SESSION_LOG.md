@@ -2437,3 +2437,785 @@ Listed under each plan in `PHASE_2.md`:
 - The plan for 2.6, the regression set; its passes are the first real calls, on their own go.
 - Ron reads the spike's cost in the OpenAI dashboard and compares it with $0.0273.
 - After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-05 (continued) — Ron accepts 2.4 and 2.5; the regression set and its labelling page
+
+### Done
+
+There were no paid calls and no git. The real store was opened read-only only: its SHA-256 was
+the same before and after every run, and no journal file was left.
+
+**Decisions**, recorded first:
+- **#184:** the code of 2.4 and 2.5 accepted, with the deviations listed under each plan.
+- **#185:** `CLAUDE.md` stays out of git on purpose.
+  - The file never said it was checked in. "checked into the codebase" is the label Claude Code
+    puts on the file when it loads it; the previous session read it as the file's own words.
+  - So there was no sentence to fix. `CLAUDE.md` now says it is kept out of git.
+
+**The proposed regression set:** 52 posts in `data/labeling/regression_set.json`.
+- Chosen by reading all 195 pending canonicals and the 32 other canonicals in a copy of the store.
+- No pending canonical is mostly English: the English posts there are bilingual. The only
+  mostly-English post, and the only "seeking a roommate to search with", are pre-model rejects
+  (`no_images`). Both are proposed anyway: the model never sees them in production, but they test
+  it.
+- The list, for the review chat (ids and cases, no post text):
+
+| # | `listing_id` | Case |
+|---|---|---|
+| 1 | `adbda7def87f83e5a8f76c44b1a48fdc1deb0a4b22553c7a33585a2056fa0454` | spike 2.1: for sale, near the Givatayim border (spike 2.1 picked it as "seeking": a wrong label) |
+| 2 | `0213a37347d74ee04ad2f55e841a6c0a816a3ad7c338576145d9e80dc8ad60e9` | spike 2.1: seeking roommate for our flat; also: one amount for arnona, internet and cable (#160); feminine-only wording; a landmark and a street |
+| 3 | `0555aa328a773ede7df4e1fc764deec75b149cd464803135e607bd0bbc326e27` | spike 2.1: two roommates; also: דירת 3 שותפים with no living room named; a room size written as a product (#162) |
+| 4 | `13006346c18cb1e2090c6918237c84fa9c1bcbf764a04aaa719211517f067b11` | spike 2.1: sublet |
+| 5 | `279781d78a1684e0f600523135cc82ada03e129dfeec5953a8b793eb33b4f37d` | spike 2.1: sublet, second; also: a sublet as an option before a regular lease (#159; the spike's post 5); women only |
+| 6 | `109404d958b28118bbaac61fa12748843dbe27350a33a4b29e28484cb2875eff` | spike 2.1: shared post; also: a shared post whose own caption is the text (a known limit, #71 H) |
+| 7 | `136b5d986c3efb2bfe62b1d69d2cd0ce9a8ee08eea75d31809b68e14b0b1bff9` | spike 2.1: English; also: for sale; bilingual |
+| 8 | `24681f5907c74201f2936617e58e41c4bcdf67a1151ed7f41d1a24934a9dc104` | spike 2.1: English, second |
+| 9 | `1454d3ee4091d329a26cfc6c12c9d4df8c23804cbd72897ea4f6c926cfc18118` | spike 2.1: several amounts: rent, arnona, house committee (spike label "several prices"; one rent) |
+| 10 | `127957f940635c8c8486e73cebaca7685e80a7f400bef7f55243a43f64722ffe` | spike 2.1: native price not in text |
+| 11 | `7d467bbe14012fe471ebf0437b570f8587990ed5f5e1ff20f19607b9e70eb43f` | spike 2.1: native price below 500 |
+| 12 | `53f269a147da5ccc4e01900b03dd61be127463ac321b347912cdce0091977fb0` | spike 2.1: Old North |
+| 13 | `2d0442017ed36810b73580931a5df51f8efb35e0bc828b952c95351909c8214f` | spike 2.1: for sale, לב העיר (spike 2.1 picked it as "Jaffa": a wrong label) |
+| 14 | `1c0bc3636693a7d6043e626d5c8bd75397352eb02268005a68a117fb91226884` | spike 2.1: feminine-only; also: דירת 3 שותפות with a living room; a two-digit year; a flexible date |
+| 15 | `34097213a78930c643656713b3762189f96d68317c821c0e5ebcce1298d3ec53` | spike 2.1: any gender |
+| 16 | `0905ca64822ffbb683b6719093cb654b785a6b15c34b748bdf1b2c5b413c9a23` | spike 2.1: another city |
+| 17 | `b0e3b41ba9772a8af7d53b588465751d8aa84581702b371bc6f08be589b9a029` | spike 2.1: month with no day; also: native price below 500 |
+| 18 | `6d64c5293947439431e7f5be973fcbae7edbf05d622b163f50acdd1668b11894` | spike 2.1: several phones |
+| 19 | `0f4053fd8cb5146e92182f74b3c989aff254679be9263934a4874f8fd8c02434` | spike 2.1: broker; also: a landmark with no area and no street; with or without a living room |
+| 20 | `79e995b4ef2b13022c6d0d19242d928ded5a9e8149f6ab30556b03433b0f3be0` | spike 2.1: #45's seeking case, אנחנו שני שותפים שמחפשים דירת 3 חדרים (ASSUMPTIONS.md C2) |
+| 21 | `e90d9045d7151af9a324485c4c58b5f5da7559fb9d3f7073a9949af4c281ce40` | seeking: a real seeking post from the store, a person looking for a shared flat (#165) |
+| 22 | `4c6aa5ef80f8916dd8901bbf36225076e590ec39e62078431e8d6c8aac6e74c0` | Jaffa: a real Jaffa rental from the store, the North Jaffa area named and a street; bilingual (#165) |
+| 23 | `b09d99a6e7ec11a5fbe255b0bc1a44b7d640e819769234857081dd625ae9d867` | Jaffa by a landmark only in the Hebrew half, "Jaffa" named in the English half; a sublet with dates; a price for the whole period |
+| 24 | `8294df78a2755f2d46c35d49649e09af7e0e8d1ea5a379ebcfe7dcf7ba1ba307` | English: a mostly English post, seeking. A pre-model reject (no_images): never sent in production |
+| 25 | `ebe67e8bb3ca424fbc1a9ea5bdb8b59fb543099c9c96e73d73be9b7ff1669a5d` | seeking a roommate to search with (against "seeking a roommate for our flat"). A pre-model reject (no_images) |
+| 26 | `34a2d715ee66f2691efc26cbe813d66d3a58e64818a3ac064f89338aa5b22825` | a sublet as an option before a regular lease (#159): the first two months as a sublet; a flexible entry |
+| 27 | `60ecd1e86a4ee8aaedbccb905852c6fca386d75b595ed61d46603802798a1d3f` | a sublet until December, then an option of a new lease in January, two prices; seeking a roommate for our flat; no living room; a foreign phone number |
+| 28 | `4010cb5c6dc92b92addc10e743eaf99e9bb7e29d2725e589cd45465d715340e4` | a contract swap or sublet until March; arnona for two months; house committee written as none |
+| 29 | `f0c5e98aa5e7f987d58f8202e02f513ac19e1f84ec2bdb59449fc83b75206df1` | a long sublet with an option to continue; women preferred (עדיפות לבנות) with feminine wording; דירת 3 שותפות with a living room |
+| 30 | `9136a71552d992b4d0d2816fdbd1eb62258d41633eb0106640432d564be5d2b3` | a sublet; native price 1000 and no price in the text; a landmark and a street |
+| 31 | `51cbed94ae13fc9f025a1ef9959f29cca86253b8ebca26263387328ad61594dd` | Russian text; native price 5800 and no price in the text |
+| 32 | `dbbce5341f66a60e3b094bef969d6fc80aa53281bd21f3992840d098c39d2cbc` | native price 6350; no price and no street in the text (both only in the provider's title) |
+| 33 | `00f1725949415cdc55fe57d15dc38284850adc46a21a49c4bdc662e95d3f2d00` | דירת 2 שותפים with no living room; a street near another street, with no area |
+| 34 | `b330d3fca46379fb9cd042ff52412cfc342a0e3909ef54e60f198298f24bc7c7` | a room; no living room, a hall instead, in a 4-room flat; the room's size; a landmark and a street |
+| 35 | `31bd92058a4d3c999431ca30aec7dddae3f91efea98eaf9249f6fef5581a3368` | דירת N שותפים with N in words; a flexible date; an area name that is not one of the 71 |
+| 36 | `53b7142320355148233c49f870fd3093d134c580b8a4d96515bd55db16b2a84e` | women only, stated in words, while the roommates staying are men; an area name (כיכר המדינה) |
+| 37 | `cdc350f163ec658e43b64e404df2b5759daccffc3095d6d6b348e3591bba6de9` | feminine-only wording (מחפשת שותפה); a four-digit year; 2 roommates in total |
+| 38 | `fc1e93b49d2e15acda879f5af7a8902e400cf5840eb2aa35b8d3faaab247214c` | a landmark with no area and no street; bilingual; no price |
+| 39 | `14a59a2e2e67c5f224c32fab6b10d737af3e6009ca1c71b3f46fd83b9822bdde` | a street corner with no area; a shared post; a house committee amount |
+| 40 | `6a59d7730e28a0a479d2dd52d26dcca35ee22f9cc0a926bfda30e4a6b00bf249` | a street with no area; two prices over time (one until March, another after) |
+| 41 | `fd8823e6eff59a4911312db30c04630234a45da84588e65f2a6c4ed8fd76f055` | the Old North named, and a street; arnona for two months; a date with possible flexibility |
+| 42 | `26e8a28bf475752036afa9cc8924de8397e174191545072895ab8505102db4fa` | another city named only in the provider's title; the text names no city |
+| 43 | `40f7f193abef7e8c2a65c8c8fb87ce1d324df8d96131322bc0fe82b5715f1395` | a per-roommate price for a whole apartment (unclear); on the border with another city |
+| 44 | `4318b5931f38f2bccfb1057caa2a375ecc937218c58606c21f4e420ca8b9efcb` | several apartments, each with a price range (a project) |
+| 45 | `e6a8b9bbd41c17470cd4a52fa8e0c6bd6b8ce40ab5264768561453367c46d9b7` | a malformed price (an extra digit); an entry date already past |
+| 46 | `c646fb9f7781f3273e1bc00e8c3ca1752d56ecde0ac5c2edc39f112038121fd8` | entry dates that disagree: immediate in Hebrew, September 1st in English |
+| 47 | `87fc491705b2cfbf5d424087f2f06265e8b98620537821ef0a7ecf105c4a5a55` | for sale, with the current rent written; bilingual; arnona per month and per two months |
+| 48 | `82d43e86d0b8fb48145cb26d614677ff29d8f327df610348c964219b42a57e16` | one amount for arnona, water and house committee together (#160) |
+| 49 | `5e634217f11da9692bb7fa4989e4d47ab2c629090e54528651a59ac944c4f3cc` | an apartment swap: it offers a flat and seeks another |
+| 50 | `e7531005333090d19b241232513e3622cf5b37d11bcc672add508d0f4ca0efd1` | כפר שלם, a name covering two areas (68, 69); everything included but electricity |
+| 51 | `8ae80944957bfebac0fbccaa8492f4897dff4e50c78d58076780b125f03dbb04` | the end of a month; bilingual |
+| 52 | `4c5bbcaf4b5795af14897947d678627b3a5834b17c7a3bb7d28ff6f5326a905e` | another city whose street names are also Tel Aviv street names |
+
+**Code, task 2.6, first part:**
+- `tlv_hunter/labeling/` (new): `regression_set.py`, `labels.py`, `page.py`, `label_page.html`.
+- `tlv_hunter/jobs/label_page.py` (new): the command, free.
+- `tlv_hunter/store/sqlite.py`: `SqliteRepository(path, read_only=True)`.
+- **Generated:** `data/labeling/label_posts.html`, 52 posts, about 155 KB.
+
+**Tests:**
+- New: `tests/test_labeling.py` (the set, the texts, the page, the command) and
+  `tests/test_labels.py` (`labels.json`).
+- Extended: `tests/test_sqlite_store.py`, with 7 tests for `read_only`.
+
+**Docs:**
+- `DECISIONS.md` #184, #185.
+- `PHASE_2.md`:
+  - the status line;
+  - 2.6: the set and the page as built, with the deviations;
+  - 2.6: the plan for the regression runner;
+  - 2.7: its plan;
+  - §4.
+- `CLAUDE.md`: the phase line; the out-of-git line; the command; `read_only` in the store row;
+  the store-constructor sentence; `labeling/`.
+- `BACKLOG.md`.
+
+### Verified
+
+- **`uv run pytest`:** 929 passed in 393 s, 56 more than the 873 before. An earlier full run,
+  before the last template and set edits, also gave 929 passed.
+- **`uv run ruff check .`:** all checks passed. **`uv run ruff format --check .`:** 117 files
+  already formatted.
+- **First failures while writing the tests,** both fixed:
+  - the hash raised on a lone surrogate (now `surrogatepass`);
+  - one test's own assertion was wrong.
+
+- **The page in a real browser:** headless Chrome (the installed one) ran a scripted session on the
+  generated page:
+  - every text matched the stored text exactly;
+  - one post was labelled in full, one marked ambiguous, one partly labelled;
+  - the export downloaded `labels.json`, and `read_labels` read it and named the partly labelled
+    post as incomplete;
+  - the progress was saved in local storage.
+- **The page loads nothing from outside:** no `src`, `<link>`, `@import` or `url(`. The only
+  "http" in it is inside post texts.
+- **Screenshots** of a Hebrew post and a bilingual one: each line takes its own direction.
+- **The worst case the cap check would use,** computed offline from the real requests of the 51
+  stored posts: $0.0030–0.0033 a call. Nothing was sent.
+
+### Deviations
+
+Listed under 2.6 in `PHASE_2.md`:
+- `text_sha256` in `labels.json`;
+- the entry date labelled as `entry_date_parts`;
+- the price from the text only;
+- `null` for not labelled, and "No area" as `[]`;
+- no case label on the page;
+- `SqliteRepository`'s `read_only`;
+- the command in `jobs/`.
+
+Also:
+- the spike's "several prices" post holds one rent plus arnona and a house committee; its case
+  says so.
+- `text_sha256` hashes with `surrogatepass`, so a lone surrogate still hashes.
+
+### Conflicts found
+
+- **#128:** the regression runner would be a second reader of `OPENAI_API_KEY`. It is a plan
+  only, and asked in `PHASE_2.md` §4.
+- **`CLAUDE.md`'s production-store sentence:** the labelling command opens the store too,
+  read-only. The sentence now says "for writing", and names the read-only command.
+- **No invariant is touched:** the page never shows a model answer, and no store record is
+  written. No schema changes: `labels.json`'s shape is new and marked for Ron's review.
+
+### Next
+
+- Ron reviews the set (52 posts) and the page's code, and answers `PHASE_2.md` §4.
+- Ron labels the set and moves `labels.json` into `data/labeling/`.
+- Then the regression runner's code. Its two passes are the first real calls, on their own go,
+  about $0.02–0.04, cap $0.10 proposed.
+- Ron reads the spike's cost in the OpenAI dashboard and compares it with $0.0273.
+- After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-06 — Ron's answers; the regression runner and the review report; the first regression run
+
+### The stop of 2026-10-05, 22:17
+
+The previous round was stopped mid-work. What it had changed:
+- **`docs/DECISIONS.md`:** #186–#195 were recorded in full (Ron's answers of 2026-10-05).
+- **`tlv_hunter/classification_run.py`:** the attempt loop had moved, complete, into a public
+  `attempt_post` that writes nothing, and `_Stop` had become the public `RunStop`. `_classify_one`
+  calls `attempt_post`, then saves. The module's 70 tests had passed.
+- **The tree was consistent.** The full suite on it: 929 passed, ruff clean. My edits to
+  `complete.py` and `regression_set.py` landed while that run was in progress, so it is not a clean
+  certificate of either state; the final run below is.
+- Nothing was reverted. The change was finished as it stood and used by the runner.
+
+### Done
+
+There was **one paid run**, the regression run Ron approved, and no git. The store was opened
+read-only only: its SHA-256 was the same before and after. Ron's `labels.json` was never written:
+its SHA-256 is `b0718144…`, the same before and after.
+
+**Decisions**, recorded first:
+- **#186–#195:** Ron's answers of 2026-10-05.
+- **#196:** Ron's changes of 2026-10-06 on top of `labels.json`.
+- Notes on #128 (amended by #188) and #142 (refined by #190–#193).
+
+**The overrides:** `data/labeling/label_overrides.json`, with #196's 6 removals, 13 label changes
+and 3 fields not compared. Each entry carries its reason, and the file is pinned to `labels.json`'s
+SHA-256. Its name and shape are my proposal, for Ron to confirm.
+
+**Code, the runner** (`PHASE_2.md` 2.6):
+- `jobs/regression_run.py` (new), with `--check`;
+- `labeling/overrides.py`, `regression.py`, `compare.py`, `run_report.py` (new);
+- `regression_set.py`: `truth`, `regression_posts`, #45's post dated 2026-09-13;
+- `classify/complete.py`: `price_with_fallback` and `entry_date_from_parts` made public;
+- `classification_run.py`: `attempt_post`, `RunStop`;
+- `store/sqlite.py`: read-only `get_listing` returns `None` with no `listings` table.
+
+**Code, the review report** (`PHASE_2.md` 2.7):
+- `jobs/review_page.py` (new), with `--run`;
+- `labeling/corrections.py`, `review.py`, `review_page.html` (new);
+- `jobs/label_page.py` leaves out a post that joined from the review.
+
+**Tests:**
+- New: `tests/test_regression_runner.py` (21) and `tests/test_review_page.py` (17).
+- Added: one each in `tests/test_sqlite_store.py`, `tests/test_classification_run.py` and
+  `tests/test_labeling.py`.
+
+**Docs:**
+- `DECISIONS.md`;
+- `PHASE_2.md`: the status line, the built notes and deviations under the runner's plan and 2.7,
+  §4;
+- `CLAUDE.md`: the phase line, the commands, the key readers, the read-only commands, `labeling/`;
+- `BACKLOG.md`.
+
+### Verified
+
+- **Before the paid run:** `uv run pytest` gave 970 passed in 119 s, 41 more than the 929 before.
+  `uv run ruff check .`: all checks passed. `uv run ruff format --check .`: 127 files already
+  formatted. No code changed after that run.
+- **First failures while writing the tests,** all in the tests themselves:
+  - a cap of $0.004 sits above one call's worst case, so it could not stop the run; the test now
+    uses $0.001;
+  - `TransportError` takes keyword arguments.
+- **`--check` on the real files:** 46 posts; removed positions 6, 10, 27, 31, 43 and 49; no
+  ambiguous post; the overrides applied; no refusal.
+- **The review page in headless Chrome:**
+  - the text matched exactly;
+  - fields were marked wrong and edited, and two posts marked reviewed;
+  - the "not reviewed yet" filter showed only the one left;
+  - `CorrectionFile` read the export, `corrected_listing` applied it, and the errors per field and
+    the post to join the set came out right.
+- **The review command on the real store:** 0 posts, since nothing there is classified. The store
+  was unchanged.
+
+### The regression run (paid, Ron's go)
+
+`data/labeling/runs/v1-7cebac22-d807e1baa0a0/`, holding `results.json` and `report.html` (the
+readable version, with the texts).
+
+- **The run:** `gpt-6-luna` as reported on every call; prompt version 1 (fingerprint
+  `7cebac22…`); effort `none`, temperature 0.
+- **Calls:** 46 posts, two passes, 92 calls, all answered on the first attempt. No retry, no stop.
+- **Cost, by the usage metadata:** $0.019597 of the $0.10 cap ($0.009773 for pass 1, $0.009823
+  for pass 2).
+  - Tokens: 386,122 input, of which 359,359 read from the cache and 3,949 written to it; 26,456
+    output; 0 reasoning.
+  - About $0.00021 a call.
+- **The bill** has not been compared yet (P19's lesson).
+
+**Per pass and field.** The deciding fields only: the other fields are not measured until Ron
+reviews pass 1 (#193).
+
+| Field | Bar | Pass 1 | Pass 2 |
+|---|---|---|---|
+| `post_nature` | no error | 0 of 46 wrong: pass | 0 of 46: pass |
+| `apartment_kind` | 95% | 1 of 32 (96.9%): pass | 1 of 32 (96.9%): pass |
+| `price` | 95% | 1 of 31 (96.8%): pass | **2 of 31 (93.5%): fail** |
+| `gender` | 95% | 1 of 32 (96.9%): pass | 1 of 32 (96.9%): pass |
+| entry date | 90% | 2 of 32 (93.8%): pass | 3 of 32 (90.6%): pass |
+| `areas` | 95% | **11 of 30 (63.3%): fail** | **11 of 30 (63.3%): fail** |
+| `other_city` | no error | 0 of 32: pass | 0 of 32: pass |
+| Filled in where not written | none | 0 | 0 |
+| **Verdict** | | **fail** | **fail** |
+
+14 posts are compared on `post_nature` only (#196 point 1), so most fields count 32, not 46.
+
+**Every mismatch, with my reading.** Position, field, label, model. The model's answer is pass 1's
+unless marked; "both" means both passes. "Check on the map" means the text alone does not settle
+it.
+
+| Pos | Field | Label | Model | Reading |
+|---|---|---|---|---|
+| 2 | areas | [10] | [11]; pass 2 [9] | **Model.** A street and a landmark; the answer changes between passes. The known limit of #170 |
+| 3 | areas | [30] | [35]; pass 2 [31, 35] | **Unsure: check on the map.** Two streets that meet. If the corner lies east of the main avenue, 35 is right and the label is wrong |
+| 12 | areas | [30] | [30, 31], both | **Model, or a sentence.** The Old North is named and a street should choose its part (rule 1); the model returns both parts. A sentence naming the line between 30 and 31 would let it choose |
+| 14 | areas | [41] | [37], both | **Model.** A street only, placed in the wrong area (#170) |
+| 19 | areas | [31] | [37], both | **Unsure: check on the map.** A landmark only (a square). If the square touches both 31 and 37, rule 4 gives both, and the label needs 37 too |
+| 26 | areas | [37] | [38], both | **Probably the label.** A street, a hotel and "near the market" point to 38. Check on the map |
+| 33 | areas | [30, 31] | [37]; pass 2 [] | **Both.** "A street near another street": 37 is far off, and [] is unstable. The label's 31 is doubtful: the street is the Old North's northern edge, and 33 or 34 lies across it. Check on the map |
+| 34 | areas | [31] | [37], both | **An instruction sentence.** The post calls its location "the center of Tel Aviv", which the instructions map to 37, and also names a square and a street in the Old North. Rule 1 lets a stated name decide. A sentence is needed on a general name against a precise place |
+| 37 | areas | [31] | [37], both | **Unsure: check on the map.** A landmark: a shopping centre on the street the area names cross. 37 may be right |
+| 41 | areas | [31] | [30, 31], both | **Model, or a sentence.** As 12: the Old North named, a street that should choose |
+| 48 | areas | [30] | [30, 31], both | **Model, or a sentence.** No area named; two streets meet, and rule 3 gives their common area. Same line between 30 and 31 |
+| 15 | entry date | immediate | not written, both | **Label.** The text gives no entry date; re-checked |
+| 16 | entry date | immediate | unclear, both | **An instruction sentence.** Entry is "immediately once the occupancy permit arrives", which is still pending. The model's unclear is defensible. A sentence is needed on a conditional "immediate" |
+| 35 | entry date | 2026-10-10 | unclear (pass 2 only) | **An instruction sentence.** A date followed by "flexible"; the instructions make "flexible" unclear. Pass 1 gave the date |
+| 32 | apartment kind | room | whole apartment, both | **Label.** The owner offers a whole two-room apartment; re-checked |
+| 35 | gender | no restriction | women only, both | **Model.** The feminine wording describes the roommates who stay, not the person wanted. The instructions already say "the person wanted" |
+| 45 | price | [7200] | [72000], both | **An instruction sentence; the model is wrong either way.** The price is written with a misplaced thousands separator. The label reads it as 7200; the model copied the digits. Rule 5 (copy, never correct) makes neither safe. A sentence is needed: a malformed amount is unclear |
+| 33 | price | [5500] | unclear (pass 2 only) | **Model.** The price is clear, and pass 1 gave [5500] |
+
+**What the readings come to:**
+- `areas` holds 11 of the 18 mismatches.
+  - About 6 look like the model's: 2, 12, 14, 41, 48, and 33 in part.
+  - About 5 need Ron's check on the map, and some may be the label's: 3, 19, 26, 33, 37.
+  - One needs an instruction sentence: 34.
+- Three are one pattern: the model returns both parts of the Old North where a street should
+  choose (12, 41, 48). Two more touch the Old North's edges (33, 34).
+- Two label errors: 15 and 32.
+- Three instruction gaps: 16, 35's entry date, 45.
+- The instructions were not changed.
+
+**Answers that changed between the passes:** 24, by position and field.
+- Deciding fields: 2 areas; 3 areas; 7 price (a sale post, not compared); 33 price and areas;
+  35 entry date; 39 areas (not compared, #196).
+- Other fields: 3 rooms; 14, 17, 26 and 29 entry date as written; 16 broker and parking; 22 and
+  51 broker; 23 rooms and furnished; 30 parking and furnished; 34 arnona; 35 entry date as
+  written; 44 rooms; 50 house committee.
+- Temperature 0 is not deterministic (O12): 18 of the 46 posts changed at least one field.
+
+### Deviations
+
+Listed under the runner's plan and under 2.7 in `PHASE_2.md`. In short:
+- `--check`, and `--cap` defaulting to $0.10;
+- `truth` on set entries;
+- the overrides file's shape;
+- the list of fields measured from the review, and `entry_date` held to 90%;
+- the four verdicts, with exit code 0 whatever the verdict;
+- ambiguous posts not sent;
+- the shared helpers made public;
+- the review's `--run`;
+- a stale correction stops the review command;
+- progress kept per classification;
+- the typed controls for areas, prices and phone names;
+- only stored posts join the set.
+
+### Conflicts found
+
+- **No invariant is touched:**
+  - the runner and both pages write nothing to the store (SHA-256 checked);
+  - the model received each text verbatim, in the classifier's approved request;
+  - Ron's `labels.json` is unchanged.
+- **#196's file name and shape** were proposed and used in the same round, as the brief asked;
+  Ron confirms them.
+- **`review_page` imports `RUNS_DIRECTORY` from `jobs/classify_pending.py`,** and so loads the
+  OpenAI client module without calling it.
+
+### Next
+
+- **Ron decides what follows the failed run:**
+  - label fixes in `label_overrides.json` (15, 32, and those the map check settles);
+  - instruction sentences: the line between 30 and 31; a general name against a precise place;
+    a conditional "immediate"; a date with "flexible"; a malformed amount;
+  - then a second run, or the next model (#127).
+- Ron reviews pass 1 (`review_page --run v1-7cebac22-d807e1baa0a0`) for the other fields (#193).
+- Ron confirms `label_overrides.json`'s shape and the deviations.
+- Ron reads this run's cost on the OpenAI bill against $0.019597, and the spike's against $0.0273.
+- After 2026-10-08: the free GET on an expired run A link.
+- 2.8 waits for a passing set.
+
+## 2026-10-06 (continued) — Ron's decisions after the failed run; instructions version 2; two regression runs
+
+### Done
+
+There were **two paid runs**, the ones Ron approved, and no git. The store was opened read-only
+only: its SHA-256 was the same before and after both runs. Ron's `labels.json` was not written:
+its SHA-256 is still `b0718144…`. No other paid call was made.
+
+**Decisions**, recorded first:
+- **#197:** `label_overrides.json` and the runner's deviations accepted.
+- **#198:** `areas` measured by reach, at 90% (amends #142).
+- **#199:** more label changes: 15, 32, 16, and `price` on 45 not compared.
+- **#200:** the instructions, version 2.
+- **#201:** the reasoning effort as an option of a regression run.
+
+**The instructions, version 2** (`tlv_hunter/classify/instructions.txt`). Five sentences were added
+and nothing else was changed; `PROMPT_VERSION` is "2", with its fingerprint (`11cbdce8…`). The text
+is 9,815 characters, against 9,025. The new sentences, in place:
+- **Areas** (after rule 5): "Lean towards more areas, not fewer. When the location is given by a
+  street, a corner, a square or a landmark that may lie in more than one area, or near the border
+  between areas, return every area it could be in. Return one area only when the post names that
+  area or the place clearly lies inside it. A general phrase (מרכז תל אביב, מרכז העיר) beside a
+  precise street or square does not replace it: return the areas of the precise place as well."
+- **Gender**, appended to the existing paragraph: "Feminine wording about the roommates who stay
+  (נשארות שתי שותפות) is not a restriction; only wording about the person wanted counts."
+- **Entry date**, two bullets after "Flexible is unclear": "A date followed by "flexible" ("10.10
+  גמיש") is the date, written. "Flexible" with no date stays "unclear"." and "An entry that
+  depends on an event with no date (a permit, the end of a renovation) is "unclear"."
+- The Old North's two parts: no sentence, as decided (#200).
+
+**Code:**
+- `labeling/compare.py`:
+  - `areas` by reach (`reaches`), at 90%;
+  - `AreasExact`: the exact-match errors and the average areas returned and labelled, as
+    information.
+- `classify/instructions.py`:
+  - `build_prompt(reasoning_effort=...)`;
+  - no temperature at effort `low` (O4);
+  - `Prompt.with_production_setting()`.
+- `classify/openai_classifier.py`:
+  - the request leaves out `temperature` when there is none;
+  - the guard compares the prompt at the production setting, so a run at another effort is still
+    held to the approved text.
+- `jobs/regression_run.py`: `--effort none|low`. A run records its own full fingerprint and effort,
+  and its folder is named `v<version>-<effort>-<fingerprint 8>-<run>`.
+- `labeling/run_report.py`:
+  - the areas figures;
+  - the number of posts that changed between the passes;
+  - a failed post's error detail.
+- `data/labeling/label_overrides.json`: #199's three label changes and one field not compared.
+
+**Tests:** 986 passed in 121 s, 16 more than the 970. Run before the paid runs: 985 passed in 280
+s, with ruff clean. The 986th covers the error detail added after the runs.
+- New: areas by reach, the 90% bar, the exact and average figures, the effort option (no
+  temperature, its own fingerprint, the folder name), the count of changed posts, the version 2
+  sentences, the guard at another effort, a changed text refused at any effort, and the error
+  detail of a failed post.
+- Updated: two assertions that pinned prompt version "1".
+
+**Docs:** `DECISIONS.md` #197–#201; `PHASE_2.md` (status, the bar, the instructions' version 2, the
+two runs, §4); `CLAUDE.md`; `BACKLOG.md`.
+
+### The two runs
+
+Both: 46 posts, two passes, `gpt-6-luna` as reported on every call, prompt version 2, cap $0.10,
+none stopped by it. Readable reports, with the texts, are the `report.html` of each folder.
+
+| | `none`, temperature 0 | `low`, no temperature |
+|---|---|---|
+| Folder | `v2-none-11cbdce8-14b9a3e72c0a` | `v2-low-fe24bbc5-fdcdef213c8c` |
+| Calls | 93 (one retry) | 92 |
+| Cost, usage metadata | $0.020218 | $0.041000 |
+| Tokens: input / cached / cache write | 408,621 / 381,524 / 4,147 | 404,338 / 377,377 / 4,147 |
+| Tokens: output (of which reasoning) | 27,178 (0) | 68,853 (29,819) |
+| Mean seconds a call | 3.3 | 8.1 |
+| Cost a classified post | $0.00022 | $0.00045 |
+| Posts that changed between the passes | 19 of 46 (26 answers) | 27 of 46 (45 answers) |
+
+**Every field against its bar, per pass.** Errors of posts compared; the bar in brackets.
+
+| Field | `none` pass 1 | `none` pass 2 | `low` pass 1 | `low` pass 2 |
+|---|---|---|---|---|
+| `post_nature` (none) | 0/46 | 0/45 | 0/46 | 0/46 |
+| `apartment_kind` (95%) | 1/32 | 0/32 | 1/32 | 1/32 |
+| `price` (95%) | 0/30 | 0/30 | 0/30 | 0/30 |
+| `gender` (95%) | **2/32 fail** | 1/32 | 0/32 | 0/32 |
+| entry date (90%) | 1/32 | 0/32 | 2/32 | 1/32 |
+| `areas`, by reach (90%) | **4/30 fail** | **6/30 fail** | **6/30 fail** | **6/30 fail** |
+| `other_city` (none) | 0/32 | 0/32 | 0/32 | 0/32 |
+| Filled in where not written | 0 | 0 | 0 | 0 |
+| **Verdict** | **fail** | **incomplete**, and `areas` fails | **fail** | **fail** |
+
+At 30 posts, 90% allows 3 errors on `areas`.
+
+**Areas, as information.**
+
+| | `none` p1 | `none` p2 | `low` p1 | `low` p2 |
+|---|---|---|---|---|
+| Exact match | 63.3% | 63.3% | 66.7% | 73.3% |
+| Areas returned a post | 1.53 | 1.27 | 1.13 | 1.17 |
+
+The labels hold 0.97 a post. Version 1, re-scored under the same rules (reach, the new
+overrides), had 8 of 30 wrong in both passes, 1.03 returned a post and 63.3% exact.
+**Version 2 at `none` is better on `areas` than version 1** (4 and 6 errors against 8).
+
+**Every error on `areas` in the four passes comes from seven posts: 2, 3, 19, 26, 33, 34, 37.**
+Misses by pass: 3 and 34, all four; 2, 19, 26 and 37, three; 33, two.
+
+**Pass 2 at `none` is incomplete:** position 24, the English post, came back invalid twice. The run
+did not record why: the error detail was not kept. It is kept from now on.
+
+### The two settings side by side
+
+| | `none` | `low` |
+|---|---|---|
+| Cost a classified post | $0.00022 | $0.00045 (2.0×) |
+| Monthly, 4,500–7,500 posts | $0.99–1.65 | $2.01–3.34 |
+| Cache writes (up to 48 job runs a day) | at most about $0.75 | the same |
+| Seconds a call | 3.3 | 8.1 |
+| A day's 150–250 posts, one after another | 8–14 minutes | 20–34 minutes |
+| Failed posts | 1 (invalid twice) | 0 |
+| Posts that changed between the passes | 19 of 46 | 27 of 46 |
+
+The monthly figures are the measured cost a post times the volume of `PHASE_2.md`; the volume is
+still one day's data (`ASSUMPTIONS.md` P7). A bill has not been compared with these figures.
+
+### Every remaining mismatch, and my reading
+
+Position, field, label, model. "Map" means the text alone cannot settle it and the label or the
+model needs a check on the map. No post text is quoted.
+
+| Pos | Field | Label | Model | Reading |
+|---|---|---|---|---|
+| 2 | areas | [10] | [9] ×2 `none`; [7, 9, 11] `low` p2; right in `low` p1 | **Model.** A street and a mall that lie in 10; the model places the street elsewhere. The known limit of #170 |
+| 3 | areas | [30] | [33, 34, 35] ×2 `none`; [31, 35] and [35] `low` | **Map.** Two streets that meet. The model never returns 30; it points at 35 or the New North. If it is right the label is wrong |
+| 19 | areas | [31] | [37] ×3 | **Map.** A square only. If it lies on the border of 31 and 37, the new sentence asks for both and the model fails it; if clearly in 37, the label is wrong |
+| 26 | areas | [37] | [38] `low` p1; [30, 31, 38] `none` p2; [29, 30, 31, 38] `low` p2 | **Model.** The street gives 37. The model uses the market and the lane the post names as distances, which rule 4 says place nothing, and drops 37 |
+| 33 | areas | [30, 31] | [33, 34, 35] `low` p1; [34] `low` p2; right in `none` | **Label, probably.** The model puts the corner in the New North in every pass where it misses. Map |
+| 34 | areas | [31] | [37] ×4 | **Map.** A square, given as the centre of the city. The first and the second sentence both apply, and the model returns one area |
+| 37 | areas | [31] | [37] ×3 | **Map, and the post.** "In the centre of" a long street: the street runs through both, and the first sentence asks for both |
+| 34 | gender | no restriction | women preferred ×2 `none` | **Model.** The wording names both sexes and gives an age range. The instructions already say wording for both is no restriction; an age preference is not named |
+| 35 | gender | no restriction | women only `none` p1 | **Model, and flaky.** The target of the new sentence on the roommates who stay: it held in 3 of 4 passes |
+| 38 | apartment kind | whole apartment | room in `none` p1 and in both `low` passes | **Ambiguous post.** Four private units with their own bathrooms and a shared kitchen. Ron may mark it ambiguous. Version 1 answered whole apartment |
+| 42 | entry date | not written | unclear `none` p1 | **Model, and flaky.** "Just bring suitcases and move in" is not a date; right in pass 2 |
+| 26 | entry date | unclear | 2026-11-01 `low` p1 | **Label or model.** The contract starts early November, the entry is flexible. Defensible either way; right in pass 2 |
+| 46 | entry date | immediate | unclear ×2 `low` | **The post.** The Hebrew half says immediate, the English half says September 1st. The model's unclear is defensible; the label could be unclear |
+| 24 | all | — | invalid ×2 `none` p2 | **Unknown.** The detail was not recorded |
+
+**What the readings come to:**
+- The remaining error is on `areas` and in the labels as much as the model.
+  - Four posts need a map check (3, 19, 34, 37) and three look like the model's (2, 26) or the
+    label's (33).
+  - If the map check changes the labels of the posts the model missed in most passes, the
+    numbers move a lot; if it does not, version 2 fails at either setting.
+- The instructions were not changed. No new gap beyond two small ones: an age preference is not a
+  gender restriction, and two halves of a post that disagree on the entry date.
+
+### Recommendation for the setting (Ron decides)
+
+**Keep `none`.**
+- **Quality:** `low` did not fix the one failing field. `areas` was wrong on 4 and 6 of 30 at
+  `none`, and 6 and 6 at `low`. Its gains elsewhere are small: no `gender` error, against 3 at
+  `none`; but 3 entry-date errors, against 1.
+- **Cost and time:** `low` costs twice as much and takes 2.5 times longer a call, for the same
+  verdict.
+- **Stability:** at `low` more posts changed between the passes (27 against 19).
+- **The case against:** `none` had the one failed post (position 24), and a `gender` error in
+  pass 1. Two passes of 46 posts cannot separate small differences.
+- **The setting is not what decides the verdict.** Seven posts, in the labels and the area
+  instructions, hold every error on `areas`.
+
+### Deviations
+
+- **The instructions' guard** compares the prompt at the production setting, so a run at `low` is
+  accepted and still held to the approved text. The production setting is unchanged (#201).
+- **A change after the runs:** the failed post's error detail in `results.json`. No call was made
+  with it, and it is tested.
+- **The version 1 numbers re-scored** use the new rules and overrides; they are not what the run of
+  2026-10-06's own report shows.
+
+### Conflicts found
+
+None. No invariant or decision is touched: the runs write nothing to the store, the model received
+each text verbatim in the approved request, and Ron's `labels.json` is unchanged.
+
+### Next
+
+- **Ron checks on the map** the labels of positions 3, 19, 34, 37, and 2, 26, 33; then decides:
+  label changes, more instruction sentences, a second run, or the next model (#127).
+- **Ron decides the setting.**
+- Ron reviews pass 1 of a run for the other fields (`review_page --run <folder>`, #193).
+- Ron reads these two runs' cost on the OpenAI bill against $0.020218 and $0.041000, and the
+  earlier run's against $0.019597.
+- After 2026-10-08: the free GET on an expired run A link.
+- 2.8 waits for a passing set.
+
+## 2026-10-06 (continued) — The known places; instructions version 3; one regression run; the run over the store NOT made
+
+### Done
+
+There was **one paid run**, the version 3 regression run Ron approved, and no git. The store was
+opened read-only only, and its SHA-256 is the same as before (`42504ba8…`). Ron's `labels.json` is
+unchanged (`b0718144…`). **The first run over the whole store (2.8) was not made:** a condition of
+#208 failed (below). No backup was made, since it belongs to that run.
+
+**Disclosure.** In the first fetch of the municipality's polygons I put Ron's email address in the
+`User-Agent`, so it went to the municipality's GIS server (`gisn.tel-aviv.gov.il`) in that one
+request. It was an oversight: the rule is to send it to no external service unless Ron asks. Every
+later request (Nominatim, Overpass, the GIS point queries) used a `User-Agent` that names only the
+tool. The request is not in any file the package keeps; the polygons file holds the response only.
+
+**Decisions**, recorded first: #202 (the setting stays `none`), #203 (the map check, a lead), #204
+(label changes), #205 (the known places), #206 (instructions version 3), #207 (the stop rule), #208
+(the first run over the store, with conditions). A note under #203 records the re-derived results.
+
+**The contracts, read first** (`external-contract-verification`): the skill names no source for
+coordinates, so the current documentation of each was read before any call:
+- Nominatim: the usage policy (at most 1 request a second, an identifying `User-Agent`, results
+  cached, bulk geocoding not encouraged, ODbL attribution) and `/search`.
+- Overpass: the wiki's fair-use limits and the shared-node query.
+- ArcGIS REST: the layer query parameters, and the stored layer metadata (EPSG:2039).
+
+They are in `ASSUMPTIONS.md` as A2–A5 (VERIFIED, with A5 a limit), and A6 (ASSUMED). A1c is now
+VERIFIED. **Overpass answered HTTP 504 on 7 of 21 requests** and each retry after 30 s worked.
+
+**Fixtures** in `data/raw/` (gitignored):
+- `tlv_gis_layer511_polygons_2026-10-06.json`: the 71 polygons in WGS84, fetched once;
+- `tlv_gis_layer511_point_queries_2026-10-06.json`: one point query per place;
+- `nominatim_known_places_2026-10-06.json` and `…_2_…`: 54 queries;
+- `overpass_junctions_2026-10-06.json` and `overpass_stations_2026-10-06.json`.
+
+**The known places:** `reference/known_places.yaml`, a name and shape proposed by me (#205).
+- Per place: `name` as people write it, `aliases`, `lat`, `lon`, `coordinates_source` (the OSM
+  object), `coordinates_date`, `areas`. A `source` block names both sources, the fixtures and
+  `touch_meters` (40).
+- **48 places:** 39 named places (squares, markets, malls, hospitals, stations, the port, beaches,
+  hotels, parks, a campus and the Jaffa places) and 9 junctions.
+- **The areas:** the area the point lies in, from a layer 511 point query, **plus every area within
+  40 m** (a place on a boundary lists both). The 40 m is my choice (A5).
+- **Cross-check:** a local point-in-polygon test on the polygons agreed with the service on all 48.
+- **Loader:** `areas/reference.py`, `load_known_places()`, the only reader; it refuses an
+  incomplete entry, areas that are not sorted municipal numbers, a point outside Tel Aviv-Yafo, and
+  a name written for two places.
+
+**The list, with each place's areas:**
+
+| Place | Areas | Place | Areas |
+|---|---|---|---|
+| כיכר דיזנגוף | 31 | מלון רויאל ביץ' | 38 |
+| כיכר רבין | 30, 31 | מגדל שלום | 37 |
+| כיכר המדינה | 34 | מגדל השעון ביפו | 42, 44 |
+| כיכר הבימה | 31 | נמל יפו | 44 |
+| כיכר מגן דוד | 37, 38 | יפו העתיקה | 44 |
+| כיכר אתרים | 30 | מתחם התחנה | 39 |
+| שוק הכרמל | 37, 38 | מרכז סוזן דלל | 39 |
+| שוק לוינסקי | 52 | גן מאיר | 37 |
+| שוק הפשפשים | 42 | פארק צ'ארלס קלור | 39 |
+| שרונה | 40 | פארק המסילה | 39 |
+| מגדלי עזריאלי | 41 | גן העצמאות | 30 |
+| דיזנגוף סנטר | 31 | אצטדיון בלומפילד | 42 |
+| נמל תל אביב | 29 | מרכז הירידים | 12 |
+| אוניברסיטת תל אביב | 11 | המושבה האמריקאית | 42 |
+| איכילוב | 35 | תחנת רכבת סבידור מרכז | 36 |
+| בית חולים אסותא | 13, 28 | תחנת רכבת השלום | 41 |
+| התחנה המרכזית | 53 | תחנת רכבת ההגנה | 53, 54 |
+| קניון רמת אביב | 10 | ארלוזורוב פינת הנרייטה סולד | 34, 35 |
+| חוף גורדון | 30, 31 | ז'בוטינסקי פינת אבן גבירול | 30, 34 |
+| חוף פרישמן | 31 | ארלוזורוב פינת אבן גבירול | 30, 34, 35 |
+| חוף הילטון | 30 | דיזנגוף פינת בן גוריון | 30, 31 |
+| מלון הילטון | 30 | אלנבי פינת רוטשילד | 37 |
+| אלנבי פינת בן יהודה | 37, 38 | דיזנגוף פינת ארלוזורוב | 30 |
+| בגין פינת קפלן | 40, 41 | הרצל פינת לוינסקי | 52 |
+
+**Ron's seven, re-derived** (#203):
+- Agree with the lead: 19 Dizengoff Square 31; 34 Rabin Square 31; 37 Dizengoff Center 31; 2 the
+  Ramat Aviv mall 10; 26 the Royal Beach hotel 38.
+- **3, Arlozorov / Henrietta Szold: 34, and 35 within 3 m.** Position 3's label is [34, 35]
+  instead of [34].
+- **33, Jabotinsky / Ibn Gabirol: the point lies in 34, with 30 within 1 m.** The review chat's
+  approximation fell on the 30 side; the label [30, 31] stays, as Ron said it is right, and reaches
+  through 30.
+
+**Places whose area surprised me:**
+- **Dizengoff Square, Habima Square and Rabin Square are all in 31** (the Old North's southern part),
+  not in 37, the centre: the pattern Ron named. Rabin Square also has 30 within 34 m.
+- **Savidor Center station is in 36** (Ayalon Peaks), not in the north.
+- **HaMesila Park is in 39** (Neve Tzedek) and not in Florentin; 52 is 95 m away.
+- **The Jaffa flea market is in 42** (North Jaffa), and the clock tower lists 42 and 44.
+- **Assuta Hospital lists 28 and 13** (Atidim, and the Yarkon Park), not Ramat HaHayal's own area.
+- **The Carmel Market point is on the 37 / 38 boundary** (0 m), as is Allenby / Ben Yehuda (1 m).
+- **The Dizengoff / Arlozorov junction is in 30** and Dizengoff / Ben Gurion on the 30 / 31 line.
+
+**The instructions, version 3** (`classify/instructions.txt`; `PROMPT_VERSION` "3", fingerprint
+`8b469eae…`). Version 2 is unchanged and the text grew by two things:
+- **After the list of the 71 areas**, a new paragraph and the generated list: "Known places. These
+  places, written as people write them, lie in the areas listed; a place on the boundary of two
+  areas lists both. A place from this list that the post gives as the apartment's location (rule 4)
+  places it in those areas: return them. Use this list, not your own memory of where these places
+  are." Then one line a place: the name, the other ways it is written after a slash, then its areas.
+  The list is generated by `render_places`, never typed.
+- **In the gender paragraph**: "An age preference (25-35) is not a gender restriction."
+- **11,698 characters**, against 9,815. The cache write grew from 4,147 to 5,020 tokens (+873, +21%).
+
+**Code:**
+- `areas/reference.py`: `KnownPlace`, `load_known_places`.
+- `classify/instructions.py`: `render_places`; `render_instructions` and `build_prompt` take the
+  places; version 3 and its fingerprint.
+- `data/labeling/label_overrides.json`: #204's two label changes and two fields not compared.
+
+**Tests:**
+- `uv run pytest`: **1030 passed** in 162 s, 44 more than the 986.
+  `uv run ruff check .`: all checks passed. `uv run ruff format --check .`: 128 files already
+  formatted. Both before the paid run; no code changed after it.
+- New: `tests/test_known_places.py` (37): the loader's refusals, the real file's contents, Ron's
+  seven, and the file's areas against the polygons and the point queries, read in place.
+- Added to `tests/test_classify_instructions.py` (7), plus the changed signatures and the version
+  pin.
+
+### The regression run
+
+`data/labeling/runs/v3-none-8b469eae-474573e21e9e/`: 46 posts, two passes, `gpt-6-luna` as reported
+on every call, version 3, effort `none`, temperature 0, cap $0.10, not stopped by it.
+
+**Cost, by the usage metadata:** **$0.020588** for 93 calls (one retry): $0.00022 a classified
+post. Tokens: 489,810 input (461,840 read from the cache, 5,020 written), 26,094 output, no
+reasoning. 3.28 s a call. The bill has not been compared.
+
+**Every field against its bar, per pass.** Errors of posts compared; the bar in brackets.
+
+| Field | Pass 1 | Pass 2 |
+|---|---|---|
+| `post_nature` (none) | 0/45 | 0/46 |
+| `apartment_kind` (95%) | 0/31 | 0/31 |
+| `price` (95%) | 0/30 | 1/30 |
+| `gender` (95%) | 1/32 | **2/32 (93.8%): fail** |
+| entry date (90%) | 0/31 | 0/31 |
+| `areas`, by reach (90%) | **0/30** | **0/30** |
+| `other_city` (none) | 0/32 | 0/32 |
+| Filled in where not written | 0 | 0 |
+| **Verdict** | **incomplete** (position 24) | **fail** (`gender`) |
+
+**Areas, as information.** Exact match 23 of 30 (76.7%) in pass 1 and 24 of 30 (80%) in pass 2; 1.20
+areas returned a post in both, against 1.00 in the labels. Version 2 at `none` had 4 and 6 errors by
+reach, and 1.53 and 1.27 returned. **Posts that changed between the passes: 20 of 46** (26 answers).
+
+**Which compared posts name a place in the list**, so that they no longer test the model's own
+knowledge of where places are. Of the 30 posts compared on `areas`:
+- **14 do.** 12 by an exact written name or alias (positions 2, 3, 5, 12, 22, 26, 33, 34, 36, 38,
+  45, 46), and 2 by a variant spelling that my scan did not match (19 writes "ככר דיזנגוף" without
+  the yod; 37 writes "במרכז דיזנגוף", which the list holds as Dizengoff Center).
+- Some of the hits are incidental: position 12 names the port only as a distance ("הנמל", an
+  alias), 3 names Savidor station as a distance, and 45 and 46 name HaMesila Park. Position 3's own
+  place, the Arlozorov / Henrietta Szold junction, is written with another spelling ("סאלד").
+- **16 do not** (8, 9, 14, 15, 16, 17, 18, 32, 40, 41, 42, 44, 48, 50, 51, 52). They had no `areas`
+  error in either version 2 run or in this one: the model's own knowledge handles them.
+- Seven posts held every `areas` error of the four version 2 passes (2, 3, 19, 26, 33, 34, 37); all
+  seven now name a place in the list, and the list fixed them.
+
+**Every remaining mismatch:**
+
+| Pos | Field | Label | Model | Reading |
+|---|---|---|---|---|
+| 34 | gender | no restriction | women preferred, both passes | **Model.** The wording names both sexes and gives an age range, with the word "preference" beside it. The age sentence did not help |
+| 35 | gender | no restriction | women only, pass 2 | **Model, flaky.** "The roommates who stay" sentence held in pass 1; it held in 4 of 6 passes over the three runs that carry it |
+| 33 | price | [5500] | unclear, pass 2 | **Model, flaky.** The price is clear; wrong in 2 of the 8 passes over four runs |
+| 24 | all | — | invalid twice, pass 1 | **Model.** The answer failed our own check: `rooms: value_error`, a `Marked` whose state and value disagree (the post asks for "2–3 rooms"). The position is a pre-model reject, never sent in production; a seeking post with a photo would be |
+
+Also, on posts not compared on a field: entry dates and apartment kinds changed between passes on
+posts whose label is a sublet, a for-sale or a not-compared field (positions 20, 21, 23, 25, 38).
+They are not errors.
+
+The instructions were not changed after the run.
+
+### Cost, size and monthly estimate (recomputed)
+
+- **Instructions:** 11,698 characters; a cache-write prefix of 5,020 tokens (4,147 in version 2).
+  The prefix is read from the cache after the first call: 461,840 of 489,810 input tokens here.
+- **A post:** $0.00022 measured, against $0.00022 in version 2: the prefix is cheap to read.
+- **A month, 4,500–7,500 posts:** $1.01–1.68, plus the cache writes: up to 48 job runs a day, each
+  writing the prefix once ($0.00063), at most $0.90 a month. **About $1.9–2.6 a month.** The volume
+  is still one day's data (`ASSUMPTIONS.md` P7), and the bill is not compared.
+- **The run over the store** (195 pending canonicals): about $0.044, under its $1.00 cap.
+
+### The first run over the whole store (2.8): NOT made
+
+Ron's go (#208) was conditional on all of:
+1. **In the regression run, `post_nature` and `other_city` have no error in both passes, and no
+   pass is incomplete.** `post_nature` and `other_city`: no error, both passes. **Pass 1 is
+   incomplete: position 24 failed after its attempts.** **This condition fails.**
+2. A dated backup of the store's file, with its path and SHA-256. **Not made:** the run was not
+   made.
+3. `run_once` is not running. Checked: no `run_once`, `classify_pending` or `regression_run`
+   process was running.
+
+I did not run it, and said which condition fails, as #208 requires. What I know that bears on the
+decision:
+- The failure is one post that the pre-model rejects would never send: it has no photo.
+- It is the same post that failed in pass 2 of the version 2 `none` run, where its cause was not
+  recorded. The cause is now recorded: the model's `rooms` is inconsistent.
+- In `classify_pending` a failed post costs one failed run and is retried, up to three runs (#139);
+  it does not stop the job.
+
+The review page for this run is `data/labeling/review.html` (45 posts: position 24 has no
+classification). There is no review page from the store: the store has no classification yet.
+
+### Deviations
+
+- **The known places' reach is 40 m** and a place is one point (A5): my choices.
+- **Position 3's label is [34, 35]**, not Ron's [34] (#204 allowed my result).
+- **The version 2 text is unchanged,** including the typed examples "כיכר המדינה: 34" and "שרונה:
+  40" in the colloquial names, which now also appear in the generated list with the same values. A
+  later edit of those two places in the file would not change the typed examples.
+- **An email in one User-Agent** (the disclosure above).
+
+### Conflicts found
+
+None with an invariant. Two with the wording of decisions:
+- **#208's condition** (no incomplete pass) failed, so the run was not made; Ron's stop rule (#207)
+  says the next step is 2.8 whatever the areas figure is. The two read apart: the stop rule is about
+  the areas figure, the condition is about completeness.
+- **Invariant 1:** `reference/known_places.yaml` is a new reference file with a new shape. It is
+  not a `Listing` field or a filter rule, and Ron approved proposing its shape (#205); it is for him
+  to confirm.
+
+### Next
+
+- **Ron decides the run over the store (2.8):** go anyway, or another regression run first. If go:
+  a dated backup of the store, then `classify_pending --cap 1.00`; the review page from the store
+  afterwards.
+- Ron reads the known places and adds or corrects entries.
+- Ron reviews pass 1 (`review_page --run v3-none-8b469eae-474573e21e9e`).
+- Ron compares the cost of the runs with the OpenAI bill: $0.020588 (this run), $0.020218 and
+  $0.041000 (version 2), $0.019597 (version 1), and the spike's $0.0273.
+- After 2026-10-08: the free GET on an expired run A link.

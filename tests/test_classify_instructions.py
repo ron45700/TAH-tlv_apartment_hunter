@@ -6,11 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from tlv_hunter.areas.reference import Area, load_areas
+from tlv_hunter.areas.reference import Area, KnownPlace, load_areas, load_known_places
 from tlv_hunter.classify.instructions import (
     AREAS_MARKER,
     MAX_OUTPUT_TOKENS,
     MODEL_NAME,
+    PLACES_MARKER,
     PROMPT_FINGERPRINT,
     PROMPT_VERSION,
     REASONING_EFFORT,
@@ -18,13 +19,14 @@ from tlv_hunter.classify.instructions import (
     TEMPLATE_FILE,
     build_prompt,
     render_instructions,
+    render_places,
 )
 
 
 def test_the_version_pins_everything_sent_except_the_post() -> None:
     """A change to the text, to reference/areas.yaml, to ListingExtraction or to the setting
     fails here until PROMPT_VERSION and PROMPT_FINGERPRINT are updated together."""
-    assert PROMPT_VERSION == "1"
+    assert PROMPT_VERSION == "3"
     assert build_prompt().fingerprint() == PROMPT_FINGERPRINT
 
 
@@ -56,8 +58,9 @@ def test_the_setting_is_the_approved_one() -> None:
 
 def test_render_generates_every_area_once_with_its_display_name() -> None:
     areas = [Area(number=1, name="א"), Area(number=2, name="'ב ג", label="ב ג'")]
-    rendered = render_instructions(areas, template=f"before\n{AREAS_MARKER}\nafter")
-    assert rendered == "before\n1: א\n2: ב ג'\nafter"
+    template = f"before\n{AREAS_MARKER}\nmid\n{PLACES_MARKER}\nafter"
+    rendered = render_instructions(areas, [], template=template)
+    assert rendered == "before\n1: א\n2: ב ג'\nmid\n\nafter"
 
 
 def test_the_real_render_holds_all_71_and_no_marker() -> None:
@@ -74,13 +77,84 @@ def test_the_two_additions_of_178_are_in_the_text() -> None:
     assert "A landmark on a border gives every number it touches" in template
 
 
-@pytest.mark.parametrize("template", ["no marker", f"{AREAS_MARKER}{AREAS_MARKER}"])
-def test_a_template_without_exactly_one_marker_is_refused(template: str) -> None:
+@pytest.mark.parametrize(
+    "template",
+    [
+        "no marker",
+        f"{AREAS_MARKER}{AREAS_MARKER}{PLACES_MARKER}",
+        f"{AREAS_MARKER}",
+        f"{PLACES_MARKER}",
+        f"{AREAS_MARKER}{PLACES_MARKER}{PLACES_MARKER}",
+    ],
+)
+def test_a_template_without_exactly_one_of_each_marker_is_refused(template: str) -> None:
     with pytest.raises(ValueError):
-        render_instructions(load_areas(), template=template)
+        render_instructions(load_areas(), load_known_places(), template=template)
 
 
 def test_the_draft_left_docs() -> None:
     """#178: the text lives in the package only."""
     docs = Path(__file__).resolve().parent.parent / "docs"
     assert not (docs / "INSTRUCTIONS_V1_DRAFT.md").exists()
+
+
+def test_a_run_at_effort_low_carries_no_temperature_and_its_own_fingerprint() -> None:
+    low = build_prompt(reasoning_effort="low")
+    assert (low.reasoning_effort, low.temperature) == ("low", None)
+    assert low.fingerprint() != PROMPT_FINGERPRINT
+    assert low.with_production_setting().fingerprint() == PROMPT_FINGERPRINT
+
+
+def test_version_2_holds_its_five_sentences() -> None:
+    text = build_prompt().instructions
+    for sentence in (
+        "Lean towards more areas, not fewer.",
+        "return the areas of the precise place as well.",
+        "Feminine wording about the roommates who stay",
+        'A date followed by "flexible"',
+        "An entry that depends on an event with no date",
+    ):
+        assert sentence in text
+
+
+# --- version 3 (#205, #206): the known places, generated; the age sentence ---
+
+PLACE = KnownPlace(
+    name="כיכר א",
+    aliases=["כיכר ב", "ג"],
+    lat=32.08,
+    lon=34.78,
+    coordinates_source="test",
+    coordinates_date="2026-10-06",
+    areas=[30, 31],
+)
+
+
+def test_a_place_renders_with_its_other_names_and_all_its_areas() -> None:
+    assert render_places([PLACE]) == "כיכר א / כיכר ב / ג: 30, 31"
+    assert render_places([]) == ""
+
+
+def test_the_real_render_holds_every_known_place_once_and_the_template_none() -> None:
+    template = TEMPLATE_FILE.read_text(encoding="utf-8")
+    instructions = build_prompt().instructions
+    assert PLACES_MARKER not in instructions
+    for place in load_known_places():
+        line = render_places([place])
+        assert instructions.count(f"\n{line}\n") == 1  # generated into the instructions
+        assert (chr(10) + line + chr(10)) not in template  # and never typed in the template
+
+
+def test_a_changed_place_changes_the_fingerprint_and_so_the_version_pin() -> None:
+    other = PLACE.model_copy(update={"areas": [30]})
+    assert build_prompt(places=[PLACE]).fingerprint() != build_prompt(places=[other]).fingerprint()
+    assert build_prompt(places=[PLACE]).fingerprint() != PROMPT_FINGERPRINT
+
+
+def test_version_3_holds_its_sentences() -> None:
+    template = TEMPLATE_FILE.read_text(encoding="utf-8")
+    assert "Known places. These places, written as people write them" in template
+    assert "Use this list, not your own memory of where" in template
+    assert "An age preference" in template and "(25-35) is not a gender restriction." in template
+    # Version 2's sentences stay, rule (a) included (#205).
+    assert "Lean towards more areas, not fewer." in template

@@ -101,7 +101,7 @@ def classify_pending(
         first_call = len(meter.calls)
         try:
             outcome, attempts = _classify_one(post, repository, classifier, sleep, on_written)
-        except _Stop as stop:
+        except RunStop as stop:
             stopped = stop.reason
             logger.warning("classification stopped before %s: %s", post.listing_id, stop.reason)
             break
@@ -119,10 +119,36 @@ def classify_pending(
     )
 
 
-class _Stop(Exception):
+class RunStop(Exception):
+    """The run stops before this post, which is not counted: the cap, or a failure every post would
+    share (`STOP_KINDS`)."""
+
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+def attempt_post(
+    post: RawPost, classifier: CompletingClassifier, sleep: Callable[[float], None]
+) -> tuple[Completed | ClassificationError, int]:
+    """The attempts of one post in one run, by the table above (#182): the completed answer, or the
+    last error once the attempts are spent, and the number of attempts. Writes nothing; raises
+    RunStop. Shared by this job and the regression runner (`PHASE_2.md` 2.6)."""
+    attempts = 0
+    while True:
+        attempts += 1
+        try:
+            return classifier.classify_completed(post), attempts
+        except CapReached as error:
+            raise RunStop(f"cap: {error}") from error
+        except ClassificationError as error:
+            if error.kind in STOP_KINDS:
+                raise RunStop(str(error)) from error
+            wait = _wait_before_next(error, attempts)
+            if wait is None:
+                return error, attempts
+            if wait:
+                sleep(wait)
 
 
 def _classify_one(
@@ -132,23 +158,10 @@ def _classify_one(
     sleep: Callable[[float], None],
     on_written: Callable[[Completed], None] | None,
 ) -> tuple[str, int]:
-    attempts = 0
-    while True:
-        attempts += 1
-        try:
-            completed = classifier.classify_completed(post)
-        except CapReached as error:
-            raise _Stop(f"cap: {error}") from error
-        except ClassificationError as error:
-            if error.kind in STOP_KINDS:
-                raise _Stop(str(error)) from error
-            wait = _wait_before_next(error, attempts)
-            if wait is None:
-                return _save_failure(post, repository, error), attempts
-            if wait:
-                sleep(wait)
-            continue
-        return _save_success(post, repository, completed, on_written), attempts
+    result, attempts = attempt_post(post, classifier, sleep)
+    if isinstance(result, ClassificationError):
+        return _save_failure(post, repository, result), attempts
+    return _save_success(post, repository, result, on_written), attempts
 
 
 def _wait_before_next(error: ClassificationError, attempts: int) -> float | None:

@@ -36,7 +36,7 @@ class OpenAIClassifier:
         prompt: Prompt | None = None,
     ) -> None:
         self._prompt = build_prompt() if prompt is None else prompt
-        if self._prompt.fingerprint() != PROMPT_FINGERPRINT:
+        if self._prompt.with_production_setting().fingerprint() != PROMPT_FINGERPRINT:
             raise ValueError(
                 "the prompt changed without a new PROMPT_VERSION: update PROMPT_VERSION and "
                 "PROMPT_FINGERPRINT in classify/instructions.py (DECISIONS.md #179)"
@@ -49,7 +49,7 @@ class OpenAIClassifier:
         """The instructions end at the cache breakpoint; the post follows, verbatim and alone
         (invariant 8, DECISIONS.md #147, #150, #157)."""
         prompt = self._prompt
-        return {
+        request = {
             "model": prompt.model,
             "input": [
                 {
@@ -67,10 +67,12 @@ class OpenAIClassifier:
             "text": {"format": prompt.text_format},
             "store": False,
             "reasoning": {"effort": prompt.reasoning_effort},
-            "temperature": prompt.temperature,
             "max_output_tokens": prompt.max_output_tokens,
             "prompt_cache_options": {"mode": "explicit"},
         }
+        if prompt.temperature is not None:
+            request["temperature"] = prompt.temperature
+        return request
 
     def classify(self, post: RawPost) -> Listing:
         return self.classify_completed(post).listing

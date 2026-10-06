@@ -1540,6 +1540,8 @@ recorded.
 It is in `.env`. Like `APIFY_TOKEN` (#79), only the command's entry point reads it, and it never
 appears in a log line. No reason recorded.
 
+*Amended by #188 (2026-10-05): only the commands that call the model read the key; the regression runner reads it too.*
+
 ### 129 — Rules name "the model", not a provider
 Where a rule named Gemini (`CLAUDE.md` invariants 8 and 11 and the seams, `BASELINE.md` §2 and
 §4, `SCHEMA.md`), it now says "the model". History entries and research keep their wording. No
@@ -1639,6 +1641,7 @@ a post Ron marks as ambiguous is not counted.
 *Why (the bar, the draft's):* it follows the cost of each mistake.
 
 *Amended by #177 (2026-10-05): streets and area names as written are not compared.*
+*Refined by #190–#193 (2026-10-05): prices compared as a set; `other_city` as Tel Aviv-Yafo or not; each pass on its own; the fields not labelled blind measured from the review.*
 
 ### 143 — Labelling and corrections through local static pages in `data/labeling/`
 Points 17 and 18, Ron's request. A labelling page, generated as a static HTML file in
@@ -1929,6 +1932,221 @@ No reason recorded.
 
 ### 183 — `other_city` stays on the labelling page, labelled blind
 #177 covers streets and area names only. No reason recorded.
+
+**Ron's review of tasks 2.4 and 2.5, 2026-10-05.**
+
+### 184 — The code of tasks 2.4 and 2.5 is accepted
+As built and committed, with the deviations listed under each plan in `PHASE_2.md` (2.4: the billed
+usage on the meter's `CallRecord`, `classify_completed` beside `classify`, the setting in
+`instructions.py`, the refusal to start on a fingerprint mismatch, a `not_found` kind, the current
+429 codes, a year below 100 read as 20YY; 2.5: `job_logging()` and `log_failure()`, the error text
+cut at 200 characters, a discarded failure not counted, `--cap` above 0, no dropped-names file when
+nothing is written). No reason recorded.
+
+### 185 — `CLAUDE.md` stays out of git, on purpose
+It is listed in `.gitignore` and is not tracked. The file never said it was checked in: "checked
+into the codebase" is the label Claude Code puts on the file when it loads it, which the session of
+2026-10-05 read as the file's own words (`SESSION_LOG.md`). The file now says it is kept out of git.
+No reason recorded.
+
+**Ron's answers on the regression set, its runner and the review report, 2026-10-05.**
+
+### 186 — The regression set is the 52 proposed posts
+`data/labeling/regression_set.json` as proposed on 2026-10-05, with the two pre-model rejects
+(`no_images`): the only mostly-English post and the only "seeking a roommate to search with".
+**Closes** the backlog row on the set's required cases. No reason recorded.
+
+### 187 — The labelling page's deviations are accepted
+- `labels.json` carries `text_sha256` per post.
+- The entry date is labelled as parts (`entry_date_parts`).
+- The price is labelled from the text only.
+- `null` means not labelled; "no area" is `[]`.
+- `SqliteRepository` has a `read_only` option.
+- The command lives in `jobs/`.
+- `CLAUDE.md`'s reworded sentence: the job commands construct the production store for writing;
+  the labelling command opens it read-only.
+
+No reason recorded.
+
+### 188 — Only the commands that call the model read `OPENAI_API_KEY`
+**Amends #128:** the regression runner reads the key too. The key is still never logged. No reason
+recorded.
+
+### 189 — #45's post is dated 2026-09-13
+The regression runner builds #45's post from `data/raw/test_posts.json` with `posted_at`
+2026-09-13, the day the fixture was captured, for the year completion. No reason recorded.
+
+### 190 — Prices are compared as a set
+"3,200/3,500" and "3,500/3,200" are the same answer: the regression set compares the price's state
+and its amounts as a set, not in written order. No reason recorded.
+
+### 191 — `other_city` is compared as Tel Aviv-Yafo or not
+The bar on `other_city` counts only whether the post is in Tel Aviv-Yafo or not. The city's name is
+shown in the report, not compared. No reason recorded.
+
+### 192 — Each pass of the regression set must meet the bar on its own
+**Refines #142.** No reason recorded.
+
+### 193 — The fields not labelled blind are measured from Ron's corrections in the review
+The truth for a field that is not labelled blind is the reviewed classification with Ron's
+corrections (`PHASE_2.md` 2.7): a field Ron did not correct counts as right. **Refines #142.** No
+reason recorded.
+
+### 194 — The regression runner's cap is $0.10
+No reason recorded.
+
+### 195 — Task 2.7: the plan approved
+- A "reviewed" mark per post.
+- Two more filters: in the regression set, and not reviewed yet.
+- The shape of `corrections.json`: `format_version` 1, `exported_at`, and per `listing_id`:
+  `text_sha256`, the reviewed classification's `prompt_version`, `model_name` and `classified_at`,
+  `reviewed`, `fields` (each corrected field's right value, in `Listing`'s shape), and `note`.
+- **A corrected post joins the regression set automatically,** with the corrected classification
+  as its truth.
+
+No reason recorded.
+
+**Ron's decisions on the labels, 2026-10-06.** Ron labelled all 52 posts
+(`data/labeling/labels.json`, exported 2026-10-05T20:15Z); the review chat read every label against
+its post. Ron will not relabel, and his file stays untouched.
+
+### 196 — Changes on top of `labels.json`, in a separate file
+The changes below live in `data/labeling/label_overrides.json`. The regression runner applies them
+on top of `labels.json` and lists them in every run report. Each entry carries its reason, and the
+file names the SHA-256 of the `labels.json` it was reviewed against.
+1. **A post labelled `seeking`, `for_sale`, `not_listing` or `sublet_offer` is compared on
+   `post_nature` only.** *Why (Ron):* nothing else matters on such a post.
+2. **Removed from the set,** by position in `regression_set.json`: 6, 10, 27, 31, 43, 49. The set
+   is 46 posts. No reason recorded.
+3. **Label corrections**, each because the post's text is unambiguous:
+   - 5: price [2900]; 16: price [9000];
+   - 12, 22, 42, 44: entry date not written;
+   - 51: entry date day 31, month 10; 17: day 1, month 9;
+   - 26: entry date unclear;
+   - 35, 39, 50: `other_city` null; 50: areas [68, 69].
+4. **Fields not compared:** `areas` on 35 and 39; `price` on 44. No reason recorded.
+5. Apart from 1 and 4, a blank deciding field still stops the runner.
+
+*The file's name and shape were proposed by Claude on 2026-10-06 (`PHASE_2.md` 2.6) and wait for
+Ron's confirmation; the run of 2026-10-06 used them.*
+
+**Ron's decisions after the failed regression run, 2026-10-06.**
+
+### 197 — `label_overrides.json` and the runner's deviations are accepted
+The overrides file's name and shape (#196), and the deviations of the runner and of 2.7: the `truth`
+field of a set entry; `--cap` defaulting to $0.10; the entry date held to the 90% bar; exit code 0
+whatever the verdict; a stale correction stops the review command; numbers typed on the review
+page. No reason recorded.
+
+### 198 — Areas are measured by reach, not by exact match
+**Amends #142.** A post passes on `areas` when the model's areas and the label's share at least one
+number, or both are empty. An empty answer against a labelled area is an error, and so is an area
+against an empty label. The bar is 90%. Still reported, as information and not as a bar: the
+exact-match rate, and the average number of areas returned per post, so an answer that lists too
+many areas is visible.
+*Why (Ron):* in a filter a wrong area hides an apartment, while an extra area only adds an orange
+post. The 71 areas are finer than a post's text can settle; several of Ron's own labels were
+uncertain.
+
+### 199 — More label changes, on top of `labels.json`
+**Extends #196**, each because the post's text is unambiguous (read by the review chat): position
+15, entry date not written; position 32, apartment kind whole apartment; position 16, entry date
+unclear (the entry depends on a pending permit). Not compared: `price` on 45 (a typo in the post).
+No reason recorded beyond the text.
+
+### 200 — The instructions, version 2
+Five sentences added, nothing else:
+1. Areas lean towards more, not fewer: a street, a corner, a square or a landmark that may lie in
+   more than one area, or near the border between areas, gives every area it could be in; one area
+   only when the post names it or the place clearly lies inside it.
+2. A general phrase ("מרכז תל אביב", "מרכז העיר") beside a precise street or square: the areas of
+   the precise place as well.
+3. Feminine wording about the roommates who stay ("נשארות שתי שותפות") is not a restriction; only
+   wording about the person wanted counts.
+4. A date followed by "flexible" ("10.10 גמיש") is the date, written; "flexible" with no date
+   stays unclear.
+5. An entry that depends on an event with no date (a permit, the end of a renovation) is unclear.
+
+`PROMPT_VERSION` and `PROMPT_FINGERPRINT` change with them (#179). Which streets divide the Old
+North's two parts: no sentence; the first one covers it. **Refines #88, #178 and #96.** No reason
+recorded.
+
+### 201 — The reasoning effort is an option of a regression run
+The regression runner takes `--effort none|low`. The production setting stays `none`, temperature
+0 (#157), until Ron decides. At `low` the request carries no temperature (`ASSUMPTIONS.md` O4). The
+classifier's fingerprint check pins everything else: the text, the schema, the model and the
+output limit. A run records the effort and its own full fingerprint. No reason recorded.
+
+**Ron's decisions after the two regression runs of version 2, 2026-10-06.**
+
+### 202 — The setting stays effort `none`, temperature 0
+Confirms #157. *Why (Ron):* `low` cost twice as much, was slower, and did not fix `areas`
+(`SESSION_LOG.md`, 2026-10-06).
+
+### 203 — The map check: seven places against layer 511 (a lead)
+Done by the review chat, one point query per place against the municipality's layer 511. The
+coordinates were its approximations, so the results are a lead, re-derived in the next round (#205):
+- 19, Dizengoff Square: 31. The label is right, the model wrong.
+- 34, Rabin Square: 31. The label is right.
+- 37, Dizengoff Center: 31. The label is right.
+- 2, Einstein St. by the Ramat Aviv mall: 10. The label is right.
+- 33, Jabotinsky by Ibn Gabirol: 30. The label is right.
+- 26, HaYarkon by the Royal Beach hotel: 38. The model is right, the label wrong.
+- 3, Arlozorov and Henrietta Szold: 34. Both were wrong.
+
+The pattern (Ron): the model takes "לב תל-אביב" (37) to reach Dizengoff Square and Rabin Square;
+the municipality puts them in 31. The model lacks the boundaries, not the understanding.
+
+*Re-derived 2026-10-06 (#205), from OSM coordinates and layer 511's own polygons and point queries:
+19 Dizengoff Square: 31. 34 Rabin Square: 31, and 30 within 34 m. 37 Dizengoff Center: 31. 2 the Ramat
+Aviv mall: 10. 26 the Royal Beach hotel: 38. 3 the Arlozorov / Henrietta Szold junction: 34, and 35
+within 3 m. **33 the Jabotinsky / Ibn Gabirol junction: 34, and 30 within 1 m** (the review chat's
+approximation fell on the 30 side). Everything else agrees with the lead.*
+
+### 204 — More label changes, on top of `labels.json`
+**Extends #196 and #199.** Position 26: `areas` [38]. Position 3: `areas` [34]; if the re-derived result
+differs, it is used and said (position 3 is [34, 35]: the junction is 3 m from 35). Not compared: `apartment_kind` on 38 and `entry_date` on 46 (ambiguous
+posts). No reason recorded beyond #203.
+
+### 205 — Known places: a reference file, rendered into the instructions
+A new file in `reference/`, read only through `areas/reference.py`:
+- **Entries:** a few dozen well-known places (squares, main junctions, markets, malls, hospitals,
+  stations, the port, the main beaches and hotels, campuses), spread over the areas people rent in
+  (the centre, the Old and New North, Ramat Aviv, Florentin and the south, Jaffa), the seven places
+  of #203 included. Each has the name as people write it, its coordinates, the source of the
+  coordinates and its date, and the area number.
+- **The area** comes from layer 511, by a point query or from its polygons fetched once into
+  `data/raw/`. A place on a boundary lists every area it touches.
+- **The coordinates** come from a stated free source, never from memory, under the
+  `external-contract-verification` skill and the source's usage policy.
+- **In the instructions:** the list is generated into them as known places, not typed. Rule (a) of
+  version 2 (areas lean towards more) stays.
+- **Ron adds entries later;** the file is in git.
+
+The file's name and shape are proposed by Claude in the same round, as with the overrides (#196).
+No reason recorded.
+
+### 206 — The instructions, version 3: the known places, and an age preference
+Version 3 adds the generated list of known places (#205) and one sentence: an age preference
+("25-35") is not a gender restriction. **Refines #103, #117 and #200.** No reason recorded.
+
+### 207 — The stop rule for the regression rounds
+After this round the next step is the first run over the whole store (2.8), whatever the areas
+figure is. Areas keep improving through Ron's error reports (#172, #173), not through more
+regression rounds. *Why (Ron):* the 71 areas are finer than a post's text can settle (#198).
+
+### 208 — The first run over the whole store: Ron's go, on conditions
+`classify_pending --cap 1.00`, in the same round as the version 3 regression run, only if all hold:
+- in that regression run `post_nature` and `other_city` have no error in both passes, and no pass
+  is incomplete;
+- the store's SQLite file is copied to a dated backup beside it first, and its path and SHA-256 are
+  stated;
+- `run_once` is not running.
+
+If the cap or anything else stops it, report and do not rerun. After it: the counts by outcome and
+by rejection reason, the cost, the failures, and the review page generated from the store. If a
+condition fails, the run is not made and the report says which. Closes the gate of #164 for this
+run only. No reason recorded.
 
 ---
 

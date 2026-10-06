@@ -5,6 +5,7 @@ answer in memory. The refusal is built from the documented shape: none was obser
 import copy
 import json
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -282,3 +283,22 @@ def test_the_cap_stops_before_the_send(posts: list[RawPost]) -> None:
     with pytest.raises(CapReached):
         classifier(transport, CostMeter(cap=0.001)).classify(spike_post(posts, 0))
     assert transport.requests == []
+
+
+def test_a_prompt_at_another_effort_is_accepted_and_sends_no_temperature(
+    posts: list[RawPost],
+) -> None:
+    transport = FakeTransport(spike_response())
+    meter = CostMeter(cap=1.0)
+    low = OpenAIClassifier(
+        transport, meter, clock=ticking_clock(), prompt=build_prompt(reasoning_effort="low")
+    )
+    low.classify(spike_post(posts, 0))
+    (request,) = transport.requests
+    assert request["reasoning"] == {"effort": "low"} and "temperature" not in request
+
+
+def test_a_changed_text_is_refused_at_any_effort() -> None:
+    prompt = replace(build_prompt(reasoning_effort="low"), instructions="changed")
+    with pytest.raises(ValueError, match="PROMPT_VERSION"):
+        OpenAIClassifier(FakeTransport(), CostMeter(cap=1.0), clock=ticking_clock(), prompt=prompt)

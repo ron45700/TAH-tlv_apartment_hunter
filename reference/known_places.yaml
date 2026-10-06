@@ -1,0 +1,368 @@
+# Known places: well-known squares, junctions, markets, malls, hospitals, stations, the port, the
+# main beaches and hotels and campuses, each with the areas it lies in (DECISIONS.md #205).
+# Rendered into the model's instructions as known places (classify/instructions.py), never typed
+# there. Read only through tlv_hunter/areas/reference.py. Ron adds entries by hand; each needs
+# every field below.
+#
+# `name` is the place as people write it; `aliases` are other ways it is written. `lat`/`lon` are
+# WGS84. `areas` are municipal numbers (`ms_shchuna`, 1-71): the area the point lies in, and every
+# area whose boundary is within `touch_meters` of the point (a place on a boundary lists every area
+# it touches). For a new entry: a point query against layer 511 gives the area; the coordinates
+# come from a stated free source, with its date.
+source:
+  coordinates: 'OpenStreetMap contributors, ODbL (https://www.openstreetmap.org/copyright): searched through
+    Nominatim (https://nominatim.openstreetmap.org, one request a second, an identifying User-Agent, results
+    cached in data/raw/) and, for junctions and stations, the Overpass API (https://overpass-api.de).
+    The object of each place is named in its `coordinates_source`.'
+  areas: 'Tel Aviv-Yafo Municipality, layer 511 (https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/511):
+    a point query per place, cross-checked against the layer''s polygons fetched once (outSR 4326).'
+  polygons_fixture: data/raw/tlv_gis_layer511_polygons_2026-10-06.json
+  point_queries_fixture: data/raw/tlv_gis_layer511_point_queries_2026-10-06.json
+  read: '2026-10-06'
+  touch_meters: 40
+places:
+- name: כיכר דיזנגוף
+  aliases: []
+  lat: 32.077994
+  lon: 34.774349
+  coordinates_source: OpenStreetMap relation 13645250, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [31]
+- name: כיכר רבין
+  aliases: []
+  lat: 32.080927
+  lon: 34.780792
+  coordinates_source: OpenStreetMap relation 9523249, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [30, 31]
+- name: כיכר המדינה
+  aliases: []
+  lat: 32.086864
+  lon: 34.789847
+  coordinates_source: OpenStreetMap way 26260278, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [34]
+- name: כיכר הבימה
+  aliases: [כיכר התרבות]
+  lat: 32.072461
+  lon: 34.779975
+  coordinates_source: OpenStreetMap relation 7276783, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [31]
+- name: כיכר מגן דוד
+  aliases: []
+  lat: 32.069606
+  lon: 34.770419
+  coordinates_source: OpenStreetMap way 201004221, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [37, 38]
+- name: כיכר אתרים
+  aliases: []
+  lat: 32.085603
+  lon: 34.769708
+  coordinates_source: OpenStreetMap relation 13658562, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [30]
+- name: שוק הכרמל
+  aliases: [הכרמל]
+  lat: 32.068368
+  lon: 34.768553
+  coordinates_source: OpenStreetMap way 149546103, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [37, 38]
+- name: שוק לוינסקי
+  aliases: []
+  lat: 32.059446
+  lon: 34.773116
+  coordinates_source: OpenStreetMap node 2079183194, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [52]
+- name: שוק הפשפשים
+  aliases: []
+  lat: 32.053598
+  lon: 34.756873
+  coordinates_source: OpenStreetMap node 6175608583, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [42]
+- name: שרונה
+  aliases: [מתחם שרונה, שרונה מרקט]
+  lat: 32.071103
+  lon: 34.787062
+  coordinates_source: OpenStreetMap way 284108856, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [40]
+- name: מגדלי עזריאלי
+  aliases: [עזריאלי]
+  lat: 32.074704
+  lon: 34.79197
+  coordinates_source: OpenStreetMap way 32635200, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [41]
+- name: דיזנגוף סנטר
+  aliases: []
+  lat: 32.075246
+  lon: 34.774592
+  coordinates_source: OpenStreetMap relation 15311025, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [31]
+- name: נמל תל אביב
+  aliases: [הנמל]
+  lat: 32.09865
+  lon: 34.775517
+  coordinates_source: OpenStreetMap way 803404214, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [29]
+- name: אוניברסיטת תל אביב
+  aliases: [אוניברסיטת ת"א, אונ' תל אביב]
+  lat: 32.112358
+  lon: 34.805013
+  coordinates_source: OpenStreetMap relation 17483735, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [11]
+- name: איכילוב
+  aliases: [בית החולים איכילוב, בי"ח איכילוב]
+  lat: 32.080381
+  lon: 34.790155
+  coordinates_source: OpenStreetMap way 26599740, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [35]
+- name: בית חולים אסותא
+  aliases: [אסותא רמת החייל]
+  lat: 32.107805
+  lon: 34.838592
+  coordinates_source: OpenStreetMap way 295081431, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [13, 28]
+- name: התחנה המרכזית
+  aliases: [התחנה המרכזית החדשה]
+  lat: 32.05535
+  lon: 34.779982
+  coordinates_source: OpenStreetMap way 230605310, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [53]
+- name: קניון רמת אביב
+  aliases: []
+  lat: 32.112169
+  lon: 34.795753
+  coordinates_source: OpenStreetMap way 40955414, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [10]
+- name: חוף גורדון
+  aliases: []
+  lat: 32.083161
+  lon: 34.767619
+  coordinates_source: OpenStreetMap way 183536462, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [30, 31]
+- name: חוף פרישמן
+  aliases: []
+  lat: 32.080494
+  lon: 34.766709
+  coordinates_source: OpenStreetMap way 152326514, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [31]
+- name: חוף הילטון
+  aliases: []
+  lat: 32.08985
+  lon: 34.769565
+  coordinates_source: OpenStreetMap way 37573238, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [30]
+- name: מלון הילטון
+  aliases: [הילטון]
+  lat: 32.089587
+  lon: 34.770817
+  coordinates_source: OpenStreetMap node 6024930691, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [30]
+- name: מלון רויאל ביץ'
+  aliases: [רויאל ביץ']
+  lat: 32.070389
+  lon: 34.764366
+  coordinates_source: OpenStreetMap node 5443060262, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [38]
+- name: מגדל שלום
+  aliases: [מגדל שלום מאיר]
+  lat: 32.064242
+  lon: 34.769704
+  coordinates_source: OpenStreetMap way 90837257, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [37]
+- name: מגדל השעון ביפו
+  aliases: [מגדל השעון]
+  lat: 32.055066
+  lon: 34.75627
+  coordinates_source: OpenStreetMap way 640627236, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [42, 44]
+- name: נמל יפו
+  aliases: []
+  lat: 32.053985
+  lon: 34.750271
+  coordinates_source: OpenStreetMap node 1147284797, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [44]
+- name: יפו העתיקה
+  aliases: []
+  lat: 32.053817
+  lon: 34.753328
+  coordinates_source: OpenStreetMap node 7038359403, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [44]
+- name: מתחם התחנה
+  aliases: [התחנה]
+  lat: 32.058835
+  lon: 34.761738
+  coordinates_source: OpenStreetMap relation 12306965, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [39]
+- name: מרכז סוזן דלל
+  aliases: []
+  lat: 32.060282
+  lon: 34.764378
+  coordinates_source: OpenStreetMap way 218656641, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [39]
+- name: גן מאיר
+  aliases: []
+  lat: 32.073088
+  lon: 34.772887
+  coordinates_source: OpenStreetMap way 33631428, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [37]
+- name: פארק צ'ארלס קלור
+  aliases: []
+  lat: 32.062621
+  lon: 34.760254
+  coordinates_source: OpenStreetMap way 104304038, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [39]
+- name: פארק המסילה
+  aliases: []
+  lat: 32.060155
+  lon: 34.766371
+  coordinates_source: OpenStreetMap way 855004769, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [39]
+- name: גן העצמאות
+  aliases: []
+  lat: 32.091626
+  lon: 34.77178
+  coordinates_source: OpenStreetMap way 37558654, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [30]
+- name: אצטדיון בלומפילד
+  aliases: [בלומפילד]
+  lat: 32.051837
+  lon: 34.761577
+  coordinates_source: OpenStreetMap way 1019033128, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [42]
+- name: מרכז הירידים
+  aliases: [אקספו תל אביב]
+  lat: 32.105414
+  lon: 34.808422
+  coordinates_source: OpenStreetMap way 355090046, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [12]
+- name: המושבה האמריקאית
+  aliases: [המושבה האמריקאית גרמנית]
+  lat: 32.056658
+  lon: 34.762791
+  coordinates_source: OpenStreetMap node 11012660856, by a Nominatim search
+  coordinates_date: '2026-10-06'
+  areas: [42]
+- name: תחנת רכבת סבידור מרכז
+  aliases: [תחנת סבידור, סבידור מרכז, סבידור]
+  lat: 32.084244
+  lon: 34.798312
+  coordinates_source: OpenStreetMap node 2930618402, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [36]
+- name: תחנת רכבת השלום
+  aliases: [תחנת השלום]
+  lat: 32.073559
+  lon: 34.793164
+  coordinates_source: OpenStreetMap node 2930618403, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [41]
+- name: תחנת רכבת ההגנה
+  aliases: [תחנת ההגנה]
+  lat: 32.05415
+  lon: 34.784802
+  coordinates_source: OpenStreetMap node 3978658308, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [53, 54]
+- name: ארלוזורוב פינת הנרייטה סולד
+  aliases: [הנרייטה סולד פינת ארלוזורוב]
+  lat: 32.083067
+  lon: 34.792116
+  coordinates_source: OpenStreetMap, the centre of the nodes 291705529, 968515553 that the two streets
+    share, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [34, 35]
+- name: ז'בוטינסקי פינת אבן גבירול
+  aliases: [אבן גבירול פינת ז'בוטינסקי]
+  lat: 32.088126
+  lon: 34.782344
+  coordinates_source: OpenStreetMap, the centre of the nodes 29944880, 2304907593, 7996757599 that the
+    two streets share, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [30, 34]
+- name: ארלוזורוב פינת אבן גבירול
+  aliases: [אבן גבירול פינת ארלוזורוב]
+  lat: 32.08526
+  lon: 34.781832
+  coordinates_source: OpenStreetMap, the centre of the nodes 339420506, 2166644193, 2475602290 that the
+    two streets share, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [30, 34, 35]
+- name: דיזנגוף פינת בן גוריון
+  aliases: [בן גוריון פינת דיזנגוף]
+  lat: 32.084419
+  lon: 34.774297
+  coordinates_source: OpenStreetMap, the centre of the nodes 340005675, 10578527867, 10578527868 that
+    the two streets share, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [30, 31]
+- name: אלנבי פינת רוטשילד
+  aliases: [רוטשילד פינת אלנבי]
+  lat: 32.063441
+  lon: 34.772948
+  coordinates_source: OpenStreetMap, the centre of the nodes 1941637466, 2496365161 that the two streets
+    share, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [37]
+- name: אלנבי פינת בן יהודה
+  aliases: [בן יהודה פינת אלנבי]
+  lat: 32.072872
+  lon: 34.768165
+  coordinates_source: OpenStreetMap, the centre of the nodes 13623522597 that the two streets share, by
+    an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [37, 38]
+- name: דיזנגוף פינת ארלוזורוב
+  aliases: [ארלוזורוב פינת דיזנגוף]
+  lat: 32.086911
+  lon: 34.774938
+  coordinates_source: OpenStreetMap, the centre of the nodes 35288611, 12397670100, 12397689401, 12478297518,
+    13521616457 that the two streets share, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [30]
+- name: בגין פינת קפלן
+  aliases: [קפלן פינת בגין]
+  lat: 32.073401
+  lon: 34.790392
+  coordinates_source: OpenStreetMap, the centre of the nodes 293336243, 340001282, 340001348, 667786477
+    that the two streets share, by an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [40, 41]
+- name: הרצל פינת לוינסקי
+  aliases: [לוינסקי פינת הרצל]
+  lat: 32.059708
+  lon: 34.770623
+  coordinates_source: OpenStreetMap, the centre of the nodes 496176171 that the two streets share, by
+    an Overpass query
+  coordinates_date: '2026-10-06'
+  areas: [52]
