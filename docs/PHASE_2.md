@@ -14,7 +14,7 @@ report, is built. **The first run over the store (2.8) was made on 2026-10-06** 
 (`SESSION_LOG.md`, 2026-10-06). **On 2026-10-08** the other-city rejection took Facebook's
 location field into account (#214) and the three stored records it changed were re-derived. No code
 before a task's plan is approved; no paid call before its own go.
-**Rewritten:** 2026-10-05, from the draft of the same day, after Ron's answers. Not yet in git.
+**Rewritten:** 2026-10-05, from the draft of the same day, after Ron's answers.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gate B (approved) · **Research:**
 `RESEARCH.md` §15 (OpenAI), §14 (streets), §13 (Gemini, the alternative)
@@ -30,10 +30,12 @@ in a local report. No dashboard, no Telegram.
 2. The regression set passes the bar (2.6).
 3. A model failure or outage leaves collection and every watermark untouched; the post stays
    `"pending"` and is retried, up to three failed runs (2.5).
-4. **A real working day is measured:** the number of calls, the tokens and the cost of a day's
+4. **Moved to Phase 3 (#225, Ron's re-plan of 2026-10-08), to be done once a dashboard exists:** a
+   real working day is measured: the number of calls, the tokens and the cost of a day's
    classification, from the usage metadata and then the OpenAI bill. Every paid run stayed under
-   its cap.
-5. Ron reviewed the report of the first paid run (2.7, 2.8) and signed it off.
+   its cap. Comparing the recorded costs with the OpenAI bill stays with Ron and does not wait.
+5. **Signed off by Ron, 2026-10-08 (#224):** Ron reviewed the report of the first paid run (2.7,
+   2.8), 51 of its 194 classifications, and accepts that as enough.
 6. The items of §3 are resolved or explicitly re-planned.
 7. Gate D settled, or deferred with a measured reason (2.10).
 
@@ -1310,14 +1312,15 @@ from the cache after the first call):
 
 So **about $1–11 a month**, against collection's $20–26. **Measured in spike 2.1 (20 posts):** $0.00019 a
 post at `none`, $0.00029 at `low`; this run about $0.04 at `none`; about $1.2–2.6 a month. Still
-estimates until the run and a real working day measure them.
+estimates until the run and a real working day measure them (Phase 3, #225).
 
 **Cap: $1** for this run (approved, #153), enforced by the job as in 2.1;
 the project's hard spend limit as the second line.
 
 **Checked after:** every pending canonical has a `Listing` and left pending, or is listed as
 failed; the cost from the usage metadata against the bill read later (as P19 taught); the names
-dropped by #162; Ron's review (2.7). Then the first real working day is measured (DoD 4).
+dropped by #162; Ron's review (2.7). Then the first real working day is measured (DoD 4, now Phase 3's,
+#225).
 
 **The run of 2026-10-06** (`classify_pending --cap 1.00`, version 3, effort `none`; Ron's go, #213):
 - **Before:** the store copied to `data/store/tlv_hunter.2026-10-06.backup.sqlite3` (SHA-256
@@ -1333,7 +1336,8 @@ dropped by #162; Ron's review (2.7). Then the first real working day is measured
 - **Checks from the store:** every stored `RawPost` identical to the backup's (invariant 14); the
   194 posts that left `"pending"` each have a `Listing`; no duplicate and no pre-model reject was
   classified.
-- **Not a working day** (DoD 4): one run over a backlog of 195 posts, not a day's measure.
+- **Not a working day** (DoD 4, Phase 3's since #225): one run over a backlog of 195 posts, not a day's
+  measure.
 
 ---
 
@@ -1875,6 +1879,293 @@ them. If rewritten reposts are common, Gate D is settled on the evidence and ded
 phase 2; if rare, Gate D waits until after phase 3, with the measured rate recorded. #70 under
 dedup B (#72.7) and the phone signal (#75 C) wait for the same gate.
 
+### Built (2026-10-08) — the free runs are made; Ron judges the pairs
+
+Built in the order of the plan, with no Repository, `SCHEMA.md`, contract or dependency change, no
+model, paid or network call, and no write to the store.
+- **Code:** `tlv_hunter/gate_d/candidates.py`, `verdicts.py`, `page.py`, `candidate_pairs.html` and
+  `tlv_hunter/jobs/gate_d_pairs.py` (`--dry-run`, `--measure`). `CLAUDE.md` lists the commands and the
+  package.
+- **Tests:** `tests/test_gate_d.py`, 46 tests, offline, on stores built in `tmp_path` (both stores for the
+  population): each rule's edge, the sublet shape, the agent numbers and the sample, the window at 72
+  hours and a second, determinism, read-only (the store's bytes and `raw_posts` rows identical, a write
+  through the opened repository raises, a dry run writes no file), the page (text verbatim, markup
+  characters escaped, UTC in the data, photos existing and at most four, no key beyond the plan's), and
+  the export (four verdicts, the old `"same"` refused, repeated, reversed, unknown and stale pairs
+  refused, the figures hand-computed, the threshold at 6 and 7 pairs of 139).
+- **Verified:** `uv run pytest` **1300 passed** (the 1254 of before and the 46 new) in 325 s;
+  `ruff check .` and `ruff format --check .` clean.
+- **The real store, read-only (2026-10-08):** `--dry-run`, then the command. **24 pairs**: 10 found by
+  the fields rule, 13 by the phone rule, 2 by both, and the sample of 3 agent-number pairs; the 2 agent
+  numbers give 42 pairs, not listed one by one; 139 compared posts; the posts span 27.0 hours. The
+  sublet pair (`9136a715…`, `9a6252c1…`) is among them, found by the fields rule. The store's SHA-256
+  was `2fcc382e…` before and after (`2FCC382EC5E6D8DB…FD11EBF`), and its modification time did not move.
+  The page is `data/gate_d/candidate_pairs.html` (24 pairs; 1 to 4 photos on each post).
+- **Next:** Ron judges the pairs in the page and exports `pair_verdicts.json` into `data/gate_d/`;
+  then `gate_d_pairs --measure` prints the figures, and Ron's decision on "common" or "rare" goes into
+  `DECISIONS.md`.
+
+**Deviations from the plan, and what it did not say:**
+- **The sample** is the agent-number pairs with the same price, or the same rooms and an area in common,
+  at most 3, the ones with the smallest gap first. Today exactly 3 qualify. The plan named "the 3 pairs".
+- **The window applies to both rules,** the phone rule too; the plan's counts did the same.
+- **`found_by`** of an agent-number pair that also meets the fields rule is `["fields"]`; its shared number
+  is still shown on the page.
+- **Israel time** is formed by the browser (`Intl.DateTimeFormat` with `Asia/Jerusalem`), not in Python:
+  the project has no `tzdata` dependency, and a dependency change was not allowed. The data carries UTC.
+- **Photos** are linked by a relative path (`../store/images/…`) from the page, not copied into it; only
+  files that exist are listed.
+- **`--measure`** refuses an export for another `rules_version`, and prints a line saying whether the
+  lower and the upper figure reach the threshold of #227, as a fact and not as a decision.
+- **Not checked in a real browser.** The page's script passes `node --check` and ran against a stub DOM
+  in node (24 cards, a verdict updates the progress, the export runs); how it looks was not seen.
+- **Tests build their own posts** (no `data/raw` fixture), so they need nothing from `data/`.
+
+### Plan for task 2.10 — approved by Ron, 2026-10-08 (#226–#228); written 2026-10-08
+
+**Amended by #227: four verdicts** (`same_listing`, `same_apartment_other_listing`, `different`,
+`not_sure`) instead of three. Point 3's verdict line, the export's `verdict` values, point 4's
+measurement and the export tests below are amended in place; everything else is as approved.
+
+**Scope:** the evidence for Gate D, nothing else. A read-only command lists candidate pairs of
+stored posts with different text hashes; a local page shows them side by side; Ron gives a verdict
+per pair; the command measures his verdicts. **It decides none of these:** the Gate D key, any dedup
+B rule, any field or schema change. **It marks no stored post as a duplicate and writes nothing to
+the store.** No code until this plan is approved. No model call, no paid call, no network call.
+
+#### 1. What the store holds (read with `mode=ro`, 2026-10-08)
+
+- 266 posts: 227 canonical, 39 duplicates (14.7%, the exact-hash reposts dedup A already catches).
+- The 227 canonicals: **139 active**, 87 rejected, 1 pending (`73aebb24…`, one failure). 194 have a
+  `Listing`. 136 of the 139 active canonicals have at least one stored photo.
+- **The posts span 27.0 hours:** `posted_at` from 2026-10-03 13:41 to 2026-10-04 16:43 UTC. That is
+  one collection day. It limits what the evidence can say (point 5).
+
+#### 2. The candidate rules, exactly
+
+**Which posts are compared.** A pair is two *different* posts, both:
+- canonical (`is_canonical` true): a duplicate carries its canonical's hash, so it adds no pair;
+- in state `"active"` and holding a `Listing`: a rejected post is never shown or alerted, so a
+  rewritten repost of it costs one model call and nothing else. Adding the 55 model-rejected posts
+  would add 7 phone pairs and no field pair;
+- with a `text_hash` that differs from the other's (the stored hash, not a recomputation).
+
+**"A few days"** is `|posted_at(a) − posted_at(b)| ≤ 72 hours` (`RawPost.posted_at`, UTC, the field
+dedup A orders by). On today's store it excludes nothing: the widest gap among the 21 candidates is 16.4
+hours.
+
+**The two rules** (a pair is a candidate when either holds):
+- **Phone:** the two `RawPost.phones` lists share a number (the stored canonical form).
+  *Agent numbers:* a number found in four or more active canonicals is not used to list pairs
+  one by one (point below).
+- **Fields:** all of: both prices written and equal as sets (the `Listing`'s `price`, so a native
+  price from the provider counts, as it does in `Listing`); both `areas` non-empty with at least one
+  number in common; both `rooms` written and equal.
+
+**Today's counts** (active canonicals, 72 hours):
+
+| | Pairs |
+|---|---|
+| Fields rule | 10 |
+| Phone, numbers shared by 2–3 posts (11 numbers) | 13 |
+| In both | 2 |
+| **The two rules together, agent numbers excluded** | **21** |
+| Phone, the two agent numbers (7 posts each, 21 pairs each) | 42 |
+| Of those 42, the ones with the same price, or the same rooms and an area in common | 3 |
+| The two rules together, every phone pair | 63 |
+
+Each agent number belongs to one poster who lists different apartments: the seven posts of each differ
+in rooms, areas and, but for one pair, price (3 to 5 rooms at 12,750–16,800 on one; 2 to 4 rooms at
+5,200–15,000 on the other). That is #63's point ("a phone-only match is not a duplicate"), seen in the data. **To
+check the reading rather than assume it, the list keeps the 3 agent-number pairs above, labelled as a
+sample.** List: 21 + 3 = **24 pairs**.
+
+**Far from 30?** 24 is close, and the one variant that reaches 63 is the 42 agent-number pairs that
+Ron would have to judge one by one. Variants, for the record:
+- price as "any amount in common" instead of equal sets: 11 fields pairs (+1);
+- areas equal instead of "in common": 8 fields pairs (−2);
+- the window at 24 hours, or no window: the same pairs;
+- rooms or price dropped from the fields rule: 194 pairs (no price) and 15 (no rooms), the first too
+  loose to read;
+- a price "within 10%": 48 pairs (38 new). Not proposed: it is a new rule, and the phone pairs already
+  show price-changed reposts (9 of the 13 have a different price).
+
+**What the rules do not see:** a repost with a changed price and no phone; a post without a written
+price, rooms or area; a post whose rooms are not written (2 pairs of the 15 above). So the measured
+rate is a lower bound for these reasons too, not only for the one day.
+
+**The two near-identical sublet posts** (`9136a715…`, `9a6252c1…`, `BACKLOG.md`): confirmed, both
+are active canonicals in the same group, posted 6 minutes apart (14:41:38 and 14:46:50 UTC), with
+different hashes. Neither has a phone, so the **phone rule does not find them; the fields rule does**
+(price [1000], from the provider's native price, rooms 4, areas [30, 31] in both).
+
+#### 3. How Ron judges
+
+A static local page, written by the command, in the manner of the labelling and review pages
+(`data/gate_d/candidate_pairs.html`, gitignored with `data/`; the file and folder names are
+proposals). Per pair, side by side:
+- **the original text**, verbatim from the stored `RawPost` (never normalized text, invariant 8),
+  right-to-left aware, HTML escaped;
+- **up to four of the stored photos** of each post, from `<store_root>/images/` by relative path.
+  Display only: the code compares no image;
+- the `Listing` fields that matter (price and its source, rooms, areas, kind, nature);
+- **what matched:** phone (the number is shown), price, rooms, areas, and the gap in hours;
+- **the dates and the groups:** both `posted_at` in Israel time (display only, invariant 9), both
+  group titles, whether the groups are the same, and each post's permalink as a link;
+- **the author's display name**, shown and never used by a rule (invariant 5);
+- **a verdict** (#227): *same listing* (the same offer posted again with other text), *same apartment,
+  other listing* (the same flat, another offer: two rooms of one shared flat), *different*, *not sure*,
+  and a note.
+
+The order: pairs found by both rules first, then the fields rule, then the phone rule, then the
+sample of agent-number pairs (labelled). Progress is kept in the browser as the review page keeps it,
+and an **Export** button downloads `pair_verdicts.json`. Ron moves it into `data/gate_d/`, and the
+code reads it only from there.
+
+**The export** (proposed):
+
+```json
+{
+  "format_version": 1,
+  "exported_at": "2026-10-09T10:00:00Z",
+  "rules_version": "1",
+  "pairs": {
+    "<listing_id a>|<listing_id b>": {
+      "text_sha256": ["<of a's text>", "<of b's text>"],
+      "found_by": ["fields", "phone"],
+      "verdict": "same_listing",
+      "note": ""
+    }
+  }
+}
+```
+
+`verdict` is `"same_listing"`, `"same_apartment_other_listing"`, `"different"` or `"not_sure"` (#227);
+the key has the smaller `listing_id` first;
+`found_by` is the subset of `"fields"`, `"phone"` and `"agent_phone_sample"`. The text hashes are
+SHA-256 of the original text, as `corrections.json` does (`labeling/regression_set.text_sha256`), so a
+verdict for a text that changed since is refused.
+
+#### 4. What is measured from the verdicts
+
+`gate_d_pairs --measure` reads the export, checks it against the store (an unknown pair or a changed
+text is refused), and prints:
+- the pairs judged, and each of the four verdicts among them;
+- **the rate of rewritten reposts: `same_listing` pairs ÷ the 139 active canonicals** (the active
+  canonicals the rules compare), and the share of them that are in at least one `same_listing` pair.
+  Only `same_listing` counts (#227). `not_sure` counted as `different` gives the figure that meets the
+  5% threshold; `not_sure` counted as `same_listing` gives the upper figure, printed beside it;
+- **`same_apartment_other_listing` as its own line,** its pairs and its share, and per signal too;
+- **which signal found them,** for each of *fields only*, *phone only*, *both* and *the agent-number
+  sample*: pairs judged, `same_listing`, `same_apartment_other_listing`, `different`, `not_sure`, and
+  the share that is `same_listing`. This is the evidence for the phone as a Gate D signal (#75 C) and
+  for the fields as one;
+- **the threshold** of #227 (5%, 7 pairs of 139) and whether the lower figure reaches it, printed as a
+  fact and not as a decision;
+- **the window:** the store's span in hours, printed beside the rate, so no one reads a one-day rate
+  as a monthly one;
+- beside them, the exact-hash rate of dedup A (39 of 266), for scale.
+
+It prints; it writes no file. Ron's decision on "common" or "rare" (point 6 below) is recorded in
+`DECISIONS.md`, with these figures.
+
+#### 5. Where the code lives, tests, docs
+
+**Code:**
+
+| File | What |
+|---|---|
+| `tlv_hunter/gate_d/candidates.py` (new) | The rules of point 2, pure functions over `RawPost`, `PostLifecycle` and `Listing` lists; returns `CandidatePair` records. A plain module, not a seam |
+| `tlv_hunter/gate_d/verdicts.py` (new) | Reads and checks `pair_verdicts.json`; the measurement of point 4 |
+| `tlv_hunter/gate_d/page.py`, `candidate_pairs.html` (new) | The page and its template |
+| `tlv_hunter/jobs/gate_d_pairs.py` (new) | The command: with no flag it writes the page and prints the counts; `--dry-run` prints the counts and the pair ids and writes nothing; `--measure` as in point 4 |
+
+The command opens the production store with `SqliteRepository(read_only=True)` and reads it through
+`query`, `get_lifecycle` and `get_listing`: **no Repository change.** Free; reads no key. It writes one
+file, the page. Never run beside `run_once` or `classify_pending` (#140), like the other free pages.
+Exit codes as `review_page`: 0 done, 1 failed with nothing written.
+
+**Tests, all offline,** on stores built in `tmp_path` (`local_json` and SQLite) and posts built in the
+test, so no `data/` file is needed:
+- each rule's edge: the same hash is no pair; a duplicate is no member; a rejected post is no member;
+  the window at 72 hours and 72 hours and a second; price as sets (`[1000]` against `[1000, 1200]`);
+  areas in common, and an empty `areas`; rooms written against not written; a shared phone; an agent
+  number shared by 4 posts lists no pair except the sample;
+- **the sublet pair:** two posts shaped like `9136a715…` and `9a6252c1…` (price 1000, rooms 4, areas
+  [30, 31], six minutes apart, no phone, different text) are found by the fields rule and not by the
+  phone rule;
+- the same store gives the same pairs in the same order twice;
+- **read-only:** the store file's bytes are identical after the command, every `RawPost` document is
+  identical (invariant 14's test shape), and a write through the opened repository raises;
+- the page holds each text verbatim and escaped, the groups, the dates in Israel time and the matched
+  fields; no normalized text appears;
+- the export: a valid file measures as hand-computed; an unknown pair, a changed text hash and a
+  repeated pair are refused; an old three-verdict value (`"same"`) is refused; the `not_sure` upper and
+  lower figures; `same_apartment_other_listing` is not counted in the rate.
+
+**Docs touched, on approval:** `DECISIONS.md` (Ron's answers, from #226), `PHASE_2.md` 2.10 ("Built"),
+`BACKLOG.md`, `CLAUDE.md` (the command in the list, `gate_d/` among the plain modules, the command among
+the free read-only ones), `SESSION_LOG.md`. **`SCHEMA.md` is not touched:** no field, type or rule.
+
+**Order of work:** 1, `candidates.py` and its tests; 2, `verdicts.py` and its tests; 3, the page and
+its test; 4, the command; 5, `uv run pytest` and `ruff`; 6, Ron runs `--dry-run`, then the command,
+and judges; 7, he exports, `--measure` runs, and the result and Ron's answer go into `DECISIONS.md`.
+
+#### 6. For Ron before code
+
+**Answered 2026-10-08:** all ten as recommended (#226), point 6 with four verdicts instead of three
+(#227). The text below is the question as asked.
+
+1. **Which posts are compared.** (A) Active canonicals only, 139. (B) Also the model-rejected ones
+   (adds 7 phone pairs, no field pair). *Recommend A:* a rejected post is never shown or alerted.
+2. **The phone rule and the agent numbers.** (A) Numbers shared by 2–3 posts list their pairs; numbers
+   shared by 4 or more list only the 3-pair sample: 24 pairs. (B) Every phone pair: 63. (C) As A with
+   no sample: 21. *Recommend A:* it keeps the list near 30 and tests the reading of the agent numbers
+   instead of assuming it. The threshold of 4 is a gap in today's data (no number is shared by 4–6
+   posts).
+3. **"Same" in the fields rule.** Price: equal as sets (recommended) or any amount in common (+1 pair).
+   Areas: any number in common (recommended) or equal lists (−2 pairs). *Recommend the first of each:*
+   the model returns several areas for an imprecise post, and equal sets is the strict reading of "same
+   price".
+4. **"A few days":** 72 hours on `posted_at`. *Recommend:* yes. It changes nothing today and is stated
+   so that it holds on a larger store.
+5. **The store holds one day.** Reposts that come later cannot be seen, so a low rate would prove less
+   than it seems. (A) Judge today's list, and record the rate as a lower bound for a 27-hour store
+   (recommended). (B) First run collection again (paid, at most $0.275 a run by the charge cap, #71;
+   Ron's go) and wait some days. (C) A, and run the same free command again on the larger store before
+   or after Phase 3. *Recommend A with C's re-run:* the command costs nothing, and "rare" would then be
+   recorded with its window, as #145 asks.
+6. **What "common" means, set before the judging.** The rate is confirmed pairs ÷ 139 active
+   canonicals. (A) Common at 5% or more, 7 pairs or more (recommended). (B) Another threshold, Ron's.
+   (C) No threshold: Ron decides after seeing the figures. *Recommend A or B:* a threshold fixed
+   before the judging cannot be fitted to the answer. *Not sure* counts as *different* for the
+   threshold, and the upper figure is printed beside it.
+7. **The page shows photos** (display only, no comparison) **and the author's display name** (never a
+   rule). *Recommend yes:* the photos are most of what tells two postings of one apartment apart, and
+   nothing is stored.
+8. **No text-similarity figure** on the page. *Recommend no:* it would need the normalized text, which
+   invariant 8 keeps for the hash, or it is a new signal. Ron compares the texts himself.
+9. **New stored files** (invariant 1, as #182 and #219 did): `data/gate_d/candidate_pairs.html` and
+   `data/gate_d/pair_verdicts.json`, with the shape of point 3. *Recommend yes.* No store field, no
+   schema.
+10. **Where the code lives.** (A) A package `tlv_hunter/gate_d/` of plain modules, tested and kept
+    (recommended). (B) A throwaway under `scratch/`, as the spike. *Recommend A:* the same rules must
+    run again on a larger store (point 5), and the rules deserve their tests.
+
+#### 7. Conflicts with decisions or invariants
+
+None, with the answers recommended above. Points that touch them:
+- **Invariant 1:** the two new files of point 9 are stored output; they are listed for Ron's
+  approval. No field, schema or filter rule is created.
+- **Invariant 8:** the page shows original text only; the rules use the stored `text_hash` and nothing
+  normalized. Only point 8's figure, if Ron chose it, would touch it.
+- **Invariant 5:** the author's name is displayed, never an identity key.
+- **#63, #75 C:** a phone-only match is not a duplicate. The phone is a candidate signal here and
+  nothing is marked.
+- **#145 and 2.10 say "about 30":** the rules give 21, and 24 with the sample.
+- **Not a conflict, a limit:** the one-day store (point 5) and the rules' blind spots (point 2) make
+  the measured rate a lower bound.
+
 ---
 
 ## 3. Items this phase must close
@@ -1890,7 +2181,7 @@ Full register: `ASSUMPTIONS.md`.
 | O7: caching with an explicit breakpoint | 2.1 |
 | O8: the organization's usage tier | Before 2.1 |
 | O10: tokens per post | 2.1 |
-| I3: the model's cost is small | 2.8, then a working day (DoD 4) |
+| I3: the model's cost is small | 2.8; **re-planned to Phase 3 with DoD 4** (#225, #228): the same measurement |
 | C2: #45's seeking case | 2.6 |
 
 O6 and O9 are settled from the documentation. C3 no longer applies; C4 and G1–G9 belong to Gemini,
@@ -1900,7 +2191,7 @@ now the alternative.
 
 ## 4. For Ron's decision
 
-Answered: everything through #222 (2026-10-08). The first run over the store (2.8) was made on
+Answered: everything through #225 (2026-10-08). The first run over the store (2.8) was made on
 2026-10-06 (#213). Open today, not resolved here:
 
 1. **The version 4 prompt items** (`BACKLOG.md`, "For the next prompt version", #211): a range of
@@ -1908,13 +2199,14 @@ Answered: everything through #222 (2026-10-08). The first run over the store (2.
    cases at regression positions 34 and 35 (accepted for now, #210). Ron decides when version 4 is
    written. A version change is also what first gives task 2.9 something to select.
 2. **Gate D (2.10):** the read-only list of candidate pairs after the first paid run, and Ron's
-   judgement. Not started.
-3. **DoD 4:** the cost of the runs read against the OpenAI bill (the spike's was: $0.03 against
-   $0.0273, `ASSUMPTIONS.md` O2; the five later runs are not), and a real working day measured.
-4. **DoD 5:** Ron's sign-off on the review of the first run. 51 of the 194 classified posts were
-   reviewed (#215, #216); his decision is whether that is enough.
-5. **Task 2.9's build:** Ron's review of it, and a separate go for the first real `--run` (small, with
-   a cap) once there is a change of version, model or schema to select on.
+   judgement. The plan is approved (#226–#228) and built (2.10, "Built"); Ron judges the pairs.
+3. **The bill:** the cost of the runs read against the OpenAI bill, which stays with Ron and does not
+   wait for Phase 3 (#225; the spike's was: $0.03 against $0.0273, `ASSUMPTIONS.md` O2; the five
+   later runs are not). The measured working day itself (DoD 4) is Phase 3's.
+4. **Task 2.9:** accepted by Ron on 2026-10-08. What is left is a separate go for the first real
+   `--run` (small, with a cap) once there is a change of version, model or schema to select on.
+
+Closed since the last version of this list: DoD 5 (#224), and DoD 4 re-planned to Phase 3 (#225).
 
 ---
 

@@ -404,9 +404,9 @@ bootstrap mode, Gate A.
 
 ### Open for Ron
 
-What is open today is in `PHASE_2.md` §4 (the version 4 prompt items, Gate D, the measured working
-day and the bill, Ron's sign-off on the review of the first run). Gate B, the model's response and
-the Gate E failure fields are approved (#125, #151, #152).
+What is open today is in `PHASE_2.md` §4 (the version 4 prompt items, Gate D, the bill). The measured
+working day is Phase 3's (#225) and Ron's sign-off on the review of the first run is given (#224). Gate B,
+the model's response and the Gate E failure fields are approved (#125, #151, #152).
 
 ### Recorded, not verified
 

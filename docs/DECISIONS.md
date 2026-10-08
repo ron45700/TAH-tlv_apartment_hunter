@@ -2318,6 +2318,57 @@ proposed set (45 to 55) by its entries whose `truth` is `"blind"`; a post that j
 "for sale" assertions are unchanged. Recorded as its own decision, not a note under #216, because it
 changes a test's rule and not #216's. *Why (Ron):* the review keeps adding posts to the set.
 
+**Ron's decisions on the Phase 2 DoD, 2026-10-08.**
+
+### 224 — DoD 5 is signed off
+Ron reviewed 51 of the 194 classifications of run 2.8 (#215, #216) and accepts that as enough.
+*Why (Ron):* the system does not need to be perfect, and the calibration can go on while it is used.
+
+### 225 — DoD 4, the measured working day, moves to Phase 3
+An explicit re-plan of a DoD item, not a waiver. Item 4 of `PHASE_2.md`'s DoD leaves Phase 2 and is
+done in Phase 3, once a dashboard exists. Comparing the recorded costs with the OpenAI bill stays with
+Ron and does not wait for Phase 3.
+*Why (Ron):* on that day he can also judge how things look in the interface, not only the
+classification.
+
+**Ron's answers to the plan for task 2.10 (Gate D evidence), 2026-10-08.** The plan is in `PHASE_2.md`
+2.10; the numbers in brackets are its "For Ron before code" points.
+
+### 226 — The plan for 2.10 is approved: the rules, the page, the files, the place
+Approved as recommended (#145 unchanged). (1) The pairs are two different canonical posts, both
+`"active"` with a `Listing`, different stored `text_hash`; 139 posts today. (2) The phone rule lists the
+pairs of numbers shared by 2–3 posts; a number shared by 4 or more posts lists only a labelled sample of 3
+pairs: 24 pairs today. (3) The fields rule: both prices written and equal as sets, both `areas` non-empty
+with a number in common, both `rooms` written and equal. (4) "A few days" is 72 hours on `posted_at`.
+(5) Ron judges today's list; the rate is recorded as a lower bound for a 27-hour store; the same free
+command runs again on a larger store. (7) The page shows the stored photos (display only, no comparison)
+and the author's display name (never a rule). (8) No text-similarity figure. (9) Two new stored files,
+approved as invariant 1 asks (as #182 and #219 did): `data/gate_d/candidate_pairs.html` and
+`data/gate_d/pair_verdicts.json`. (10) The code is a package of plain modules, `tlv_hunter/gate_d/`, plus
+`jobs/gate_d_pairs.py`, tested and kept. No Repository, `SCHEMA.md`, contract or dependency change. The
+command decides no Gate D key and no dedup B rule, marks no post a duplicate, writes nothing to the store.
+
+### 227 — Four verdicts; what counts as a rewritten repost; the threshold
+**Amends point 3 of the plan (the verdicts) and settles its point 6.** (6) A: dedup B is "common" at 5% or
+more of the active canonicals (7 pairs of 139 or more), fixed before the judging. Ron judges each pair
+with one of **four verdicts**, stored as:
+- `same_listing`: the same offer posted again with other text (a rewritten repost);
+- `same_apartment_other_listing`: the same flat but another offer, for example two different rooms of
+  one shared flat;
+- `different`;
+- `not_sure`.
+
+Only `same_listing` counts as a rewritten repost, for the rate and for the threshold. `--measure` reports
+`same_apartment_other_listing` as its own line, and per signal too. `not_sure` counts as `different` for
+the threshold, with the upper figure (`not_sure` read as `same_listing`) printed beside it.
+*Why (Ron):* 9 of the 13 phone pairs have different prices, and two rooms of one flat must not be read as a
+repost that dedup B would merge. The stored value names are those above, as Ron wrote them in his answer.
+
+### 228 — Assumption I3 is re-planned to Phase 3 with DoD 4
+**Extends #225.** `ASSUMPTIONS.md` I3 (the model's cost is small) is re-planned to Phase 3, together with
+DoD 4: it is the same measurement. `PHASE_2.md` §3 closes I3 on that basis (DoD 6 reads "explicitly
+re-planned").
+
 ---
 
 ## Corrections to recorded facts

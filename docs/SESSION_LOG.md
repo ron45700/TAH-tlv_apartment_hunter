@@ -3658,3 +3658,117 @@ No model call, no network call, no git command, no write to the production store
 - **Verified:** `uv run pytest` **1254 passed** in 452 s; `ruff check .` and `ruff format --check .` clean.
 - **Next:** Ron's own pytest run; the first real `reclassify --run` and any `--apply` wait for his
   separate go and for a change of version, model or schema (the plan selects 0 posts today).
+
+## 2026-10-08 (continued) — DoD 4 and 5 recorded (#224, #225); the plan for task 2.10 (docs only)
+
+### Done
+
+**No code, no test, no dependency change, no model call, no paid call, no network call, no write to
+the store, no git command.**
+
+**Step 1:**
+- `DECISIONS.md` #224 (DoD 5 signed off: Ron reviewed 51 of the 194 classifications and accepts that as
+  enough) and #225 (DoD 4, the measured working day, moves to Phase 3 once a dashboard exists; comparing
+  the recorded costs with the OpenAI bill stays with Ron and does not wait). The reasons are Ron's, as he
+  gave them.
+- `PHASE_2.md`: DoD items 4 and 5 marked (moved; signed off); §4 rewritten to what is open (#225
+  recorded; the bill; 2.10's plan; 2.9 accepted, the first real `--run` waits for a separate go).
+- `BACKLOG.md`: next-sprint item 2 (the sign-off) replaced by 2.10's plan and a row for the bill; a
+  Phase 3 row for DoD 4; the #145 row and the regression-set row updated; the intro says #224, #225.
+
+**Step 2:** "Plan for task 2.10 — WAITING for Ron" in `PHASE_2.md` under 2.10; the approved 2.10 text is
+untouched. Ten points in its "For Ron before code".
+
+### What was checked, read-only
+
+Scratch scripts (in the session's scratchpad, outside the project) opened the store with SQLite's
+`mode=ro` URI and printed counts only, not texts or phone numbers. They read the SQLite tables directly,
+not through `SqliteRepository`; the planned command will use the Repository.
+- 266 posts, 227 canonical, 39 duplicates; the 227: 139 active, 87 rejected, 1 pending; 194 `Listing`s.
+- **The posts span 27.0 hours** (2026-10-03 13:41 to 2026-10-04 16:43 UTC): the "few days" window
+  excludes nothing, and a low rate of rewritten reposts would prove less than it seems.
+- Active canonicals, 72 hours: fields rule 10 pairs; phone 55, of which 42 come from two numbers shared
+  by 7 posts each (one poster listing different apartments) and 13 from numbers shared by 2–3 posts;
+  2 pairs in both. Default list 21; with a 3-pair sample of the agent-number pairs, 24.
+- The sublet pair (`9136a715…`, `9a6252c1…`) is found by the fields rule and not by the phone rule
+  (neither has a phone).
+
+### Deviations
+
+None from the round's limits. The first message of the round was meant to state where Phase 2 stands in
+eight lines, before anything else; it is given at the top of the final reply, since the reading came
+first.
+
+### Findings (stale lines outside Step 1, not fixed)
+
+- `PHASE_2.md` line 17: "Not yet in git." The files have been committed since.
+- `PHASE_2.md` §3, the I3 row ("2.8, then a working day (DoD 4)"), and 2.8's lines "Still estimates
+  until the run and a real working day measure them" and "Then the first real working day is measured
+  (DoD 4)": DoD 4 is Phase 3's now (#225). DoD 6 says the §3 items are resolved or explicitly
+  re-planned; whether I3 is re-planned with DoD 4 is for Ron to say.
+- `BASELINE.md` §14, "Open for Ron": still lists the measured working day and the sign-off as open.
+- `ASSUMPTIONS.md` I3 (O2's text in that row): "until a real bill and a real working day confirm it".
+
+### Next
+
+- Ron answers the ten points of "For Ron before code" in `PHASE_2.md` 2.10.
+- Then the answers go into `DECISIONS.md` (from #226) and the build starts in the order of the plan.
+- Unchanged: the version 4 items, the retry of `73aebb24…`, the first real `reclassify --run`, the bill.
+
+## 2026-10-08 (continued) — Task 2.10 approved and built: Gate D's evidence (#226–#228)
+
+### Done
+
+No model call, no paid call, no network call, **no write to the production store**, no git command, no
+change to `Repository`, `SCHEMA.md`, the contracts, `pyproject.toml` or `uv.lock`. Nothing of Gate D is
+decided: no key, no dedup B rule, no post marked a duplicate.
+
+**Step 1, docs first:**
+- `DECISIONS.md` #226 (the plan approved as recommended), #227 (four verdicts: `same_listing`,
+  `same_apartment_other_listing`, `different`, `not_sure`; only `same_listing` is a rewritten repost; the
+  5% threshold; Ron's reason), #228 (I3 re-planned to Phase 3 with DoD 4).
+- `PHASE_2.md` 2.10: the plan marked approved and amended for the four verdicts (page, export, measurement,
+  tests); `BACKLOG.md`: the 2.10 and #145 rows, a Phase 3 row for I3.
+
+**Step 2, the batch of wording fixes** (Ron approved; no decision in any):
+- `PHASE_2.md`: line 17 "Not yet in git" removed; §3's I3 row; 2.8's two lines on the working day.
+- `BASELINE.md` §14 "Open for Ron"; `ASSUMPTIONS.md` I3 (one clause added to the row).
+- Other lines touched: `PHASE_2.md` 2.10's status words ("Plan ... approved"), the "Answered" note under
+  its point 6, and §4 item 2 (it now says approved and built); `BACKLOG.md` next-sprint item 2.
+
+**Step 3, the build** (details and deviations in `PHASE_2.md` 2.10, "Built"):
+- `tlv_hunter/gate_d/candidates.py`, `verdicts.py`, `page.py`, `candidate_pairs.html`, and
+  `tlv_hunter/jobs/gate_d_pairs.py` (new). `CLAUDE.md`: the commands, the package, the phase line.
+- `tests/test_gate_d.py`: 46 tests.
+
+### Verified
+
+- `uv run pytest`: **1300 passed** in 325 s. `ruff check .` and `ruff format --check .` clean.
+- **The real store**, read-only, `--dry-run` then the command: **24 pairs** (10 by the fields rule, 13 by
+  the phone rule, 2 in both, the sample of 3 agent-number pairs); 139 compared posts; 2 agent numbers with
+  42 pairs not listed; the posts span 27.0 hours. The sublet pair `9136a715…` / `9a6252c1…` is in the
+  list, found by the fields rule. The store's SHA-256 is `2FCC382E…D11EBF` before and after, and its
+  modification time did not change. `data/gate_d/candidate_pairs.html` exists (24 pairs, 1 to 4 photos on
+  every post).
+- The page's script: `node --check` passes, and it ran against a stub DOM in node (24 cards, a verdict moves
+  the progress, the export runs). **Not seen in a real browser.**
+- Scratch scripts (counts, the stub DOM) are in the session's scratchpad, outside the project.
+
+### Deviations
+
+None from the round's limits. From the plan, listed in `PHASE_2.md` 2.10 "Built": the sample's definition,
+Israel time formed in the browser (no `tzdata` dependency), photos linked rather than copied, `--measure`
+refusing another rules version.
+
+### Conflicts found
+
+None with an invariant. Invariant 1 (the two stored files) was approved in #226; nothing else is new.
+
+### Next
+
+- Ron opens `data/gate_d/candidate_pairs.html`, judges the 24 pairs, exports `pair_verdicts.json` and puts
+  it in `data/gate_d/`.
+- Then `uv run python -m tlv_hunter.jobs.gate_d_pairs --measure`; Ron records "common" or "rare" (5% or more
+  of the 139 active canonicals, `same_listing` only) in `DECISIONS.md`.
+- Unchanged: the version 4 items, the retry of `73aebb24…`, the first real `reclassify --run`, the bill,
+  the working day and I3 (Phase 3).

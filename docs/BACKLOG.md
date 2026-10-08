@@ -24,12 +24,13 @@ still unimplemented on 2026-10-02.
 
 Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is being built: Gate B approved on
 2026-10-05 (`DECISIONS.md` #81–#125); the model provider is OpenAI, for now (#126); `PHASE_2.md`
-approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6 (set, labelling page, runner), 2.7 (review report) built; **2.9 (reclassify, #217-#222) built and accepted by Ron on 2026-10-08, no real `--run` or `--apply` yet**; instructions version 3 (the known places, #205, approved #209) passed `areas` by reach in both passes. **The first run over the store (2.8) was made on 2026-10-06** (#213): 194 of 195 pending canonicals classified.
+approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6 (set, labelling page, runner), 2.7 (review report) built; **2.9 (reclassify, #217-#222) built and accepted by Ron on 2026-10-08, no real `--run` or `--apply` yet**; instructions version 3 (the known places, #205, approved #209) passed `areas` by reach in both passes. **The first run over the store (2.8) was made on 2026-10-06** (#213): 194 of 195 pending canonicals classified. **DoD 5 is signed off (#224); DoD 4, the measured working day, moved to Phase 3 (#225).**
 
 | # | Item | Source | Needs |
 |---|---|---|---|
 | 1 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
-| 2 | Ron's sign-off on the review of the first run. The review was made on 51 of the 194 posts (39 rejected, 12 active; `corrections.json`, #215, #216); what remains is his decision that it is enough (DoD 5). The things that look wrong are in the tables below and in `SESSION_LOG.md` 2026-10-06 and 2026-10-08 | `PHASE_2.md` 2.7, 2.8, §4 | Ron |
+| 2 | Task 2.10, Gate D evidence: built (2026-10-08). Ron judges the 24 pairs in `data/gate_d/candidate_pairs.html` (four verdicts, #227) and puts the exported `pair_verdicts.json` in `data/gate_d/`; then `gate_d_pairs --measure` runs and Ron records "common" (5% or more of the active canonicals) or "rare" in `DECISIONS.md`. The same free command runs again on a larger store (#226, point 5) | `PHASE_2.md` 2.10; `DECISIONS.md` #145, #226, #227 | Ron |
+| 3 | Comparing the costs recorded by the runs with the OpenAI bill. Stays with Ron; does not wait for Phase 3 | `DECISIONS.md` #225; `ASSUMPTIONS.md` O2 | Ron |
 
 ### For the next prompt version (`DECISIONS.md` #211)
 
@@ -40,10 +41,12 @@ approved, the spike run (#126–#156); the model decides the area (#167); tasks 
 | No area names on an other-city post: `4c5bbcaf…` (Rishon LeZion) returned `stated_area_names` ["לב העיר"]; Ron's review corrected it to [] (`corrections.json`; its post is regression position 52, where area names are not compared, #177) | Ron's review, 2026-10-08 |
 | The gender cases at regression positions 34 (wording for both sexes with an age range and the word "preference": the model says women preferred) and 35 (feminine wording about the roommates who stay: women only in 2 of 6 passes) | Ron, 2026-10-06 |
 
-### For phase 3 (`DECISIONS.md` #214)
+### For phase 3 (`DECISIONS.md` #214, #225)
 
 | Item | Source |
 |---|---|
+| **`ASSUMPTIONS.md` I3 (the model's cost is small), re-planned with DoD 4:** it is the same measurement, so it closes with the working day below | `DECISIONS.md` #228 |
+| **DoD 4, the measured working day (moved from Phase 2):** the number of calls, the tokens and the cost of a day's classification, from the usage metadata and then the OpenAI bill; every paid run under its cap. Done once a dashboard exists, so Ron can also judge how the interface looks on that day | `DECISIONS.md` #225; `PHASE_2.md` DoD 4 |
 | **The card's city for an other-city post is derived, not stored:** call `postmodel.rejects.other_city_name(post, listing)` (or `other_city_ruling`, which also says whether the city came from Facebook's location field or from the model). For `26e8a28b…` the `Listing`'s `other_city` is null and the card must show "רמת גן". Never read `Listing.other_city` alone for the rejected list or the card | `DECISIONS.md` #214, option A |
 
 ### From the first run over the store, 2026-10-06 (for Ron; the stored records were then re-derived on 2026-10-08, #214)
@@ -64,9 +67,9 @@ approved, the spike run (#126–#156); the model decides the area (#167); tasks 
 
 | Decision | State of the code (checked 2026-10-04) | What has to change |
 |---|---|---|
-| #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Built: the set, the labelling page, the runner (`label_overrides.json`, #196) and the review report (2026-10-06). Version 3 passed `areas` in both passes; `gender` failed in pass 2 and pass 1 was incomplete | Ron's sign-off on the review of the first run (next-sprint item 2, DoD 5); the review of pass 1 (`review_page --run`, #193). The row leaves when Ron accepts the set |
+| #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Built: the set, the labelling page, the runner (`label_overrides.json`, #196) and the review report (2026-10-06). Version 3 passed `areas` in both passes; `gender` failed in pass 2 and pass 1 was incomplete | Ron signed off the review of the first run (DoD 5, #224); what remains is the review of pass 1 (`review_page --run`, #193). The row leaves when Ron accepts the set |
 | #144, #217–#222 reclassify: two commands (`jobs/reclassify.py`, paid, store read-only, writes the diff report and two list files; `jobs/apply_reclassify.py`, free, the fourth store writer, `--allow` / `--allow-file`, no apply all); `find_reviewed` reads the replaced `Listing`s | Plan approved 2026-10-08; built 2026-10-08, waiting for review (`PHASE_2.md` 2.9). No real `--run` and no real `--apply`: they wait for Ron's separate go and for a change of prompt version, model or schema (0 posts are selected today) | Ron's review of the build; the first real `--run` at `--limit 10 --cap 0.02` |
-| #145 Gate D after the first paid run | Nothing exists | Phase 2 (2.10) |
+| #145, #226, #227 Gate D after the first paid run | The evidence command and page are built (`tlv_hunter/gate_d/`, `jobs/gate_d_pairs.py`, 2026-10-08); the 24 pairs wait for Ron's verdicts. No Gate D key, no dedup B rule, nothing marked a duplicate | Ron's verdicts and the `--measure` figures; then Gate D is settled (dedup B built in Phase 2 if common) or deferred with the rate recorded |
 | #77 D4b archiving deletes the image files and removes their `PostImage` entries | Nothing exists; task 1.12 already reads a record archived before #74 without counting its old entries (#77 D4) | Phase 5, the archive job |
 | #47 profiles live in the database; no per-user group subscriptions | `config/users/ron.yaml` holds `user_id` and subscribed groups; the config interface exposes them | Remove the per-user YAML and its interface methods when the user records arrive in phase 3. Until then it is unused, not wrong |
 | #46 archive and deletion | Nothing exists | Stored shape approved at Gate E (#63); the jobs in phase 5 |
