@@ -2502,6 +2502,48 @@ Three changes, for regression positions 34 and 35 (`BACKLOG.md`, #210, #211):
 *Why (Ron), for (a) and (b):* a wrong "women_only" hides the post from him. If position 35 stays unstable after
 version 4, it is accepted as in #210 and looked at again in Phase 3. **Refines #206, #210 and #211.**
 
+**Ron's decisions after the version 4 regression run (run `47e96cac0e8d`, `data/labeling/runs/v4-none-0ad0bb4b-47e96cac0e8d`), 2026-10-08.**
+
+### 238 — Version 4 is accepted although both passes of the run are marked "fail"
+*The reviewing chat's recommendation, accepted by Ron:* every deciding field is inside its bar in both passes;
+positions 24, 34, 35 and 45 behave as intended; the fails come from positions 54, 3 and 56, whose "truth" is an
+uncorrected version 3 answer on fields the five sentences do not touch, and 54 and 56 are for-sale posts. Ron's
+words: not a disaster. **Recorded as a fact, with no action:** #235 was not followed at position 52
+(`stated_area_names` `["בלב העיר"]` in both passes); the field is not compared (#177). Closes the version 4 items
+of #233–#237; the run does not change the instructions, the labels or `PROMPT_VERSION`.
+
+### 239 — `nature_only` also applies to a post that joined the set from Ron's review
+The existing rule of `label_overrides.json` (#196) applies to posts that entered the set from Ron's review as well:
+on such a post only what `nature_only` already compares is compared (`post_nature`), and the filled-in rule does not
+read its other fields. *Why (Ron), as given on 2026-10-06:* nothing else matters on such a post. **Built in
+`labeling/` only (2026-10-08):** the natures are those of `label_overrides.json` today (`seeking`, `for_sale`,
+`not_listing`, `sublet_offer`), not widened; no compared field is added; no label, override or correction file was
+edited. The nature tested is that of the post's corrected classification. Refines #196 and #195.
+
+**Ron's decisions of 2026-10-08/09, on the version 4 run.**
+
+### 240 — A post whose truth says the apartment is in another city is compared on its nature and its city only
+A post whose truth has `other_city` not null, blind-labelled or from the review, is compared on `post_nature` and
+`other_city` only, and the filled-in rule does not read its other fields. *Why (Ron), as given on 2026-10-06:* on a
+disqualified post nothing else matters to him. **In addition to #239**, whose natures and field do not change.
+Built in `labeling/` only (2026-10-09). The rule needs `other_city` among the fields compared on the post: a city left
+out by `not_compared`, or excluded from the review (#216), does not trigger it. **It affects two positions today:** 16
+(`0905ca64…`, Holon) and 52 (`4c5bbcaf…`, Rishon LeZion); the other-city review posts (53 to 55) are already covered by
+#239. The counted posts per field, before and after: `apartment_kind` 31 → 29, `price` 30 → 28, `gender` 32 → 30,
+`entry_date` 31 → 29, `areas` 30 → 28, each field measured from the review 8 → 6; `post_nature` 51 and `other_city`
+32 unchanged. Refines #196 and #195.
+
+### 241 — Position 3, `furnished`: the right answer is "partial" (the ruling is recorded; no file carries it yet)
+Ron's ruling: on the post `0555aa32…` ("ארון קיר עצום (ללא ריהוט נוסף)") the right answer for `furnished` is `partial`,
+not `unclear`. *The reviewing chat's reason, accepted by Ron:* the post says what there is and what there is not.
+**Not yet carried by the set.** `label_overrides.json`'s `label_changes` accept the seven deciding fields only (the
+`Literal` of `overrides.py`, validated as `labels.json` is), `corrections_excluded` can only leave a field out, and the
+other route is an edit to `corrections.json`, which is Ron's. Carrying it needs **a new kind of entry in
+`label_overrides.json`** (for instance a changed value of a field measured from the review, with Ron's name, the date and
+the reason, applied over the reviewed classification in `labeling/regression.py`), which is a change to that file's shape
+and a few lines of code. Not built; it waits for Ron's go. The model answered `partial` at this position in both passes
+of run `47e96cac0e8d`.
+
 ---
 
 ## Corrections to recorded facts

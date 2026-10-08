@@ -16,8 +16,8 @@ location field into account (#214) and the three stored records it changed were 
 the evidence for Gate D is measured (#229) and **Gate D's key is decided** (2026-10-08, #230, rule 1 amended
 by #232); **dedup B is not built in this phase**: whether two posts are the same listing is derived from the
 stored posts by the key when it is needed, in Phase 3 (#231). **Instructions version 4** (2026-10-08, #233–#237: five
-changes to `instructions.txt`, in Ron's wording) are written and pinned by the tests; **no run on version 4 yet**: the
-plan for the regression run and the first real reclassify is in 2.9, "Plan for the version 4 runs", WAITING for Ron.
+changes to `instructions.txt`, in Ron's wording) are written and pinned by the tests; **its regression run was made on 2026-10-08**
+(both passes marked `fail`; Ron accepted version 4, #238, and decided on the review posts, #239; 2.6); the first real reclassify was made on 2026-10-09 (five posts, run `dcb4c0cb4b24`, no `--apply`; 2.9). **Phase 2's build is closed (Ron, 2026-10-09)**; two items are deferred: #241's carrier and the reclassify of the other 189 (`BACKLOG.md`).
 No code before a task's plan is approved; no paid call before its own go.
 **Rewritten:** 2026-10-05, from the draft of the same day, after Ron's answers.
 **Owner:** Ron
@@ -1026,7 +1026,10 @@ in `tlv_hunter/labeling/`: `overrides.py` (#196), `regression.py` (the checks be
 - **`label_overrides.json` (#196), proposed name and shape:**
   - `format_version`, `approved`, and `labels_sha256`, the `labels.json` it was reviewed against;
     another `labels.json` makes the runner refuse;
-  - `nature_only` (the natures and the reason);
+  - `nature_only` (the natures and the reason). **Since #239 (2026-10-08) it also applies to a post that joined
+    from the review:** when its corrected classification has one of these natures, only `post_nature` is compared
+    and the filled-in rule does not read its other fields. The natures are not widened. **Since #240 (2026-10-09) a post
+    whose truth has `other_city` not null is compared on `post_nature` and `other_city` only;**
   - `removed`, `label_changes` and `not_compared`: each entry has its position, `listing_id`,
     field, value where one applies, and reason;
   - positions are checked against their `listing_id`, and a label change is validated as
@@ -1104,7 +1107,7 @@ types, never a value): position 24's cause was not recorded.
 20 of 46 posts changed between the passes. 14 of the 30 posts compared on `areas` name a place in
 the list, so they no longer test the model's own knowledge (`SESSION_LOG.md`).
 
-**Version 4, written 2026-10-08 (#233–#237), not run yet.** Five changes to `classify/instructions.txt`, in Ron's
+**Version 4, written 2026-10-08 (#233–#237); its regression run is below.** Five changes to `classify/instructions.txt`, in Ron's
 wording: a range of rooms is unclear (#233); a malformed amount is unclear (#234); no area names when the
 apartment is in another city (#235); an area named only as nearby is not a stated area name (#236); the gender
 paragraph (#237: the roommates-who-stay sentence removed, "decide only from the words about the person wanted"
@@ -1112,6 +1115,59 @@ at its head, a preference worded for both sexes is `no_restriction`). The render
 characters, against 11,698 in version 3 (+505). `PROMPT_VERSION` "4", `PROMPT_FINGERPRINT` `0ad0bb4b…`.
 `regression_run --check`: 51 posts, removed positions 6, 10, 27, 31, 43, 49, no ambiguous, overrides applied.
 The plan for its run is in 2.9 below.
+
+**The run of 2026-10-08** (Ron's go, `--cap 0.10`, effort `none`, temperature 0; `data/labeling/runs/v4-none-0ad0bb4b-47e96cac0e8d`): 102 calls, **$0.022741** by the usage metadata
+(the plan said about $0.023), no retry, no failed post, not stopped. Both passes are complete and both are marked `fail`:
+
+| | Pass 1 | Pass 2 |
+|---|---|---|
+| `post_nature`, `other_city` | no error | no error |
+| `gender` | 0 of 37 | 0 of 37 |
+| `price` | 0 of 31 | 0 of 31 |
+| `apartment_kind` | 0 of 36 | 1 of 36 (97.2%, inside the bar) |
+| `areas` by reach | 1 of 35 (97.1%) | 0 of 35 |
+| Fields measured from Ron's corrections (bar 90%) | `furnished` 2 of 13 (84.6%, **fails**); `balcony` 1, `entry_date_written` 1 | `furnished` 1 of 13, `balcony` 1 (inside) |
+| Value filled in where the truth says not written (bar: zero) | 1 (position 54, `balcony`) | 1 (the same) |
+
+So the fail of pass 2 is the filled-in rule alone, and pass 1 adds `furnished`. 13 of 51 posts changed between the passes
+(15 answers). The mismatches and the five positions of the plan are in `SESSION_LOG.md`, 2026-10-08, last entry. Nothing was
+edited and no second run was made.
+
+**Ron's decisions on this run, 2026-10-08 (#238, #239).** Version 4 is accepted although both passes are marked `fail`
+(#238; #235 was not followed at position 52, a field that is not compared). The `nature_only` rule now also applies to
+the review posts (#239; all five, positions 53 to 57, are `for_sale`, so all five are covered). **The verdicts of this
+run, recomputed from its `results.json` with the new code and no model call** (the stored posts and files unchanged; the
+old code reproduces the recorded verdicts exactly):
+
+| | Pass 1 | Pass 2 |
+|---|---|---|
+| Verdict | `fail` | `fail` |
+| Filled in where the truth says not written | **0** (position 54 no longer compared on `balcony`) | **0** |
+| Deciding fields | all inside their bars: `areas` 1 of 30, `gender` 0 of 32, `price` 0 of 30 | all inside: `apartment_kind` 1 of 31 (96.8%), `areas` 0 of 30 |
+| Fields measured from Ron's corrections (bar 90%), now 8 posts | `furnished` 1 of 8 (87.5%, **fails**); `entry_date_written` 1 of 8 (87.5%, **fails**) | `furnished` 1 of 8 (87.5%, **fails**) |
+| Mismatches that remain | 3 `furnished`; 14 `areas`; 52 `entry_date_written` | 3 `furnished`; 19 `apartment_kind` |
+
+So the new rule removes the filled-in fail and the review posts' misses, and the rest of the fail is the small
+denominator: the fields measured from the review are now counted on 8 posts, so one miss is 87.5%. Nothing was edited
+to change that; it is Ron's to read.
+
+**Then #240 (2026-10-09):** a post whose truth says the apartment is in another city is compared on `post_nature` and
+`other_city` only. It affects positions 16 and 52. Counted posts before → after: `apartment_kind` 31 → 29, `price` 30 → 28,
+`gender` 32 → 30, `entry_date` 31 → 29, `areas` 30 → 28, each field measured from the review 8 → 6. **The verdicts of the
+same run, recomputed again** (throwaway script, no model call; the files unchanged):
+
+| | Pass 1 | Pass 2 |
+|---|---|---|
+| Verdict | `fail` | `fail` |
+| Filled in where the truth says not written | 0 | 0 |
+| Deciding fields | all inside their bars: `areas` 1 of 28 (96.4%), `gender` 0 of 30, `price` 0 of 28 | all inside: `apartment_kind` 1 of 29 (96.6%), `areas` 0 of 28 |
+| Fields measured from Ron's corrections (bar 90%), now 6 posts | `furnished` 1 of 6 (83.3%, **fails**) | `furnished` 1 of 6 (83.3%, **fails**) |
+| Mismatches that remain | 3 `furnished`; 14 `areas` | 3 `furnished`; 19 `apartment_kind` |
+
+The one field that fails is position 3's `furnished`, whose truth is the uncorrected version 3 answer `unclear`; Ron ruled
+`partial` (#241), which the model answered in both passes, but no file carries the ruling yet. *For information only, in memory,
+not a change:* with that truth the same script gives `pass` for both passes, with the same deciding-field mismatches
+(14 `areas` in pass 1, 19 `apartment_kind` in pass 2).
 
 
 **Command:** `tlv_hunter/jobs/regression_run.py`, PAID. It reads `OPENAI_API_KEY` too. #128 makes
@@ -1898,7 +1954,7 @@ read-only. Two paid steps, each with its own go from Ron, in this order.
 make ambiguous. Nothing in `labels.json`, `label_overrides.json` or `corrections.json` was edited. Ron decides
 there; the run below reads the files as they are.
 
-#### Step 1: the regression run on version 4
+#### Step 1: the regression run on version 4 — MADE 2026-10-08 (Ron's go); result in 2.6, "The run of 2026-10-08"
 
 ```bash
 uv run python -m tlv_hunter.jobs.regression_run --check                  # free, done 2026-10-08: 51 posts
@@ -1954,7 +2010,7 @@ I make no further round (#207).
 
 **How many are selected.** The free plan (`uv run python -m tlv_hunter.jobs.reclassify`, 2026-10-08, store read-only,
 nothing written): current prompt 4 / schema 1 / `gpt-6-luna`; 194 stored `Listing`s, all at prompt 3;
-**194 selected** (some marked `[reviewed by Ron]`). Left out: 38 pending with no `Listing`, 25 rejected `no_images`,
+**194 selected** (some marked `[reviewed by Ron]`). Left out: 38 pending with no `Listing` (37 duplicates, never classified, and 1 pending canonical, `73aebb24…`), 25 rejected `no_images`,
 9 rejected `no_text`.
 
 **The cost, line by line**, from run 2.8 (`classify_pending`, version 3, effort `none`; usage metadata):
@@ -1970,22 +2026,28 @@ nothing written): current prompt 4 / schema 1 / `gpt-6-luna`; 194 stored `Listin
 | **All 194 in one run** | $0.0425 + $0.0005 + $0.0004 | **about $0.044** |
 
 **Proposed.**
-- **First step: keep `--limit 10 --cap 0.02`** (the `BACKLOG.md` row, #221). Expected $0.0022 + $0.0005 = $0.0027; the cap
-  lets the run go on until it has spent about $0.02 − $0.0037, 74 posts at the typical rate, 7 times what it needs. A
-  higher cap would buy nothing for 10 posts. `--limit` takes the first 10 in the plan's order (by id), which is
-  arbitrary. Ron may instead name the posts with `--allow` (#217: id prefixes of 8 characters or more), for example
-  the ones the five sentences are about: `e6a8b9bb…`, `b330d3fc…`, `31bd9205…`, `4c5bbcaf…`, `d269d280…`. The cap is the
-  same. Ron chooses; I recommend `--limit 10` as written, unless Ron wants to see those five first.
-- **The rest: `--limit 194 --cap 0.10`** (#221). If Ron applied the first 10, the plan then selects the remaining
-  184 (the applied ones are current), expected 184 × $0.000219 + $0.0005 = $0.041. If he applied none, the plan
-  selects all 194 again and the 10 are paid for twice: $0.044 in all. The cap allows (0.10 − 0.0037) / 0.000219 = 440
+- **First step (Ron, 2026-10-09, replacing `--limit 10`): five named posts, `--cap 0.02`.** The ones the version 4
+  sentences are about: `e6a8b9bb…`, `b330d3fc…`, `31bd9205…`, `4c5bbcaf…`, `d269d280…` (#217: `--allow` takes
+  comma-separated id prefixes of 8 characters or more). Expected 5 × $0.000219 + $0.0005 = $0.0016; the cap lets the run go
+  on until it has spent about $0.02 − $0.0037, 74 posts at the typical rate. The command:
+  `uv run --env-file .env python -m tlv_hunter.jobs.reclassify --run --cap 0.02 --allow e6a8b9bbd41c,b330d3fca463,31bd92058a4d,4c5bbcaf4b57,d269d280af71`.
+  **Made on 2026-10-09** (the first attempt was refused by argparse before any call, because `--allow` was given with spaces;
+  the second, with commas, ran): run `dcb4c0cb4b24`, **5 calls, $0.001693 of the $0.02 cap** by the usage metadata (the plan said
+  $0.0016), 5 proposed, 0 failed, no state change, not stopped; tokens: input 27,097 (cached 20,652, cache write 5,163), output
+  1,425, no reasoning. Folder `data/store/reclassify/dcb4c0cb4b24/`. The store file is byte-identical. What changed, per post,
+  is in `SESSION_LOG.md`, 2026-10-09 (the second entry); nothing is applied.
+- **The second step, the remaining 189 (194 − 5): not scheduled (Ron, 2026-10-09).** New posts are classified at version 4 and
+  the old ones leave by retention; Ron decides later whether to run it. If he does: `--limit 194 --cap 0.10` (#221). If Ron applied the five, the plan then
+  selects 189 (the applied ones are current), expected 189 × $0.000219 + $0.0005 = $0.042. If he applied none, the plan
+  selects all 194 again and the five are paid for twice: $0.044 in all. The cap allows (0.10 − 0.0037) / 0.000219 = 440
   posts, 2.3 times the pass. The sum of the 194 worst cases is $0.65 and is not an estimate.
-- Expected total of the two steps, 10 applied in between: $0.0027 + $0.041 = **about $0.044**. The project's hard
+- Expected total of the two steps, the five applied in between: $0.0016 + $0.042 = **about $0.044**. The project's hard
   spend limit is the second line.
 
 **Before the run:** `run_once`, `classify_pending`, `rederive_rejections` and `apply_reclassify` are not running (#140,
-#220: none takes a lock). The 38 pending canonicals stay pending; `classify_pending` is not started before Ron's
-verdict on step 1, because it would write version 4 `Listing`s the regression run has not passed.
+#220: none takes a lock). Of the 38 pending posts, 37 are duplicates (never classified, #75 B) and 1 is a pending canonical, `73aebb24…`
+(failed twice with `json_invalid`). `classify_pending` is not started before Ron's verdict on step 1, because it
+would classify `73aebb24…` at version 4 before the regression run has passed.
 
 #### Step 3: what Ron sees before any `--apply`
 

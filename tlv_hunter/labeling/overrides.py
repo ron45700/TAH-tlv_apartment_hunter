@@ -2,7 +2,9 @@
 reason (DECISIONS.md #196). Ron's file is never edited: the regression runner applies these on
 top of it and lists them in every run report.
 
-- `nature_only`: a post labelled with one of these natures is compared on `post_nature` only.
+- `nature_only`: a post labelled with one of these natures is compared on `post_nature` only; so is
+  a post that joined from Ron's review when its corrected classification has one of these natures
+  (#239).
 - `removed`: posts taken out of the set. `regression_set.json` keeps them, so positions stay put.
 - `label_changes`: a deciding field's label replaced, in `labels.json`'s shape.
 - `not_compared`: a deciding field left out of the comparison for one post.

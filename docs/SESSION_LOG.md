@@ -4027,7 +4027,7 @@ field or filter rule changed. No git command.** `data/labeling/` was not edited.
 - `regression_run --check` (free): "regression set ready: 51 posts, removed positions [6, 10, 27, 31, 43, 49],
   ambiguous [], overrides applied".
 - `jobs.reclassify` with no flag (free, read-only): current prompt 4 / schema 1 / `gpt-6-luna`; 194 stored
-  `Listing`s, all prompt 3; **194 selected**; left out: 38 pending, 25 `no_images`, 9 `no_text`. Estimate printed:
+  `Listing`s, all prompt 3; **194 selected**; left out: 38 pending (37 duplicates and 1 pending canonical, `73aebb24…`), 25 `no_images`, 9 `no_text`. Estimate printed:
   194 × $0.000219 = $0.0425; worst case of one call $0.00335 to $0.00372.
 - Read-only reading of the stored `Listing`s (prompt 3): `d269d280…` streets `["הרצל"]`, `stated_area_names`
   `["פלורנטין"]`, `areas` `[52]`; `e81273e6…` streets `["קורדוברו"]`, `stated_area_names` `["פלורנטין"]`, `areas`
@@ -4088,7 +4088,8 @@ have no line saying version 3 is the current version.
 
 ### Findings, not fixed
 
-- The 38 pending canonicals will be classified at version 4 by the next `classify_pending`, while the 194 stored
+- *Corrected the same day:* of the 38 pending posts, 37 are duplicates (never classified) and 1 is a pending canonical,
+  `73aebb24…`. The next `classify_pending` would classify only that one, at version 4, while the 194 stored
   `Listing`s stay at version 3 until a reclassify is applied: two versions side by side, by design (#217).
 
 ### Deviations
@@ -4100,3 +4101,360 @@ None from the round's limits. One judgement call: the order of changes 3 and 4 i
 Waiting for Ron: (1) the list of labels above; (2) a go for the regression run on version 4; (3) after he has read its
 report, a go for `reclassify --run --limit 10 --cap 0.02`. Unchanged: the retry of `73aebb24…`, the bill, the working day
 and I3 (Phase 3).
+
+## 2026-10-08 (continued) — The pending count corrected; the regression run on version 4 (Ron's go, Step 1 only)
+
+### Done
+
+- **Doc fix, no code.** Of the 38 pending posts, 37 are duplicates (`is_canonical` false, never classified) and 1 is a
+  pending canonical, `73aebb24…` (read again, read-only: `['73aebb24'], 37`). Corrected in `PHASE_2.md` 2.9 (the plan's
+  "How many are selected" and "Before the run") and in this log (the findings of the entry above, and its verified
+  list). The next `classify_pending` would classify only `73aebb24…`, at version 4. The line of 2026-10-06 that says the
+  same ("the 37 duplicates… and the failed one") was already right.
+- **One paid run**, as planned: `uv run --env-file .env python -m tlv_hunter.jobs.regression_run --cap 0.10`, after a
+  free `--check` (51 posts). Exit 0, not stopped. Folder:
+  `data/labeling/runs/v4-none-0ad0bb4b-47e96cac0e8d`. No second run, no `reclassify`, no `classify_pending`, no
+  `--apply`, no other paid or network call, no store write, no git command. The labels and the instructions were not edited.
+- **Cost, from the usage metadata:** 102 calls (every post `ok` on its first attempt, no retry), **$0.022741 of the
+  $0.10 cap** (the plan said about $0.023; $0.000223 a call, against $0.000221 for version 3). Model reported:
+  `gpt-6-luna`. Fingerprint `0ad0bb4b…`, effort `none`, temperature 0.
+
+### The verdict of each pass against the approved bar
+
+Both passes are **complete** (no failed or missing position) and both are marked **`fail`**. Every deciding field is inside
+its bar in both passes; the fail comes from two things outside them.
+
+| Field (bar) | Pass 1 | Pass 2 |
+|---|---|---|
+| `post_nature` (no error), 51 | 0 | 0 |
+| `other_city` (no error), 36 | 0 | 0 |
+| `gender` (95%), 37 | 0 errors | 0 errors |
+| `price` (95%), 31 | 0 | 0 |
+| `apartment_kind` (95%), 36 | 0 | 1 (97.2%) — position 19, `whole_apartment` → `unclear` |
+| `areas` by reach (90%), 35 | 1 (97.1%) — position 14, label [41], answer [52, 53] | 0 |
+| `entry_date` (90%), 36 | 0 | 0 |
+| fields measured from Ron's corrections (90%), 13 posts | `furnished` **2 (84.6%, fails)**: position 3 (`unclear` → `partial`), position 56 (`unclear` → `not_written`); `entry_date_written` 1 (position 52, "ב30/11" for "30/11"); `balcony` 1 | `furnished` 1 (position 3); `balcony` 1 |
+| **a value filled in where the truth says not written (bar: zero)** | **1** — position 54 `balcony`: `not_written` → `true` | **1** — the same |
+
+- Pass 2 fails on the filled-in rule alone. Pass 1 fails on it and on `furnished`.
+- **Position 54** (`4e55319f…`) is a review-truth post: a for-sale penthouse in Haifa whose text has no balcony line, only
+  "155 מ"ר בנוי אדריכלי + מרפסות, גג…" in the size. Its truth is the stored version 3 answer (`not_written`), counted right
+  because Ron did not correct it. Both version 4 passes read "מרפסות" as a balcony.
+- **Position 3** (`0555aa32…`): "ללא ריהוט נוסף" next to the room; truth `unclear` (the stored answer), version 4 says
+  `partial` in both passes.
+- Versus version 3 (`gender` 1 and 2 of 32; `areas` by reach 0 of 30 in both passes): `gender` is clean here (0 of 37 in both),
+  and `areas` has one miss in pass 1. The set is not the same (46 then, 51 now), so these are not the same denominators.
+- 13 of the 51 posts changed between the passes (15 answers; the list is in `results.json` under `flips`).
+
+### The five positions, in each pass (from `results.json`)
+
+| Position | Pass 1 | Pass 2 |
+|---|---|---|
+| **24** `8294df78…` (English, "2–3 room", nature only) | valid, 1 attempt; `rooms` **`unclear`** | valid, 1 attempt; `rooms` **`unclear`** |
+| **34** `b330d3fc…` | `gender` **`no_restriction`** (label: the same); areas [30, 31] (label [31], reach holds) | the same |
+| **35** `31bd9205…` | `gender` **`no_restriction`** (label: the same); areas [26] | `gender` **`no_restriction`**; areas [25] — differs from pass 1 (areas are `not_compared` on this post); `stated_area_names` one string in pass 2, two in pass 1 |
+| **45** `e6a8b9bb…` | `price` **`unclear`**, `price_source` `text`; areas [52]; `stated_area_names` [], and "פלורנטין המערבית" dropped | `price` **`unclear`**, `price_source` `text`; areas [52]; `stated_area_names` ["פלורנטין"] |
+| **52** `4c5bbcaf…` | `other_city` "ראשון לציון", areas []; price [2580]; **`stated_area_names` ["בלב העיר"]** | the same: **["בלב העיר"]** |
+
+- 24: version 3 returned it invalid twice; both version 4 passes are valid with the sentence's expected value.
+- 34 and 35: `gender` was right and stable between the passes at both. Position 35's other instability (its areas) is not a gender
+  matter and is not compared.
+- 45: the price is `unclear` in both passes, as #234 says (the price of this post is not compared, #199).
+- 52: for information, `stated_area_names` is **not** `[]` in either pass, so the sentence of #235 was not followed on this post
+  (it is not compared, #177; Ron's correction says `[]`).
+- Position 19's `apartment_kind` flip (`whole_apartment` in pass 1, `unclear` in pass 2) is the post "ל 2 או 3 שותפים (עם / בלי סלון)"
+  that the entry above noted as a possible target of the rooms sentence; `rooms` is not labelled, and what changed is
+  `apartment_kind`. It is the only miss of pass 2 on a deciding field.
+
+### Doc lines touched
+
+`BACKLOG.md`: the sprint intro (the run was made), row 4 (now "Ron reads the version 4 regression run"), row 5 (after he has
+read it), the #142 row. `PHASE_2.md`: the status line, the version 4 block in 2.6 (the result table), the Step 1 heading in
+2.9, the two pending-count lines. `CLAUDE.md`: the phase line. `SESSION_LOG.md`: the correction in the entry above.
+
+### Deviations
+
+None from the round's limits. The run was one run; the report is as the plan said.
+
+### Next
+
+STOP. Waiting for Ron to read the report (`report.html` in the run folder; the comparison is in `results.json`). His
+decisions, not made here: whether these two fails count against version 4 (position 54's `balcony` is a post whose truth
+is an uncorrected model answer; `furnished` is measured from corrections), what to do about the labels or the instructions,
+and whether to go on to Step 2, `reclassify --run --limit 10 --cap 0.02`. No edit to the instructions or the labels and no
+further run until then.
+
+## 2026-10-08 (continued) — Version 4 accepted (#238); `nature_only` covers the review posts (#239)
+
+### Done
+
+**No paid, model or network call. No store write (the store opened `read_only`). No change to the instructions,
+`PROMPT_VERSION`, a schema or a field. `labels.json`, `label_overrides.json` and `corrections.json` were not edited. No git
+command.**
+
+- `DECISIONS.md` **#238** (version 4 accepted although both passes are marked `fail`; the reviewing chat's
+  recommendation accepted by Ron; Ron's words "not a disaster"; the fact, with no action, that #235 was not followed at
+  position 52 and that the field is not compared) and **#239** (the `nature_only` rule applies to a post that joined from
+  Ron's review; Ron's reason of 2026-10-06 as given).
+- **The build, `labeling/` only.** `compare.review_truth` takes `nature_only` (default empty) and, when the corrected
+  classification's nature is in it, returns `{"post_nature": ...}` and nothing else; `regression.prepare` passes the same
+  set it passes to `blind_truth`. Two docstrings say so (`compare.py`, `overrides.py`). No natures added, no compared
+  field added.
+- **Tests** (`tests/test_regression_runner.py`): 6 new — a review post of each of the four natures compares
+  `post_nature` only; the filled-in rule does not read its other fields (a `balcony` true on a for-sale review post is no
+  mismatch; a wrong nature still is); a review post of another nature rejected as `other_city` is compared in full. One
+  existing test, `test_a_review_truth_leaves_an_excluded_field_out`, used a `for_sale` review post to show that excluded
+  fields are left out and that the others still count; under #239 such a post has no other fields, so it now uses a
+  `rental_offer` rejected as `other_city` (the same behaviour tested on a post that is still compared in full).
+
+### Verified
+
+- `uv run pytest`: **1307 passed** (1301 before; 0 failed). `ruff check`: all checks passed. `ruff format --check`:
+  clean. `regression_run --check` (free): "regression set ready: 51 posts, removed positions [6, 10, 27, 31, 43, 49],
+  ambiguous [], overrides applied" — no refusal.
+
+### Report: the natures, and the `other_city` question
+
+- **The list of natures** in `label_overrides.json` `nature_only`: `seeking`, `for_sale`, `not_listing`, `sublet_offer`; the
+  only compared field is `post_nature`. Unchanged.
+- **Is a review post rejected as `other_city` covered? Not by nature.** The rule tests the nature of the corrected
+  classification, not the rejection. A review post whose nature is `rental_offer` and that is rejected as `other_city`
+  is **not** covered and is compared in full (a test pins this). **Today it does not arise:** all five review posts
+  (positions 53 to 57) are `for_sale`, so all five are covered, including 53 (Ofakim), 54 (Haifa) and 55 (Beer Sheva)
+  that are also other-city. Whether a rental rejected as `other_city` should be covered too is Ron's decision; I stopped
+  there and did nothing about it.
+
+### The recomputed verdict of run 47e96cac0e8d (no model call)
+
+It needed a throwaway script of about 20 lines (`prepare` over the read-only store, `Listing.model_validate_json` of each
+`results.json` entry, `judge`), kept in the scratchpad and not added to the package. With the **old** code it reproduced the
+recorded verdicts and mismatches exactly (pass 1 and pass 2 `fail`, the same five and three mismatches); with the new code:
+
+| | Pass 1 | Pass 2 |
+|---|---|---|
+| Verdict | **`fail`** | **`fail`** |
+| Value filled in where the truth says not written | 0 | 0 |
+| `post_nature`, `other_city` | no error | no error |
+| `gender` / `price` | 0 of 32 / 0 of 30 | 0 of 32 / 0 of 30 |
+| `apartment_kind` | 0 of 31 | 1 of 31 (96.8%, inside the bar) |
+| `areas` by reach | 1 of 30 (96.7%) | 0 of 30 |
+| `furnished` (bar 90%), 8 posts | **1 of 8 (87.5%), fails** | **1 of 8 (87.5%), fails** |
+| `entry_date_written` (bar 90%), 8 posts | **1 of 8 (87.5%), fails** | 0 of 8 |
+
+**The mismatches that remain:** pass 1 — position 3 `furnished` (truth `unclear`, answer `partial`), position 14 `areas`
+(label [41], answer [52, 53]), position 52 `entry_date_written` (truth "30/11", answer "ב30/11"); pass 2 — position 3
+`furnished` (the same), position 19 `apartment_kind` (`whole_apartment` → `unclear`). So the new rule takes away the
+filled-in fail and the misses of positions 54 and 56, **but the verdict is still `fail` in both passes**, for a reason the
+change itself caused: the fields measured from Ron's corrections are now counted on 8 posts instead of 13 (the five review
+posts no longer count there), and one miss in 8 is 87.5%, under the 90% bar. Position 3's `furnished` ("ללא ריהוט נוסף" next
+to the room; the truth is the stored version 3 answer, uncorrected) is the one that fails in both passes. I did not change the
+bar, the labels or the counting; whether this is a pass, and whether one miss on 8 posts should fail a pass, is Ron's.
+Version 4 is accepted regardless (#238).
+
+### Doc lines touched
+
+- `DECISIONS.md`: #238, #239 and their heading line (before "Corrections to recorded facts").
+- `PHASE_2.md`: the status line (the run sentence); 2.6, the `label_overrides.json` bullet (`nature_only`, #239); 2.6, after
+  the version 4 run table, the paragraph and the table of the recomputed verdicts.
+- `BACKLOG.md`: the sprint intro (the run sentence); next-sprint row 4 (rewritten: accepted, recomputed result); the row for
+  #142.
+- `CLAUDE.md`: the phase line (the version 4 run sentence). The seam paragraph on `labeling/` still describes the set
+  correctly and was not touched.
+
+### Findings, not fixed
+
+- The run's own `report.html` and `results.json` still say `fail` with the old counting: they are the record of what the
+  code said then, and no command re-renders them. A new run would use the new rule.
+- The run report page's overrides section prints "Nature only: …" without saying it now covers review posts.
+
+### Deviations
+
+None from the round's limits.
+
+### Next
+
+STOP. For Ron: (1) whether the remaining `fail` (one `furnished` miss on 8 posts, position 3; and one `entry_date_written` miss in
+pass 1, position 52) is a pass, or whether the 90% bar should be read differently on a denominator of 8; (2) whether a rental
+rejected as `other_city` should also be covered by `nature_only` (none arises today); (3) a go for `reclassify --run --limit
+10 --cap 0.02` (Step 2). Unchanged: the retry of `73aebb24…`, the bill, the working day and I3 (Phase 3).
+
+## 2026-10-09 — Position 3 (#241), other-city posts (#240); the first reclassify run did not start
+
+### Done
+
+**No model call, no paid call, no network call, no store write. No change to the instructions, `PROMPT_VERSION`, a schema or
+a field. `labels.json`, `corrections.json` and `label_overrides.json` were not edited. No `apply_reclassify`, no
+`classify_pending`, no git command.**
+
+- **Part 1 (position 3, `furnished`): the ruling is recorded (`DECISIONS.md` #241) but not carried by any file, and I
+  stopped there.** The set has no way to carry it without new code: `label_overrides.json`'s `label_changes` take the seven
+  deciding fields only (`LabelField` in `overrides.py`, validated as `labels.json` is) and `furnished` is measured from the
+  review; `corrections_excluded` can only leave a field out (it would remove the miss without recording `partial`); the only
+  other route is `corrections.json`, which is Ron's. **Needed:** a new kind of entry in `label_overrides.json` (a changed value
+  of a field measured from the review, with Ron's name, the date and the reason) applied over the reviewed classification in
+  `labeling/regression.py`: a change to that file's shape and a few lines of code, with its tests. Ron's go.
+- **Part 2 (other-city posts): built and recorded (#240).** In `labeling/compare.py`: `blind_truth` keeps `post_nature` and
+  `other_city` only when the label's `other_city` is not null and the field is among those compared (a city left out by
+  `not_compared` does not trigger it); `review_truth` does the same on the corrected `other_city`, unless it is excluded (#216),
+  after #239's nature rule; `regression.prepare` passes the excluded fields. Constant `OTHER_CITY_FIELDS`; the module docstring
+  says so. The natures and the field of #239 are unchanged.
+- **Tests:** 3 more net (1310 passed; 1307 before). The old test "a review post of another nature … rejected other_city is
+  compared in full" is replaced by four: a review rental in Tel Aviv is compared in full; a review post in another city is
+  compared on nature and city only, and a wrong `balcony`/`rooms` is no mismatch; the same for a blind post; a city left out
+  by `not_compared` keeps the other fields. `test_a_review_truth_leaves_an_excluded_field_out` now expects, before the
+  exclusion, `{post_nature, other_city: "רמת החייל"}` (the corrected city is another one). `ruff check` and `ruff format --check`
+  clean. `regression_run --check` (free): 51 posts, removed positions [6, 10, 27, 31, 43, 49], no ambiguous, no refusal.
+
+### Part 2: which positions, and the counted posts
+
+It affects **positions 16 (`0905ca64…`, Holon) and 52 (`4c5bbcaf…`, Rishon LeZion)**; the other-city review posts (53 to 55)
+were already covered by #239.
+
+| Field | Counted before | Counted after |
+|---|---|---|
+| `post_nature` | 51 | 51 |
+| `other_city` | 32 | 32 |
+| `apartment_kind` | 31 | 29 |
+| `price` | 30 | 28 |
+| `gender` | 32 | 30 |
+| `entry_date` | 31 | 29 |
+| `areas` | 30 | 28 |
+| each of the 15 fields measured from the review | 8 | 6 |
+
+### The recomputed verdicts of run 47e96cac0e8d (throwaway script, no model call; the old code had reproduced the record)
+
+| | Pass 1 | Pass 2 |
+|---|---|---|
+| Verdict | **`fail`** | **`fail`** |
+| Value filled in where the truth says not written | 0 | 0 |
+| `post_nature`, `other_city` | no error | no error |
+| `gender`, `price` | 0 of 30, 0 of 28 | 0 of 30, 0 of 28 |
+| `apartment_kind` | 0 of 29 | 1 of 29 (96.6%, inside the bar) |
+| `areas` by reach | 1 of 28 (96.4%) | 0 of 28 |
+| `entry_date` | 0 of 29 | 0 of 29 |
+| `entry_date_written` and the other fields measured from the review, 6 posts | no miss, except `furnished` | no miss, except `furnished` |
+| **`furnished`** (bar 90%) | **1 of 6 (83.3%), fails** | **1 of 6 (83.3%), fails** |
+
+**Mismatches that remain:** pass 1 — position 3 `furnished` (truth `unclear`, answer `partial`), position 14 `areas` (label [41],
+answer [52, 53]); pass 2 — position 3 `furnished` (the same), position 19 `apartment_kind` (`whole_apartment` → `unclear`).
+Position 52's `entry_date_written` miss of pass 1 is gone (it is an other-city post now). Nothing was changed to alter this.
+
+*For information only (in memory in the script, not a change to any file):* with position 3's `furnished` truth set to `partial`
+(#241), the same script gives **`pass`** for both passes; the deciding-field mismatches above (14, 19) stay inside their bars.
+The model answered `partial` at position 3 in both passes.
+
+### Part 3: the first reclassify run did not start; nothing was sent
+
+- **Before it:** no `tlv_hunter` process was running (checked; #140). The store file's SHA-256 started `2fcc382e…`.
+- **What happened:** `uv run --env-file .env python -m tlv_hunter.jobs.reclassify --run --cap 0.02 --allow e6a8b9bbd41c
+  b330d3fca463 31bd92058a4d 4c5bbcaf4b57 d269d280af71` was refused by argparse (exit 2): `--allow` takes **one comma-separated
+  value** (`--help`: "comma-separated id prefixes (8 or more)"), so the second prefix on was "unrecognized arguments". No model
+  call was made, no run folder was written (`data/store/reclassify/` does not exist), nothing was spent, and the store file's
+  hash is unchanged (`2fcc382e…`).
+- **I stopped, as the message said for a run that fails to start.** The syntax in the message was the cause, not the command.
+  The command that does what Ron approved is the same with commas:
+  `uv run --env-file .env python -m tlv_hunter.jobs.reclassify --run --cap 0.02 --allow e6a8b9bbd41c,b330d3fca463,31bd92058a4d,4c5bbcaf4b57,d269d280af71`
+  (the 12-character prefixes are those of the stored `Listing`s; 8 would do). It needs Ron's word to run it in this form.
+- Nothing to report for the five posts, `d269d280…` (#236) or `diff.html` and the two allow lists yet: they are written by that run
+  into `data/store/reclassify/<run_id>/`.
+
+### Doc lines touched
+
+- `DECISIONS.md`: #240, #241 and their heading line (before "Corrections to recorded facts").
+- `PHASE_2.md`: 2.6, the `label_overrides.json` bullet (the other-city rule); 2.6, after the recomputed table of #239, the paragraph
+  and table of #240; 2.9, "Plan for the version 4 runs", Step 2 "Proposed" (the first step is the five named posts, the second the
+  remaining 189, the cost lines recomputed, "not made yet" and why).
+- `BACKLOG.md`: next-sprint row 4 (appended: #240, #241) and row 5 (the five posts, the comma form, not made yet).
+- `CLAUDE.md`: the phase line (the version 4 sentence).
+
+### Findings, not fixed
+
+- The 2.9 plan and the `reclassify` docstring give `--allow 2bac260c`, a single prefix; the plan's text never said that several are
+  comma-separated. Said now in the 2.9 plan.
+
+### Deviations
+
+None from the limits. One judgement: I did not retry the run after the usage error, because the message said not to rerun a run that
+fails to start; the cost of waiting is one reply.
+
+### Next
+
+STOP. For Ron: (1) the go to run the first reclassify step in the comma form above; (2) whether to carry the ruling on position 3
+(a new kind of entry in `label_overrides.json`: a change to that file's shape, a few lines and tests); (3) after that, whether
+the recomputed verdict is a pass. Unchanged: the retry of `73aebb24…`, the bill, the working day and I3 (Phase 3).
+
+## 2026-10-09 (continued) — Phase 2's build closed; the first real `reclassify --run` (five posts, nothing applied)
+
+### Done
+
+**One paid run, the one Ron authorised. No other model, paid or network call. No `apply_reclassify`, no `classify_pending`, no store
+write (the store file's SHA-256 is `2fcc382e…` before and after), no code change, no git command.**
+
+- **Before it:** no `tlv_hunter` or `pytest` process was running (#140).
+- **The command, exactly:** `uv run --env-file .env python -m tlv_hunter.jobs.reclassify --run --cap 0.02 --allow
+  e6a8b9bbd41c,b330d3fca463,31bd92058a4d,4c5bbcaf4b57,d269d280af71`. Exit 0, not stopped, "the store was not written".
+- **Cost and calls, from the usage metadata:** run `dcb4c0cb4b24`; **5 calls, $0.001693 of the $0.02 cap** (the plan said about
+  $0.0016); tokens: input 27,097 (cached 20,652, cache write 5,163), output 1,425, reasoning 0; model reported `gpt-6-luna`; prompt
+  4, fingerprint `0ad0bb4b…`. 5 attempted, 5 proposed, 0 failed, 0 state changes, every post one attempt. Per post: $0.000208 to
+  $0.000799 (the first call carried the cache write).
+- **The run folder:** `data/store/reclassify/dcb4c0cb4b24/`. **`diff.html`:**
+  `C:\Users\ronki\Desktop\TLV_Apartment_Hunter\data\store\reclassify\dcb4c0cb4b24\diff.html`. **The two allow lists**, in the same
+  folder: `allow_unchanged.txt` and `allow_state_changes.txt` (all five posts are in the first: none changes state). Also
+  `proposals.jsonl` and `summary.json` (`complete`: true).
+- The docs: the two deferrals are recorded in `BACKLOG.md` only (items 3 and 4), as asked.
+
+### The five posts, every field that changed, old (prompt 3) against new (prompt 4)
+
+Provenance (`prompt_version` 3 → 4, `classified_at`) changed on all five and is not listed again.
+
+| Post | Field | Old | New |
+|---|---|---|---|
+| **`d269d280…`** (Herzl 35) | `stated_area_names` | `["פלורנטין"]` | **`[]`** |
+| | `areas` (unchanged) | `[52]` | `[52]` |
+| `e6a8b9bb…` ("7,2000₪") | `price` | written `[72000]` | **`unclear`** |
+| | `stated_area_names` | `[]` | `["פלורנטין", "המושבה האמריקאית"]` |
+| | `areas` | `[52]` | `[42, 52]` |
+| `b330d3fc…` | `arnona` | `not_written` | `unclear` |
+| `31bd9205…` | `stated_area_names` | `["צפון תל אביב שיכון דן"]` | `["צפון תל אביב", "שיכון דן"]` |
+| `4c5bbcaf…` (Rishon LeZion) | `stated_area_names` | `["לב העיר"]` | `["בלב העיר"]` |
+
+**`d269d280…`, the only check of #236, in full:** old `stated_area_names` `["פלורנטין"]`, `areas` `[52]`, `streets` `["הרצל"]`;
+new `stated_area_names` **`[]`**, `areas` **`[52]`**, `streets` `["הרצל"]` (unchanged). The "nearby" sentence did what #236 says on
+this post: the name is no longer a stated area name. The areas stay `[52]` and now come from the street. Nothing was dropped by the
+exact-match check (`dropped`: no street, no area name, no city).
+
+Facts worth Ron's eye, no conclusion drawn:
+- `e6a8b9bb…`: the price is `unclear` as #234 says (the native 7,200 is not used, #114). But the areas gained 42 and the stated
+  names gained "המושבה האמריקאית", a place the text gives after "קרוב ל…" together with Park HaMesila and Bloomfield: a place named as
+  nearby that now decides an area. Its `stated_area_names` also holds "פלורנטין" (before: `[]`, the name had been dropped as a
+  mismatch in version 3).
+- `4c5bbcaf…`: `stated_area_names` is `["בלב העיר"]`, not `[]` (#235 not followed on this post, as in both passes of the
+  regression run); `areas` `[]` and `other_city` unchanged. Ron's correction (`[]`) is on file for the old classification.
+- `31bd9205…` and `b330d3fc…`: single-field changes; `gender` is `no_restriction` in both, and `areas` unchanged.
+
+### Doc lines touched
+
+- `PHASE_2.md`: the status line (the reclassify was made; Phase 2's build closed; two deferrals); 2.9, "Plan for the version 4 runs",
+  Step 2 "Proposed": the first step (made, the run, the cost, the tokens, the folder) and the second step (not scheduled).
+- `BACKLOG.md`: the sprint intro (the 2.9 clause; the version 4 sentence, now "Phase 2's build is closed… two items are deferred");
+  next-sprint rows 3 and 4 replaced by the two deferrals, row 5 replaced by the run's result and the apply that waits for Ron (the old
+  rows 3, 4 and 5 left); the #144 row; the #142 row (position 3's `furnished` is deferred).
+- `CLAUDE.md`: the phase line (Phase 2's build closed; one real `--run`; the two deferrals) and the 2.9 sentence ("one real `--run`
+  (five posts, 2026-10-09), no real `--apply` yet").
+- `DECISIONS.md` and the code: not touched.
+
+### Findings, not fixed
+
+- `BACKLOG.md`'s "Decisions pending implementation" rows for #142 and #144 still list the regression set and reclassify as waiting for
+  Ron's acceptance and `--apply`; I changed only the clauses that the run and the deferrals contradicted.
+
+### Deviations
+
+None from the round's limits.
+
+### Next
+
+STOP. Nothing is applied: all 194 stored `Listing`s are still at prompt 3, and the five proposals wait in the run folder. Ron reads
+`diff.html`; if he wants any of the five in the store, the free dry run is `uv run python -m tlv_hunter.jobs.apply_reclassify
+dcb4c0cb4b24`, then `--apply --allow-file …` (a separate go; it writes the store, after a backup). Deferred, by Ron: #241's carrier,
+and the reclassify of the other 189. Unchanged: the retry of `73aebb24…`, the bill, the working day and I3 (Phase 3). Phase 3 is next.

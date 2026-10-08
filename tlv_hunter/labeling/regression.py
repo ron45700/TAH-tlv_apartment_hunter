@@ -115,7 +115,7 @@ def prepare(repo_root: Path, store: Repository, reclassify_dir: Path | None = No
             if reviewed is None:
                 prepared.refusals.append(f"position {position}: joined from review, no review")
                 continue
-            truth = review_truth(entry, position, reviewed)
+            truth = review_truth(entry, position, reviewed, nature_only, excluded)
             if excluded:
                 # An excluded field (#216) is neither corrected nor compared.
                 truth = Truth(

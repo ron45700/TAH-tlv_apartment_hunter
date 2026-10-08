@@ -8,7 +8,10 @@ The truth of a post:
   completed with the classifier's own rules (the native price, the entry date's year). The other
   fields from the reviewed, corrected classification, when Ron reviewed the post (#193).
 - **Review** (`truth: "review"`): every field from the corrected classification (#195).
-- A post labelled with a nature in `nature_only` is compared on `post_nature` only (#196).
+- A post labelled with a nature in `nature_only` is compared on `post_nature` only (#196). So is a
+  review post whose corrected classification has one of those natures (#239).
+- A post whose truth says the apartment is in another city (`other_city` not null), blind or from
+  the review, is compared on `post_nature` and `other_city` only (#240).
 """
 
 from collections.abc import Sequence
@@ -44,6 +47,10 @@ OTHER = (
 )
 FIELDS = DECIDING + OTHER
 NO_ERROR = frozenset({"post_nature", "other_city"})
+OTHER_CITY_FIELDS = (
+    "post_nature",
+    "other_city",
+)  # all that is compared on an other-city post (#240)
 BAR_95 = frozenset({"apartment_kind", "price", "gender"})
 BAR_OTHER = 0.90  # every other field, and `areas` by reach (#198)
 
@@ -94,7 +101,9 @@ def blind_truth(
         )
         for name in not_compared:
             values.pop(name if name != "entry_date_parts" else "entry_date", None)
-        if reviewed is not None:
+        if label.other_city is not None and "other_city" in values:
+            values = {name: values[name] for name in OTHER_CITY_FIELDS}  # #240
+        elif reviewed is not None:
             values.update({name: getattr(reviewed, name) for name in OTHER})
     blank = sorted(name for name in DECIDING if name in values and values[name] is None)
     blank = [name for name in blank if name != "other_city"]  # null is Tel Aviv-Yafo
@@ -103,7 +112,22 @@ def blind_truth(
     return Truth(entry.listing_id, position, values, "label")
 
 
-def review_truth(entry: RegressionEntry, position: int, corrected: Listing) -> Truth:
+def review_truth(
+    entry: RegressionEntry,
+    position: int,
+    corrected: Listing,
+    nature_only: frozenset[str] = frozenset(),
+    excluded: frozenset[str] = frozenset(),
+) -> Truth:
+    """Every field of the corrected classification; only `post_nature` when its nature is one of
+    `nature_only` (#239), the same natures and the same field as for a blind post; only
+    `post_nature` and `other_city` when the corrected `other_city` is not null (#240), unless that
+    field is excluded (#216: then the model's value is not a truth)."""
+    if corrected.post_nature in nature_only:
+        return Truth(entry.listing_id, position, {"post_nature": corrected.post_nature}, "review")
+    if corrected.other_city is not None and "other_city" not in excluded:
+        values = {name: getattr(corrected, name) for name in OTHER_CITY_FIELDS}
+        return Truth(entry.listing_id, position, values, "review")
     values = {name: getattr(corrected, name) for name in FIELDS}
     return Truth(entry.listing_id, position, values, "review")
 

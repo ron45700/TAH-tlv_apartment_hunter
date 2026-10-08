@@ -590,9 +590,9 @@ def test_a_review_truth_leaves_an_excluded_field_out(tmp_path: Path, posts) -> N
     post = chosen[0]
     store = SqliteRepository(database)
     store.upsert_with_lifecycle(post, lifecycle(post))
-    listing = make_listing(post.listing_id, post_nature="for_sale", other_city="חולון")
+    listing = make_listing(post.listing_id, post_nature="rental_offer", other_city="חולון")
     store.save_classification(
-        listing, lifecycle(post, state="rejected", rejection_reason="for_sale")
+        listing, lifecycle(post, state="rejected", rejection_reason="other_city")
     )
     labeling = tmp_path / LABELING_DIR
     (labeling / "regression_set.json").write_text(
@@ -641,7 +641,8 @@ def test_a_review_truth_leaves_an_excluded_field_out(tmp_path: Path, posts) -> N
         (truth,) = prepared.truths
         return truth.values
 
-    assert values()["price"].value == [3540000] and values()["other_city"] == "רמת החייל"
+    # With the city corrected to another one, only the nature and the city are compared (#240).
+    assert values() == {"post_nature": "rental_offer", "other_city": "רמת החייל"}
     _write_overrides(
         tmp_path,
         corrections_excluded=[
@@ -652,4 +653,120 @@ def test_a_review_truth_leaves_an_excluded_field_out(tmp_path: Path, posts) -> N
     kept = values()
     assert "price" not in kept and "other_city" not in kept
     assert kept["rooms"].value == 3.0  # the other correction still counts
-    assert kept["post_nature"] == "for_sale"
+    assert kept["post_nature"] == "rental_offer"
+
+
+# --- a review post with a nature_only nature (#239) ---
+
+
+def _review_post(
+    tmp_path: Path,
+    posts,
+    *,
+    nature: str,
+    state: str,
+    reason: str | None,
+    city: str | None = "חולון",
+):
+    """A store with one post that joined from the review, its corrected `rooms` on file."""
+    database, chosen = _repo(tmp_path, posts, count=1)
+    post = chosen[0]
+    store = SqliteRepository(database)
+    store.upsert_with_lifecycle(post, lifecycle(post))
+    listing = make_listing(post.listing_id, post_nature=nature, other_city=city)
+    store.save_classification(listing, lifecycle(post, state=state, rejection_reason=reason))
+    labeling = tmp_path / LABELING_DIR
+    entry = {"listing_id": post.listing_id, "case": "c", "source": "store", "truth": "review"}
+    (labeling / "regression_set.json").write_text(
+        json.dumps({"format_version": 1, "posts": [entry]}), encoding="utf-8"
+    )
+    record = {
+        "text_sha256": hashlib.sha256(post.text.encode("utf-8")).hexdigest(),
+        "prompt_version": listing.prompt_version,
+        "model_name": listing.model_name,
+        "classified_at": listing.classified_at.isoformat(),
+        "reviewed": True,
+        "fields": {"rooms": {"state": "written", "value": 3.0}},
+        "note": "",
+    }
+    (labeling / CORRECTIONS_FILE).write_text(
+        json.dumps(
+            {
+                "format_version": 1,
+                "exported_at": "2026-10-06T08:00:00Z",
+                "corrections": {post.listing_id: record},
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write_overrides(tmp_path)
+    prepared = _prepare(tmp_path)
+    assert prepared.refusals == []
+    return post, prepared.truths[0]
+
+
+@pytest.mark.parametrize("nature", NATURE_ONLY)
+def test_a_review_post_with_a_nature_only_nature_compares_post_nature_only(
+    tmp_path: Path, posts, nature: str
+) -> None:
+    _, truth = _review_post(tmp_path, posts, nature=nature, state="rejected", reason="for_sale")
+    assert truth.source == "review"
+    assert truth.values == {"post_nature": nature}
+
+
+def test_the_filled_in_rule_does_not_read_the_other_fields_of_such_a_post(
+    tmp_path: Path, posts
+) -> None:
+    post, truth = _review_post(
+        tmp_path, posts, nature="for_sale", state="rejected", reason="for_sale"
+    )
+    answer = make_listing(post.listing_id, post_nature="for_sale", balcony=marked("written", True))
+    result = judge(1, [truth], {post.listing_id: answer})
+    assert result.mismatches == [] and result.verdict == "pass on the measured fields"
+    wrong = make_listing(post.listing_id, post_nature="rental_offer")
+    assert [m.field for m in judge(1, [truth], {post.listing_id: wrong}).mismatches] == [
+        "post_nature"
+    ]
+
+
+def test_a_review_post_in_tel_aviv_of_another_nature_is_compared_in_full(
+    tmp_path: Path, posts
+) -> None:
+    """Neither `nature_only` (#239) nor the other-city rule (#240) covers a rental in Tel Aviv."""
+    _, truth = _review_post(
+        tmp_path, posts, nature="rental_offer", state="active", reason=None, city=None
+    )
+    assert set(truth.values) > {"post_nature", "rooms", "other_city", "balcony"}
+    assert truth.values["rooms"].value == 3.0
+
+
+def test_a_review_post_in_another_city_is_compared_on_nature_and_city_only(
+    tmp_path: Path, posts
+) -> None:
+    post, truth = _review_post(
+        tmp_path, posts, nature="rental_offer", state="rejected", reason="other_city"
+    )
+    assert truth.values == {"post_nature": "rental_offer", "other_city": "חולון"}
+    answer = make_listing(
+        post.listing_id,
+        post_nature="rental_offer",
+        other_city="חולון",
+        balcony=marked("written", True),
+        rooms=marked("written", 9.0),
+    )
+    result = judge(1, [truth], {post.listing_id: answer})
+    assert result.mismatches == [] and result.verdict == "pass on the measured fields"
+
+
+def test_a_blind_post_in_another_city_is_compared_on_nature_and_city_only(posts) -> None:
+    truth = _truth(posts[0], other_city="חולון")
+    assert truth.values == {"post_nature": "rental_offer", "other_city": "חולון"}
+    kept = _truth(posts[0], other_city=None)
+    assert {"price", "gender", "areas", "entry_date", "apartment_kind"} <= set(kept.values)
+
+
+def test_an_other_city_label_that_is_not_compared_leaves_the_rest_in_place(posts) -> None:
+    """The rule needs `other_city` among the compared fields: a post whose city is `not_compared`
+    keeps its other fields (nothing says it is disqualified)."""
+    truth = _truth(posts[0], other_city="חולון", not_compared=("other_city",))
+    assert "other_city" not in truth.values and "price" in truth.values
