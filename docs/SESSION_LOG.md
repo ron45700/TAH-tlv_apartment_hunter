@@ -3772,3 +3772,226 @@ None with an invariant. Invariant 1 (the two stored files) was approved in #226;
   of the 139 active canonicals, `same_listing` only) in `DECISIONS.md`.
 - Unchanged: the version 4 items, the retry of `73aebb24…`, the first real `reclassify --run`, the bill,
   the working day and I3 (Phase 3).
+
+## 2026-10-08 (continued) — Task 2.10: Ron's verdicts measured (#229); do the pairs share a photo?
+
+### Done
+
+No model call, no paid call, no network call, no dependency change, no change to the package or to
+`SCHEMA.md`, **no write to the store** (opened `mode=ro`; image files only read).
+
+**Step 1, docs:**
+- `DECISIONS.md` #229: the measurement (the `--measure` lines, run again on `data/gate_d/pair_verdicts.json`)
+  and Ron's reading. 24 of 24 pairs judged: `same_listing` 10, `same_apartment_other_listing` 0, `different`
+  14, `not_sure` 0. **10 / 139 = 7.2%**, above the 5% threshold of #227: rewritten reposts are common, as a
+  lower bound for a 27-hour store; 20 of the 139 posts (14.4%) are in a `same_listing` pair. By signal:
+  fields and phone 2 of 2; fields only 3 of 8; phone only 4 of 11; agent-number sample 1 of 3. Ron's reading:
+  no single signal is reliable enough to merge on; a wrong merge hides a real apartment and is worse than a
+  missed one; his notes confirm a shared phone is often one agent with different apartments. **Gate D is
+  not decided**; no key is recorded or proposed.
+- `PHASE_2.md` 2.10 (the result and its table) and §4 item 2; `BACKLOG.md`: next-sprint item 2, the #145
+  row, and a calibration row under "For the next prompt version" (the streets extracted are wrong in both
+  posts of `d269d280…` / `e81273e6…`, Ron's note; not a Gate D matter).
+
+**Step 2, a throwaway script** `scratch/gate_d_photos.py` (gitignored, no tests): for each of the 24 judged
+pairs, the stored photos of each post (`PostLifecycle.images`, files under `data/store/images/`), the number
+byte-identical (SHA-256), equal in file size, and equal in pixel size (read from the JPEG header with the
+standard library; all 216 photos readable). It prints ids and counts only.
+
+### The numbers
+
+Photos held per post: 1 to 5. **The provider returns at most 5 photos per post** (158 of the 266 stored posts
+have exactly 5, none more), and all were downloaded, so two posts of one apartment with more than 5 photos
+may hold different 5.
+
+Per pair (first 8 characters of each id; photos held; byte-identical / equal size / equal pixel size):
+
+| Verdict | Pair | Found by | Photos | SHA-256 | Size | Pixels |
+|---|---|---|---|---|---|---|
+| same_listing | 40f7f193 / 7253eefa | phone | 5 / 5 | 5 | 5 | 2 |
+| same_listing | 8ae80944 / e81273e6 | fields+phone | 5 / 5 | 5 | 5 | 1 |
+| same_listing | 9136a715 / 9a6252c1 | fields | 4 / 4 | 4 | 4 | 1 |
+| same_listing | 00f17259 / 54ecb1d0 | fields+phone | 4 / 4 | 0 | 0 | 1 |
+| same_listing | 0213a373 / aa511f57 | fields | 5 / 5 | 0 | 0 | 2 |
+| same_listing | 127957f9 / 6fe45469 | agent sample | 2 / 3 | 0 | 0 | 0 |
+| same_listing | 1e8246f4 / 5bbdf8db | phone | 1 / 1 | 0 | 0 | 1 |
+| same_listing | 31bd9205 / 34215457 | fields | 5 / 5 | 0 | 0 | 1 |
+| same_listing | 4318b593 / 49b78b08 | phone | 3 / 5 | 0 | 0 | 0 |
+| same_listing | aa8ed374 / f515e83b | phone | 5 / 5 | 0 | 0 | 0 |
+| different | 14 pairs | | 1 to 10 each | 0 in all 14 | 0 in all 14 | 1 in 3 pairs, 0 in 11 |
+
+Byte-identical photos are in **3 of the 10** `same_listing` pairs, and in 0 of the 14 `different`; every
+photo of those 3 pairs matches (5 of 5, 5 of 5, 4 of 4). In the other 7 `same_listing` pairs no file is
+identical, and none shares a file size: the photos were re-uploaded or re-encoded. Where files differ, what is
+visible without a new dependency is the pixel size, which is weak: 7 of the 10 `same_listing` pairs share a
+pixel size, and so do 3 of the 14 `different` pairs (most photos are one common size).
+
+Signal present / absent against Ron's verdict:
+
+| Signal | Present: same_listing / different | Absent: same_listing / different |
+|---|---|---|
+| Byte-identical photo (SHA-256) | 3 / 0 | 7 / 14 |
+| Equal file size | 3 / 0 | 7 / 14 |
+| Equal pixel size (any photo) | 7 / 3 | 3 / 11 |
+| Same pixel-size sequence, photo for photo | 5 / 1 | 5 / 13 |
+
+The byte-identical photo combined with the two rules (`found_by`):
+
+| Fields rule | Phone rule | Identical photo | same_listing | different |
+|---|---|---|---|---|
+| yes | yes | yes | 1 | 0 |
+| yes | yes | no | 1 | 0 |
+| yes | no | yes | 1 | 0 |
+| yes | no | no | 2 | 5 |
+| no | yes | yes | 1 | 0 |
+| no | yes | no | 3 | 7 |
+| no | no (the agent-number sample) | no | 1 | 2 |
+
+The three pairs with an identical photo were found by a rule in every case (fields+phone, fields, phone), and
+none belongs to the agent-number sample. Among the 21 pairs with no identical photo, 7 are `same_listing`
+and 14 `different`.
+
+### What this does not say
+
+Byte-identical matching is rare among the `same_listing` pairs (3 of 10), so it catches few rewritten
+reposts but made no mistake here (0 of 14 `different` pairs share a file). Seeing whether re-encoded photos are
+the same picture would need a perceptual hash, which needs a new dependency or new code: **not done, and
+stopped here**, as asked. No Gate D key is decided or proposed. The sample is 24 pairs from one 27-hour store.
+
+### Deviations
+
+- **One git command was run by mistake** — `git check-ignore -q scratch`, read-only, to see whether `scratch/`
+  is ignored (`.gitignore` says it is) — against the round's "no git commands at all". Nothing else touched git.
+- The store's SHA-256 was not recomputed this round; nothing opened it other than `mode=ro`.
+
+### Next
+
+- Ron decides what dedup B would be built on (open); nothing is chosen here.
+- Unchanged: the version 4 items, the retry of `73aebb24…`, the first real `reclassify --run`, the bill, the
+  working day and I3 (Phase 3), and the same free command on a larger store.
+
+## 2026-10-08 (continued) — Gate D's key decided (#230); the plan for dedup B (docs only)
+
+### Done
+
+**No code, no test, no dependency change, no model call, no paid call, no network call, no write to the store,
+no git command.** Whether a path is ignored was read from `.gitignore`.
+
+- `DECISIONS.md` #230: Ron's key, as given. Two posts with different text hashes are the same listing, within
+  72 hours and among the posts the 2.10 rules compare, when (1) they share a phone and the fields rule matches,
+  or (2) they hold a byte-identical photo and at least one of the two rules matches (a shared phone that is not
+  an agent number, or the fields rule). Nothing else merges. His reasons, as given; perceptual hashing recorded
+  as not planned.
+- `SCHEMA.md`: the Gate D row of the gate table now says the key is decided (#230). It has no Gate D section
+  and no field changed. `PHASE_2.md` 2.10 and §4 item 2: the key marked decided. `BACKLOG.md`: next-sprint
+  item 2, the #145 row, a row for #230's code, and the perceptual-hashing row under "Future".
+- **The plan** is in `PHASE_2.md` under 2.10, "Plan for dedup B — WAITING for Ron": what a merge does to each
+  record; whether a stored field is needed (none proposed; a merge log of files instead); where it runs; the
+  agent-number rule as the store grows; the existing store; the interplay; the undo; tests, files, docs, order;
+  17 points for Ron; conflicts.
+
+### What was checked, read-only
+
+A throwaway script (`scratch/dedup_b_dryrun.py`, gitignored; SQLite `mode=ro`; image files and two labelling
+files only read; ids and counts printed) ran the key over the real store, the posts being those the 2.10 rules
+compare (139 active canonicals with a `Listing`):
+- **4 merging pairs**, as expected, each judged `same_listing` by Ron: `54ecb1d0…` ← `00f17259…` (rule 1),
+  `7253eefa…` ← `40f7f193…` (rule 2), `e81273e6…` ← `8ae80944…` (both), `9136a715…` ← `9a6252c1…` (rule 2). No
+  post is in two pairs; none of the eight has an exact-hash duplicate; none is flagged.
+- Three pairs on the whole store hold an identical photo, all with a rule match.
+- Agent numbers: 2 (7 and 7 posts); the next are 3, 2, 2. The same count over every canonical gives 2 numbers
+  at 4 or more; over every post, duplicates included, 3 (16, 7, 4).
+- Three of the four posts that would become duplicates, and one survivor, are in the regression set; one
+  duplicate (`00f17259…`) has a correction. `fetched_at` is the run's time (three values in the store), so the
+  "stored first" rule falls back to `posted_at` and gives the same four results as "earlier `posted_at`".
+- Things read that shape the plan: `dedup_a` raises on a stored duplicate whose canonical is not a canonical
+  (so a demoted canonical's duplicates must be repointed, and the write order matters); `reclassify` selects
+  duplicates too; `fetched_at` is kept by `upsert`.
+
+### Findings (not fixed)
+
+- `BACKLOG.md` "Recorded for a later phase": the rows "#70 under dedup B (#72.7) | Gate D" and "The phone as a
+  candidate signal for dedup B | Gate D" are answered by #230 or by the plan's question 10; they wait for Ron's
+  answers before they leave.
+- `BASELINE.md` §4 "Dedup B ... Key settled at Gate D" does not state the key.
+- `PHASE_2.md` DoD 7 ("Gate D settled, or deferred with a measured reason") is half met: the key is settled,
+  dedup B is not built.
+
+### Deviations
+
+None from the round's limits.
+
+### Next
+
+- Ron answers the 17 points of "For Ron before code" in `PHASE_2.md` 2.10, "Plan for dedup B". The first is
+  whether rule 1's "share a phone" includes an agent number; the plan builds the key as written unless he says
+  otherwise.
+- Then the answers go into `DECISIONS.md` (from #231) and the build starts in the order of the plan. Nothing is
+  written to the store before a dry run and Ron's separate go.
+
+## 2026-10-08 (continued) — Dedup B is not built; the key stays, its use moves to Phase 3 (#231, #232)
+
+### Done
+
+**Docs only.** No code, no test, no dependency change, no store access, no model, paid or network call, no git
+command. **No code implements the key yet:** `gate_d/` implements the candidate rules (the 2.10 evidence), not
+the key, and its rule 1 is not touched.
+
+- `DECISIONS.md` **#231:** dedup B is not a store-writing command; "the same listing" is derived from the
+  stored posts by the key when it is needed (Phase 3's lists, cards and repost log; Phase 4's alerts) and is
+  not written onto any post: no fifth store writer, no demoted canonical, no merge log, no undo, no change to
+  #75. Amends #145. Ron's reason (rare: 4 merges among 139 active posts; building it now would stretch the
+  work), the reviewing chat's recommendation accepted by Ron (the key rests on 24 pairs from one day and will
+  probably change, and a derived result follows a key change at once, as #92 and #214 option A do), and the
+  open item for Phase 3, not measured: whether deriving it stays fast enough as the store grows. The plan's 17
+  points are void.
+- `DECISIONS.md` **#232:** rule 1's "share a phone" does not include an agent number (a number found in 4 or
+  more of the compared posts), as in rule 2; #230's wording carries a dated note. Reason (the assistant's,
+  accepted by Ron): two identical flats from one agent are the likeliest wrong merge. **No result changes on
+  today's store:** no compared pair meets the fields rule and shares an agent number (read-only check of
+  2026-10-08).
+- `PHASE_2.md`: the status line; DoD 7 (Gate D is settled, #230 as amended; dedup B's use re-planned to Phase 3);
+  an amendment note under the approved 2.10 text; "Plan for dedup B" marked **NOT BUILT, superseded by #231**,
+  kept whole, with a banner listing what Phase 3 can use from it; the Gate D paragraph; §4 item 2.
+- `BASELINE.md` §4 (the data-path line and the "Dedup B" bullet, which now states the key and that the result is
+  derived, not stored), §12 (the Phase 2 and Phase 3 rows), the header note, and §14 "Open for Ron".
+- `SCHEMA.md`: the Gate D row of the gate table (key decided, nothing stored). `CLAUDE.md`: the phase line.
+- `BACKLOG.md`: the row for the dedup B code and the #145 row removed; new Phase 3 rows ((a) the grouping
+  derived by the key for lists, cards and the repost log; (b) the 4 pairs the key finds today as a first check;
+  (c) notes from the plan: the agent-number threshold to be re-measured on a week of data, alerts must not fire
+  for a post the key ties to an earlier one (Phase 4), the key reads only active canonicals that have a
+  `Listing`; plus the `gate_d_pairs` re-run on a larger store and the card-time and retention notes); the two
+  "Recorded for a later phase" rows that said "Gate D" (#70 under dedup B; the phone as a signal) now say what
+  the key settles and what is left, deciding nothing; the sprint intro.
+
+### Doc lines touched beyond the ones named
+
+- `DECISIONS.md`: a dated note under #145; rule 1 of #230 (the parenthesis) and a note at the end of #230.
+- `PHASE_2.md`: the amendment note under 2.10's approved text; the sentence "How a merge is written…" in the
+  Gate D paragraph.
+- `BASELINE.md` §14 "Open for Ron" (it listed Gate D as open).
+- `BACKLOG.md`: next-sprint item 2 (the Gate D item) removed and the bill item renumbered 2; Phase 3 rows
+  beyond (a)–(c): the `gate_d_pairs` re-run, and the card-time and retention note.
+
+### Rows left alone, listed
+
+- `BACKLOG.md`, the row on the two near-identical sublet posts (`9136a715…`, `9a6252c1…`) still names "Gate D"
+  as its source: it is a price matter (the native price taken as rent) and the pair is one of the four the key
+  finds; nothing is decided there.
+- `PHASE_1.md` lines 236 and 259 ("a candidate signal for Gate D"; "#70 under dedup B is deferred to Gate D"):
+  historical, Phase 1's plan.
+- `CLAUDE.md` seam text on `gate_d/` ("It decides no Gate D key and no dedup B rule") describes the command, which
+  is still true; the phase line says the key is decided.
+- `DECISIONS.md` #230's "What this does not decide" paragraph says the merge mechanics are in a plan "which
+  waits for Ron"; #231 and the note after it supersede that.
+
+### Deviations
+
+None from the round's limits.
+
+### Next
+
+- Phase 3 is planned with the key as an input: how the grouping is derived and shown, and whether it is fast
+  enough as the store grows (not measured).
+- Unchanged: the version 4 items, the retry of `73aebb24…`, the first real `reclassify --run`, the bill, the working
+  day and I3 (Phase 3).

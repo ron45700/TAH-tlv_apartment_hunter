@@ -88,7 +88,7 @@ Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 | A | `RawPost` | ✅ Approved 2026-09-14 |
 | E | Post lifecycle record (state, rejection reason, flag, last publication, images, classification failures) and `GroupWatermark` | ✅ Approved 2026-10-04; classification-failure fields approved 2026-10-05 (#139, #152) |
 | B | `Listing`, and the model's response `ListingExtraction` | ✅ Approved 2026-10-05 (#81–#125; the response #137, #151) |
-| D | Dedup stage B key | ⬜ Not opened — phase 2 |
+| D | Dedup stage B key | ✅ Key decided 2026-10-08 (#230, rule 1 amended by #232: a shared phone that is not an agent number and the fields rule, or an identical photo and one of the two rules; nothing else merges). **Nothing is stored:** the result is derived from the stored posts when it is needed, in phase 3 (#231); no field, record or schema change |
 | C | Filter rules, and the user, key and profile records | ⬜ Not opened — phase 3 |
 
 ---

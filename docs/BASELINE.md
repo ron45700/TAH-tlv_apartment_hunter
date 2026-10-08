@@ -14,6 +14,8 @@ three card rules (#120–#122) in §6. Amended again 2026-10-05: Gate B's last t
 #124) in §6–§7; OpenAI as the model provider and provider-neutral rules (#126, #129) in §4 and §12. Then the
 spike's decisions: the setting (#157) in §4, prefix letters and names not in the text (#158, #162)
 in §7. Then the model decides the area (#167–#170): §4 and §7 rewritten.
+Amended 2026-10-08: Gate D's key (`DECISIONS.md` #230, amended by #232) and that dedup B's result is
+derived from the stored posts, not stored, with its use in Phase 3 (#231): §4 and §12.
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -88,7 +90,8 @@ power-on after power loss, wired network.
 scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-model rejects
           -> dedup A -> image download -> store ("pending")
           -> the model (extraction, the area included) -> rejection derived by code
-          -> dedup B -> update the stored post
+          -> update the stored post
+          -> dedup B: the same listing, derived by the Gate D key, not stored (phase 3)
           -> per-user evaluation -> Telegram alert
 ```
 
@@ -112,7 +115,14 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   dedup B. The canonical is the earliest publication among posts that arrive together; a stored
   canonical never changes, so an older copy that arrives later becomes its duplicate
   (`DECISIONS.md` #75).
-- **Dedup B (after the model):** same apartment reposted with rewritten text. Key settled at Gate D.
+- **Dedup B (after the model; derived, not stored):** same apartment reposted with rewritten text. The
+  Gate D key (`DECISIONS.md` #230, #232): two posts with different text hashes, within 72 hours of each
+  other, among the active canonical posts that have a classification, are the same listing when they share a
+  phone that is not an agent number (a number found in four or more of those posts) **and** the fields match
+  (price sets equal, rooms equal, an area in common), **or** they hold a byte-identical photo **and** one of
+  those two matches. Nothing else merges: a phone, the fields or a photo alone never does. The result is
+  **computed from the stored posts when it is needed**, never written onto a post (#231): the dashboard's
+  lists and cards in phase 3, the alerts in phase 4. How it is computed and shown is planned with phase 3.
 - **Reposts:** a repost does not create a new card and does not alert again. It updates the post's
   "last published" time and adds a line to a small repost log on the card, so it is easy to see
   that an apartment has been pushed for a while and is still not rented.
@@ -342,8 +352,8 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 | Phase | Contents | Done means |
 |---|---|---|
 | **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · **Gate E** (post lifecycle fields) · SQLite store · thedoor fetch · pre-model rejects · dedup A · repost log · image download · per-group watermark | A real run stores posts and images with no duplicates, and a second run does not repeat them |
-| **2. Classification** | **Gate B** (field schema from §5–§7) · the model · post-model rejects · street and area · **Gate D** and dedup B · reclassify job | Every post has fields and a state |
-| **3. Basic dashboard** | **Gate C** (filter rules, and the user, key, profile and viewed-post records) · users and keys · profile and filters · cards · viewed posts · rejected list · flagging | Ron filters and sees real apartments in a browser |
+| **2. Classification** | **Gate B** (field schema from §5–§7) · the model · post-model rejects · street and area · **Gate D** (the key, #230; its use is phase 3's, #231) · reclassify job | Every post has fields and a state |
+| **3. Basic dashboard** | **Gate C** (filter rules, and the user, key, profile and viewed-post records) · users and keys · profile and filters · cards · viewed posts · rejected list · flagging · the same-listing grouping, derived by the Gate D key (#231) | Ron filters and sees real apartments in a browser |
 | **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike | A real alert arrives according to Ron's profile |
 | **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
 | **6. Later** | memo23 failover · UI polish from Ron's screenshots · editing the quiet hours, the group list and `max_posts` from the dashboard · Yad2 | |
@@ -404,7 +414,7 @@ bootstrap mode, Gate A.
 
 ### Open for Ron
 
-What is open today is in `PHASE_2.md` §4 (the version 4 prompt items, Gate D, the bill). The measured
+What is open today is in `PHASE_2.md` §4 (the version 4 prompt items, the bill; Gate D is settled, #230). The measured
 working day is Phase 3's (#225) and Ron's sign-off on the review of the first run is given (#224). Gate B,
 the model's response and the Gate E failure fields are approved (#125, #151, #152).
 

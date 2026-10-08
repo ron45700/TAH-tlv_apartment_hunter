@@ -1673,6 +1673,9 @@ Gate D waits until after phase 3 with the measured rate recorded.
 *Why:* a key designed before classified data is a guess, and a missed duplicate costs one model
 call, not a correctness failure.
 
+*Amended 2026-10-08 by #231: the key is settled in Phase 2 (#230); its use moves to Phase 3, derived and
+not stored.*
+
 **Ron's answers to `PHASE_2.md` §4, and the spike's go, 2026-10-05.**
 
 ### 146 — The 30-day abuse-monitoring log is accepted
@@ -2368,6 +2371,91 @@ repost that dedup B would merge. The stored value names are those above, as Ron 
 **Extends #225.** `ASSUMPTIONS.md` I3 (the model's cost is small) is re-planned to Phase 3, together with
 DoD 4: it is the same measurement. `PHASE_2.md` §3 closes I3 on that basis (DoD 6 reads "explicitly
 re-planned").
+
+**Ron's verdicts on the candidate pairs, 2026-10-08.** From `gate_d_pairs --measure` over
+`data/gate_d/pair_verdicts.json` (exported 2026-10-08 13:46 UTC, rules version 1).
+
+### 229 — Gate D's evidence: the measurement, and Ron's reading of it
+**The measurement** (the command's own lines): 24 of 24 listed pairs judged: `same_listing` 10,
+`same_apartment_other_listing` 0, `different` 14, `not_sure` 0. **10 / 139 = 7.2%** of the active
+canonicals (the same figure with `not_sure` read as `same_listing`, there being none); 20 of the 139
+(14.4%) are in at least one `same_listing` pair. The threshold of #227 is 5%, 7 pairs of 139: reached.
+For scale, dedup A's exact-hash duplicates are 39 of 266 stored posts (14.7%).
+
+| Signal | Judged | `same_listing` | `same_apartment_other_listing` | `different` | `not_sure` | Share `same_listing` |
+|---|---|---|---|---|---|---|
+| fields and phone | 2 | 2 | 0 | 0 | 0 | 100% |
+| fields only | 8 | 3 | 0 | 5 | 0 | 37.5% |
+| phone only | 11 | 4 | 0 | 7 | 0 | 36.4% |
+| agent-number sample | 3 | 1 | 0 | 2 | 0 | 33.3% |
+
+**Ron's reading.** By #227's definition rewritten reposts are **common**, and the 7.2% is a **lower
+bound**: the store spans 27 hours, and the rules miss a repost with a changed price and no shared number,
+and a post missing a price, rooms or an area. **No single signal is reliable enough to merge on:** a wrong
+merge hides a real apartment, which is worse than a missed one. His notes on the pairs confirm that a
+shared phone is often one agent with different apartments (six of the pairs he judged `different`, with a
+note saying so: four found by the phone rule and the agent-number sample's two).
+
+**Gate D is not decided.** No key, no dedup B rule and no merge is chosen or proposed here; nothing is
+marked a duplicate. What dedup B would be built on is open, for Ron.
+
+**Ron's decision on the Gate D key, 2026-10-08**, after #229 and the photo measurement of
+`SESSION_LOG.md` (2026-10-08, "do the pairs share a photo?").
+
+### 230 — Gate D's key: when two posts are the same listing
+**Settles Gate D** (`SCHEMA.md`'s Gate D row, #145; answers #75 C, "the phone as a candidate signal for
+dedup B"). Two posts with different text hashes are **the same listing** when, **within the 72-hour window
+and among the posts the 2.10 rules compare** (canonical, `"active"`, with a `Listing`; #226), **either**:
+1. they **share a phone and the fields rule matches** (price sets equal, rooms equal, an area in common)
+   (*2026-10-08, #232: the shared phone is not an agent number*); or
+2. they **hold a byte-identical photo** (SHA-256 of the stored file) **and at least one of the two rules
+   matches**: a shared phone that is not an agent number (a number found in four or more of the compared
+   posts), or the fields rule.
+
+**Nothing else merges.** A shared phone alone, the fields alone, or an identical photo alone never merges.
+*Why (Ron):* a wrong merge hides a real apartment and is worse than a missed one; on the 24 judged pairs
+(#229) this key finds 4 of the 10 rewritten reposts (`same_listing`) and none of the 14 different pairs; it
+needs no new dependency. It rests on a small sample of one day, so the key is strict on purpose.
+
+**What this does not decide:** how a merge is written, where dedup B runs, any stored field, the undo. They
+are in `PHASE_2.md` 2.10, "Plan for dedup B", which waits for Ron. The key itself is changed only by Ron.
+
+**Recorded for later, not planned** (`BACKLOG.md`, "Future"): comparing re-encoded photos (perceptual
+hashing) to find the other rewritten reposts. Ron decides after he has used the dashboard. No dependency is
+added for it.
+
+*Amended 2026-10-08 by #232: rule 1's "share a phone" does not include an agent number. Its use moved to
+Phase 3 by #231.*
+
+**Ron's decisions on the plan for dedup B, 2026-10-08.** The plan is in `PHASE_2.md` 2.10; it is not built
+(#231).
+
+### 231 — Dedup B is not a store-writing command: "the same listing" is derived, and its use moves to Phase 3
+**Amends #145** ("dedup B is built in phase 2": the key is settled in Phase 2, its use moves to Phase 3).
+The Gate D key stays decided (#230, as amended by #232). Whether two posts are the same listing is
+**derived** from the stored posts by the key, **when it is needed** (the dashboard's lists and cards in
+Phase 3, the alerts in Phase 4), and is **not written onto any post**. So:
+- no fifth store writer (`jobs/dedup_b.py` is not built), no demoted canonical, no merge log, no undo;
+- no change to #75 (a stored canonical never changes; stored groups are never merged), to `is_canonical`
+  or `duplicate_of`, or to any stored record or `SCHEMA.md` field;
+- how it is computed and shown is **planned with Phase 3**, not designed now.
+
+*Why (Ron):* it is rare today (4 merges among 139 active posts), and building it now would stretch the work
+for little gain. *Recommended by the reviewing chat and accepted by Ron:* the key rests on 24 pairs from one
+day and will probably change, and a derived result follows a key change at once, as the rejection reason
+(#92) and the other-city name (#214, option A) already do.
+
+**Open, for Phase 3's planning, not measured:** whether deriving it stays fast enough as the store grows.
+
+`PHASE_2.md`'s "Plan for dedup B" is kept for the record and marked not built; its findings on #75, on the
+repointing of duplicates and on the agent-number rule are input for Phase 3. Its 17 points are void.
+
+### 232 — The key, rule 1: "share a phone" does not include an agent number
+**Amends #230's rule 1**, which now reads: they share a phone **that is not an agent number** and the fields
+rule matches. An agent number is a number found in four or more of the compared posts, as in rule 2.
+*Why (the assistant's, accepted by Ron):* two identical flats from one agent are the likeliest wrong merge.
+**It changes no result on today's store:** no pair of the compared posts meets the fields rule and shares an
+agent number (the 4 pairs the key finds are the same as before, read-only, 2026-10-08).
 
 ---
 

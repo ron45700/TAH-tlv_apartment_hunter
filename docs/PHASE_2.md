@@ -12,8 +12,11 @@ effort `none` and at `low`) **also failed it, on `areas` by reach**. **Version 3
 report, is built. **The first run over the store (2.8) was made on 2026-10-06** (#213, the
 "no incomplete pass" condition waived): 195 pending canonicals, 194 classified, 1 failed
 (`SESSION_LOG.md`, 2026-10-06). **On 2026-10-08** the other-city rejection took Facebook's
-location field into account (#214) and the three stored records it changed were re-derived. No code
-before a task's plan is approved; no paid call before its own go.
+location field into account (#214) and the three stored records it changed were re-derived. **Task 2.10:**
+the evidence for Gate D is measured (#229) and **Gate D's key is decided** (2026-10-08, #230, rule 1 amended
+by #232); **dedup B is not built in this phase**: whether two posts are the same listing is derived from the
+stored posts by the key when it is needed, in Phase 3 (#231). No code before a task's plan is approved; no
+paid call before its own go.
 **Rewritten:** 2026-10-05, from the draft of the same day, after Ron's answers.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gate B (approved) · **Research:**
@@ -37,7 +40,9 @@ in a local report. No dashboard, no Telegram.
 5. **Signed off by Ron, 2026-10-08 (#224):** Ron reviewed the report of the first paid run (2.7,
    2.8), 51 of its 194 classifications, and accepts that as enough.
 6. The items of §3 are resolved or explicitly re-planned.
-7. Gate D settled, or deferred with a measured reason (2.10).
+7. **Gate D is settled (2.10):** the key, #230 as amended by #232. Dedup B's use is **re-planned to Phase 3**
+   (#231): the result is derived by the key when the dashboard and the alerts need it, and nothing is
+   written onto a stored post.
 
 No bulk reclassify is part of the DoD (#144).
 
@@ -1879,7 +1884,10 @@ them. If rewritten reposts are common, Gate D is settled on the evidence and ded
 phase 2; if rare, Gate D waits until after phase 3, with the measured rate recorded. #70 under
 dedup B (#72.7) and the phone signal (#75 C) wait for the same gate.
 
-### Built (2026-10-08) — the free runs are made; Ron judges the pairs
+*Amended 2026-10-08 by #231:* the rewritten reposts were common (#229) and the key is settled in this phase
+(#230, #232), but dedup B is not built here: its use moves to Phase 3, as a derived result, not a stored one.
+
+### Built (2026-10-08) — the free runs are made; Ron judged the pairs (#229)
 
 Built in the order of the plan, with no Repository, `SCHEMA.md`, contract or dependency change, no
 model, paid or network call, and no write to the store.
@@ -1901,9 +1909,324 @@ model, paid or network call, and no write to the store.
   sublet pair (`9136a715…`, `9a6252c1…`) is among them, found by the fields rule. The store's SHA-256
   was `2fcc382e…` before and after (`2FCC382EC5E6D8DB…FD11EBF`), and its modification time did not move.
   The page is `data/gate_d/candidate_pairs.html` (24 pairs; 1 to 4 photos on each post).
-- **Next:** Ron judges the pairs in the page and exports `pair_verdicts.json` into `data/gate_d/`;
-  then `gate_d_pairs --measure` prints the figures, and Ron's decision on "common" or "rare" goes into
-  `DECISIONS.md`.
+- **Next (done, see the result below):** Ron judged the pairs and exported `pair_verdicts.json` into
+  `data/gate_d/`; `gate_d_pairs --measure` printed the figures; his reading is in `DECISIONS.md` #229.
+
+**Result of the judging (2026-10-08, #229).** 24 of 24 pairs judged: `same_listing` 10,
+`same_apartment_other_listing` 0, `different` 14, `not_sure` 0. **10 / 139 = 7.2%** of the active
+canonicals, above the 5% threshold of #227 (7 pairs): rewritten reposts are **common**, as a lower bound
+for a 27-hour store; 20 of the 139 posts (14.4%) are in a `same_listing` pair.
+
+| Signal | Judged | `same_listing` | `different` | Share `same_listing` |
+|---|---|---|---|---|
+| fields and phone | 2 | 2 | 0 | 100% |
+| fields only | 8 | 3 | 5 | 37.5% |
+| phone only | 11 | 4 | 7 | 36.4% |
+| agent-number sample | 3 | 1 | 2 | 33.3% |
+
+Ron's reading: no single signal is reliable enough to merge on; a wrong merge hides a real apartment and is
+worse than a missed one, and his notes confirm that a shared phone is often one agent with different
+apartments. **Gate D was not decided by this measurement:** no key and no dedup B rule was chosen or proposed
+there, and nothing is marked a duplicate. *Decided afterwards the same day: the key, #230 (below).*
+
+**The photo measurement (`SESSION_LOG.md`, 2026-10-08):** byte-identical photos are in 3 of the 10
+`same_listing` pairs and in none of the 14 `different` pairs; the provider returns at most 5 photos per post.
+
+**Gate D's key is decided (2026-10-08, #230).** Two posts with different text hashes are the same listing
+when, within 72 hours and among the posts the 2.10 rules compare, **either** (1) they share a phone **and**
+the fields rule matches, **or** (2) they hold a byte-identical photo **and** at least one of the two rules
+matches (a shared phone that is not an agent number, or the fields rule). Nothing else merges: a shared phone
+alone, the fields alone, or an identical photo alone never does. On the 24 judged pairs the key finds 4 of the
+10 `same_listing` pairs and none of the 14 `different` ones. *Amended by #232: the shared phone of rule 1 is not an
+agent number either; no result on today's store changes.* How a merge would be written was the plan below; it
+is not built (#231): the result is derived, not stored.
+
+### Plan for dedup B — NOT BUILT, superseded by #231 (written 2026-10-08)
+
+> **Superseded the same day (`DECISIONS.md` #231, #232).** Ron decided that dedup B is **not** built as a
+> store-writing command: "the same listing" is derived from the stored posts by the key when it is needed
+> (Phase 3's lists, cards and repost log; Phase 4's alerts) and is never written onto a post. So there is no
+> fifth store writer, no demoted canonical, no merge log, no undo and no change to #75, and **this plan's 17
+> points are void.** It is kept for the record. Its findings that Phase 3 can use: what a merge would do to
+> the records and why `dedup_a` raises on a repointed chain (points 1, 6), the behaviour of the agent-number
+> threshold as the store grows (point 4), the four pairs the key finds today (point 5), the interplay with
+> #70/#72.7, flagged and archived posts, a reclassify and the regression set (point 6). Rule 1 below reads
+> "share a phone" as including an agent number; since #232 it does not. Nothing below was built.
+
+**Scope:** the plan to build dedup B on the key of #230, nothing more. No code, no test, no dependency, no model
+call, no write to the store. Read-only checks of the real store (SQLite `mode=ro`, image files only read) made
+for this plan are in point 5. **This plan changes neither the key nor any field or schema, and it says nothing
+of perceptual hashing.** Where a point needs a decision it is in point 9.
+
+**The key as built** (`dedup/stage_b.py`, a plain module beside `stage_a.py`): over the compared posts (canonical,
+`"active"`, with a `Listing`, a stored `text_hash`), a pair of different hashes within 72 hours of `posted_at`
+merges when `phone ∧ fields` (rule 1) or `photo ∧ (light phone ∨ fields)` (rule 2). *Fields*: both prices
+written and equal as sets, both rooms written and equal, an area in common (#226). *Light phone*: a shared number
+that is not an agent number. *Photo*: a SHA-256 shared by a stored file of each post (`PostLifecycle.images`,
+`<store_root>/images/`). Whether "share a phone" in rule 1 includes an agent number is point 9, question 1.
+
+#### 1. What a merge does, in terms of the existing records
+
+A merge makes one post the survivor, **C** (the canonical), and the other **D** (the duplicate). Nothing is
+deleted (invariant 3), the `raw` of both is untouched (invariant 4), and no text is edited.
+
+| Record | What changes | What does not |
+|---|---|---|
+| D's `RawPost` | `is_canonical` `True` → `False` and `duplicate_of` `None` → C. Both are Gate A's *derived fields* "populated by `textnorm` and `dedup`", the fields dedup A already writes. `text`, `raw`, `text_hash`, `phones`, `fetched_at` stay | Everything else |
+| The posts that pointed at D (its exact-hash duplicates from dedup A, and any earlier B duplicates) | `duplicate_of` D → C. **Required:** a duplicate points at a canonical, never at another duplicate (#75), and `dedup_a` raises on a stored duplicate whose canonical is not a canonical (`_Reader.canonical_of`) | |
+| C's lifecycle record | `last_published_at` = the later of C's and D's own (D's already holds its duplicates'); never backwards. When C holds no downloaded image (`PostImage` with a `local_path`) and D holds some, D's `PostImage` entries are added to C's `images`, as #70 / #72.3 do for a repost | `state`, flag fields, failure counts |
+| D's lifecycle record | Nothing. It stays `"active"` with its own `images` and `last_published_at` | |
+| D's `Listing`, C's `Listing` | Nothing. D's is kept: it is what the model said, and an undo needs it | |
+| The repost log (`BASELINE.md` §4–5, Gate E) | Nothing stored: it is **derived** from the records whose `duplicate_of` points at C, so D and D's former duplicates appear there at once | |
+| The card, the alerts | **No new card:** a card is a canonical post. **No new alert:** BASELINE §4 puts dedup B before the per-user evaluation; D is merged before it could alert. C's card shows C's text, and its main time is the last publication (#122) | |
+
+**Which post is C** (decision, point 9 question 2). Both posts are stored canonicals, so this is the first time a
+stored canonical stops being one (#75 A, D4: "a stored canonical never changes", "stored groups are never
+merged"). Proposed: the post that was **stored first keeps its place** (earlier `fetched_at`), then the earlier
+`posted_at`, then the smaller `listing_id`. In the usual case that is also the earlier post. On the four pairs of
+point 5 the two readings give the same result.
+
+**Chains.** Posts are taken in order of `(posted_at, listing_id)` and each is compared with the **canonicals
+that exist at that moment**, so the result does not depend on the order of the store. A post that matches a
+duplicate but not its canonical does not merge (a duplicate is not compared). If D matches two canonicals, it
+joins the one the rule above prefers; its other match is left alone.
+
+**Writes, in an order in which every stop is a valid store** (no Repository change; each step idempotent):
+(a) repoint D's duplicates to C; (b) C's lifecycle record; (c) D's `RawPost`. After (a) the store is valid (the
+duplicates point at C, which is a canonical); after (b) too; (c) is the merge. A run killed between two steps
+leaves nothing `dedup_a` can raise on, and the next run finishes it. Each record is **re-read right before it is
+written**; a record that no longer has the state the plan saw is not written, is listed, and the exit code is 2.
+
+#### 2. Does a merge need a stored field or record that `SCHEMA.md` does not have?
+
+Today: `duplicate_of` and `is_canonical` only; there is no field for *which stage* or *which signal* found a
+duplicate. Options, field by field:
+- **A. Store nothing new on `RawPost` or `PostLifecycle`** (recommended). The stage is derivable: a duplicate
+  whose `text_hash` differs from its canonical's is a dedup B duplicate (dedup A's share the hash; a later
+  edit of an A duplicate's text would also look so). The signal is recomputable by the same pure function.
+- **B. A `RawPost` field** (for example `duplicate_stage`, or `duplicate_signal`) — a Gate A change.
+- **C. A `PostLifecycle` field** — a Gate E change, `schema_version` 3.
+
+Not a schema change, but a new stored thing (invariant 1): **a merge log**, files in
+`<store_root>/dedup_b/<run_id>/` (as `reclassify/<run_id>/`, #219): `merges.jsonl` (per merge: the two ids, the
+signal(s) that fired, the key's version, the agent-number count, the **before and after** of every record
+changed, Ron's verdict for the pair when `pair_verdicts.json` holds one) and `summary.json`. It is the audit
+trail and the source of an undo (point 7). Recommended: A, with the log.
+
+#### 3. Where dedup B runs
+
+After classification (it needs the `Listing`) and before the per-user evaluation of phase 4. Proposed:
+**a command of its own, `jobs/dedup_b.py`, the fifth command that writes the production store** (with
+`run_once`, `classify_pending`, `rederive_rejections` and `apply_reclassify`), **not** part of `classify_pending`:
+- invariant 14 and #163 pin `classify_pending` to leave every stored `RawPost` identical; dedup B writes two
+  derived fields of the `RawPost`;
+- it needs no model, no key and no cap, and it has its own dry run and its own approval;
+- a failure in it must not count against a post's classification.
+
+Modes: **no flag = a dry run** (the plan on screen, nothing written); `--apply` with `--allow <id prefixes>` or
+`--allow-file <path> …` (the posts that become duplicates, 8 characters or more, each must match a planned merge,
+nothing left over, as #218); `--undo <run_id>` with `--allow` (point 7). A dated **backup** of the store is made
+before the first write (`jobs/common.backup_store`), and after the writes the command checks that **every stored
+`RawPost` row is identical to the backup's except** `is_canonical` and `duplicate_of` of the posts it names. The
+check lives in `jobs/common`, beside the existing one. **No lock** (#140 extended): never beside `run_once`,
+`classify_pending`, `rederive_rejections` or `apply_reclassify`; it re-reads before writing. Exit codes 0 / 1 / 2
+as `apply_reclassify`. When the phase 5 scheduler exists the chain is `run_once` → `classify_pending` →
+`dedup_b` → evaluation; whether it then runs with `--allow` is point 9, question 8.
+
+#### 4. The agent-number rule in production
+
+*The threshold of 4 was a gap in one day's data:* the numbers are found in 7, 7, 3, 2, 2, 2… of the 139
+compared posts. Read-only on the real store: the same count over every canonical gives 7, 7, 3, 3, 3, 2…; over
+every post, duplicates included, three numbers reach 4 (16, 7, 4), because a poster who posts the same text
+again is counted each time. **As the store grows** the count is over the compared posts, which are the
+active canonicals of the last 25 days, so it grows with the store: a number with four distinct texts in 25 days
+becomes an agent number. Consequences:
+- The error is on the **safe side**: more agent numbers means fewer merges by rule 2's phone branch. A poster who
+  rewrites the same flat's text four times (dedup B's own target) turns into an "agent" and is then found by the
+  fields branch of rule 2 (photo and fields) or by rule 1 (if agent numbers count there, question 1), not lost.
+- The opposite error is the real risk: an agent whose count is under 4 in a thin store has an ordinary number, and
+  two of their apartments sharing a photo (a building's facade) would merge by rule 2. Counting only the compared
+  posts and not duplicates keeps a repost-heavy landlord out of the agent set more than an agent.
+- The agent set is computed at each run, and a merge, once written, is never reconsidered because a number later
+  became an agent number.
+
+Proposed: **keep 4, counted over the active canonicals, as measured (#226)**; write the agent-number count and
+the distribution into every run's `summary.json`; re-measure with the 2.10 command (`gate_d_pairs`) on a store of
+at least a week before the phase 5 scheduler runs dedup B by itself. Alternatives are in point 9, question 11.
+
+#### 5. The existing store
+
+Read-only, 2026-10-08 (scratch script, `mode=ro`; ids and counts printed): 139 compared posts, 2 agent numbers,
+**4 merges**, as expected. Each pair was judged `same_listing` by Ron (#229).
+
+| Survivor C | Duplicate D | Fired | Posted (UTC, 10-04) | Groups | Photos held |
+|---|---|---|---|---|---|
+| `54ecb1d0…` | `00f17259…` | rule 1 (phone and fields) | 13:01 / 13:06 | different | 4 / 4, none identical |
+| `7253eefa…` | `40f7f193…` | rule 2 (identical photos, shared phone) | 04:21 / 04:22 | same | 5 / 5, all identical |
+| `e81273e6…` | `8ae80944…` | rules 1 and 2 | 10:31 / 10:32 | different | 5 / 5, all identical |
+| `9136a715…` | `9a6252c1…` | rule 2 (identical photos, fields) | 14:41 / 14:46 | same | 4 / 4, all identical |
+
+- No post is in two merging pairs; none of the eight has an exact-hash duplicate (so repointing is not exercised
+  on the real store and is covered by the tests); none is flagged.
+- Three pairs on the whole store hold an identical photo, and all three have a rule match, so the "and one of the
+  two rules" clause of rule 2 changes nothing today.
+- After the merges: 135 canonicals among the 139 (the four D stay `"active"` in their lifecycle records, no
+  longer canonical); 43 stored duplicates instead of 39; each C's `last_published_at` is the later time.
+- **Three of the four D, and one C, are in the regression set; one D (`00f17259…`) has a correction in
+  `corrections.json`.** Point 6.
+
+**How Ron approves:** `dedup_b` with no flag prints exactly this (and Ron's verdict beside each pair); he says go;
+the command makes the backup; `dedup_b --apply --allow 00f17259 40f7f193 8ae80944 9a6252c1` writes. Nothing is
+written before the dry run has been seen.
+
+#### 6. Interplay
+
+- **#70 and #72.7 (media through a repost, dedup B).** Not reachable with this key: a post that was rejected as
+  `no_images` has no `Listing` and no photo, so it is not a compared post and cannot match; rule 2 needs photos.
+  So "a rewritten repost brings a `no_images` canonical back to pending" is not built, and #72.7 closes as *not
+  reachable by the key of #230* (point 9, question 10). The #72.3 image rule is used for C's `images` (point 1).
+- **#75 C (the phone).** Answered by #230: the phone is a signal, never alone. Dedup A's layer 3 still produces
+  nothing.
+- **#75 A and D4.** Amended for dedup B only (point 9, question 3): a stored canonical can become a duplicate,
+  and two stored groups can merge. Dedup A's rules for a new post are untouched.
+- **Dedup A, afterwards.** Needs no change. A merged post fetched again keeps its result (the sticky rule); a new
+  post with the exact text of a merged post joins C (`canonical_of` follows `duplicate_of`); nothing raises.
+  Dedup A does not find a stored duplicate whose hash differs from its canonical's when it looks up a canonical's
+  duplicates (BACKLOG known limit); for a merged post that costs nothing, because its time is folded into C at the
+  merge. Tests pin all three.
+- **Flagged posts.** A flagged post is `"rejected"`, so it is not compared; a merge never touches the flag
+  fields. A flag on C after a merge hides C and, with it, the repost log. Restoring C restores them together.
+- **Archived posts.** Not compared (the key reads `"active"` posts, #230): a rewritten repost of an archived
+  apartment becomes a card of its own; dedup A's return from archive (#74) is for exact reposts. After a merge C's
+  clock is extended (a repost resets it). D keeps its own clock; whether a duplicate's retention follows its own
+  or its canonical's is the open phase 5 row, and D's clock is never later than C's.
+- **A reclassify.** The merge is decided once, on the `Listing`s of that moment, and is **not** recomputed: the
+  model answers differently from run to run on many posts (O12), and an unmerge because a price moved would be
+  an action nobody asked for. Two consequences: (1) `reclassify` selects every `Listing` that is not current,
+  duplicates included, and would pay to re-ask the model about a post nobody reads — proposed: it leaves
+  non-canonical posts out, with a line in its plan (point 9, question 12); (2) `dedup_b`'s dry run adds two lists:
+  *merges the key no longer supports* (information only, undone only by Ron) and *new pairs the key now finds*.
+- **The regression set and `corrections.json`.** A demoted post keeps its `RawPost`, its text and its `Listing`, so
+  the set, the runner and a correction work as before: the truth is about the classification, not the dedup.
+  Proposed: nothing changes there, and a duplicate stays in the set (point 9, question 13). The review page lists
+  duplicates like any `Listing`.
+- **The card rule in `BACKLOG.md`** (the repost log shows the earliest `posted_at`, the card's main time is the
+  last publication). Unchanged. With "stored first stays", C can be later-posted than D, as for dedup A's case in
+  #75 A; a display rule, phase 3.
+- **Phase 3 and 4 queries.** D is `"active"` and not canonical, unlike an exact duplicate, which is `"pending"`.
+  Every list a user sees and every alert must read **canonical, active** posts, as BACKLOG already says for the
+  admin lists. Proposed: a BACKLOG row for phase 3 (point 9, question 4).
+
+#### 7. How a wrong merge is undone
+
+`dedup_b --undo <run_id> --allow <prefix of D>` (a dry run first; `--apply` as above), from the run's
+`merges.jsonl`: D's `RawPost` goes back to `is_canonical` `True`, `duplicate_of` `None`; the posts repointed
+to C point at D again; the `images` entries added to C are removed; C's `last_published_at` goes back **only if
+C's record is still the one the merge wrote**, otherwise it is left and listed. Each record is re-read first; a
+changed one is not touched and the exit code is 2. D was `"active"` throughout, with its `Listing` and photos, so it
+is a card again at once, and (phase 4) it alerts as a new active post, which is right for an apartment that was
+hidden by mistake. A backup is made before. If the log is lost, the dated backup is the way back. A user-facing
+way to say "these are different apartments" is for the phase 3 design (not planned here).
+
+#### 8. Tests, files, docs, order of work
+
+**Tests, all offline** (`tests/test_dedup_b.py`, both stores through `make_repository`, posts built in the test):
+- the key as a truth table: rule 1 alone, rule 2 alone, both; a shared phone alone, the fields alone, an identical
+  photo alone: no merge; rule 2 with an agent number only: no merge; the photo plus fields: merge; the 72-hour edge;
+  the same hash: not dedup B's; a rejected, pending, archived, flagged or `Listing`-less post: not compared;
+- the shape of the real four (the sublet pair's, the phone-and-photo pair's) built synthetically;
+- the merge: D's two fields, the repointed duplicates (A's and an earlier B's), C's `last_published_at`, the images
+  rule, D's lifecycle and both `Listing`s unchanged; **every other `RawPost` byte-identical**;
+- chains and order: the same result when the store is read in another order; D matching two canonicals;
+- **crash safety:** an exception after each of the three writes; `dedup_a` does not raise on the store and the next
+  run finishes the merge;
+- dedup A afterwards: a merged post re-fetched, and a new post with its exact text, as point 6;
+- the command: the dry run writes nothing (store bytes identical); `--apply` needs `--allow`; a prefix that matches
+  nothing is refused; a record that changed is skipped with exit 2; the backup exists and hashes like the store; the
+  row check; no key read; the merge log's content;
+- the undo: the round trip leaves the store as before the merge; a changed C is not touched;
+- the shared rules: `tests/test_gate_d.py` stays green after they move.
+
+**Files touched:** new `tlv_hunter/dedup/stage_b.py` (the key, the plan, the pure merge and undo records),
+`tlv_hunter/jobs/dedup_b.py`, `tests/test_dedup_b.py`; changed `tlv_hunter/gate_d/candidates.py` (it imports the
+fields rule, the agent-number count, the window and the member type from `stage_b`, one implementation of each;
+behaviour unchanged), `tlv_hunter/jobs/common.py` (the row check), and, if point 9 question 12 is accepted,
+`tlv_hunter/postmodel/reclassify.py`. **No change** to `Repository`, `SCHEMA.md`'s fields, the contracts or the
+dependencies. Alternative for atomicity (point 9, question 9) would add a `Repository` method.
+
+**Docs touched, on approval:** `DECISIONS.md` (Ron's answers, from #231), `PHASE_2.md` ("Built"), `BACKLOG.md` (the
+phase 3 row, the retention row), `CLAUDE.md` (the fifth writer, `dedup/stage_b.py`, the command), `BASELINE.md` §4
+("Dedup B"), `SCHEMA.md` only if Ron chooses a stored field, `SESSION_LOG.md`.
+
+**Order of work:** (1) move the shared rules into `stage_b`, `test_gate_d.py` green; (2) the key and the plan, with
+tests; (3) the merge and the undo as pure records, then their writes on both stores, with the crash tests; (4) the
+command; (5) `uv run pytest`, `ruff check`, `ruff format --check`; (6) the dry run on the real store, nothing
+written; (7) on Ron's separate go, the backup and `--apply --allow` for the four; (8) docs.
+
+#### 9. For Ron before code
+
+1. **"Share a phone" in rule 1.** (A) As written: any shared number, an agent number included; today it changes
+   nothing (no pair with an agent number meets the fields rule). (B) A number that is not an agent number, as in
+   rule 2. *Recommend B for caution (an agent with two identical flats in one building is the likeliest wrong
+   merge), but it narrows your key, so it is yours: the plan builds A unless you answer B.*
+2. **Which post survives.** (A) The one stored first (earlier `fetched_at`), then earlier `posted_at`, then smaller
+   `listing_id` (recommended: the card, alerts and "viewed" records accumulate on the canonical, #75 A's reason).
+   (B) The earlier `posted_at` (BASELINE §4's rule for a batch). (C) The post evaluated in an earlier dedup B
+   run; needs a stored marker. *Recommend A.*
+3. **Amend #75 A and D4 for dedup B** (a stored canonical can become a duplicate; two stored groups can merge).
+   *Recommend yes; otherwise dedup B cannot exist.*
+4. **D's state.** (A) Stays `"active"`, not canonical; phase 3 and 4 read canonical, active posts (recommended; a
+   BACKLOG row). (B) A new rejection reason or state: a Gate E change. (C) `"pending"` like an exact duplicate:
+   loses that D has a `Listing`. *Recommend A.*
+5. **A stored field for stage or signal.** (A) None (recommended). (B) `RawPost.duplicate_stage` /
+   `duplicate_signal` (Gate A). (C) A `PostLifecycle` field (Gate E, version 3). *Recommend A with the merge log.*
+6. **The merge log files** in `<store_root>/dedup_b/<run_id>/` (`merges.jsonl`, `summary.json`), new stored files
+   under invariant 1. *Recommend yes: the undo needs them.*
+7. **Where it runs.** (A) A command of its own, the fifth store writer, no lock, dry run first (recommended).
+   (B) Inside `classify_pending`: breaks invariant 14's pin and #163. *Recommend A.*
+8. **Applying in production.** (A) Always `--allow`/`--allow-file` (Ron names the posts) until phase 5 is planned
+   (recommended). (B) A `--all` flag now. (C) Automatic in the scheduler from the start. *Recommend A: decide
+   C when the phase 5 scheduler is planned, with the merge rate seen.*
+9. **Atomicity.** (A) The existing methods in the safe write order of point 1 (recommended). (B) A new `Repository`
+   method that writes a merge in one transaction (a seam change, with contract tests on both stores). *Recommend
+   A: every stop is a valid store and the run is idempotent.*
+10. **#72.7 and #70 under dedup B.** (A) Close as not reachable by the key (recommended). (B) Keep open.
+    *Recommend A.*
+11. **The agent-number rule as the store grows.** (A) Keep 4 over the active canonicals; log the distribution;
+    re-measure on a week of data (recommended). (B) 4 within a rolling window. (C) Count distinct listings (distinct
+    price and rooms) instead of posts. (D) Count over every canonical, rejected and archived included. *Recommend A;
+    B–D change the definition measured in 2.10.*
+12. **`reclassify` and duplicates.** (A) Leave non-canonical posts out of its selection, with a line in the plan
+    (recommended). (B) Keep selecting them. *Recommend A.*
+13. **The regression set and `corrections.json`.** (A) No change: a demoted post stays in the set and keeps its
+    correction (recommended). (B) Take duplicates out of the set. *Recommend A.*
+14. **C's images.** (A) Add D's `PostImage` entries to C's `images` only when C holds no downloaded image
+    (recommended, #72.3). (B) Never. (C) Always. *Recommend A.*
+15. **The undo.** (A) `--undo` from the merge log, C's `last_published_at` restored only if unchanged (recommended).
+    (B) Backup only. *Recommend A.*
+16. **Shared rule code.** (A) Move the fields rule, the agent-number count and the window into `stage_b.py` and have
+    `gate_d` import them (recommended: one implementation). (B) `stage_b` imports `gate_d`. *Recommend A.*
+17. **The dry run on the real store** shows Ron's `same_listing` verdict beside each pair when
+    `data/gate_d/pair_verdicts.json` is there. *Recommend yes.*
+
+#### 10. Conflicts with decisions or invariants
+
+- **#75 A and D4** ("a stored canonical never changes", "stored groups are never merged"): dedup B is the first
+  thing that demotes a stored canonical and merges two stored groups. Not an invariant; a decision to amend
+  (question 3).
+- **#75 B** (a duplicate gets an ordinary lifecycle record, `"pending"` in practice): a dedup B duplicate is
+  `"active"`. Handled in question 4.
+- **Invariant 14 and #163:** untouched for classification — `classify_pending` still writes no `RawPost`. Dedup B,
+  a different command, writes two derived fields of a `RawPost` and nothing else; its own test pins that.
+- **Invariant 1:** the merge-log files (question 6) are new stored files; any stored field (question 5) would be a
+  schema change. Neither is made without Ron.
+- **Invariant 8:** the key reads the stored `text_hash`, the stored phones and the photo files; it never reads or
+  stores normalized text. **Invariant 5:** the author is neither read nor used.
+- **Invariant 3:** nothing is deleted. **Invariants 12 and 13:** a merge is not user-specific, and no login is used.
+- **#140 (no lock):** the fifth writer takes none, with the same re-read rule.
+- **#72.7:** closed by the key, if question 10 is answered A.
+- **Not a conflict, a limit:** the key rests on 24 pairs from a 27-hour store; it is strict on purpose (#230), so
+  most rewritten reposts are still missed (4 of 10 found).
 
 **Deviations from the plan, and what it did not say:**
 - **The sample** is the agent-number pairs with the same price, or the same rooms and an area in common,
@@ -2198,8 +2521,13 @@ Answered: everything through #225 (2026-10-08). The first run over the store (2.
    rooms is unclear; a malformed price is unclear; no area names on an other-city post; the gender
    cases at regression positions 34 and 35 (accepted for now, #210). Ron decides when version 4 is
    written. A version change is also what first gives task 2.9 something to select.
-2. **Gate D (2.10):** the read-only list of candidate pairs after the first paid run, and Ron's
-   judgement. The plan is approved (#226–#228) and built (2.10, "Built"); Ron judges the pairs.
+2. **Gate D (2.10):** the evidence is in (#229): 10 of 24 pairs are `same_listing`, 10 / 139 = 7.2%, above
+   the 5% threshold, so rewritten reposts are common, as a lower bound for a 27-hour store. Ron's reading
+   is that no single signal is reliable enough to merge on. **Gate D's key is decided (#230):** a shared phone
+   and the fields rule, or an identical photo and one of the two rules; nothing else merges), rule 1
+   amended by #232 (the phone is not an agent number). **Dedup B is not built in Phase 2 (#231):** the result
+   is derived by the key when Phase 3 needs it; how it is computed and shown is planned with Phase 3. The plan
+   in 2.10 is kept for the record and marked not built. Nothing in 2.10 is left open for Ron.
 3. **The bill:** the cost of the runs read against the OpenAI bill, which stays with Ron and does not
    wait for Phase 3 (#225; the spike's was: $0.03 against $0.0273, `ASSUMPTIONS.md` O2; the five
    later runs are not). The measured working day itself (DoD 4) is Phase 3's.
