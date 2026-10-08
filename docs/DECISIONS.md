@@ -2170,6 +2170,8 @@ The instructions are not changed before the first run over the store. Waiting fo
 (`BACKLOG.md`): a range of rooms ("2-3 rooms") is unclear; and the gender cases at regression
 positions 34 and 35. No reason recorded.
 
+*Written 2026-10-08 as version 4: #233–#237.*
+
 ### 212 — No outgoing request carries a personal identifier
 A new rule (`CLAUDE.md`, invariant 15): no outgoing request ever carries a personal identifier of
 Ron or of any user (an email address, a name, a phone number), in a header, a User-Agent, a URL or
@@ -2456,6 +2458,49 @@ rule matches. An agent number is a number found in four or more of the compared 
 *Why (the assistant's, accepted by Ron):* two identical flats from one agent are the likeliest wrong merge.
 **It changes no result on today's store:** no pair of the compared posts meets the fields rule and shares an
 agent number (the 4 pairs the key finds are the same as before, read-only, 2026-10-08).
+
+**Ron's wording for the instructions, version 4, 2026-10-08.** Five changes to `classify/instructions.txt`,
+in Ron's approved wording, applied as given (`PROMPT_VERSION` "4", `PROMPT_FINGERPRINT` `0ad0bb4b…`, #179).
+Nothing else in the file changed. No schema, field or filter rule changes. One decision per change; Ron gave no
+reasons beyond those written here.
+
+### 233 — Version 4: a range of rooms is "unclear"
+The rooms paragraph ends with: *A range of rooms ("2-3 חדרים") is "unclear".* This is Ron's ruling of
+2026-10-06 (the row "For the next prompt version" of `BACKLOG.md`, #211), now written. **Refines #211.**
+No reason recorded.
+
+### 234 — Version 4: a malformed amount is "unclear"
+The price paragraph ends with: *An amount whose digits are malformed ("7,2000") is "unclear"; never repair
+it.* This is Ron's ruling of 2026-10-08 (the `BACKLOG.md` row, #211). **No code changes with it:** #114
+already keeps an unclear text price unclear when a native price exists. **Refines #211.** No reason recorded.
+
+### 235 — Version 4: no area names when the apartment is in another city
+The stated_area_names paragraph ends with: *When the apartment is in another city, return [].* From Ron's
+review (`corrections.json`, post `4c5bbcaf…`). **Refines #211.** No reason recorded.
+
+### 236 — Version 4: an area named only as nearby is not a stated area name
+The stated_area_names paragraph, after the landmark sentence: *An area named only as nearby or within walking
+distance ("במרחק הליכה מפלורנטין") is not a stated area name and does not decide the areas.* **Replaces the
+`BACKLOG.md` row** "the streets extracted are wrong in both posts of the pair `d269d280…` / `e81273e6…`".
+Facts only, from a read-only reading of the store by the reviewing chat (and read again on 2026-10-08):
+- the stored streets are `["הרצל"]` and `["קורדוברו"]`, as written in the posts;
+- what is wrong is that `d269d280…` returned `stated_area_names` `["פלורנטין"]` and `areas` `[52]` from
+  "במרחק הליכה מפלורנטין".
+
+No interpretation of Ron's note in `pair_verdicts.json` is recorded here. No reason recorded.
+
+### 237 — Version 4: the gender paragraph
+Three changes, for regression positions 34 and 35 (`BACKLOG.md`, #210, #211):
+- **(a) Removed** the sentence *Feminine wording about the roommates who stay (נשארות שתי שותפות) is not a
+  restriction; only wording about the person wanted counts.*
+- **(b) At the head of the paragraph:** *Decide gender only from the words about the person wanted. Words about
+  the people who already live in the flat or stay in it ("נשארות שתי שותפות", "יש שני שותפים ושותפה") say
+  nothing about it.*
+- **(c) After the sentence on wording for both (שותף/ה):** *A preference worded for both sexes ("עדיפות
+  לדיירות/ים") is "no_restriction"; "women_preferred" needs a preference for women alone.*
+
+*Why (Ron), for (a) and (b):* a wrong "women_only" hides the post from him. If position 35 stays unstable after
+version 4, it is accepted as in #210 and looked at again in Phase 3. **Refines #206, #210 and #211.**
 
 ---
 

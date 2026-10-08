@@ -26,7 +26,7 @@ from tlv_hunter.classify.instructions import (
 def test_the_version_pins_everything_sent_except_the_post() -> None:
     """A change to the text, to reference/areas.yaml, to ListingExtraction or to the setting
     fails here until PROMPT_VERSION and PROMPT_FINGERPRINT are updated together."""
-    assert PROMPT_VERSION == "3"
+    assert PROMPT_VERSION == "4"
     assert build_prompt().fingerprint() == PROMPT_FINGERPRINT
 
 
@@ -105,12 +105,13 @@ def test_a_run_at_effort_low_carries_no_temperature_and_its_own_fingerprint() ->
     assert low.with_production_setting().fingerprint() == PROMPT_FINGERPRINT
 
 
-def test_version_2_holds_its_five_sentences() -> None:
+def test_version_2_holds_its_sentences() -> None:
+    """Version 2's roommates sentence ("Feminine wording about the roommates who stay") was
+    replaced in version 4 (#237)."""
     text = build_prompt().instructions
     for sentence in (
         "Lean towards more areas, not fewer.",
         "return the areas of the precise place as well.",
-        "Feminine wording about the roommates who stay",
         'A date followed by "flexible"',
         "An entry that depends on an event with no date",
     ):
@@ -158,3 +159,23 @@ def test_version_3_holds_its_sentences() -> None:
     assert "An age preference" in template and "(25-35) is not a gender restriction." in template
     # Version 2's sentences stay, rule (a) included (#205).
     assert "Lean towards more areas, not fewer." in template
+
+
+# --- version 4 (#233-#237): the five approved changes ---
+
+
+def test_version_4_holds_its_sentences_and_no_longer_the_one_it_replaced() -> None:
+    text = " ".join(TEMPLATE_FILE.read_text(encoding="utf-8").split())  # line breaks do not count
+    for sentence in (
+        'A range of rooms ("2-3 חדרים") is "unclear".',
+        'An amount whose digits are malformed ("7,2000") is "unclear"; never repair it.',
+        "When the apartment is in another city, return [].",
+        'An area named only as nearby or within walking distance ("במרחק הליכה מפלורנטין") is not'
+        " a stated area name and does not decide the areas.",
+        "Decide gender only from the words about the person wanted.",
+        '("נשארות שתי שותפות", "יש שני שותפים ושותפה") say nothing about it.',
+        'A preference worded for both sexes ("עדיפות לדיירות/ים") is "no_restriction"; '
+        '"women_preferred" needs a preference for women alone.',
+    ):
+        assert sentence in text
+    assert "Feminine wording about the roommates who stay" not in text

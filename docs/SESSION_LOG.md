@@ -3995,3 +3995,108 @@ None from the round's limits.
   enough as the store grows (not measured).
 - Unchanged: the version 4 items, the retry of `73aebb24…`, the first real `reclassify --run`, the bill, the working
   day and I3 (Phase 3).
+
+## 2026-10-08 (continued) — Prompt version 4 written (#233–#237); the plan for its runs (no paid call)
+
+### Done
+
+**No paid, model or network call. No write to the store (it was opened `read_only` and by `mode=ro` only). No schema,
+field or filter rule changed. No git command.** `data/labeling/` was not edited.
+
+- `classify/instructions.txt`: Ron's five changes, in his wording, and nothing else (the file keeps its CRLF line
+  ends). Where two of them land in the same paragraph (`stated_area_names`), the order is: the landmark
+  sentence, then the "nearby" sentence (change 4), then "another city, return []" (change 3); that is what
+  applying both as written gives. Changes 5b/5c: only the punctuation and a line break joining them.
+- `classify/instructions.py`: `PROMPT_VERSION` "4"; `PROMPT_FINGERPRINT`
+  `0ad0bb4b236ed0baac778e4bd56b6780ac465c6c769dc1bdd45cd14f746e7c32` (computed by `build_prompt().fingerprint()`).
+  The rendered instructions are 12,203 characters, against 11,698 (+505).
+- `tests/test_classify_instructions.py`: the version pin is "4". The test `..._version_2_holds_its_five_sentences`
+  asserted the sentence Ron's change 5a removes ("Feminine wording about the roommates who stay"): it is dropped
+  from that list (renamed `..._holds_its_sentences`, with a docstring saying why), and a new test pins the seven
+  new sentences (line breaks ignored) and the absence of the removed one.
+- `DECISIONS.md` #233–#237, one per change (5a–5c together, #237), with Ron's reasons only where he gave them
+  (#237: a wrong "women_only" hides the post from him; if position 35 stays unstable it is accepted as in #210 and
+  looked at again in Phase 3). #236 replaces the `BACKLOG.md` streets row and records the facts only. A dated
+  note under #211.
+- `PHASE_2.md` 2.9: "Plan for the version 4 runs — WAITING for Ron" (Part B, below).
+
+### Verified
+
+- `uv run pytest`: **1301 passed** (1300 before the new test; 0 failed). `ruff check`: all checks passed.
+  `ruff format --check`: 148 files already formatted.
+- `regression_run --check` (free): "regression set ready: 51 posts, removed positions [6, 10, 27, 31, 43, 49],
+  ambiguous [], overrides applied".
+- `jobs.reclassify` with no flag (free, read-only): current prompt 4 / schema 1 / `gpt-6-luna`; 194 stored
+  `Listing`s, all prompt 3; **194 selected**; left out: 38 pending, 25 `no_images`, 9 `no_text`. Estimate printed:
+  194 × $0.000219 = $0.0425; worst case of one call $0.00335 to $0.00372.
+- Read-only reading of the stored `Listing`s (prompt 3): `d269d280…` streets `["הרצל"]`, `stated_area_names`
+  `["פלורנטין"]`, `areas` `[52]`; `e81273e6…` streets `["קורדוברו"]`, `stated_area_names` `["פלורנטין"]`, `areas`
+  `[52]` (its text says "בשכונת פלורנטין ברחוב קורדוברו"); `e6a8b9bb…` price `[72000]`; `4c5bbcaf…`
+  `stated_area_names` `["לב העיר"]`.
+
+### For Ron: labels, overrides and corrections the new sentences contradict or make ambiguous
+
+Nothing was edited or decided. The set's positions are 1-based over `regression_set.json`'s 57 entries.
+
+| Position / post | What is on file now | What the new rule implies |
+|---|---|---|
+| **24** `8294df78…` (English post seeking "2–3 room") | Label: `seeking`; `nature_only` (override), so only `post_nature` is compared. No `Listing`: a pre-model reject (`no_images`), sent only by the runner | `rooms` should be `unclear` (#233). Compared with nothing, so **no contradiction**; the run only shows whether the call is valid now |
+| **34** `b330d3fc…` ("עדיפות לדיירות/ים", "כיום יש שני שותפים ושותפה") | Label `gender` `no_restriction`, `areas` [31]; no override, no correction. Stored `Listing`: `no_restriction`, areas [30, 31] | (b) and (c) both say `no_restriction`. **Agrees with the label** |
+| **35** `31bd9205…` ("נשארות שתי שותפות") | Label `gender` `no_restriction`; `other_city` null (label change); `areas` `not_compared` (override). Stored: `no_restriction`, `stated_area_names` ["צפון תל אביב שיכון דן"], areas [26] | (b): words about those who stay say nothing. **Agrees.** "מרחק הליכה קצר לסופרים…" names no area, so change 4 does not touch it |
+| **45** `e6a8b9bb…` ("7,2000₪") | Label `price` written [7200]; override `not_compared` for `price` ("a typo in the post", #199). Stored `Listing` (prompt 3): price [72000] from the text | #234: the model should return `unclear`, and #114 keeps it unclear (the native 7,200 is not used). **The label's 7,200 contradicts the rule** if the price is ever compared on this post; as it stands it is not compared. After a reclassify the post would have **no price** on the card |
+| **52** `4c5bbcaf…` (Rishon LeZion) | Label `other_city` "ראשון לציון", `areas` []; correction: `stated_area_names` [] with Ron's note; correction file names `prompt_version` "3". Stored: `stated_area_names` ["לב העיר"] | #235 gives [] as the correction does. **Agrees.** `stated_area_names` is not compared (#177), so no score changes; after a version 4 `Listing` replaces the old one, `find_reviewed` still finds the reviewed one (#222) |
+| **`d269d280…`** (not in the set: no label, no correction; `pair_verdicts.json` not touched) | Stored: streets ["הרצל"], `stated_area_names` ["פלורנטין"], areas [52] | #236 implies `stated_area_names` [] and the areas then decided by the street (rule 3). Whether that still gives [52] was **not predicted**. Its pair `e81273e6…` names "בשכונת פלורנטין" itself, so its [52] should stay |
+
+Also found by reading the 51 active texts; none is a contradiction:
+- **Gender.** The five `women_only` labels (positions 2, 5, 14, 36, 37) rest on words about the person wanted
+  ("מחפשות שותפה", "מיועד רק לבנות", "רלוונטי לנשים בלבד", "מחפשת שותפה (25-35)"). Posts with wording about those who
+  stay (3 "נשארים שני שותפים", 5 "אני השותפה שנשארת", 33 "נשארת שותפה", 36 "נשארים 2 שותפים גברים") keep their
+  labels under (b). Position 5's `women_only` now rests on "מיועד רק לבנות" alone, which is about the person wanted.
+- **Position 26** (`34a2d715…`, label areas [38] by Ron's change): "מרחק הליכה קצר לשוק הכרמל ונחלת בנימין". The "nearby"
+  sentence may change which areas the model adds for those two places. Areas are compared by reach, so a change
+  is possible, not a contradiction.
+- **Position 19** (`0f4053fd…`): "ל 2 או 3 שותפים (עם / בלי סלון)". It is not a range of rooms, but the rooms
+  sentence could be applied to it. `rooms` is not a labelled field, so no label is involved.
+- **Evidence.** The new sentences quote words from positions 24, 34, 35, 45 and from `d269d280…` ("2-3 חדרים",
+  "עדיפות לדיירות/ים", "נשארות שתי שותפות", "יש שני שותפים ושותפה", "7,2000", "במרחק הליכה מפלורנטין"). A pass on those
+  positions shows the sentence is followed, not that it generalises (as with the known places, 14 of 30 posts).
+
+### Part B
+
+The plan is in `PHASE_2.md` 2.9, "Plan for the version 4 runs — WAITING for Ron": the regression run (`--cap 0.10`,
+about $0.023, the approved bar, what is reported for 24, 34, 35 and 45), the first real `reclassify --run`
+(194 selected; `--limit 10 --cap 0.02` kept, then `--limit 194 --cap 0.10`; about $0.044 in all), the order and
+what Ron sees before any `--apply`. Every figure is calculated line by line from the costs of runs 2.8 and the
+version 2 and 3 regression runs.
+
+### Doc lines touched
+
+- `CLAUDE.md`: the phase line (the sentence on version 3 now continues with version 4).
+- `BACKLOG.md`: the sprint intro paragraph; next-sprint rows 3–5 added (the labels list, the regression run, the
+  first real reclassify); the section "For the next prompt version" (its five rows) removed; the "From the first run"
+  row on `e6a8b9bb…` (the malformed-amount sentence is now added); the row for #142 ("Version 4 is not run yet"); the row
+  for #144 (194 posts selected, the first `--run` is item 5).
+- `PHASE_2.md`: the status line; a "Version 4, written…" block after the version 3 block in 2.6; 2.9 "Not done, on
+  purpose"; the new plan before 2.10; §4 items 1 and 4.
+- `DECISIONS.md`: #233–#237 and their heading line; a note under #211.
+
+Lines that say "version 3" and were left alone, because they are history or a measurement of version 3: `PHASE_2.md`
+2.6 (the version 3 block, run 2.8), 2.9 §8 and the caution on the report page (`reclassify_report.py`, "20 of 46 posts
+changed… version 3"), `jobs/reclassify.py`'s `MEASURED_COST_PER_POST` comment, `ASSUMPTIONS.md` A6 and O10, the
+`prompt_version="3"` fixtures in `tests/` (independent of `PROMPT_VERSION`). `BASELINE.md`, `SCHEMA.md` and `RESEARCH.md`
+have no line saying version 3 is the current version.
+
+### Findings, not fixed
+
+- The 38 pending canonicals will be classified at version 4 by the next `classify_pending`, while the 194 stored
+  `Listing`s stay at version 3 until a reclassify is applied: two versions side by side, by design (#217).
+
+### Deviations
+
+None from the round's limits. One judgement call: the order of changes 3 and 4 inside one paragraph (above).
+
+### Next
+
+Waiting for Ron: (1) the list of labels above; (2) a go for the regression run on version 4; (3) after he has read its
+report, a go for `reclassify --run --limit 10 --cap 0.02`. Unchanged: the retry of `73aebb24…`, the bill, the working day
+and I3 (Phase 3).

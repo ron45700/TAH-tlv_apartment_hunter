@@ -15,8 +15,10 @@ report, is built. **The first run over the store (2.8) was made on 2026-10-06** 
 location field into account (#214) and the three stored records it changed were re-derived. **Task 2.10:**
 the evidence for Gate D is measured (#229) and **Gate D's key is decided** (2026-10-08, #230, rule 1 amended
 by #232); **dedup B is not built in this phase**: whether two posts are the same listing is derived from the
-stored posts by the key when it is needed, in Phase 3 (#231). No code before a task's plan is approved; no
-paid call before its own go.
+stored posts by the key when it is needed, in Phase 3 (#231). **Instructions version 4** (2026-10-08, #233–#237: five
+changes to `instructions.txt`, in Ron's wording) are written and pinned by the tests; **no run on version 4 yet**: the
+plan for the regression run and the first real reclassify is in 2.9, "Plan for the version 4 runs", WAITING for Ron.
+No code before a task's plan is approved; no paid call before its own go.
 **Rewritten:** 2026-10-05, from the draft of the same day, after Ron's answers.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gate B (approved) · **Research:**
@@ -1102,6 +1104,15 @@ types, never a value): position 24's cause was not recorded.
 20 of 46 posts changed between the passes. 14 of the 30 posts compared on `areas` name a place in
 the list, so they no longer test the model's own knowledge (`SESSION_LOG.md`).
 
+**Version 4, written 2026-10-08 (#233–#237), not run yet.** Five changes to `classify/instructions.txt`, in Ron's
+wording: a range of rooms is unclear (#233); a malformed amount is unclear (#234); no area names when the
+apartment is in another city (#235); an area named only as nearby is not a stated area name (#236); the gender
+paragraph (#237: the roommates-who-stay sentence removed, "decide only from the words about the person wanted"
+at its head, a preference worded for both sexes is `no_restriction`). The rendered instructions are 12,203
+characters, against 11,698 in version 3 (+505). `PROMPT_VERSION` "4", `PROMPT_FINGERPRINT` `0ad0bb4b…`.
+`regression_run --check`: 51 posts, removed positions 6, 10, 27, 31, 43, 49, no ambiguous, overrides applied.
+The plan for its run is in 2.9 below.
+
 
 **Command:** `tlv_hunter/jobs/regression_run.py`, PAID. It reads `OPENAI_API_KEY` too. #128 makes
 `classify_pending` the only reader today, so this needs Ron's approval.
@@ -1872,7 +1883,135 @@ the first run, `test_labeling.py::test_the_proposed_set_holds_the_spike_posts_an
 entries whose truth is `"blind"` only.
 
 **Not done, on purpose:** no real `--run` and no real `--apply`. Both wait for Ron's separate go and
-for a change of prompt version, model or schema: the plan on the real store selects 0 posts today.
+for a change of prompt version, model or schema: the plan on the real store selected 0 posts on
+2026-10-08 before version 4 was written, and selects 194 since (below).
+
+### Plan for the version 4 runs — WAITING for Ron (written 2026-10-08)
+
+**Nothing here has been run.** No paid, model or network call was made in the round that wrote it; the only
+reads were the free `regression_run --check` and the free plan of `jobs.reclassify` (no flag), the store
+read-only. Two paid steps, each with its own go from Ron, in this order.
+
+#### Step 0: Ron reads the labels list (free, before any run)
+
+`SESSION_LOG.md`, 2026-10-08, lists every label, override or correction that the five sentences contradict or
+make ambiguous. Nothing in `labels.json`, `label_overrides.json` or `corrections.json` was edited. Ron decides
+there; the run below reads the files as they are.
+
+#### Step 1: the regression run on version 4
+
+```bash
+uv run python -m tlv_hunter.jobs.regression_run --check                  # free, done 2026-10-08: 51 posts
+uv run --env-file .env python -m tlv_hunter.jobs.regression_run --cap 0.10   # PAID: two passes, effort none, temperature 0
+```
+
+**The cap: $0.10**, as for the earlier runs. **The estimate**, from the costs the earlier runs recorded:
+
+| | Calculation | Result |
+|---|---|---|
+| Version 3 regression run | $0.020588 over 93 calls (46 posts × 2 passes = 92, one retry) | $0.000221 a call |
+| Version 2 run at `none`, for comparison | $0.020218 over 93 calls | $0.000217 a call |
+| Calls now | 51 posts × 2 passes | 102, plus retries |
+| Cost | 102 × $0.000221 | $0.0225 |
+| With 3 retries | 105 × $0.000221 | $0.0232 |
+| The longer prompt | +505 characters, about 200–250 cached tokens × $0.01/M × 102 calls | about $0.0003 |
+| **Expected** | | **about $0.023** |
+| Worst case of one call (the cap check), 194 stored posts, version 4 | `reclassify` plan, 2026-10-08 | $0.00335 to $0.00372 |
+| Calls the cap allows at the typical rate | ($0.10 − $0.0037) / $0.000221 | 436, 4.3 times the 102 |
+
+All figures are from the usage metadata and still estimates against the OpenAI bill (`ASSUMPTIONS.md` O2).
+
+**What counts as a pass: the bar already approved** (2.6; #142, #177, #198), unchanged by version 4, each pass on its
+own and complete:
+- `post_nature` and `other_city`: no error;
+- `apartment_kind`, `price` and `gender`: at least 95% exact;
+- `areas`: at least 90% by reach;
+- no value filled in where the label says not written: zero;
+- a pass with a post that stayed invalid after its attempts is incomplete, and is reported, not judged.
+
+**I report, whatever the verdict**, for each of these positions, in each pass, from `results.json` and `report.html`:
+- **24** (`8294df78…`, an English post seeking "2–3 room"; a pre-model reject never sent in production, nature
+  only): whether the call is valid or invalid (with the error detail), and the `rooms` returned. Expected:
+  `unclear`. Version 3 returned it invalid twice.
+- **34** (`b330d3fc…`, "עדיפות לדיירות/ים", "יש שני שותפים ושותפה"): `gender`. The label is `no_restriction`.
+- **35** (`31bd9205…`, "נשארות שתי שותפות"): `gender`. The label is `no_restriction`. Whether it differs between the
+  two passes. If it does, or is wrong, it is reported and accepted as in #210, to be looked at again in Phase 3
+  (#237).
+- **45** (`e6a8b9bb…`, "7,2000₪"): `price`, with its state, the amounts and `price_source`. Expected: `unclear`,
+  from the text. The price of this post is not compared (`not_compared`, #199); it is reported apart, as
+  information.
+- Extra, for information: **52** (`4c5bbcaf…`), `stated_area_names` (not compared, #177) and `other_city`.
+
+**What the run cannot tell, said now.** The five new sentences quote the words of positions 24, 34, 35 and 45 and of
+the post `d269d280…` (which is not in the set). A pass on those positions shows the sentence is followed, not that
+it holds on other wording. The same was true of the known places in version 3 (14 of 30 `areas` posts).
+`d269d280…` is seen in the reclassify report, not here.
+
+**If a pass fails:** I report which posts and fields, and stop. I do not edit the instructions or the labels, and
+I make no further round (#207).
+
+#### Step 2: the first real `reclassify --run`, after Ron has read the regression report
+
+**How many are selected.** The free plan (`uv run python -m tlv_hunter.jobs.reclassify`, 2026-10-08, store read-only,
+nothing written): current prompt 4 / schema 1 / `gpt-6-luna`; 194 stored `Listing`s, all at prompt 3;
+**194 selected** (some marked `[reviewed by Ron]`). Left out: 38 pending with no `Listing`, 25 rejected `no_images`,
+9 rejected `no_text`.
+
+**The cost, line by line**, from run 2.8 (`classify_pending`, version 3, effort `none`; usage metadata):
+
+| | Calculation | Result |
+|---|---|---|
+| Run 2.8 | 197 calls, 194 posts classified | $0.042574 |
+| A post | $0.042574 / 194 (three retried calls included) | $0.000219 |
+| 10 posts | 10 × $0.000219 | $0.0022 |
+| The other 184 | 184 × $0.000219 | $0.0403 |
+| One cold cache write per run | about 4,700 tokens × ($0.125 − $0.01)/M | $0.0005 |
+| The longer prompt | +505 characters × 194 calls, cached | about $0.0004 |
+| **All 194 in one run** | $0.0425 + $0.0005 + $0.0004 | **about $0.044** |
+
+**Proposed.**
+- **First step: keep `--limit 10 --cap 0.02`** (the `BACKLOG.md` row, #221). Expected $0.0022 + $0.0005 = $0.0027; the cap
+  lets the run go on until it has spent about $0.02 − $0.0037, 74 posts at the typical rate, 7 times what it needs. A
+  higher cap would buy nothing for 10 posts. `--limit` takes the first 10 in the plan's order (by id), which is
+  arbitrary. Ron may instead name the posts with `--allow` (#217: id prefixes of 8 characters or more), for example
+  the ones the five sentences are about: `e6a8b9bb…`, `b330d3fc…`, `31bd9205…`, `4c5bbcaf…`, `d269d280…`. The cap is the
+  same. Ron chooses; I recommend `--limit 10` as written, unless Ron wants to see those five first.
+- **The rest: `--limit 194 --cap 0.10`** (#221). If Ron applied the first 10, the plan then selects the remaining
+  184 (the applied ones are current), expected 184 × $0.000219 + $0.0005 = $0.041. If he applied none, the plan
+  selects all 194 again and the 10 are paid for twice: $0.044 in all. The cap allows (0.10 − 0.0037) / 0.000219 = 440
+  posts, 2.3 times the pass. The sum of the 194 worst cases is $0.65 and is not an estimate.
+- Expected total of the two steps, 10 applied in between: $0.0027 + $0.041 = **about $0.044**. The project's hard
+  spend limit is the second line.
+
+**Before the run:** `run_once`, `classify_pending`, `rederive_rejections` and `apply_reclassify` are not running (#140,
+#220: none takes a lock). The 38 pending canonicals stay pending; `classify_pending` is not started before Ron's
+verdict on step 1, because it would write version 4 `Listing`s the regression run has not passed.
+
+#### Step 3: what Ron sees before any `--apply`
+
+The run writes into `data/store/reclassify/<run_id>/` (#219) and changes nothing in the store:
+- `diff.html`: old against new, per field; the posts whose **state or rejection reason** changes listed first and
+  apart; a mark on the posts Ron reviewed; the caution at its top that the same prompt gives different answers on
+  many posts (20 of 46 changed between the two passes of the version 3 regression run), so the diff shows the model's
+  variation as well as the effect of the change;
+- `summary.json` (marked `complete` only at the end; the apply refuses a folder that is not), `proposals.jsonl`
+  (the old and the new `Listing`, the archive of what an apply replaces), `allow_unchanged.txt` and
+  `allow_state_changes.txt` (#218);
+- the calls and the cost of the run from the usage metadata, and a section of the posts that failed (a failure leaves
+  the old `Listing`, #221).
+
+Then the free dry run, `apply_reclassify <run_id>`: what it would replace, with nothing written. Only after Ron has
+read both: `apply_reclassify <run_id> --apply --allow-file <path> [<path> …]` (or `--allow <id prefixes>`). There is
+no "apply all" (#218). The apply states the path and SHA-256 of the dated backup before it writes, and re-reads each
+record first.
+
+**One consequence Ron should know before applying (#222).** A card shows the new answer without Ron's correction until
+Phase 3's corrections record exists; the regression runner still finds the old reviewed classification in
+`proposals.jsonl`.
+
+**The order, and why.** Step 0, then 1, then 2, then 3. The regression run comes first because it is the check that
+version 4 did not break the bar, it costs about half of what the full reclassify costs ($0.023 against $0.044), and a reclassify
+of 194 posts on a prompt that failed the bar would be paid for and then discarded. Nothing is applied by either step on its own.
 
 ---
 
@@ -2517,10 +2656,10 @@ now the alternative.
 Answered: everything through #225 (2026-10-08). The first run over the store (2.8) was made on
 2026-10-06 (#213). Open today, not resolved here:
 
-1. **The version 4 prompt items** (`BACKLOG.md`, "For the next prompt version", #211): a range of
-   rooms is unclear; a malformed price is unclear; no area names on an other-city post; the gender
-   cases at regression positions 34 and 35 (accepted for now, #210). Ron decides when version 4 is
-   written. A version change is also what first gives task 2.9 something to select.
+1. **The version 4 prompt items:** written on 2026-10-08 in Ron's wording (#233–#237). What is open: Ron's reading of
+   the list of labels the sentences contradict or make ambiguous (`SESSION_LOG.md`, 2026-10-08), and his go for the
+   regression run on version 4 (2.9, "Plan for the version 4 runs"). The version change also gives task 2.9 something
+   to select: 194 posts.
 2. **Gate D (2.10):** the evidence is in (#229): 10 of 24 pairs are `same_listing`, 10 / 139 = 7.2%, above
    the 5% threshold, so rewritten reposts are common, as a lower bound for a 27-hour store. Ron's reading
    is that no single signal is reliable enough to merge on. **Gate D's key is decided (#230):** a shared phone
@@ -2532,7 +2671,8 @@ Answered: everything through #225 (2026-10-08). The first run over the store (2.
    wait for Phase 3 (#225; the spike's was: $0.03 against $0.0273, `ASSUMPTIONS.md` O2; the five
    later runs are not). The measured working day itself (DoD 4) is Phase 3's.
 4. **Task 2.9:** accepted by Ron on 2026-10-08. What is left is a separate go for the first real
-   `--run` (small, with a cap) once there is a change of version, model or schema to select on.
+   `--run` (small, with a cap). Version 4 gives it 194 posts to select; the plan, the cost and the order are in 2.9,
+   "Plan for the version 4 runs", WAITING for Ron.
 
 Closed since the last version of this list: DoD 5 (#224), and DoD 4 re-planned to Phase 3 (#225).
 

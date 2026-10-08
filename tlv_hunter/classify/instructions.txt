@@ -46,7 +46,8 @@ PRICE AND ENTRY
 price: the monthly rent in ILS from the post's text, a list of whole numbers, usually one. Several
 distinct prices (different rooms, "4,500/4,800") are all listed, in the order written. "unclear"
 when the rent of a whole apartment is given per roommate, or when the price is in another currency
-($, €). "not_written" when the text gives no price.
+($, €). "not_written" when the text gives no price. An amount whose digits are malformed ("7,2000") is
+"unclear"; never repair it.
 
 entry_date_written: the entry date exactly as written ("כניסה מיידית", "1.11", "תחילת נובמבר"), or
 null when the post gives none.
@@ -68,7 +69,7 @@ THE APARTMENT
 rooms: the total number of rooms in the apartment, whole or half (2.5; חדר וחצי is 1.5), also when
 a single room is offered: a room in a 4-room flat gives 4. The one exception to rules 2 and 3:
 "דירת N שותפים" or "דירת N שותפות" gives N, or N+1 when the post says the flat has a living room
-(סלון).
+(סלון). A range of rooms ("2-3 חדרים") is "unclear".
 
 floor: a whole number; the ground floor (קומת קרקע) is 0, a basement (מרתף) is -1.
 building_floors: the building's number of floors, only when written: "3 מתוך 4" gives floor 3 and
@@ -89,11 +90,13 @@ months" is 400. "All included" (הכל כלול) without saying what is included
 for several charges together ("200 for arnona, internet and cable") is "unclear" for each of
 arnona and house_committee it covers.
 
-gender, a plain value: "women_only" when the post asks only for women, or uses only feminine
+gender, a plain value: Decide gender only from the words about the person wanted. Words about
+the people who already live in the flat or stay in it ("נשארות שתי שותפות", "יש שני שותפים
+ושותפה") say nothing about it. "women_only" when the post asks only for women, or uses only feminine
 wording for the person wanted (מחפשות שותפה); "women_preferred" for a stated preference
 (עדיפות לבנות); otherwise "no_restriction", also when the post says nothing about gender. Wording
-for both (שותף/ה) is "no_restriction". Feminine wording about the roommates who stay (נשארות שתי
-שותפות) is not a restriction; only wording about the person wanted counts. An age preference
+for both (שותף/ה) is "no_restriction". A preference worded for both sexes ("עדיפות
+לדיירות/ים") is "no_restriction"; "women_preferred" needs a preference for women alone. An age preference
 (25-35) is not a gender restriction.
 
 LOCATION
@@ -102,7 +105,9 @@ copied as written without the house number; [] when none. "דיזנגוף פינ
 
 stated_area_names: the neighbourhood or area names the post itself gives as the apartment's
 location, copied as written (בצפון הישן, פלורנטין, לב העיר); [] when none. A place given only as a
-landmark or a distance ("5 minutes from the sea") is not an area name.
+landmark or a distance ("5 minutes from the sea") is not an area name. An area named only as nearby or within
+walking distance ("במרחק הליכה מפלורנטין") is not a stated area name and does not decide the
+areas. When the apartment is in another city, return [].
 
 areas: the numbers, from the list below, of the areas the apartment is in. Use only numbers from
 the list. The rules, in order:
