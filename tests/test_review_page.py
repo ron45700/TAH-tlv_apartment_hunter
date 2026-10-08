@@ -32,6 +32,7 @@ from tlv_hunter.labeling.review import (
     ReviewCard,
     add_corrected_to_set,
     dropped_names,
+    join_preview,
     render_review_page,
     run_cards,
 )
@@ -172,13 +173,33 @@ def _run_folder(root: Path, listing, text: str, **post: Any) -> Path:
     return run
 
 
-def test_run_cards_read_pass_1_and_refuse_a_changed_text(tmp_path: Path) -> None:
+def test_run_cards_read_pass_1_and_refuse_a_changed_text(tmp_path: Path, posts) -> None:
     listing = make_listing("a" * 64, post_nature="seeking")
     run = _run_folder(tmp_path, listing, "text")
-    (card,) = run_cards(run, {"a" * 64: "text"})
+    stored = {"a" * 64: posts[0].with_changes(text="text", native_location=None)}
+    (card,) = run_cards(run, stored)
     assert (card.rejection_reason, card.dropped_streets) == ("seeking", ("רחוב",))
+    assert (card.city, card.city_source) == (None, None)
     with pytest.raises(ValueError, match="text changed"):
-        run_cards(run, {"a" * 64: "other"})
+        run_cards(run, {"a" * 64: posts[0].with_changes(text="other")})
+
+
+def test_run_cards_take_the_city_from_the_native_location(tmp_path: Path, posts) -> None:
+    """#214: a rental in Ramat Gan by its Facebook location is an other-city post, whatever the
+    model said; a Tel Aviv-Yafo location clears the model's other city."""
+    run = _run_folder(tmp_path, make_listing("a" * 64), "text")
+    ramat_gan = posts[0].with_changes(text="text", native_location="רמת גן, תל אביב")
+    (card,) = run_cards(run, {"a" * 64: ramat_gan})
+    assert (card.rejection_reason, card.city, card.city_source) == (
+        "other_city",
+        "רמת גן",
+        "native_location",
+    )
+    other = tmp_path / "other"
+    run = _run_folder(other, make_listing("a" * 64, other_city="עין ורד"), "text")
+    tel_aviv = posts[0].with_changes(text="text", native_location="תל אביב - יפו, תל אביב")
+    (card,) = run_cards(run, {"a" * 64: tel_aviv})
+    assert (card.rejection_reason, card.city) == (None, None)
 
 
 def test_corrected_posts_join_the_set_once(tmp_path: Path) -> None:
@@ -363,3 +384,147 @@ def test_the_command_reviews_a_runs_pass_1(tmp_path: Path, posts) -> None:
     assert data["source"] == "pass 1 of regression run v1-x-run"
     assert [card["listing_id"] for card in data["cards"]] == [chosen[1].listing_id]
     assert _main(tmp_path, "--run", "absent")[0] == 1
+
+
+# --- corrections_excluded (#216) ---
+
+EXCLUDED = {("b", "price"), ("d", "other_city"), ("zz", "other_city")}
+
+
+def test_excluded_pairs_are_not_counted_in_the_errors_per_field() -> None:
+    file = corrections_file(
+        {
+            "a": correction("x", fields={"price": NOT}),
+            "b": correction("y", fields={"price": NOT, "rooms": NOT}),
+            "c": correction("z", fields={"other_city": "חולון"}),
+            "d": correction("w", fields={"other_city": "רמת החייל"}),
+        }
+    )
+    assert file.errors_per_field()["price"] == 2
+    errors = file.errors_per_field(EXCLUDED)
+    assert (errors["price"], errors["rooms"], errors["other_city"]) == (1, 1, 1)
+    assert file.effective_fields("b", EXCLUDED) == {"rooms": NOT}
+    assert file.effective_fields("d", EXCLUDED) == {}
+
+
+def test_a_corrected_listing_leaves_an_excluded_field_as_the_model_gave_it() -> None:
+    listing = make_listing("a" * 64)
+    record = corrections_file(
+        {
+            "a": correction(
+                "x", fields={"price": {"state": "written", "value": [3540000]}, "areas": [30]}
+            )
+        }
+    ).corrections["a"]
+    corrected = corrected_listing(listing, record, {"price"})
+    assert corrected.price == listing.price and corrected.areas == [30]
+    assert corrected_listing(listing, record).price.value == [3540000]
+
+
+def test_a_post_with_only_excluded_corrections_still_joins_without_those_fields(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "regression_set.json"
+    path.write_text(
+        json.dumps(
+            {"format_version": 1, "posts": [{"listing_id": "a", "case": "c", "source": "store"}]}
+        ),
+        encoding="utf-8",
+    )
+    file = corrections_file(
+        {
+            "a": correction("x", fields={"price": NOT}),  # already in the set
+            "b": correction("y", fields={"price": NOT}),  # only an excluded correction
+            "c": correction("z", fields={"price": NOT, "rooms": NOT}),
+            "d": correction("w"),  # reviewed, nothing corrected
+        }
+    )
+    excluded = {("b", "price"), ("c", "price"), ("d", "other_city")}
+    preview = join_preview(path, file, {"a", "b", "c", "d"}, excluded)
+    assert preview.joins == [("b", [], ["price"]), ("c", ["rooms"], ["price"])]
+    assert preview.skipped_pairs == [
+        ("b", "price", True),
+        ("c", "price", True),
+        ("d", "other_city", False),  # no correction on file: excluded for later
+    ]
+    assert (
+        json.loads(path.read_text(encoding="utf-8"))["posts"][0]["listing_id"] == "a"
+    )  # nothing written
+    assert add_corrected_to_set(path, file, {"a", "b", "c", "d"}, excluded) == ["b", "c"]
+    cases = {
+        e["listing_id"]: e["case"] for e in json.loads(path.read_text(encoding="utf-8"))["posts"]
+    }
+    assert cases["b"] == "reviewed in the review (corrections excluded: price)"
+    assert cases["c"] == "corrected in review: rooms"
+
+
+def test_the_command_dry_run_prints_the_joins_and_the_skipped_pairs_and_writes_nothing(
+    tmp_path: Path, posts
+) -> None:
+    _, chosen = _store(tmp_path, posts)
+    labeling = tmp_path / LABELING_DIR
+    (labeling / "corrections.json").write_text(
+        json.dumps(
+            {
+                "format_version": 1,
+                "exported_at": "2026-10-06T08:00:00Z",
+                "corrections": {
+                    chosen[0].listing_id: correction(chosen[0].text, fields={"price": NOT})
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (labeling / "label_overrides.json").write_text(
+        json.dumps(
+            {
+                "format_version": 1,
+                "approved": "t",
+                "labels_sha256": "x",
+                "nature_only": {"natures": ["seeking"], "reason": "r"},
+                "removed": [],
+                "label_changes": [],
+                "not_compared": [],
+                "corrections_excluded": [
+                    {"listing_id": chosen[0].listing_id, "field": "price", "reason": "r"},
+                    {"listing_id": chosen[1].listing_id, "field": "other_city", "reason": "r"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    set_before = (labeling / "regression_set.json").read_bytes()
+    code, output = _main(tmp_path, "--dry-run")
+    assert code == 0
+    assert "1 posts would join" in output and "excluded: price" in output
+    assert "2 (post, field) pairs skipped" in output
+    assert "other_city (no correction on file" in output
+    assert "price: 1" not in output  # the excluded correction is not counted
+    assert "nothing written" in output
+    assert (labeling / "regression_set.json").read_bytes() == set_before
+    assert not (labeling / "review.html").exists()
+
+
+def test_the_review_page_shows_the_city_and_where_it_came_from(posts) -> None:
+    card = ReviewCard(
+        "a" * 64,
+        "text",
+        make_listing("a" * 64),
+        "other_city",
+        (),
+        (),
+        None,
+        city="רמת גן",
+        city_source="native_location",
+    )
+    html = render_review_page(
+        [card],
+        load_areas(),
+        set_positions={},
+        corrections=None,
+        source="s",
+        generated_at=GENERATED_AT,
+    )
+    (shown,) = _page_data(html)["cards"]
+    assert (shown["city"], shown["city_source"]) == ("רמת גן", "native_location")
+    assert "from Facebook's location" in TEMPLATE.read_text(encoding="utf-8")

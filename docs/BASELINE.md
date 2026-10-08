@@ -155,7 +155,7 @@ about it.
 |---|---|---|
 | No text | Before the model | Not sent to the model. A post rejected before the model and fetched again is checked against both pre-model rules on its current content: it returns to pending and goes to the model only if it passes both; otherwise it stays rejected, with the first reason that applies. A pending post fetched again is re-checked the same way; a post with a verdict, or an archived one, is left as it is (`DECISIONS.md` #69, #72.1, #73) |
 | No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again is re-checked as in "No text" (`DECISIONS.md` #67, #68, #72.1). The post also returns to pending when a repost of it with identical text arrives with media, video or reel included: the repost's photos are downloaded and kept with the post while the post holds no downloaded image or when it is archived, and the repost stays a repost (#70, #72.3, #72.4). Which media are downloaded (photos only) is a separate rule |
-| Other city | By the model | The post names a city that is not Tel Aviv–Yafo. The named city is shown next to the post. Applies to all users. A nearby city mentioned as a landmark ("5 minutes from Givatayim") is not a rejection |
+| Other city | By Facebook's location field when the post has one, else by the model (#214) | The post is in a city that is not Tel Aviv–Yafo: its location field's locality (the part before the first comma) is another city, or, with no usable locality, the model finds that the text names one. The city is shown next to the post. Applies to all users. A nearby city mentioned as a landmark ("5 minutes from Givatayim") is not a rejection. Only about a quarter of the posts carry the field (thedoor's structured listings, `RawPost.native_location`) |
 | Seeking | By the model | The poster is looking for an apartment, not offering one |
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |
 | Not a listing | By the model | Furniture, a parking space, an office, anything that is not an apartment or a room |
@@ -237,7 +237,8 @@ amendment of the same day had code decide it through a street table and a transl
   its instructions, stored on the post (#167). It also returns the streets and neighbourhood names
   as written, kept for the card and for error analysis; a name or other city the post does not
   contain is dropped (#162, #180). The model never touches the source text, so a wrong area is visible beside the
-  original and can be counted and corrected.
+  original and can be counted and corrected. The other-city rejection is not the model's alone:
+  when the post has Facebook's own location field, its locality decides (#214).
 - **The areas** are a closed list: the municipality's open `שכונות` dataset (GIS layer 511), all
   71 entries, the Old North in its two parts, non-residential entries included (#81), in
   `reference/areas.yaml`. Any grouping is a display rule, decided at Gate C (#82). An area is

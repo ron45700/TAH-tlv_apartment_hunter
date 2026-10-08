@@ -323,7 +323,7 @@ and `None`. Docs only until task 2.5 (`PHASE_2.md`).
 | `schema_version` | `int` | 1 until #152's fields are built, then 2; a version-1 record reads with the two new fields at 0 and `None`. On every record (`PHASE_1.md` §1.0) |
 | `listing_id` | `str` | The post this record belongs to, and the record's key |
 | `state` | `"pending"` / `"active"` / `"rejected"` / `"archived"` | On store: `"pending"`, or `"rejected"` if a pre-model reject applies. In phase 2 the model moves it to `"active"` or `"rejected"`. A repost record has no card of its own; that is `is_canonical` / `duplicate_of` from Gate A, not a state |
-| `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `None` | One reason, the first that applies, in that order. `None` when `state` is `"pending"` or `"active"`; required when `"rejected"`; optional when `"archived"` (an archived post keeps its reason) |
+| `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `None` | One reason, the first that applies, in that order. `"other_city"` is decided by Facebook's location field when the post has a usable one, else by the model (#214). `None` when `state` is `"pending"` or `"active"`; required when `"rejected"`; optional when `"archived"` (an archived post keeps its reason) |
 | `flagged_by` | `str` / `None` | A user id. `None` until phase 3. Gate C may refine the type. Set together with `flagged_at`: both or neither |
 | `flagged_at` | `datetime` UTC / `None` | Set together with `flagged_by`: both or neither. `rejection_reason` `"flagged"` requires both |
 | `flag_note` | `str` / `None` | Optional short note from the flagger |
@@ -474,7 +474,7 @@ response shape, `ListingExtraction`, is below, after this gate (#137, #151).
 | `streets` | `list[str]` | The streets as written, in order of appearance; `[]` when none (#104). Stored never folded or normalized, for the card and for error analysis (#167) |
 | `stated_area_names` | `list[str]` | The neighbourhood names the text itself points at, as written; `[]` when none. Plain, not `Marked` (#111). Stored never folded or normalized, for the card and for error analysis (#167) |
 | `areas` | `list[int]` | Municipal numbers (`ms_shchuna`, 1–71), sorted, no repeats, **returned by the model** from the 71-entry list given in its instructions, by #88's rules given as instructions (#167). Known limit: for a post with only a street, it rests on what the model knows of Tel Aviv (#170) |
-| `other_city` | `str` / `None` | The city as written, only when it is not Tel Aviv-Yafo; a city used as a landmark is not one (`BASELINE.md` §5). A city the post's text does not contain is dropped (read as `None`) and counted, as #162 does for names (#180). Code derives the `other_city` rejection from it (#92) |
+| `other_city` | `str` / `None` | The city as written, only when it is not Tel Aviv-Yafo; a city used as a landmark is not one (`BASELINE.md` §5). A city the post's text does not contain is dropped (read as `None`) and counted, as #162 does for names (#180). Code derives the `other_city` rejection from it, unless the post has Facebook's own location field, which then decides (#214); this field is the model's answer either way and is never edited |
 
 **The area's colour** is derived from `areas`, with no field of its own (#110): one area, definite;
 two or more, unclear (orange), matching and alerting if any is chosen; empty and the post gave a
@@ -498,9 +498,17 @@ street or an area name, unclear, no alert; empty and the post gave no location, 
   different case is dropped (#179).
 - **The source text is never touched** (#163, invariant 14): the classification job never writes a
   `RawPost`.
-- **The rejection** is derived by code from `other_city` and `post_nature`, in Gate E's order, and
+- **The rejection** is derived by code from the city and `post_nature`, in Gate E's order, and
   written to `PostLifecycle.rejection_reason`. A rule change re-derives; it does not reclassify
   (#92).
+- **The city comes from `RawPost.native_location` when it has a usable locality** (#214): the part
+  before the first comma, with format characters removed and whitespace collapsed; never "תל אביב"
+  searched anywhere in the string, since the district after the comma reads "תל אביב" for Holon and
+  Ramat Gan. A locality whose comparison key (dash-like characters read as a space) is "תל אביב יפו"
+  or "תל אביב" is Tel Aviv-Yafo: never `other_city`, even when the model returned one. Any other
+  locality is `other_city`, even when the model returned `None`. A locality with no Hebrew letter,
+  or an empty one, is absent: the model decides. Nothing is stored for it: the source and the city
+  to show are derived by `postmodel.rejects.other_city_name` from the `RawPost` and the `Listing`.
 - **The area rules** (#88, #112, #124) are instructions to the model (#167): a stated area decides;
   a street only refines inside it; several possible areas are all returned; nothing the model can
   place returns no area. With no area name and no street, a well-known landmark that places the

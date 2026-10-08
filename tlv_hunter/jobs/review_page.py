@@ -2,12 +2,16 @@
 
     uv run python -m tlv_hunter.jobs.review_page                  # the store's classifications
     uv run python -m tlv_hunter.jobs.review_page --run <folder>   # a regression run's pass 1
+    uv run python -m tlv_hunter.jobs.review_page --dry-run        # what would join the set
 
 `--run` names a folder under `data/labeling/runs/`: reviewing a run's pass 1 gives the truth of the
 fields not labelled blind (DECISIONS.md #193). The store is opened read-only. When
 `data/labeling/corrections.json` exists, it is checked, its errors per field are printed and shown
 (#172), and every reviewed, corrected post the regression set does not hold joins it (#195): that
-is the only write besides the page. Exit codes: 0, written; 1, failed, with nothing written.
+is the only write besides the page. The (post, field) pairs of `label_overrides.json`'s
+`corrections_excluded` (#216) are not counted and not used as a truth. `--dry-run` prints what
+would be counted, joined and skipped, and writes nothing. Exit codes: 0, written; 1, failed,
+with nothing written.
 """
 
 import argparse
@@ -22,6 +26,7 @@ from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.jobs.classify_pending import RUNS_DIRECTORY
 from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, SQLITE_FILENAME, describe
 from tlv_hunter.labeling.corrections import CORRECTIONS_FILE, RUNS_DIR, read_corrections
+from tlv_hunter.labeling.overrides import OVERRIDES_FILE, read_overrides
 from tlv_hunter.labeling.regression_set import (
     LABELING_DIR,
     REGRESSION_SET_FILE,
@@ -31,6 +36,7 @@ from tlv_hunter.labeling.regression_set import (
 from tlv_hunter.labeling.review import (
     REVIEW_PAGE_FILE,
     add_corrected_to_set,
+    join_preview,
     render_review_page,
     run_cards,
     store_cards,
@@ -50,10 +56,13 @@ def main(
 ) -> int:
     parser = argparse.ArgumentParser(prog="python -m tlv_hunter.jobs.review_page")
     parser.add_argument("--run", help="a folder under data/labeling/runs/: review its pass 1")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="print what would join the set; write nothing"
+    )
     args = parser.parse_args(argv)
     out = sys.stdout if stream is None else stream
     try:
-        return _run(args.run, config_root, repo_root, clock, out)
+        return _run(args.run, args.dry_run, config_root, repo_root, clock, out)
     except Exception as error:
         # describe(): a pydantic message would carry the input, which can be a post's text.
         print(f"failed: {describe(error)}", file=out)
@@ -62,6 +71,7 @@ def main(
 
 def _run(
     run: str | None,
+    dry_run: bool,
     config_root: Path,
     repo_root: Path,
     clock: Callable[[], datetime],
@@ -78,6 +88,10 @@ def _run(
     regression_set = load_regression_set(set_path)
     positions = {entry.listing_id: i for i, entry in enumerate(regression_set.posts, 1)}
     corrections = read_corrections(labeling / CORRECTIONS_FILE)
+    overrides_path = labeling / OVERRIDES_FILE
+    excluded = (
+        read_overrides(overrides_path).excluded_pairs() if overrides_path.is_file() else frozenset()
+    )
 
     if run is None:
         cards = store_cards(store, store_root / RUNS_DIRECTORY)
@@ -87,7 +101,7 @@ def _run(
         if not run_dir.is_dir():
             raise FileNotFoundError(f"no run at {run_dir}")
         posts = regression_posts(regression_set.posts, store, repo_root)
-        cards = run_cards(run_dir, {post.listing_id: post.text for post in posts})
+        cards = run_cards(run_dir, {post.listing_id: post for post in posts})
         source = f"pass 1 of regression run {run}"
 
     if corrections is not None:
@@ -96,14 +110,32 @@ def _run(
         if stale:
             raise ValueError(f"{CORRECTIONS_FILE}: the text changed for {', '.join(stale)}")
         stored = {post.listing_id for post in store.query()}
-        added = add_corrected_to_set(set_path, corrections, stored)
         reviewed = len(corrections.reviewed())
         print(f"{CORRECTIONS_FILE}: {reviewed} posts reviewed; errors per field:", file=out)
-        for name, count in corrections.errors_per_field().items():
+        for name, count in corrections.errors_per_field(excluded).items():
             if count:
                 print(f"  {name}: {count} of {reviewed}", file=out)
+        if dry_run:
+            preview = join_preview(set_path, corrections, stored, excluded)
+            print(f"dry run: {len(preview.joins)} posts would join the regression set:", file=out)
+            for listing_id, kept, dropped in preview.joins:
+                print(
+                    f"  {listing_id[:8]}: truth from the other fields; corrected and counted: "
+                    f"{', '.join(kept) or 'none'}; excluded: {', '.join(dropped) or 'none'}",
+                    file=out,
+                )
+            print(f"dry run: {len(preview.skipped_pairs)} (post, field) pairs skipped:", file=out)
+            for listing_id, field, has_correction in preview.skipped_pairs:
+                note = "" if has_correction else " (no correction on file: excluded for later)"
+                print(f"  {listing_id[:8]} {field}{note}", file=out)
+            print("dry run: nothing written", file=out)
+            return EXIT_DONE
+        added = add_corrected_to_set(set_path, corrections, stored, excluded)
         for listing_id in added:
             print(f"joined the regression set: {listing_id}", file=out)
+    elif dry_run:
+        print("dry run: no corrections.json: nothing would join", file=out)
+        return EXIT_DONE
 
     html = render_review_page(
         cards,
@@ -112,6 +144,7 @@ def _run(
         corrections=corrections,
         source=source,
         generated_at=clock(),
+        excluded=excluded,
     )
     path = labeling / REVIEW_PAGE_FILE
     path.write_text(html, encoding="utf-8", newline="")

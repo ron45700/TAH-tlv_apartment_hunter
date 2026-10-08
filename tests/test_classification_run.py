@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import post_with_text
 from tests.test_classify_complete import PROVENANCE, extraction
 from tlv_hunter.classification_run import ClassifyRunResult, attempt_post, classify_pending
 from tlv_hunter.classify.base import ClassificationError
@@ -375,3 +376,69 @@ def test_attempt_post_returns_the_last_error_and_writes_nothing(posts) -> None:
     classifier = ScriptedClassifier(meter, {posts[0].listing_id: [error, error]})
     result, attempts = attempt_post(posts[0], classifier, Sleeps())
     assert (result, attempts) == (error, 2)
+
+
+# --- the city from Facebook's location field (DECISIONS.md #214) ---
+
+
+class CityClassifier(ScriptedClassifier):
+    """Answers with the other city it is given per post (the post's text must hold it, #180)."""
+
+    def __init__(self, meter: CostMeter, cities: dict[str, str | None]) -> None:
+        super().__init__(meter)
+        self.cities = cities
+
+    def classify_completed(self, post: RawPost) -> Completed:
+        self.calls.append(post.listing_id)
+        completed = complete(
+            extraction(other_city=self.cities.get(post.listing_id)), post, PROVENANCE
+        )
+        self._record(post, "ok")
+        return completed
+
+
+def test_the_native_city_decides_the_rejection_and_the_run_counts_it(
+    make_repository: MakeRepository, posts: list[RawPost], caplog: pytest.LogCaptureFixture
+) -> None:
+    repository = make_repository()
+    texts = {
+        0: "דירה בחולון להשכרה",
+        1: "דירה בעין ורד, רחוב בלפור",
+        2: "דירה בבת ים",
+        3: "דירה בלי עיר",
+    }
+    changes = [
+        ("חולון, תל אביב", "model said null: native Holon"),
+        ("תל אביב - יפו, תל אביב", "model said another city: native Tel Aviv"),
+        (None, "no native location: the model decides"),
+        ("תל אביב - יפו, תל אביב", "native Tel Aviv, model null"),
+    ]
+    prepared = []
+    for i, (location, _) in enumerate(changes):
+        prepared.append(post_with_text(posts[i], texts[i], native_location=location))
+    stored = store_pending(repository, prepared)
+    by_text = {p.text: p for p in stored}
+    cities = {
+        by_text[texts[0]].listing_id: None,
+        by_text[texts[1]].listing_id: "עין ורד",
+        by_text[texts[2]].listing_id: "בת ים",
+        by_text[texts[3]].listing_id: None,
+    }
+    classifier = CityClassifier(CostMeter(cap=1.0), cities)
+    with caplog.at_level("INFO"):
+        result, _ = run(repository, classifier)
+
+    outcome = {o.listing_id: o for o in result.outcomes}
+    holon, ein_vered, bat_yam, plain = (by_text[texts[i]].listing_id for i in range(4))
+    assert outcome[holon].outcome == "rejected: other_city"
+    assert outcome[holon].native_city == "rejected"
+    assert outcome[ein_vered].outcome == "active"
+    assert outcome[ein_vered].native_city == "cleared"
+    assert outcome[bat_yam].outcome == "rejected: other_city"
+    assert outcome[bat_yam].native_city is None  # the model's own city
+    assert outcome[plain].outcome == "active" and outcome[plain].native_city is None
+    # The model's answer is stored as it came: no edit of the Listing (#214).
+    assert repository.get_listing(ein_vered).other_city == "עין ורד"
+    assert repository.get_listing(holon).other_city is None
+    end = next(m for m in caplog.messages if m.startswith("classification done"))
+    assert "rejected by the native city 1, model city cleared by it 1" in end

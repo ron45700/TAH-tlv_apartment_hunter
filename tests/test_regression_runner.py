@@ -13,7 +13,8 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.conftest import CONFIG_ROOT, load_openai_spike
+from tests.conftest import CONFIG_ROOT, load_openai_spike, make_listing
+from tests.test_classification_run import lifecycle
 from tests.test_classify_complete import extraction
 from tests.test_openai_classifier import FakeTransport, with_answer
 from tlv_hunter.classify.instructions import PROMPT_VERSION
@@ -31,6 +32,7 @@ from tlv_hunter.labeling.compare import (
     reaches,
     same,
 )
+from tlv_hunter.labeling.corrections import CORRECTIONS_FILE
 from tlv_hunter.labeling.labels import PostLabel
 from tlv_hunter.labeling.overrides import Overrides
 from tlv_hunter.labeling.regression import prepare
@@ -552,3 +554,102 @@ def test_the_report_counts_the_posts_that_changed_between_the_passes(tmp_path: P
     assert results["changed_posts"] == 2
     assert "in 2 posts" in (folder / "report.html").read_text(encoding="utf-8")
     assert results["passes"][0]["areas_exact"]["average_returned"] == 0.0
+
+
+# --- corrections_excluded (DECISIONS.md #216) ---
+
+
+def _excluded(listing_id: str, field: str) -> dict[str, str]:
+    return {"listing_id": listing_id, "field": field, "reason": "r"}
+
+
+def test_corrections_excluded_default_to_none_and_are_keyed_by_post_and_field() -> None:
+    assert Overrides.model_validate(_overrides()).excluded_pairs() == frozenset()
+    overrides = Overrides.model_validate(
+        _overrides(corrections_excluded=[_excluded("a", "price"), _excluded("a", "other_city")])
+    )
+    assert overrides.excluded_pairs() == {("a", "price"), ("a", "other_city")}
+    assert overrides.excluded_fields("a") == {"price", "other_city"}
+    assert overrides.excluded_fields("b") == frozenset()
+
+
+def test_an_exclusion_of_an_unknown_field_or_twice_is_refused() -> None:
+    with pytest.raises(ValidationError, match="not a field of the review"):
+        Overrides.model_validate(_overrides(corrections_excluded=[_excluded("a", "price_source")]))
+    with pytest.raises(ValidationError, match="excluded twice"):
+        Overrides.model_validate(
+            _overrides(corrections_excluded=[_excluded("a", "price"), _excluded("a", "price")])
+        )
+
+
+def test_a_review_truth_leaves_an_excluded_field_out(tmp_path: Path, posts) -> None:
+    """A post that joined from the review is compared on its corrected classification, the excluded
+    fields left out of it."""
+
+    database, chosen = _repo(tmp_path, posts, count=1)
+    post = chosen[0]
+    store = SqliteRepository(database)
+    store.upsert_with_lifecycle(post, lifecycle(post))
+    listing = make_listing(post.listing_id, post_nature="for_sale", other_city="חולון")
+    store.save_classification(
+        listing, lifecycle(post, state="rejected", rejection_reason="for_sale")
+    )
+    labeling = tmp_path / LABELING_DIR
+    (labeling / "regression_set.json").write_text(
+        json.dumps(
+            {
+                "format_version": 1,
+                "posts": [
+                    {
+                        "listing_id": post.listing_id,
+                        "case": "c",
+                        "source": "store",
+                        "truth": "review",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    record = {
+        "text_sha256": hashlib.sha256(post.text.encode("utf-8")).hexdigest(),
+        "prompt_version": listing.prompt_version,
+        "model_name": listing.model_name,
+        "classified_at": listing.classified_at.isoformat(),
+        "reviewed": True,
+        "fields": {
+            "price": {"state": "written", "value": [3540000]},
+            "other_city": "רמת החייל",
+            "rooms": {"state": "written", "value": 3.0},
+        },
+        "note": "",
+    }
+    (labeling / CORRECTIONS_FILE).write_text(
+        json.dumps(
+            {
+                "format_version": 1,
+                "exported_at": "2026-10-06T08:00:00Z",
+                "corrections": {post.listing_id: record},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def values() -> dict[str, Any]:
+        prepared = _prepare(tmp_path)
+        assert prepared.refusals == []
+        (truth,) = prepared.truths
+        return truth.values
+
+    assert values()["price"].value == [3540000] and values()["other_city"] == "רמת החייל"
+    _write_overrides(
+        tmp_path,
+        corrections_excluded=[
+            _excluded(post.listing_id, "price"),
+            _excluded(post.listing_id, "other_city"),
+        ],
+    )
+    kept = values()
+    assert "price" not in kept and "other_city" not in kept
+    assert kept["rooms"].value == 3.0  # the other correction still counts
+    assert kept["post_nature"] == "for_sale"

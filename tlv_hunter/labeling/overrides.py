@@ -6,6 +6,9 @@ top of it and lists them in every run report.
 - `removed`: posts taken out of the set. `regression_set.json` keeps them, so positions stay put.
 - `label_changes`: a deciding field's label replaced, in `labels.json`'s shape.
 - `not_compared`: a deciding field left out of the comparison for one post.
+- `corrections_excluded`: a (post, field) of Ron's review (`corrections.json`) that no error count,
+  no comparison and no regression truth uses (DECISIONS.md #216). Keyed by `listing_id`: the post
+  need not be in the set.
 
 Positions are 1-based in `regression_set.json`; each is checked against its `listing_id`. The file
 names the SHA-256 of the `labels.json` it was reviewed against, and is refused with any other.
@@ -17,8 +20,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from tlv_hunter.labeling.corrections import CORRECTABLE
 from tlv_hunter.labeling.labels import PostLabel
 from tlv_hunter.labeling.regression_set import RegressionEntry
 
@@ -66,6 +70,18 @@ class NotCompared(_Strict):
     reason: str
 
 
+class CorrectionExcluded(_Strict):
+    listing_id: str
+    field: str
+    reason: str
+
+    @model_validator(mode="after")
+    def _a_listing_field(self) -> Self:
+        if self.field not in CORRECTABLE:
+            raise ValueError(f"{self.field}: not a field of the review")
+        return self
+
+
 class Overrides(_Strict):
     format_version: Literal[1]
     approved: str
@@ -74,12 +90,16 @@ class Overrides(_Strict):
     removed: list[Removed]
     label_changes: list[LabelChange]
     not_compared: list[NotCompared]
+    corrections_excluded: list[CorrectionExcluded] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _no_change_twice(self) -> Self:
         changes = [(change.listing_id, change.field) for change in self.label_changes]
         if len(changes) != len(set(changes)):
             raise ValueError("a field of one post is changed twice")
+        excluded = [(item.listing_id, item.field) for item in self.corrections_excluded]
+        if len(excluded) != len(set(excluded)):
+            raise ValueError("a (post, field) is excluded twice")
         return self
 
     def check_positions(self, entries: Sequence[RegressionEntry]) -> list[str]:
@@ -101,6 +121,14 @@ class Overrides(_Strict):
         if not changes:
             return label
         return PostLabel.model_validate({**label.model_dump(mode="json"), **changes})
+
+    def excluded_pairs(self) -> frozenset[tuple[str, str]]:
+        return frozenset((item.listing_id, item.field) for item in self.corrections_excluded)
+
+    def excluded_fields(self, listing_id: str) -> frozenset[str]:
+        return frozenset(
+            item.field for item in self.corrections_excluded if item.listing_id == listing_id
+        )
 
     def not_compared_fields(self, listing_id: str) -> set[str]:
         return {item.field for item in self.not_compared if item.listing_id == listing_id}

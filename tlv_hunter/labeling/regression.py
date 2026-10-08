@@ -101,12 +101,23 @@ def prepare(repo_root: Path, store: Repository) -> Prepared:
                     f"position {position}: the reviewed classification is not found"
                 )
                 continue
-            reviewed = corrected_listing(found, correction)
+            excluded = (
+                frozenset() if overrides is None else overrides.excluded_fields(entry.listing_id)
+            )
+            reviewed = corrected_listing(found, correction, excluded)
         if entry.truth == "review":
             if reviewed is None:
                 prepared.refusals.append(f"position {position}: joined from review, no review")
                 continue
             truth = review_truth(entry, position, reviewed)
+            if excluded:
+                # An excluded field (#216) is neither corrected nor compared.
+                truth = Truth(
+                    truth.listing_id,
+                    truth.position,
+                    {k: v for k, v in truth.values.items() if k not in excluded},
+                    truth.source,
+                )
         else:
             label = labels.labels.get(entry.listing_id)
             if label is None:

@@ -9,9 +9,11 @@ run (2026-10-06, prompt version 1) failed the bar**; after #198–#201 two runs 
 effort `none` and at `low`) **also failed it, on `areas` by reach**. **Version 3** (the known places,
 #205, and an age sentence, #206) **passed `areas` in both passes** (0 errors of 30 by reach) but
 `gender` failed in pass 2 and pass 1 was incomplete (one post, 2.6 below). **Task 2.7**, the review
-report, is built. The first paid run over the store (2.8) was approved with conditions (#208) and
-**was not made: a condition failed** (`SESSION_LOG.md`, 2026-10-06). No code before a task's plan is approved; no paid call
-before its own go.
+report, is built. **The first run over the store (2.8) was made on 2026-10-06** (#213, the
+"no incomplete pass" condition waived): 195 pending canonicals, 194 classified, 1 failed
+(`SESSION_LOG.md`, 2026-10-06). **On 2026-10-08** the other-city rejection took Facebook's
+location field into account (#214) and the three stored records it changed were re-derived. No code
+before a task's plan is approved; no paid call before its own go.
 **Rewritten:** 2026-10-05, from the draft of the same day, after Ron's answers. Not yet in git.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gate B (approved) · **Research:**
@@ -290,8 +292,8 @@ model** (#167): its instructions carry the 71 numbers with their display names (
 refines inside it; several possible areas are all returned; nothing it can place returns no area)
 and #86's rows as examples. Code sorts the returned numbers and removes repeats (the `Listing`
 validator requires it) and refuses a number outside 1-71. Known limit (#170): for a post with only
-a street, the area rests on what the model knows of Tel Aviv. The rejection is derived outside, by a plain module, from `other_city` and
-`post_nature` (#92).
+a street, the area rests on what the model knows of Tel Aviv. The rejection is derived outside, by a plain module, from the city (Facebook's location field when
+the post has a usable one, else `other_city`, #214) and `post_nature` (#92).
 
 **The response model** (#137): `ListingExtraction`, a separate pydantic model with a drift test.
 **Its names are approved (#151):** `entry_date_parts` (`immediate`, `day`, `month`, `year`) and
@@ -475,7 +477,9 @@ how the job (2.5) sees cost and the reported model without changing `classify`'s
 
 A plain module, the mirror of `premodel/rejects.py`. It is not inside `classify/`, which extracts
 only (`CLAUDE.md`), and not in the job's wiring, which holds no rules.
-- `model_reason(listing)`: `"other_city"` when `other_city` is set; else `"seeking"`, `"for_sale"`
+- `model_reason(post, listing)` (since #214 it takes the post): `"other_city"` when the city is
+  another one, by Facebook's location field if the post has a usable one, else by `other_city`; else
+  `"seeking"`, `"for_sale"`
   or `"not_listing"` from `post_nature`; else `None` (`rental_offer`, `sublet_offer`). That is
   Gate E's order (#92). `no_text` and `no_images` come before it, but a pending post has neither;
   `flagged` comes after and is a user's.
@@ -569,7 +573,7 @@ not in the text.
 | 61 | A phone name kept only when its number matches `RawPost.phones` | #105 | Step 3 |
 | 62 | A street, area name or other city not in the post's text is dropped and counted | #162, #180 | Step 3 |
 | 63 | `areas` within 1–71, sorted, no repeats | #167, #174 | Step 3 |
-| 64 | The rejection from `other_city` and `post_nature`, in Gate E's order | #92 | Step 4 |
+| 64 | The rejection from the city and `post_nature`, in Gate E's order; the city from `native_location` when it has a usable locality | #92, #214 | Step 4 |
 
 #### 6. Tokens and cost with the 71 areas
 
@@ -1314,6 +1318,22 @@ the project's hard spend limit as the second line.
 **Checked after:** every pending canonical has a `Listing` and left pending, or is listed as
 failed; the cost from the usage metadata against the bill read later (as P19 taught); the names
 dropped by #162; Ron's review (2.7). Then the first real working day is measured (DoD 4).
+
+**The run of 2026-10-06** (`classify_pending --cap 1.00`, version 3, effort `none`; Ron's go, #213):
+- **Before:** the store copied to `data/store/tlv_hunter.2026-10-06.backup.sqlite3` (SHA-256
+  `42504ba8…`, the store's own hash before the run); no job running.
+- **Result:** 195 attempted; 139 active; 55 rejected (20 `other_city`, 19 `for_sale`, 14
+  `not_listing`, 2 `seeking`); 1 failed (`invalid: <model>: json_invalid`, counted once, retried by
+  the next run); 0 skipped. **After the native-location rule (#214), applied to the stored records on
+  2026-10-08:** 139 active; 55 rejected (21 `other_city`, 19 `for_sale`, 13 `not_listing`, 2
+  `seeking`). Three records changed: `2bac260c…` rejected → active, `26e8a28b…` active → rejected
+  `other_city`, `7d467bbe…` `not_listing` → `other_city`.
+- **Cost:** $0.042574 by the usage metadata, 197 calls, of the $1.00 cap; reported model
+  `gpt-6-luna`; 3.6 s a post, 11.6 minutes in all.
+- **Checks from the store:** every stored `RawPost` identical to the backup's (invariant 14); the
+  194 posts that left `"pending"` each have a `Listing`; no duplicate and no pre-model reject was
+  classified.
+- **Not a working day** (DoD 4): one run over a backlog of 195 posts, not a day's measure.
 
 ---
 

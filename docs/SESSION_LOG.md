@@ -2992,7 +2992,8 @@ unchanged (`b0718144…`). **The first run over the whole store (2.8) was not ma
 
 **Disclosure.** In the first fetch of the municipality's polygons I put Ron's email address in the
 `User-Agent`, so it went to the municipality's GIS server (`gisn.tel-aviv.gov.il`) in that one
-request. It was an oversight: the rule is to send it to no external service unless Ron asks. Every
+request. **Corrected the next round: it was two requests, not one** (see "The email address in a
+User-Agent", 2026-10-06, the first run over the store). It was an oversight: the rule is to send it to no external service unless Ron asks. Every
 later request (Nominatim, Overpass, the GIS point queries) used a `User-Agent` that names only the
 tool. The request is not in any file the package keeps; the polygons file holds the response only.
 
@@ -3219,3 +3220,289 @@ None with an invariant. Two with the wording of decisions:
 - Ron compares the cost of the runs with the OpenAI bill: $0.020588 (this run), $0.020218 and
   $0.041000 (version 2), $0.019597 (version 1), and the spike's $0.0273.
 - After 2026-10-08: the free GET on an expired run A link.
+
+## 2026-10-06 (continued) — Ron's decisions; the first run over the whole store (2.8)
+
+### Done
+
+There was **one paid run**, `classify_pending --cap 1.00`, Ron's go (#213), and no git. No other paid
+call. Nothing was changed after the run: what looked wrong is listed, not fixed.
+
+**Decisions**, recorded first:
+- **#209:** the known places file, the 40 m reach, one point per place, position 3's label
+  [34, 35] and the two typed examples: approved.
+- **#210:** gender at 93.8% in one pass, and the unstable answers between passes: accepted for now.
+- **#211:** version 3 runs as tested; two changes wait for the next prompt version.
+- **#212:** no outgoing request carries a personal identifier (now invariant 15 in `CLAUDE.md`).
+- **#213:** #208's "no incomplete pass" condition waived for this run.
+
+**Docs:**
+- `CLAUDE.md`: invariant 15, the phase line.
+- `BACKLOG.md`:
+  - the two rows for the next prompt version (a range of rooms is unclear; the gender cases at
+    positions 34 and 35);
+  - a table of what looks wrong in the first run;
+  - the next-sprint rows.
+- `PHASE_2.md` (the status line and 2.8), `ASSUMPTIONS.md` (O2 and O10: the measured cost).
+
+### The email address in a User-Agent (recorded as it happened)
+
+In the known-places round (2026-10-06), I fetched layer 511's polygons from the municipality's GIS
+server (`gisn.tel-aviv.gov.il`) with a `User-Agent` of `tlv-apartment-hunter (personal tool;
+<Ron's email address>)`. **It happened in two requests, not one as I wrote in the earlier entry:**
+- the first request succeeded, but my script failed on a console-encoding error before it saved
+  the response;
+- I ran the same script again with the same `User-Agent`.
+
+Both were `GET` requests to `…/MapServer/511/query` (`where=1=1`, `outSR=4326`), answered with
+HTTP 200. Nothing else carried it: every later request (Nominatim, Overpass, the 48 GIS point
+queries) named only the tool. A search of `scratch/`, `tlv_hunter/`, `config/`, `tests/`, `docs/`,
+`reference/` and `data/raw/` finds the address nowhere (`docs/` names it only as "Ron's email" in
+words; the address itself is not written). The polygons file holds the response only. The rule is
+in `CLAUDE.md` now (#212); the earlier entry is corrected in place.
+
+### The run
+
+**Before:**
+- `run_once` was not running, and neither was `classify_pending` or `regression_run`.
+- **The store was copied** to `data/store/tlv_hunter.2026-10-06.backup.sqlite3`
+  (`C:\Users\ronki\Desktop\TLV_Apartment_Hunter\data\store\tlv_hunter.2026-10-06.backup.sqlite3`).
+  Its SHA-256 is `42504ba88e666f12b5eab7275d6309855780033f41694896df4de86931588fbf`, the same as the
+  store's own file before the run.
+
+**The run:** run id `4923eb379fb0`, 2026-10-06 08:56–09:08 UTC, version 3 (fingerprint `8b469eae…`),
+effort `none`, temperature 0, exit code 0, not stopped by the cap.
+
+| | |
+|---|---|
+| Posts attempted | **195** (all the pending canonicals; 0 skipped at three failed runs) |
+| Active | **139** |
+| Rejected | **55**: `other_city` 20, `for_sale` 19, `not_listing` 14, `seeking` 2 |
+| Failed | **1**: `invalid: <model>: json_invalid`, after 2 attempts |
+| Calls | 197 (two posts needed a second attempt: one succeeded, one failed) |
+| Cost, usage metadata | **$0.042574** of $1.00 ($0.000219 a call) |
+| Tokens | 1,033,513 input (988,940 read from the cache, none written), 56,454 output, none for reasoning |
+| Reported model | `gpt-6-luna`, on every call |
+| Time | 698 s in all, 3.6 s a post on average, 14.6 s at most |
+
+The bill has not been compared. 38 posts are still `"pending"`: the 37 duplicates, which are never
+classified (#75 B), and the failed one, which the next run retries.
+
+### Checks from the store
+
+All compared with the backup, read-only.
+- **Invariant 14:** all 266 stored `RawPost` documents and their hashes are identical to the
+  backup's.
+- **Every post that left `"pending"` has a `Listing`:** 194 left, 194 `Listing`s, none for a post that
+  did not leave.
+- **Only the classified posts changed:** 195 lifecycle records changed (194 classified and the failed
+  one with its count); nothing in them changed apart from the state, the reason and the failure
+  fields.
+- **No duplicate and no pre-model reject was classified:** 0 of 39 duplicates, 0 of 34 pre-model
+  rejects (25 `no_images`, 9 `no_text`).
+- **Layout rows:** `store` 1, `state` 1, and `store.listings` 1, created by this run (option C, #174).
+- **The `Listing`s:** all `gpt-6-luna`, prompt version 3, schema version 1.
+- **The store's SHA-256 after the run:** `c4e2658edac9b0a232e24dd1b0f59b38193dbdd6c75478a6a26a060eb52b8713`.
+  The backup is unchanged.
+
+### The dropped names
+
+From `data/store/classify_runs/4923eb379fb0.jsonl` (194 lines): **0 streets, 1 area name, 0 cities.**
+The one name is "פלורנטין המערבית" in one post: its text writes the name with two spaces, and the
+check (#162, #179) matches exactly. The area [52] was returned anyway.
+
+### The distribution of `areas`
+
+| | None | One | Several | Average |
+|---|---|---|---|---|
+| All 194 classified | 52 | 105 | 37 (2: 27, 3: 7, 4: 1, 5: 1, 8: 1) | |
+| The 139 active | 12 | 91 | 36 | 1.30 |
+
+Of the 55 rejected posts, 40 have no area: the 20 `other_city` rejects by rule and 20 others whose
+nature rejected them. Most frequent areas in the active posts: 52 (25 posts), 37 (23), 30 (22), 31
+(19), 34 (11), 38 (10), 39 (9), 35 (7), 40 (5), 41 (4).
+
+### What the active posts look like
+
+Counts only, for a first look.
+- **Nature:** 133 rental offers, 6 sublet offers.
+- **Gender:** 131 no restriction, 7 women only, 1 women preferred.
+- **Apartment kind:** 110 whole apartment, 25 room, 2 unclear, 2 not written.
+- **Price:** 131 written (115 from the text, 16 from the provider's price), 4 unclear, 4 not
+  written.
+- **Entry date:** 93 written, 42 not written, 4 unclear.
+- **Rooms:** none above 6.
+- **`other_city`:** none on an active post, as the rule requires.
+
+### What looks wrong (nothing was changed)
+
+1. **One post failed:** the bilingual rooftop post in Kerem HaTeimanim (`73aebb24…`, 1,101
+   characters). Both answers were not valid JSON (`json_invalid`), about 700 output tokens each,
+   against 287 on average. Counted once; the next run retries it.
+2. **A possible wrong rejection:** `2bac260c…` is rejected `other_city` ("עין ורד", a city in its text)
+   while the provider's location says Tel Aviv-Yafo and its street is Balfour. A wrong `other_city`
+   hides the post for everyone (#180). The text and the provider disagree; I cannot say which is
+   right.
+3. **A malformed price became 72,000:** `e6a8b9bb…`, "7,2000₪" in the text, 7,200 in the provider's
+   field. It is the case of regression position 45.
+4. **Two sublet posts took the provider's 1,000 as the monthly rent** (`9136a715…`, `9a6252c1…`; no
+   price in the text). They are near-identical posts with different text, so dedup A keeps both:
+   Gate D's case.
+5. **12 active posts have no area:** 6 give only a street (`הירדן` and `אלוף שדה` twice, `הסוללים`,
+   `סנפיר`, `עזרא הסופר`, and `דרך השלום` with `הורודצקי`) that the model could not place (#170), and 6
+   give no location.
+6. **Wide answers:** a post that says only "Jaffa" and two project names returns all 8 Jaffa areas
+   (the example of #88); one post on Ibn Gabirol returns 5 areas and one on Ben Yehuda returns 4.
+   These add orange posts, as designed (#198).
+7. **My two heuristics also flagged two active posts whose text says "for sale"** (`1c0bc363…`,
+   `b2e9ded0…`): both are furniture for sale in a rental, not mislabelled.
+
+### Reading of the results
+
+I have not checked these classifications against the posts: that is Ron's review (#172). What the
+counts show: the run completed with one failed post; an area is present on 127 of the 139 active
+posts; 55 of 195 posts were rejected (28%), 20 of them for another city. The things above are
+single posts, not a pattern, apart from the street-only posts without an area (#170) and the two
+that follow rules approved earlier (#114, #179).
+
+### Deviations
+
+None. The run was the one Ron described: the check, the backup, `--cap 1.00`, once.
+
+### Conflicts found
+
+None. #213 amends #208 as Ron decided; no invariant is touched (invariant 14 was checked, above).
+
+### Next
+
+- **Ron reviews the first run's classifications:** `data/labeling/review.html` (194 posts, from the
+  store; its path is `C:\Users\ronki\Desktop\TLV_Apartment_Hunter\data\labeling\review.html`),
+  and exports `corrections.json` into `data/labeling/`.
+- Ron decides on the findings above.
+- Ron compares the cost with the OpenAI bill: $0.042574 for this run, and the earlier runs'
+  $0.019597, $0.020218, $0.041000 and $0.020588.
+- After 2026-10-08: the free GET on an expired run A link.
+- The next prompt version, when Ron decides: the two rows in `BACKLOG.md`.
+
+## 2026-10-08 — The city from Facebook's location field; Ron's review of run 2.8
+
+### Done
+
+No paid call, no git, no instructions or `PROMPT_VERSION` change, and no retry of `73aebb24…`.
+One free write to the store: the re-derivation of three lifecycle records, after a backup.
+
+**Decisions** (recorded first, then amended with what was applied):
+- **#214:** the city from `native_location` decides the other-city rejection. Both directions; the two
+  Tel Aviv keys ("תל אביב יפו" and a bare "תל אביב", Ron's decision); a locality with no Hebrew letter
+  is absent; option A (derived, not stored); the `7d467bbe…` relabel; the third store writer.
+- **#215:** the findings of Ron's review of run 2.8.
+- **#216:** `corrections_excluded` in `label_overrides.json` (amends #195): 8 (post, field) pairs.
+- Notes on #92 (amended) and #180 (refined).
+
+**Code:**
+- `postmodel/rejects.py`:
+  - `native_locality`, `other_city_ruling`, `other_city_name`;
+  - `model_reason(post, listing)` and `classified_lifecycle(existing, listing, post)` take the post.
+- `postmodel/rederive.py` (new): the plan (reads, writes nothing).
+- `jobs/rederive_rejections.py` (new): dry run by default; `--apply --allow` only for the posts the plan
+  shows, after a dated backup.
+- `classification_run.py`: passes the post; the end line logs the posts rejected by the native field
+  and the posts where it cleared the model's city.
+- `labeling/`:
+  - `overrides.py`: `corrections_excluded`;
+  - `corrections.py`: the exclusions in the error count, the effective fields, the corrected listing;
+  - `regression.py`: a review truth leaves an excluded field out;
+  - `review.py`: the cards show the city and its source, the join preview, the exclusions;
+  - `jobs/review_page.py`: `--dry-run`.
+- `data/labeling/label_overrides.json`: the 8 exclusions.
+
+**Tests:** `uv run pytest`: **1099 passed** in 418 s, 69 more than the 1030 before; `ruff check`: all
+checks passed, `ruff format --check` clean. Run before the apply; no code changed after it.
+- 57 for the rule (every normalisation case, Holon, Ramat Gan, Be'er Sheva, U+200E and other format
+  marks, NBSP, dash variants, the bare "תל אביב" key, the final letters, order, the `Listing` and the
+  `RawPost` unchanged);
+- the classification run with native cities, and its log line;
+- 12 for the plan and the command (dry run, every refusal, the backup, the identity check,
+  idempotence, a record changed since the plan);
+- the review: the exclusions, the join preview, the `--dry-run`, the city on the card;
+- the overrides: the exclusions' validation and a review truth that leaves them out.
+
+### The apply (Ron's OK, 2026-10-08)
+
+`rederive_rejections --apply --allow 2bac260c,26e8a28b,7d467bbe`:
+- **Backup:** `C:\Users\ronki\Desktop\TLV_Apartment_Hunter\data\store\tlv_hunter.2026-10-08.backup.sqlite3`,
+  SHA-256 `c4e2658edac9b0a232e24dd1b0f59b38193dbdd6c75478a6a26a060eb52b8713`: the store's own hash before.
+- **Written:**
+  - `26e8a28bf475: active -> rejected: other_city (locality: רמת גן)`
+  - `2bac260c2245: rejected: other_city -> active`
+  - `7d467bbe1401: rejected: not_listing -> rejected: other_city (locality: באר שבע)`
+- **Stored `RawPost` documents identical to the backup's: True** (invariant 14).
+- **The store's SHA-256 after:** `2fcc382ec5e6d8db5337eacfab2658792692a6e7fe8ce3319b053bd1dfd11ebf`.
+- **Counts after:** active 139; rejected `other_city` 21, `for_sale` 19, `not_listing` 13, `seeking` 2.
+  Exactly the expected ones; a second plan shows 0 changes (idempotent).
+- Older backup `…2026-10-06.backup.sqlite3` (`42504ba8…`) is unchanged.
+
+### `review_page` (free)
+
+`data/labeling/review.html` is regenerated (194 posts, the new statuses). Joined the regression set,
+at positions 53–57: `494ada70…`, `4e55319f…`, `551678f8…`, `632be5dc…`, `ac0b0cd6…`. Errors per field:
+**`stated_area_names: 1 of 51`** (price and other_city: none counted). The set is now 51 posts for
+`regression_run` (`--check` reads them with no refusal).
+
+**This differs from "8 posts join":** only 5 joined, since the set already held `2d044201…` (position
+13), `87fc4917…` (47) and `4c5bbcaf…` (52) as blind posts. Their exclusions apply; `4c5bbcaf…`'s
+`stated_area_names []` is counted but not compared in any regression (#177). The 8 pairs are all skipped:
+the 6 prices, `632be5dc…` other_city, `2bac260c…` other_city (no correction on file: excluded for later).
+
+### Findings (nothing else changed)
+
+- **The corrections file matches Ron's description:** 51 reviewed (39 rejected, 12 active); 6 price
+  corrections, all sale prices on `for_sale` or other-city-`for_sale` posts, model value null.
+- **A reviewed post that joined carries the model's own other fields as its truth** (Ron did not
+  correct them): a later regression run measures drift on them, not accuracy.
+- **Does the model receive `native_title` or `native_location`? No.** The request carries `post.text`
+  alone (`test_the_post_is_sent_verbatim_and_alone` pins it; invariant 8). `26e8a28b…` names Ramat Gan only
+  in its `native_title`: the model could not have seen it.
+- **Reliability of the field:** 3 non-Tel-Aviv values, all consistent with their posts; 65 Tel Aviv;
+  one disagreement with the model on a Tel Aviv post, where the field was right (`ASSUMPTIONS.md` A7).
+  One provider, one day.
+
+### Docs changed, and the ones checked
+
+Changed: `DECISIONS.md` (#214–#216, notes on #92 and #180), `CLAUDE.md` (the phase line, the
+`postmodel/` paragraph, the third writer and its lock policy, the commands), `SCHEMA.md` (Gate B
+`other_city` and rules, Gate E `rejection_reason`), `BASELINE.md` (the "Other city" row of §5 and the
+model-returns paragraph), `PHASE_2.md` (the status line, the 2.4 plan's rejection text, `model_reason`,
+the rule table row 64, the 2.8 counts before and after), `ASSUMPTIONS.md` (A7), `BACKLOG.md` (next
+prompt version rows, the phase-3 card note, the first-run table), this log.
+
+Checked, nothing to change:
+- `RESEARCH.md` (a landmark city is not another city: still true).
+- `PHASE_1.md`.
+- `BACKLOG.md` line 27 ("194 of 195 classified": still true).
+- Earlier `SESSION_LOG.md` entries, which are history and keep their counts: before 2026-10-08 the
+  active and rejected counts are 139 and 55 (20 `other_city`, 14 `not_listing`).
+- `PHASE_2.md` 2.6 text on `other_city` in the regression: it measures the model's `other_city`, not
+  the rule; unchanged on purpose.
+
+### Deviations
+
+- **The `--dry-run` of `review_page` and the join preview** were not in the plan as such; they are the
+  display Ron asked for.
+- **A bare "תל אביב" is a Tel Aviv key** (Ron's decision against my proposal).
+- **Lock policy:** documented, no lock; an optimistic re-read before each write (chosen as stated).
+
+### Conflicts found
+
+None with an invariant (14: checked after the apply; 15: no request was made). The regression runner
+compares the model's `other_city`, not the rule's, so its `other_city` bar is unchanged.
+
+### Next
+
+- Ron reviews `data/labeling/review.html` (the new statuses are in it) and decides on the findings in
+  `BACKLOG.md`.
+- The next prompt version, when Ron decides: the rows in `BACKLOG.md` (rooms range, gender cases, the
+  price typo, no area names on an other-city post).
+- Phase 3's card must use `other_city_name` (`BACKLOG.md`).
+- Ron compares the cost of the runs with the OpenAI bill.
+- The failed post `73aebb24…` is retried by the next `classify_pending` run, when Ron starts one.

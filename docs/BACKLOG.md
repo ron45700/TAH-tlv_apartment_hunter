@@ -24,15 +24,40 @@ still unimplemented on 2026-10-02.
 
 Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is being planned: Gate B approved on
 2026-10-05 (`DECISIONS.md` #81–#125); the model provider is OpenAI, for now (#126); `PHASE_2.md`
-approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6: the set (46 posts, #186, #196), the labelling page and the runner built; version 3 of the instructions (the known places, #205) passed `areas` by reach in both passes on 2026-10-06; `gender` failed once and a pass was incomplete. Task 2.7, the review report, built. The first run over the store (2.8) was approved with conditions (#208) and was not made: a condition failed.
+approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6 (set, labelling page, runner), 2.7 (review report) built; instructions version 3 (the known places, #205, approved #209) passed `areas` by reach in both passes. **The first run over the store (2.8) was made on 2026-10-06** (#213): 194 of 195 pending canonicals classified.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
 | 1 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
 | 2 | Ron reads the spike's cost in the OpenAI dashboard and compares it with the usage-metadata total, $0.0273 (`docs/SPIKE_2_1_2026-10-05.md` §5) | `ASSUMPTIONS.md` O2, P19's lesson | Ron, some minutes after the run (2026-10-05) |
-| 3 | **The first run over the store (2.8): Ron's decision.** Pass 1 of the version 3 regression run was incomplete (position 24, a seeking post, invalid twice), so #208's condition failed and the run was not made. Go anyway, or one more regression run first. Then `classify_pending --cap 1.00` after a dated backup of the store; `run_once` must not be running (it was not, 2026-10-06) | `DECISIONS.md` #207, #208; `PHASE_2.md` 2.8, §4; `SESSION_LOG.md` 2026-10-06 | Ron |
-| 4 | Ron reads `reference/known_places.yaml` (48 places) and the places whose area surprised me, and adds or corrects entries; the list is in git | `DECISIONS.md` #205; `SESSION_LOG.md` 2026-10-06 | Ron |
-| 5 | Ron reviews a run's pass 1 (`review_page --run v3-none-8b469eae-474573e21e9e`) and moves `corrections.json` into `data/labeling/`: it measures the fields not labelled blind (#193) | `PHASE_2.md` 2.7 | Ron |
+| 3 | Ron reviews the classifications of the first run: `data/labeling/review.html` (194 posts, generated from the store), marks what is wrong and exports `corrections.json` into `data/labeling/` (#172). Things that look wrong, for his decision, are in the table below and in `SESSION_LOG.md` 2026-10-06 | `PHASE_2.md` 2.7, 2.8 | Ron |
+
+### For the next prompt version (`DECISIONS.md` #211)
+
+| Item | Source |
+|---|---|
+| A range of rooms ("2-3 rooms") is unclear. Regression position 24 came back invalid twice on it: the model returned a `rooms` whose state and value disagree (`SESSION_LOG.md`, 2026-10-06) | Ron, 2026-10-06 |
+| A malformed price ("7,2000₪", `e6a8b9bb…`, regression position 45) is read as 72,000: a sentence that a malformed amount is unclear (`SESSION_LOG.md`, 2026-10-06) | Ron, 2026-10-08 |
+| No area names on an other-city post: `4c5bbcaf…` (Rishon LeZion) returned `stated_area_names` ["לב העיר"]; Ron's review corrected it to [] (`corrections.json`; its post is regression position 52, where area names are not compared, #177) | Ron's review, 2026-10-08 |
+| The gender cases at regression positions 34 (wording for both sexes with an age range and the word "preference": the model says women preferred) and 35 (feminine wording about the roommates who stay: women only in 2 of 6 passes) | Ron, 2026-10-06 |
+
+### For phase 3 (`DECISIONS.md` #214)
+
+| Item | Source |
+|---|---|
+| **The card's city for an other-city post is derived, not stored:** call `postmodel.rejects.other_city_name(post, listing)` (or `other_city_ruling`, which also says whether the city came from Facebook's location field or from the model). For `26e8a28b…` the `Listing`'s `other_city` is null and the card must show "רמת גן". Never read `Listing.other_city` alone for the rejected list or the card | `DECISIONS.md` #214, option A |
+
+### From the first run over the store, 2026-10-06 (for Ron; the stored records were then re-derived on 2026-10-08, #214)
+
+| Item | Source |
+|---|---|
+| 1 post failed (`json_invalid` twice: the answer was not valid JSON; the bilingual rooftop post `73aebb24…`). It is counted once and retried by the next `classify_pending` run (#139) | `SESSION_LOG.md` 2026-10-06 |
+| **Resolved by #214 (2026-10-08):** `2bac260c…` was rejected as `other_city` ("עין ורד", from the text) while the provider's location says Tel Aviv-Yafo and Ron confirms it is a Tel Aviv apartment: it is active now. The model's error stays here, out of the regression count (`corrections_excluded`, #216). Also from the rule: `26e8a28b…` (a Ramat Gan apartment whose text never names the city) is rejected `other_city` and `7d467bbe…` is `other_city`, not `not_listing` | post `2bac260c…` |
+| A malformed price ("7,2000₪") became 72,000; the provider's native price is 7,200 and the text's own digits decide (#114). The malformed-amount sentence was not added (regression position 45) | post `e6a8b9bb…` |
+| Two near-identical sublet posts are both canonical (different text, so dedup A keeps both) and both took the provider's price, 1,000, as the monthly rent (a native price of at least 500 is used when the text has none, #114) | posts `9136a715…`, `9a6252c1…`; Gate D |
+| One dropped area name: "פלורנטין המערבית" does not match exactly because the text has two spaces; the area [52] was still returned (#162's match is exact, #179) | post `e6a8b9bb…` |
+| 12 active posts have no area: 6 give only a street the model could not place (#170), 6 give no location | `SESSION_LOG.md` 2026-10-06 |
+| A post that says only "Jaffa" returns all 8 Jaffa areas (the examples of #88); one post has 5 areas and one has 4 | `SESSION_LOG.md` 2026-10-06 |
 
 ---
 

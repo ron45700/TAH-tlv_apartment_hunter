@@ -8,13 +8,13 @@ import logging
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 
 from tlv_hunter.classify.base import ClassificationError, ErrorKind
 from tlv_hunter.classify.complete import Completed
 from tlv_hunter.classify.cost import CallRecord, CapReached, CostMeter
 from tlv_hunter.contracts.raw_post import RawPost
-from tlv_hunter.postmodel.rejects import classified_lifecycle, failed_lifecycle
+from tlv_hunter.postmodel.rejects import classified_lifecycle, failed_lifecycle, other_city_ruling
 from tlv_hunter.store.base import Repository
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,9 @@ class PostOutcome:
     """`active`, `rejected: <reason>`, `failed: <kind>` or `discarded`."""
     attempts: int
     calls: tuple[CallRecord, ...]
+    native_city: Literal["rejected", "cleared"] | None = None
+    """`rejected`: Facebook's location field made it an other-city post; `cleared`: it kept a post
+    in Tel Aviv-Yafo that the model gave another city (DECISIONS.md #214)."""
 
 
 @dataclass(frozen=True)
@@ -100,12 +103,16 @@ def classify_pending(
     for post in eligible:
         first_call = len(meter.calls)
         try:
-            outcome, attempts = _classify_one(post, repository, classifier, sleep, on_written)
+            outcome, attempts, native = _classify_one(
+                post, repository, classifier, sleep, on_written
+            )
         except RunStop as stop:
             stopped = stop.reason
             logger.warning("classification stopped before %s: %s", post.listing_id, stop.reason)
             break
-        result = PostOutcome(post.listing_id, outcome, attempts, tuple(meter.calls[first_call:]))
+        result = PostOutcome(
+            post.listing_id, outcome, attempts, tuple(meter.calls[first_call:]), native
+        )
         outcomes.append(result)
         _log_post(result)
 
@@ -157,11 +164,12 @@ def _classify_one(
     classifier: CompletingClassifier,
     sleep: Callable[[float], None],
     on_written: Callable[[Completed], None] | None,
-) -> tuple[str, int]:
+) -> tuple[str, int, Literal["rejected", "cleared"] | None]:
     result, attempts = attempt_post(post, classifier, sleep)
     if isinstance(result, ClassificationError):
-        return _save_failure(post, repository, result), attempts
-    return _save_success(post, repository, result, on_written), attempts
+        return _save_failure(post, repository, result), attempts, None
+    outcome, native = _save_success(post, repository, result, on_written)
+    return outcome, attempts, native
 
 
 def _wait_before_next(error: ClassificationError, attempts: int) -> float | None:
@@ -183,18 +191,24 @@ def _save_success(
     repository: Repository,
     completed: Completed,
     on_written: Callable[[Completed], None] | None,
-) -> str:
+) -> tuple[str, Literal["rejected", "cleared"] | None]:
     # Read again right before the write: the record may have changed during the call (#182).
     fresh = repository.get_lifecycle(post.listing_id)
     if fresh is None or fresh.state != "pending":
-        return "discarded"
-    lifecycle = classified_lifecycle(fresh, completed.listing)
+        return "discarded", None
+    lifecycle = classified_lifecycle(fresh, completed.listing, post)
     repository.save_classification(completed.listing, lifecycle)
     if on_written is not None:
         on_written(completed)
+    ruling = other_city_ruling(post, completed.listing)
+    native: Literal["rejected", "cleared"] | None = None
+    if ruling.source == "native_location":
+        native = "rejected"
+    elif ruling.name is None and completed.listing.other_city is not None:
+        native = "cleared"
     if lifecycle.rejection_reason is None:
-        return lifecycle.state
-    return f"{lifecycle.state}: {lifecycle.rejection_reason}"
+        return lifecycle.state, native
+    return f"{lifecycle.state}: {lifecycle.rejection_reason}", native
 
 
 def _save_failure(post: RawPost, repository: Repository, error: ClassificationError) -> str:
@@ -210,7 +224,7 @@ def _log_post(result: PostOutcome) -> None:
     calls = result.calls
     logger.info(
         "post %s: %s, %d attempts, %d calls, tokens %s, $%.6f, reported model %s, %.1f s, "
-        "dropped %d streets, %d area names, %d other city",
+        "dropped %d streets, %d area names, %d other city, native city %s",
         result.listing_id,
         result.outcome,
         result.attempts,
@@ -222,6 +236,7 @@ def _log_post(result: PostOutcome) -> None:
         sum(len(call.dropped_streets) for call in calls),
         sum(len(call.dropped_area_names) for call in calls),
         sum(call.dropped_other_city is not None for call in calls),
+        result.native_city or "-",
     )
 
 
@@ -233,12 +248,15 @@ def _log_end(
     meter: CostMeter,
 ) -> None:
     logger.info(
-        "classification done: %d found, %d skipped, %d attempted, outcomes %s, %d calls, "
+        "classification done: %d found, %d skipped, %d attempted, outcomes %s, rejected by the "
+        "native city %d, model city cleared by it %d, %d calls, "
         "tokens %s, $%.6f of $%.2f, reported models %s, stopped %s",
         found,
         len(skipped),
         len(outcomes),
         dict(sorted(Counter(outcome.outcome for outcome in outcomes).items())),
+        sum(outcome.native_city == "rejected" for outcome in outcomes),
+        sum(outcome.native_city == "cleared" for outcome in outcomes),
         len(meter.calls),
         _tokens(meter.calls),
         meter.spent,

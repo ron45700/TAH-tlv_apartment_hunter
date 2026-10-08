@@ -10,6 +10,7 @@ and writes nothing.
 
 import json
 from collections.abc import Iterator, Mapping
+from collections.abc import Set as AbstractSet
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -103,16 +104,31 @@ class CorrectionFile(BaseModel):
     def reviewed(self) -> dict[str, Correction]:
         return {key: c for key, c in self.corrections.items() if c.reviewed}
 
-    def errors_per_field(self) -> dict[str, int]:
-        """Per correctable field, the reviewed posts where Ron corrected it (#172)."""
+    def errors_per_field(
+        self, excluded: AbstractSet[tuple[str, str]] = frozenset()
+    ) -> dict[str, int]:
+        """Per correctable field, the reviewed posts where Ron corrected it (#172). An excluded
+        (post, field) is not counted (#216)."""
         counts = dict.fromkeys(CORRECTABLE, 0)
-        for correction in self.reviewed().values():
+        for listing_id, correction in self.reviewed().items():
             for name in correction.fields:
-                counts[name] += 1
+                if (listing_id, name) not in excluded:
+                    counts[name] += 1
         return counts
 
+    def effective_fields(
+        self, listing_id: str, excluded: AbstractSet[tuple[str, str]] = frozenset()
+    ) -> dict[str, Any]:
+        """The corrected fields of a post, the excluded ones left out (#216)."""
+        return {
+            name: value
+            for name, value in self.corrections[listing_id].fields.items()
+            if (listing_id, name) not in excluded
+        }
+
     def corrected_ids(self) -> list[str]:
-        """The reviewed posts with at least one corrected field: they join the set (#195)."""
+        """The reviewed posts with at least one corrected field: they join the set (#195). A post
+        whose only corrections are excluded (#216) still joins: its other fields were reviewed."""
         return sorted(key for key, c in self.reviewed().items() if c.fields)
 
     def stale(self, texts: Mapping[str, str]) -> list[str]:
@@ -123,14 +139,18 @@ class CorrectionFile(BaseModel):
         )
 
 
-def corrected_listing(listing: Listing, correction: Correction) -> Listing:
+def corrected_listing(
+    listing: Listing, correction: Correction, excluded_fields: AbstractSet[str] = frozenset()
+) -> Listing:
     """The reviewed classification with Ron's corrections: the truth of #193. `price_source`
-    follows the corrected price: none when not written, else kept, or "text" when there was none."""
+    follows the corrected price: none when not written, else kept, or "text" when there was none.
+    An excluded field keeps the model's value (#216), and no comparison uses it."""
     if not correction.is_for(listing):
         raise ValueError(f"{listing.listing_id}: the correction is for another classification")
-    merged = {**listing.model_dump(mode="json"), **correction.fields}
-    if "price" in correction.fields:
-        state = correction.fields["price"]["state"]
+    fields = {k: v for k, v in correction.fields.items() if k not in excluded_fields}
+    merged = {**listing.model_dump(mode="json"), **fields}
+    if "price" in fields:
+        state = fields["price"]["state"]
         merged["price_source"] = (
             None if state == "not_written" else (listing.price_source or "text")
         )

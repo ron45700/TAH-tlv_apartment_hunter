@@ -1313,6 +1313,8 @@ No reason recorded.
 *Amended by #109 (2026-10-05): an unclear field keeps no value.*
 
 ### 92 — The model returns facts; code derives the rejection and its reason
+*Amended by #214 (2026-10-08): the city of the other-city rejection comes from Facebook's location
+field when the post has a usable one.*
 The reasons are Gate E's (`SCHEMA.md`).
 *Why:* a rule change needs no reclassification.
 
@@ -1903,6 +1905,7 @@ visible beside the original text. No other reason recorded.
 No reason recorded.
 
 ### 180 — #162's check also covers `other_city`
+*Refined by #214 (2026-10-08): when the post has a usable `native_location`, the city is decided by it, not by the model's city.*
 A city the model returns that does not appear in the post's text is dropped (read as `None`) and
 counted, like a street or an area name. **Extends #162.**
 *Why (Ron):* an invented city would reject a Tel Aviv post for everyone, the costliest error.
@@ -2147,6 +2150,107 @@ If the cap or anything else stops it, report and do not rerun. After it: the cou
 by rejection reason, the cost, the failures, and the review page generated from the store. If a
 condition fails, the run is not made and the report says which. Closes the gate of #164 for this
 run only. No reason recorded.
+
+**Ron's decisions after the version 3 regression run, 2026-10-06.**
+
+### 209 — The known places file is approved
+`reference/known_places.yaml`: its name and shape, the 40 m reach, and one point per place. Position
+3's label [34, 35] (#204). The two typed examples in the instructions ("כיכר המדינה: 34", "שרונה: 40")
+that also appear in the generated list stay as they are. Confirms #205. No reason recorded.
+
+### 210 — Gender at 93.8% in one pass, and unstable answers between passes, are accepted for now
+Tracked through Ron's review of real classifications (#172, #173), not through more regression
+rounds (#207). No reason recorded.
+
+### 211 — Version 3 runs as tested; two changes wait for the next prompt version
+The instructions are not changed before the first run over the store. Waiting for the next version
+(`BACKLOG.md`): a range of rooms ("2-3 rooms") is unclear; and the gender cases at regression
+positions 34 and 35. No reason recorded.
+
+### 212 — No outgoing request carries a personal identifier
+A new rule (`CLAUDE.md`, invariant 15): no outgoing request ever carries a personal identifier of
+Ron or of any user (an email address, a name, a phone number), in a header, a User-Agent, a URL or
+a body. A tool name identifies the client. *Why:* the first fetch of the municipality's polygons on
+2026-10-06 put Ron's email address in its User-Agent (`SESSION_LOG.md`).
+
+### 213 — The first run over the store: the "no pass incomplete" condition is waived
+**Amends #208.** The one failure in the version 3 regression run is a pre-model reject that
+production never sends, and the stop rule (#207) makes the whole-store run the next step. Ron's go:
+`run_once` not running; a dated backup of the store beside it, its path and SHA-256 stated;
+`classify_pending --cap 1.00`, once; if the cap or anything else stops it, report, do not rerun and
+do not raise the cap; no other paid call. After it: the counts, the cost, the reported models, the
+checks from the store, the dropped names, the distribution of `areas`, and the review page. *Why
+(Ron):* #207.
+
+**Ron's review of run 2.8 and the city from Facebook's own location field, 2026-10-08.**
+
+### 214 — The city from `native_location` decides the other-city rejection
+**Amends #92 and #180 (the rule); refines BASELINE §5.** When `RawPost.native_location` is present,
+its locality decides the other-city rejection; when it is absent, the model decides as before.
+- **The locality** is the part before the first comma, trimmed. Never "תל אביב" matched anywhere in
+  the string: the part after the comma is the district and reads "תל אביב" for Holon and Ramat Gan.
+- **Tel Aviv-Yafo keys,** after the normalisation (format characters removed, whitespace collapsed,
+  dash-like characters read as a space): "תל אביב יפו" and **a bare "תל אביב"**, exact match, never a
+  substring. *Why (Ron):* a wrong active post stays visible and can be reported; a wrong rejection
+  disappears.
+- **A Tel Aviv-Yafo locality** is never rejected as `other_city`, even when the model returned one.
+  **Any other locality** is rejected as `other_city`, even when the model returned null.
+- **A locality with no Hebrew letters is treated as absent** (the model decides), so a provider that
+  changes its language cannot hide every apartment. Each classification run logs the count of posts
+  rejected by the native field.
+- **Gate E order unchanged:** `other_city` first, then `post_nature`. A post rejected only by the
+  native city changes reason when the model's nature was `seeking`, `for_sale` or `not_listing`
+  (`7d467bbe…`, `not_listing` → `other_city`: confirmed).
+- **Where it lives:** `postmodel/rejects.py`: pure code over the stored `RawPost` and `Listing`; no
+  model call; the `Listing` is not edited and the `RawPost` is never written (invariant 14).
+- **Recording the source: option A.** Nothing new is stored. The source and the city name to show
+  are derived by `other_city_name` from the two stored records: no `Listing` or `PostLifecycle`
+  schema change. The phase 3 card must call it (`BACKLOG.md`).
+- **Re-derivation of the stored records:** `jobs/rederive_rejections.py`, dry run first, a backup
+  before `--apply`; `--apply` only for the set of posts Ron allows (the three of the dry run).
+  **It is the third command that writes the production store**, with `run_once` and
+  `classify_pending`. It takes no lock, as they take none (#79 O9, #140): it must never run beside
+  either. Instead it re-reads each record right before writing it and writes nothing for a record that no
+  longer holds the status the plan saw.
+- **Applied 2026-10-08** (Ron's OK): `2bac260c…` rejected `other_city` → active; `26e8a28b…`
+  active → rejected `other_city`; `7d467bbe…` rejected `not_listing` → `other_city` (a relabel by
+  Gate E's order, confirmed by Ron). Counts after: 139 active; 21 `other_city`, 19 `for_sale`, 13
+  `not_listing`, 2 `seeking`. Backup `data/store/tlv_hunter.2026-10-08.backup.sqlite3`, SHA-256
+  `c4e2658e…`; the store's after: `2fcc382e…`; every stored `RawPost` identical to the backup's.
+
+*Data it rests on (read-only, the store of 2026-10-08):* `native_location` is present on 68 of 266
+posts, all `sale_post` from thedoor: 65 "תל אביב - יפו, תל אביב", and one each of Holon, Ramat Gan
+and Be'er Sheva.
+
+### 215 — Ron's review of run 2.8: findings, no code change
+`corrections.json`: 51 posts reviewed (39 rejected, 12 active).
+- **6 price corrections,** all sale prices on `for_sale` or other-city posts. The instructions define
+  the price as the monthly rent, so the model followed them. **No change.**
+- **`632be5dc…`:** Ron's `other_city` "רמת החייל" is not a city correction (Ramat HaHayal is area
+  71; he meant the neighbourhood). Excluded from any comparison (#216).
+- **`4c5bbcaf…` (Rishon LeZion):** `stated_area_names` ["לב העיר"] on an other-city post. Next prompt
+  version: no area names on an other-city post. No change now. Its correction stays a truth.
+- **Ron's spot check of about 10 active posts** found no errors.
+
+### 216 — `corrections_excluded` in `label_overrides.json`
+**Amends #195.** Pairs (post, field) of Ron's review that no comparison, no error count and no
+regression truth uses, each with its reason. Ron's `corrections.json` is never edited.
+- `price` on `2d044201…`, `494ada70…`, `4e55319f…`, `551678f8…`, `87fc4917…`, `ac0b0cd6…`: the
+  instructions define the monthly rent.
+- `other_city` on `632be5dc…`: Ron meant the neighbourhood, not a city.
+- `other_city` on `2bac260c…`: Ron marked it reviewed with no city correction, so the model's
+  "עין ורד" would join as a truth; the field is now decided by the native-location rule (#214). The
+  model's error stays visible in `BACKLOG.md`, not in the regression count.
+
+A reviewed post with at least one correction still joins the set, an excluded one included; its
+excluded fields are left out of its truth.
+
+*Applied 2026-10-08.* `review_page` printed 5 posts joining the set (`494ada70…`, `4e55319f…`,
+`551678f8…`, `632be5dc…`, `ac0b0cd6…`, positions 53–57; the set is 51 posts after #196's removals) and
+the 8 pairs skipped. Three of the corrected posts were already in the set as blind labels (`2d044201…`,
+`87fc4917…`, `4c5bbcaf…`): their exclusions apply and they did not join again. `2bac260c…` has no
+correction on file: its pair is excluded for later. The errors per field now read `stated_area_names`
+1 of 51.
 
 ---
 

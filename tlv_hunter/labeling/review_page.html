@@ -315,6 +315,7 @@ function renderCard(card) {
       el("b", { text: card.listing_id.slice(0, 12) }),
       el("span", { text: card.position ? `set position ${card.position}` : "not in the set" }),
       el("span", { text: "rejection: " + (card.rejection_reason || "none (active)") }),
+      el("span", { text: card.city ? "city: " + card.city + (card.city_source === "native_location" ? " (from Facebook's location)" : " (from the model)") : "city: Tel Aviv-Yafo or none" }),
       el("span", { text: `prompt ${listing.prompt_version} · ${listing.model_name} · ${listing.classified_at}` }),
     ]);
     const left = el("div");
