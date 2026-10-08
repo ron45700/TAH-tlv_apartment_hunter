@@ -21,9 +21,6 @@ Exit codes: 0, done (a dry run included); 1, refused or failed.
 """
 
 import argparse
-import hashlib
-import shutil
-import sqlite3
 import sys
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
@@ -31,7 +28,15 @@ from pathlib import Path
 from typing import TextIO
 
 from tlv_hunter.config.yaml_config import YamlConfig
-from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, SQLITE_FILENAME, describe
+from tlv_hunter.jobs.common import (
+    CONFIG_ROOT,
+    REPO_ROOT,
+    SQLITE_FILENAME,
+    backup_store,
+    describe,
+    raw_post_rows,
+    sha256_file,
+)
 from tlv_hunter.postmodel.rederive import Plan, plan_rederivation, rederived_lifecycle
 from tlv_hunter.store.sqlite import SqliteRepository
 
@@ -105,9 +110,9 @@ def _run(
         print("nothing to change", file=out)
         return EXIT_DONE
 
-    backup = _backup(database, clock())
+    backup = backup_store(database, clock())
     print(f"backup: {backup}", file=out)
-    print(f"backup SHA-256: {_sha256(backup)} (the store's, before: the same)", file=out)
+    print(f"backup SHA-256: {sha256_file(backup)} (the store's, before: the same)", file=out)
 
     repository = SqliteRepository(database)
     for change in plan.changes:
@@ -126,9 +131,9 @@ def _run(
             file=out,
         )
 
-    identical = _raw_posts(backup) == _raw_posts(database)
+    identical = raw_post_rows(backup) == raw_post_rows(database)
     print(f"stored RawPost documents identical to the backup's: {identical}", file=out)
-    print(f"store SHA-256 after: {_sha256(database)}", file=out)
+    print(f"store SHA-256 after: {sha256_file(database)}", file=out)
     if not identical:
         print("failed: a RawPost differs from the backup; restore the backup", file=out)
         return EXIT_FAILED
@@ -165,37 +170,6 @@ def _print_plan(plan: Plan, out: TextIO, *, after_write: bool = False) -> None:
             f"  {_status(key):22} {plan.before.get(key, 0):4} -> {plan.after.get(key, 0):4}",
             file=out,
         )
-
-
-def _backup(database: Path, now: datetime) -> Path:
-    base = database.with_name(f"{database.stem}.{now.date().isoformat()}.backup{database.suffix}")
-    target = (
-        base
-        if not base.exists()
-        else base.with_name(
-            f"{database.stem}.{now.strftime('%Y-%m-%dT%H%M%S')}.backup{database.suffix}"
-        )
-    )
-    if target.exists():
-        raise FileExistsError(f"{target} exists: not overwritten")
-    shutil.copy2(database, target)
-    if _sha256(target) != _sha256(database):
-        raise RuntimeError("the backup does not hash like the store")
-    return target
-
-
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
-def _raw_posts(path: Path) -> list[tuple[str, str, str | None]]:
-    connection = sqlite3.connect(f"file:{path.resolve().as_posix()}?mode=ro", uri=True)
-    try:
-        return connection.execute(
-            "SELECT listing_id, doc, text_hash FROM raw_posts ORDER BY listing_id"
-        ).fetchall()
-    finally:
-        connection.close()
 
 
 if __name__ == "__main__":

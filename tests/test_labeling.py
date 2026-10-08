@@ -64,7 +64,9 @@ def test_the_proposed_set_holds_the_spike_posts_and_about_fifty() -> None:
     cases = {entry.listing_id: entry.case for entry in regression_set.posts}
     spike = json.loads(_fixture(SPIKE_IDS))
     assert {entry["listing_id"] for entry in spike} <= set(cases)
-    assert 45 <= len(cases) <= 55
+    # Only the proposed set is bounded: a post that joins from a review (#195, #216) has
+    # `truth: "review"` and is not counted.
+    assert 45 <= sum(entry.truth == "blind" for entry in regression_set.posts) <= 55
     # The spike's two wrong labels are corrected (DECISIONS.md #165).
     for entry in spike:
         if entry["case"] in ("seeking", "Jaffa"):

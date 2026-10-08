@@ -13,7 +13,6 @@ the spend limit, the quota, a refused key or request, an unknown model); 1, fail
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
@@ -29,7 +28,14 @@ from tlv_hunter.classify.cost import CostMeter
 from tlv_hunter.classify.openai_classifier import OpenAIClassifier
 from tlv_hunter.classify.transport import ModelTransport, OpenAITransport
 from tlv_hunter.config.yaml_config import YamlConfig
-from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, SQLITE_FILENAME, job_logging, log_failure
+from tlv_hunter.jobs.common import (
+    CONFIG_ROOT,
+    REPO_ROOT,
+    SQLITE_FILENAME,
+    append_dropped_names,
+    job_logging,
+    log_failure,
+)
 from tlv_hunter.store.sqlite import SqliteRepository
 
 KEY_VARIABLE = "OPENAI_API_KEY"
@@ -128,16 +134,14 @@ class _DroppedNames:
         self._path = path
 
     def write(self, completed: Completed) -> None:
-        line = {
-            "listing_id": completed.listing.listing_id,
-            "prompt_version": completed.listing.prompt_version,
-            "dropped_streets": list(completed.dropped_streets),
-            "dropped_area_names": list(completed.dropped_area_names),
-            "dropped_other_city": completed.dropped_other_city,
-        }
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        with self._path.open("a", encoding="utf-8") as file:
-            file.write(json.dumps(line, ensure_ascii=False) + "\n")
+        append_dropped_names(
+            self._path,
+            listing_id=completed.listing.listing_id,
+            prompt_version=completed.listing.prompt_version,
+            streets=completed.dropped_streets,
+            area_names=completed.dropped_area_names,
+            other_city=completed.dropped_other_city,
+        )
 
 
 def _positive_float(value: str) -> float:

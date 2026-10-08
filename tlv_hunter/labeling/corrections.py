@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter, field_validator
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.labeling.regression_set import text_sha256
 from tlv_hunter.parsing.datetimes import require_utc
+from tlv_hunter.postmodel.reclassify import PROPOSALS_FILE
 
 CORRECTIONS_FILE = "corrections.json"
 RUNS_DIR = "runs"
@@ -177,13 +178,38 @@ def run_listings(runs_dir: Path) -> Iterator[Listing]:
                     yield Listing.model_validate_json(json.dumps(post["listing"]))
 
 
+def reclassified_listings(reclassify_dir: Path) -> Iterator[Listing]:
+    """The old `Listing` of every proposal a reclassify run kept (DECISIONS.md #222), from each
+    run's `proposals.jsonl`: whether or not the proposal was applied, it holds the classification
+    that was in the store when the run was made. A line cut short by a killed run is skipped."""
+    if not reclassify_dir.is_dir():
+        return
+    for proposals in sorted(reclassify_dir.glob(f"*/{PROPOSALS_FILE}")):
+        for line in proposals.read_text(encoding="utf-8").splitlines():
+            try:
+                old = json.loads(line)["old"]["listing"]
+            except (json.JSONDecodeError, KeyError, TypeError):
+                continue
+            yield Listing.model_validate_json(json.dumps(old))
+
+
 def find_reviewed(
-    listing_id: str, correction: Correction, store_listing: Listing | None, runs_dir: Path
+    listing_id: str,
+    correction: Correction,
+    store_listing: Listing | None,
+    runs_dir: Path,
+    reclassify_dir: Path | None = None,
 ) -> Listing | None:
-    """The classification a correction names: the store's, or one kept by a regression run."""
+    """The classification a correction names: the store's, or one kept by a regression run, or one
+    a reclassify replaced (#222). The truth of a reviewed post stays Ron's corrected old
+    classification after the store holds a new one."""
     if store_listing is not None and correction.is_for(store_listing):
         return store_listing
     for listing in run_listings(runs_dir):
         if listing.listing_id == listing_id and correction.is_for(listing):
             return listing
+    if reclassify_dir is not None:
+        for listing in reclassified_listings(reclassify_dir):
+            if listing.listing_id == listing_id and correction.is_for(listing):
+                return listing
     return None

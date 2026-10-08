@@ -38,6 +38,7 @@ from tlv_hunter.labeling.corrections import RUNS_DIR
 from tlv_hunter.labeling.regression import prepare
 from tlv_hunter.labeling.regression_set import LABELING_DIR
 from tlv_hunter.labeling.run_report import PostRun, RunMeta, write_run
+from tlv_hunter.postmodel.reclassify import RECLASSIFY_DIRECTORY
 from tlv_hunter.store.sqlite import SqliteRepository
 
 KEY_VARIABLE = "OPENAI_API_KEY"
@@ -116,7 +117,7 @@ def _run(
         logger.error("no store at %s", database)
         return EXIT_FAILED
     store = SqliteRepository(database, read_only=True)
-    prepared = prepare(repo_root, store)
+    prepared = prepare(repo_root, store, repo_root / config.store_root / RECLASSIFY_DIRECTORY)
     if prepared.refusals:
         for reason in prepared.refusals:
             logger.error("refused: %s", reason)

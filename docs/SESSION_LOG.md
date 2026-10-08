@@ -3506,3 +3506,155 @@ compares the model's `other_city`, not the rule's, so its `other_city` bar is un
 - Phase 3's card must use `other_city_name` (`BACKLOG.md`).
 - Ron compares the cost of the runs with the OpenAI bill.
 - The failed post `73aebb24…` is retried by the next `classify_pending` run, when Ron starts one.
+
+## 2026-10-08 (continued) — Task 2.9: the plan for reclassify (docs only)
+
+### Done
+
+The plan for task 2.9 is in `PHASE_2.md` under 2.9, "Plan for task 2.9 — WAITING for Ron"; the
+approved 2.9 text is untouched. **No code, no test, no dependency change, no model call, no network
+call, no write to the store.** No other doc was edited (`BACKLOG.md` and `DECISIONS.md` wait for Ron's
+answers).
+
+Read first: `CLAUDE.md`, `PHASE_2.md`, `DECISIONS.md` #131, #139, #140, #144, #152, #163, #196–#216,
+`BACKLOG.md`, the last two entries of this log, `SCHEMA.md` Gates B and E, and the code the plan rests
+on (`classification_run.py`, `postmodel/rejects.py` and `rederive.py`, `jobs/classify_pending.py`,
+`jobs/rederive_rejections.py`, `jobs/common.py`, `store/sqlite.py`, `classify/instructions.py`,
+`classify/cost.py`, `labeling/corrections.py`, `regression.py`, `review.py`).
+
+### What was checked, read-only
+
+- **The store, `mode=ro`:** 194 `Listing`s, all `('3', 1, 'gpt-6-luna')`; 139 active, 55 rejected by
+  the model (21 `other_city`, 19 `for_sale`, 13 `not_listing`, 2 `seeking`); 0 flagged. The selection
+  of the plan picks **0 posts** today. `73aebb24…` is still pending with one failure.
+- **The worst case of one call,** computed offline with `OpenAIClassifier.request` and `worst_case`
+  (a dummy transport that is never called): $0.00329–$0.00366 for the 194 posts, $0.65 in all.
+- **`data/labeling`:** 57 entries in the set, 51 counted; 19 of the 51 are reviewed in
+  `corrections.json`, 8 with corrected fields.
+
+### The finding that shapes the plan
+
+`regression_run` finds a reviewed post's classification with `find_reviewed`: the store's `Listing`, or
+one a regression run kept. A reclassify replaces the store's, so for any of the 19 reviewed set posts
+the runner would refuse ("the reviewed classification is not found"). The plan keeps the replaced
+`Listing`s in `proposals.jsonl` and proposes that `find_reviewed` reads them (For Ron, point 7).
+
+### Deviations
+
+- **One git command was run** — `git status --short`, read-only, empty output — against the round's "no
+  git commands at all". Nothing else touched git.
+- Scratch scripts for the counts are in the session's scratchpad, outside the project.
+
+### Conflicts found
+
+None with an invariant. Points that touch decisions (#128/#188, #182/#214, #110/#144, #195) and the new
+stored files (invariant 1) are listed in the plan; stale lines are listed there under "Findings".
+
+### Next
+
+- Ron answers the 13 points of "For Ron before code" in `PHASE_2.md` 2.9.
+- Then the decisions are recorded in `DECISIONS.md` (from #217), `BACKLOG.md` gets its rows, and the
+  build starts in the order of the plan.
+- Unchanged and not part of 2.9: the version 4 items in `BACKLOG.md`, the retry of `73aebb24…`, Gate D
+  (2.10).
+
+## 2026-10-08 (continued) — Task 2.9 approved and built: reclassify (#217–#222)
+
+### Done
+
+No model call, no paid call, no network call, **no write to the production store**, no git command, no
+change to `instructions.txt`, `PROMPT_VERSION`, `SCHEMA.md`, `Repository`, `pyproject.toml` or `uv.lock`,
+nothing of Gate D.
+
+**Step 1, docs first:**
+- `DECISIONS.md` #217–#222 (Ron's answers to the plan, point 2 changed as #218).
+- `PHASE_2.md`: the 2.9 plan marked approved and amended for `--allow-file` and the list files.
+- `BACKLOG.md`: the #144 row now covers #217–#222; a Gate C row for "does restore of a flagged post
+  consult `model_reason` after a reclassify" (not decided).
+
+**Step 2, the batch of wording fixes** (Ron approved; no decision in any):
+- a. The areas bar (#198 in `DECISIONS.md` does say 90% by reach, so applied): `PHASE_2.md` 2.6 "The
+  pass bar", `BASELINE.md` §7 "Known limit", `BACKLOG.md` "Known limits".
+- b. `PHASE_2.md` §4 rewritten to what is open today (version 4 items, Gate D, DoD 4, DoD 5, 2.9's review).
+- c. `PHASE_2.md` 2.4 step 4: `classified_lifecycle(existing, listing, post)`.
+- d. `BACKLOG.md` "Last updated" and item 3 (now item 2: the sign-off, 51 of 194 reviewed); the dashboard
+  row removed and recorded in `ASSUMPTIONS.md` O2 ($0.03 against $0.0273).
+- e. `BASELINE.md` §14 "Open for Ron" points at `PHASE_2.md` §4.
+- f. `CLAUDE.md` phase line: 51 counted posts, 57 entries.
+
+Other doc lines touched, listed as asked: the `PHASE_2.md` 2.6 paragraph was re-wrapped around the
+areas fix; the 2.9 plan's header, section 1 flags, section 5 table and point 7 of the page, its tests
+line and its "For Ron" heading and point 2; `BACKLOG.md` item numbering (3 became 2) and a new row 1a
+(below). Not changed: `DECISIONS.md` #142, #170 and #198's neighbours still say 95% in their own
+history ("amended by #198" is the record).
+
+**Step 3, the build** (details and deviations in `PHASE_2.md` 2.9, "Built"):
+- `postmodel/reclassify.py`, `postmodel/reclassify_report.py`, `reclassification_run.py`,
+  `jobs/reclassify.py`, `jobs/apply_reclassify.py` (new).
+- `jobs/common.py` (the backup, the SHA-256, the `RawPost` rows, the dropped-names line, moved or
+  extracted unchanged), `jobs/rederive_rejections.py`, `jobs/classify_pending.py`,
+  `classification_run.py` (`tokens_by_kind`), `labeling/corrections.py`, `labeling/regression.py`,
+  `jobs/regression_run.py` (`find_reviewed` reads `reclassify/*/proposals.jsonl`).
+- `CLAUDE.md`: the commands, the third reader of the key, the fourth writer of the store and its lock
+  policy, the new modules, the phase line.
+- Tests: 149 new, in six files.
+
+### Verified
+
+- `uv run pytest`: **1247 passed, 1 failed** in 372 s. `ruff check .` all passed; `ruff format --check .`
+  142 files formatted.
+- The failure is not from this task: `test_labeling.py::test_the_proposed_set_holds_the_spike_posts_and_about_fifty`
+  asserts 45 to 55 entries and the set holds 57 since the review joined 5 posts (#216). The last
+  session's 1099 passed was run before that join. Left as it is (`BACKLOG.md` row 1a).
+- The production store, read-only afterwards: SHA-256 `2fcc382e…` (the value recorded after the
+  re-derivation), 194 `Listing`s all `('3', 1, 'gpt-6-luna')`, no `data/store/reclassify/` folder, and
+  `classify_runs/` holds only `4923eb379fb0.jsonl`.
+- Invariant 14: the loops' tests compare every `RawPost` document before and after on both stores; the
+  command tests compare every `raw_posts` row with the backup's. A sentinel key appears in no output,
+  log line, page or summary. The store file's bytes are identical after `reclassify --run`.
+
+### Deviations
+
+- Mine, of method: the plan said `reclassify_report.html` would be a template; the page is built in
+  Python with its values escaped. Others are listed in `PHASE_2.md` 2.9 "Built" (`attempts` in the
+  proposal; `--limit`/`--allow` in the plan mode; usage mistakes exit 1; the apply logs and checks the
+  fingerprint).
+- A shell quoting slip while editing (a `\n` that became a real newline in `jobs/common.py`) was found
+  by `ruff` at once and corrected; no other file was affected.
+
+### Conflicts found
+
+None with an invariant. The amendments Ron approved (#128/#188: a third key reader; #182/#214: a fourth
+writer, no lock) are in `CLAUDE.md` now.
+
+### Next
+
+- Ron reviews the build (`PHASE_2.md` 2.9, "Built").
+- Ron decides the failing bound in `test_labeling.py` (`BACKLOG.md` row 1a).
+- The first real `reclassify --run` (`--limit 10 --cap 0.02`) and any `apply_reclassify --apply` wait for
+  Ron's separate go and for a change of prompt version, model or schema: today the plan selects 0 posts.
+- Unchanged: the version 4 items, the retry of `73aebb24…`, Gate D (2.10), DoD 4 and 5, the Gate C row on
+  restore.
+
+## 2026-10-08 (continued) — Task 2.9 accepted; three small fixes
+
+No model call, no network call, no git command, no write to the production store (its SHA-256 is still
+`2fcc382e…`).
+
+- **The failing test, Ron's decision:** recorded as **#223** in `DECISIONS.md` (its own decision,
+  because it changes a test's rule and not #216's). `test_the_proposed_set_holds_the_spike_posts_and_about_fifty`
+  now counts the entries whose truth is `"blind"` (45 to 55); its other assertions are unchanged.
+  `BACKLOG.md` row 1a removed.
+- **The City column of `diff.html`'s State changes table** (plan section 5, block 2), which the first
+  build had left out. Done as planned and within the report module plus one value: `jobs/reclassify.py`
+  computes `other_city_ruling` for the old and the new `Listing` of each proposed post and passes the
+  pairs (`cities`, optional) to `write_run_files` / `render_diff`. A row where the old or the new status is
+  `other_city` reads "was X (source); becomes Y"; other rows are empty; no city passed gives a dash. No
+  other file changed. Six tests: five on the report (to, from, not a city row, no city given, escaping)
+  and one end to end (a Holon location, `native_location`).
+- **`BACKLOG.md` wording:** the "Next sprint" intro now says Phase 2 is being built and that 2.9 is
+  accepted; the regression-set row points at next-sprint item 2 (Ron's sign-off) and the review of pass 1,
+  not at "item 3". `PHASE_2.md` 2.9 "Built" says accepted, with the City column and the test count (155).
+- **Verified:** `uv run pytest` **1254 passed** in 452 s; `ruff check .` and `ruff format --check .` clean.
+- **Next:** Ron's own pytest run; the first real `reclassify --run` and any `--apply` wait for his
+  separate go and for a change of version, model or schema (the plan selects 0 posts today).

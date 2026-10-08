@@ -483,7 +483,7 @@ only (`CLAUDE.md`), and not in the job's wiring, which holds no rules.
   or `"not_listing"` from `post_nature`; else `None` (`rental_offer`, `sublet_offer`). That is
   Gate E's order (#92). `no_text` and `no_images` come before it, but a pending post has neither;
   `flagged` comes after and is a user's.
-- `classified_lifecycle(existing, listing)`: from a `"pending"` record only (`ValueError`
+- `classified_lifecycle(existing, listing, post)` (the post since #214): from a `"pending"` record only (`ValueError`
   otherwise). The state becomes `"active"`, or `"rejected"` with the reason. Every other field is
   unchanged, the two failure fields included (#152).
 - `failed_lifecycle(existing, error)` (used by 2.5): `classification_failures` plus 1,
@@ -955,10 +955,10 @@ model's output in the review report (2.7).
   deciding fields as `SCHEMA.md` names them, plus `ambiguous` and `note`.
 
 **The pass bar** (#142): `post_nature` and `other_city` no error; `apartment_kind`, `price`,
-`gender` and `areas` at least 95% exact; every other field at least 90%; no value filled in where
-the label says not written. **A post Ron marks ambiguous is not counted.** `areas` is compared with
-the areas Ron picked, as a set. **Streets and area names as written are not compared** (#177): they
-are outside the bar, and Ron marks a wrong one in the review report.
+`gender` at least 95% exact; `areas` at least 90% by reach, not exact (#198, amends #142); every other
+field at least 90%; no value filled in where the label says not written. **A post Ron marks
+ambiguous is not counted.** `areas` is compared with the areas Ron picked, as a set. **Streets and area names as written are
+not compared** (#177): they are outside the bar, and Ron marks a wrong one in the review report.
 
 **Running it:** paid, about $0.01–0.07 for 50 posts per pass at the estimates of 2.8; on every
 prompt or model change, with the result saved next to the prompt version. **If `gpt-6-luna`
@@ -1347,6 +1347,524 @@ per field) is written to `data/` first, then the new `Listing` replaces the old,
 model's new answer, the rejection derived again. Each run has its own cap, set by Ron when he starts it. No bulk reclassify is
 planned.
 
+### Plan for task 2.9 — approved by Ron, 2026-10-08 (#217–#222)
+
+Written 2026-10-08; **approved the same day**, all 13 points as recommended except point 2, which
+Ron changed (#218): still no "apply all", but `reclassify --run` also writes two list files into the
+run folder and `apply_reclassify` accepts `--allow-file`. The text below is amended where #218
+changes it; the rest is as written. The store was read once, `mode=ro`, for the counts below; the
+worst-case figures were computed offline from the request builder (no transport, no network).
+**Built 2026-10-08** (see "Built" at the end of this plan).
+
+**Scope:** select the `Listing`s that are not current, ask the model again, write a diff report, and
+only then replace the `Listing` (and, when the rejection changes, the lifecycle record). Nothing in
+`SCHEMA.md` changes: no field, no type, no stored shape beyond the report files named in §5, which
+are files under `data/` like `classify_runs/` (and, like it, invariant 1's business, #182).
+
+**Shape in one paragraph.** Two stages, two commands. **Stage 1** (`jobs/reclassify.py`) selects,
+calls the model and writes the diff report; it opens the store `read_only` and writes nothing to it.
+**Stage 2** (`jobs/apply_reclassify.py`) is free: it replaces the `Listing`s Ron names, after a backup.
+The approved order ("a diff report is written first, then the new `Listing` replaces the old") becomes
+a physical boundary between two commands, and the one command that writes the production store holds
+no key. A one-command alternative is in "For Ron before code", point 1.
+
+#### 1. The commands, flags and exit codes
+
+```bash
+uv run python -m tlv_hunter.jobs.reclassify                                  # free: the plan
+uv run --env-file .env python -m tlv_hunter.jobs.reclassify --run --cap 0.02 --limit 10   # PAID
+uv run --env-file .env python -m tlv_hunter.jobs.reclassify --run --cap 0.10 --allow 2bac260c,26e8a28b   # PAID
+uv run python -m tlv_hunter.jobs.apply_reclassify <run_id>                   # free: what it would write
+uv run python -m tlv_hunter.jobs.apply_reclassify <run_id> --apply --allow <id prefixes>   # WRITES the store
+uv run python -m tlv_hunter.jobs.apply_reclassify <run_id> --apply --allow-file <path> [<path> …]   # WRITES the store
+```
+
+| | `reclassify` (no flag) | `reclassify --run` | `apply_reclassify` | `apply_reclassify --apply` |
+|---|---|---|---|---|
+| Calls the model | no | **yes, PAID** | no | no |
+| Reads `OPENAI_API_KEY` | no | yes | no | no |
+| Store | read-only | read-only | read-only | **written (the fourth writer)** |
+| Writes | nothing | `<store_root>/reclassify/<run_id>/` | nothing | the store; `classify_runs/<run_id>.jsonl`; a backup |
+
+- **Dry run by default**, in both commands, as `rederive_rejections` has: `reclassify` with no flag is
+  the plan; `apply_reclassify` without `--apply` prints what it would write.
+- **`reclassify --run`:** `--cap USD` **required, no default** (#153, as `classify_pending`).
+  `--limit N` (1 or more): the first N selected posts by `listing_id`. `--allow <prefixes>`: only the
+  selected posts whose `listing_id` starts with one of them (8 characters or more, as
+  `rederive_rejections`); a prefix that matches no selected post refuses the run. *Proposed:* `--run`
+  needs `--limit` or `--allow`, so the number of posts is always chosen, never implied (#144).
+- **`apply_reclassify`:** the `run_id` names a folder under `<store_root>/reclassify/`. `--apply` needs
+  `--allow` (prefixes of 8 or more, each matching a post in that run's proposals; none left over in
+  either direction, as `rederive_rejections` refuses) and/or `--allow-file <path> [<path> …]` (#218):
+  a list file written by `reclassify --run` (`allow_unchanged.txt`, `allow_state_changes.txt`) or one
+  of Ron's own, one `listing_id` or prefix per line, blank lines and lines starting with `#`
+  ignored. Both forms are checked the same way and may be combined. There is no "apply all".
+- **Exit codes:**
+
+| | 0 | 1 | 2 |
+|---|---|---|---|
+| plan | printed (nothing selected included) | failed (no store, a store error) | — |
+| `--run` | every selected post attempted, whatever the outcome per post | refused or failed (no key, no store, a bad `--allow`, a fingerprint mismatch, a disk error) | stopped early with the store untouched: the cap, the spend limit, the quota, a refused key or request, an unknown model (`classification_run.STOP_KINDS`) |
+| `apply_reclassify` | dry run printed, or every named post written | refused or failed (see §6) | finished, but at least one named post was **not** written (changed since the run); each is listed |
+
+- **Plan output** (free; no key, no network): the current triple (`PROMPT_VERSION`,
+  `LISTING_SCHEMA_VERSION`, `MODEL_NAME`); the stored `Listing`s counted by triple; the posts selected;
+  the posts left out and why (§2); for each selected post the id prefix, its status, its triple, and a
+  mark when `corrections.json` holds a reviewed correction for it (§7); the cost estimate and the
+  worst case of §8; and the exact `--run` line it would take.
+- **Logs:** JSON lines on stderr with `run_id`, through `jobs/common.job_logging`, as the other
+  commands. No post text, name, phone or key (invariants 8, 15; #128).
+
+#### 2. The selection
+
+A post is selected when **all** hold:
+
+1. It has a `Listing` (`get_listing`) and a lifecycle record.
+2. The record's `state` is `"active"`, or `"rejected"` with `rejection_reason` one of `other_city`,
+   `seeking`, `for_sale`, `not_listing` (the model's reasons, `postmodel.rederive.MODEL_REASONS`), **or**
+   the record carries a flag (`flagged_by` is set): #144 keeps a flagged post's flag and state and lets
+   its `Listing` be replaced.
+3. `Listing.prompt_version != PROMPT_VERSION`, **or** `Listing.schema_version !=
+   LISTING_SCHEMA_VERSION`, **or** `Listing.model_name != MODEL_NAME`. "Not the current one" is read as
+   **different**, not "older": a code rollback would select the newer `Listing`s too, and the plan's
+   counts by triple make that visible before any call. `PROMPT_VERSION` covers the text, the schema
+   sent, the areas, the known places, the model and the setting (#179), so no fourth test is needed.
+
+Left out, by construction: `"pending"` (including the one failed post, `73aebb24…`, which belongs to
+`classify_pending`); `"archived"`; `"rejected"` with `no_text` or `no_images` (the pre-model rejects,
+which have no `Listing`); duplicates (no `Listing`).
+
+**No Repository change.** The selection is a plain function, `postmodel/reclassify.py`, over
+`query()`, `get_lifecycle` and `get_listing`, exactly as `plan_rederivation` is. 266 posts: no query
+method is needed, and the seam contract stays as approved (`save_classification` already says "An
+existing `Listing` is replaced (reclassify, #144)").
+
+**On today's store (read `mode=ro`, 2026-10-08): 0 posts selected.** The `listings` table holds 194
+rows, all `('3', 1, 'gpt-6-luna')`: 139 active; 55 rejected by the model (21 `other_city`, 19
+`for_sale`, 13 `not_listing`, 2 `seeking`); 0 flagged. Left out: 37 duplicates and `73aebb24…`
+(pending), 34 pre-model rejects. So the first real `--run` has to wait for a change of version, model
+or schema; the paid path is tested offline, and the first real use is a small `--limit` on Ron's go.
+
+#### 3. The per-post flow
+
+**Stage 1 — `reclassify --run`** (paid; the store is read-only):
+
+1. The plan of §2, narrowed by `--allow` and `--limit`. The classifier refuses to start when its
+   fingerprint differs from `PROMPT_FINGERPRINT`, as in `classify_pending`.
+2. For each post, the snapshot: the stored `RawPost` (its `text_sha256`), the old `Listing`, the
+   lifecycle record's `state`, `rejection_reason` and whether it is flagged.
+3. **The call:** `attempt_post(post, classifier, sleep)` from `classification_run.py`: the same
+   attempts table (#182), the same cap check before every attempt, the same stops. The model receives
+   `post.text` verbatim and alone (invariants 8, 11, 14).
+4. **The answer:** one line is appended to `proposals.jsonl` and flushed at once, so a crash loses no
+   paid answer. A line holds the snapshot, the new `Listing`, the names dropped by #162/#180, the
+   status the new `Listing` would give (`model_reason(post, new_listing)`, #214), the fields that
+   changed, and the call's cost. A failed post gets a line with its error kind and no `Listing`.
+5. **The diff, per field,** old against new, for every `Listing` field except the provenance
+   (`schema_version`, `listing_id`, `model_name`, `prompt_version`, `classified_at`, which always
+   differ). `price_source` is shown with `price`. `areas` shows added and removed numbers. The
+   status (state and reason) is compared separately.
+6. At the end (or at a stop): `summary.json` and `diff.html` are written, then `summary.json` is
+   marked `complete`. The store has not been touched.
+
+**Stage 2 — `apply_reclassify --apply --allow …`** (free; writes the store):
+
+1. **Refuses unless the report is complete:** `summary.json` says `complete` and `diff.html` exists.
+   This is what makes "the diff report first" a rule of the code and not of discipline.
+2. The named posts are matched to the proposals; a post whose proposal failed has nothing to apply.
+3. **Backup** (§6), then for each post, in `listing_id` order:
+   - Read again right before the write: the `RawPost`, the lifecycle record, the `Listing`. If the
+     post's text hash is not the proposal's, or the stored `Listing`'s `classified_at`, or the record's
+     `state`, `rejection_reason` or flag differ from the snapshot, **write nothing for this post**,
+     list it as "changed since the run" and go on. If the stored `Listing` already is the proposed one
+     (`classified_at` equal), it is "already applied": a second apply is idempotent.
+   - `save_classification(new_listing, lifecycle)`, one transaction (#131), with the lifecycle below.
+4. After: the `RawPost` check against the backup (§6), the counts, and a second plan showing the
+   applied posts no longer selected. The dropped-names file for the applied posts goes to
+   `<store_root>/classify_runs/<apply_run_id>.jsonl`, in `classify_pending`'s format, so the review
+   report reads it unchanged (§7).
+
+**The lifecycle record** — what `classified_lifecycle` cannot do, and what is proposed:
+
+`classified_lifecycle` stays as it is: it accepts a `"pending"` record only, which guards the
+classification job against classifying a post twice. It is **not widened.** Nothing new is needed in
+`postmodel/rejects.py`: `postmodel/rederive.py::rederived_lifecycle(existing, listing, post)`
+already takes an `"active"` or model-`"rejected"` record and returns it with only `state` and
+`rejection_reason` changed, from `model_reason(post, listing)`. Reclassify calls it with the **new**
+`Listing`.
+
+| Existing record | The lifecycle written with the new `Listing` |
+|---|---|
+| `active` or model-`rejected`, unflagged | `rederived_lifecycle(record, new_listing, post)`. `images`, `last_published_at`, the failure fields (#152) and the flag fields are copied unchanged |
+| Flagged (`flagged_by` set) | The record **as read**, byte for byte: flag, state and reason kept (#144). Only the `Listing` is replaced |
+| Anything else | Never selected |
+
+**A change of state** (`active` ↔ `rejected`, or one rejection reason to another) is possible: the new
+answer can change `post_nature`, or `other_city` with the model's city (Facebook's location field
+still decides first, #214). It is applied exactly like any other difference, and it is the **first
+thing the report shows** (§5), because it is the only difference that changes who sees a post. Ron
+chooses which prefixes to allow; a state change gets no special flag (point 6 below).
+
+#### 4. A failed call on a post that already has a `Listing`
+
+- **The old `Listing` stays.** Stage 1 writes nothing to the store, so this holds by construction.
+- **`classification_failures` and `last_classification_error` are not touched.** `SCHEMA.md` Gate E
+  and #152 already say it: "Not counted for a failed reclassify (the old `Listing` stays)", and not
+  counted either when the run stops for its own cap or the project's spend limit.
+- The failure is in the report (id, kind, attempts) and in the log, and nowhere in the store. The post
+  is still selected by the next plan; Ron decides whether to try it again. A post that keeps failing
+  would be paid for on every attempt, which is the cost of not storing the failure; a manual command
+  with `--allow` makes that Ron's choice (point 11).
+
+#### 5. The diff report
+
+**Where:** `<store_root>/reclassify/<run_id>/` (that is `data/store/reclassify/<run_id>/`), beside
+`classify_runs/`, gitignored with `data/`. It holds real posts and phone numbers, like the other
+report pages. `run_id` is the command's own, 12 hex characters, as the other jobs.
+
+| File | What | Written |
+|---|---|---|
+| `proposals.jsonl` | One line per selected post attempted: `listing_id`, `text_sha256`, `old` (the full `Listing`, `state`, `rejection_reason`, flagged yes/no), `new` (the full `Listing`, the status it gives; `null` on failure), `error` (the kind; or `null`), `fields_changed`, `dropped` (streets, area names, city), `cost`. **The source of truth for stage 2**, and the archive of every `Listing` it replaces | Appended per post |
+| `summary.json` | `format_version`, `run_id`, times, the selection triple counts, the current triple and `PROMPT_FINGERPRINT`, cap, spent, calls, tokens by kind, reported models, counts (proposed, failed, not attempted, unchanged apart from provenance), `stopped`, `complete` | At the end |
+| `diff.html` | The page Ron reads | At the end |
+| `allow_unchanged.txt`, `allow_state_changes.txt` | The `--allow-file` lists (#218): the proposed posts whose status is unchanged, and those whose state or reason changes. One full `listing_id` per line, after a `#` comment line | At the end |
+
+(File names and shapes approved, #219 and #218: they are new stored files, invariant 1.)
+
+**`diff.html`,** static like `review.html` (inline markup, no network, post text set as text and never
+parsed as HTML), in this order — **what Ron reads first is the first two blocks:**
+
+1. **Header:** the run, from-triples to the current triple, calls, cost against the cap, counts, the
+   reported model, `stopped` if it did.
+2. **State changes:** one row per post whose status differs, `old status → new status`, the city and
+   its source (`other_city_name`, #214). Empty is stated ("no post changes state").
+3. **Fields changed:** per field, how many posts changed, largest first; for `areas`, how many gained
+   and how many lost a number.
+4. **Failed and not attempted posts,** with the kind.
+5. **Posts with a reviewed correction on file** (`corrections.json`, read-only): the replacement
+   leaves Ron's correction attached to the old classification (§7).
+6. **One card per post:** the text; the changed fields, old → new; the unchanged ones collapsed.
+   Filters: state changed, a given field changed, failed.
+7. **The two list files** (`allow_unchanged.txt`, `allow_state_changes.txt`, #218), named with their
+   counts and the `apply_reclassify … --allow-file` line to use. Ron may copy either file and delete
+   the lines he does not accept.
+
+A caution the page states at its top: the same prompt and model give a different answer on many posts
+(20 of 46 posts changed between the two passes of the version 3 regression run, O12), so the diff
+shows the model's variation as well as the effect of the change. It cannot tell them apart.
+
+#### 6. Store safety
+
+`apply_reclassify --apply` would be **the fourth command that writes the production store**, with
+`run_once`, `classify_pending` and `rederive_rejections`. It is the only one of the two new commands
+that writes it; `reclassify` opens it `read_only`, like `regression_run`.
+
+- **Backup before any write,** the dated copy beside the store, its path and SHA-256 printed, the copy
+  required to hash the same as the store: `rederive_rejections`' `_backup`, `_sha256` and `_raw_posts`
+  move unchanged to `jobs/common.py` and both commands import them (its 12 tests stay as they are).
+- **Re-read before each write** (§3), the optimistic check #214 chose: a record that no longer holds
+  the status the proposal saw is not written. Unlike `rederive_rejections`, which fails the run,
+  `apply_reclassify` skips that post and lists it, because the model's answer is already paid for;
+  exit code 2.
+- **The lock policy is #140's, extended to a fourth writer: no lock.** The command does not check that
+  `run_once` or another writer is not running. A concurrent writer to the *same record* can still win
+  (last write wins, #65); `run_once` is the one that rewrites lifecycle records of posts like these, so
+  **never beside `run_once`**. Beside `classify_pending` it is practically safe, since the two touch
+  disjoint posts (pending against active/rejected) and SQLite serialises writes, but the rule stays
+  "never at the same time". A lock shared by all the writers is phase 5's.
+- **Invariant 14.** Stage 1 never opens the store for writing (a test: the file's SHA-256 is the same
+  before and after, and a write attempt raises). Stage 2 calls only `save_classification`, which never
+  writes `raw_posts`. After the writes the command compares every `raw_posts` row (`listing_id`, `doc`,
+  `text_hash`) with the backup's and prints the result; a difference prints "restore the backup" and
+  exits 1, as `rederive_rejections` does. A contract test on both stores pins that `save_classification`
+  over an existing `Listing` leaves the `RawPost` document byte-identical.
+- **Refusals before anything is written:** no store (SQLite would create one); a run folder that is
+  not `complete`; an `--allow` prefix under 8 characters or matching nothing; a backup that already
+  exists under the exact name (the dated name gets a time suffix, as now); a proposal whose
+  `PROMPT_FINGERPRINT` is not the one the code has now (the answer was made for a prompt that is no
+  longer current).
+
+#### 7. What a reclassify does to `data/labeling`
+
+Read from `labeling/corrections.py`, `labeling/regression.py`, `labeling/review.py`; counts from
+`corrections.json`, `regression_set.json` and `label_overrides.json` as they stand (2026-10-08).
+
+- **`corrections.json` (51 records, all for `('3', 'gpt-6-luna')` classifications, 8 with corrected
+  fields).** A record names the classification it reviewed by `prompt_version`, `model_name` and
+  `classified_at`; a correction is "never applied to a newer classification" (2.7), and
+  `Correction.is_for(listing)` says so. After a replacement, Ron's correction stays in the file but
+  belongs to a classification that is no longer in the store. The review page treats the new
+  classification as new (its progress key includes `classified_at`). Until phase 3's corrections
+  record exists (#173), **a card shows the new answer without Ron's correction.**
+  `CorrectionFile.errors_per_field` counts every reviewed record whether or not it still matches the
+  store, so "x of 51" keeps describing the old classifications.
+- **The break that matters: `regression_run` refuses.** `regression.prepare` finds the classification
+  a correction names with `find_reviewed`: the store's `Listing` if `is_for`, else a `Listing` kept in
+  a regression run's `results.json`. The 2.8 classifications are in the store only. Replace one and
+  `find_reviewed` returns `None`, and for any set post with a reviewed correction the runner refuses
+  with "the reviewed classification is not found" (`regression.py`, line 100). **19 of the 51 posts of
+  the set are reviewed, 8 with corrected fields** (the 5 `truth: "review"` posts and 3 blind ones).
+  Reclassifying one of the 19 blocks the next regression run until this is dealt with. Options in
+  point 7 below; recommended: `find_reviewed` also reads the old `Listing`s kept in
+  `reclassify/*/proposals.jsonl` (a read added to `labeling/corrections.py`, beside `run_listings`; no
+  schema). The truth then stays Ron's corrected **old** classification, which is what it should be.
+- **The review-truth posts in the set** (positions 53–57): their truth is `corrected_listing(found,
+  correction)` over the old classification, so they are the same case; with the read above they keep
+  their truth unchanged. They are not re-labelled by a reclassify.
+- **`labels.json`, `label_overrides.json`, `regression_set.json`:** untouched, and unaffected. Labels
+  and overrides are keyed by post and text hash, not by classification.
+- **`classify_runs/*.jsonl` (the dropped names).** `review.dropped_names` keys a line by
+  `(listing_id, prompt_version)` and takes the newest file by modification time. Stage 2 writes its
+  file at apply time, for the applied posts only (never at stage 1: a proposal not applied must not
+  attach new dropped names to the old `Listing`). When only the model or the schema changed and the
+  version did not, the new line wins by being the newest, as intended. When the version changed, the
+  old lines are simply no longer looked up. Posts not reclassified keep their lines.
+- **`runs/*/results.json`** (regression runs): untouched.
+- **Afterwards,** `review_page` is run again by Ron (free) so the cards show the new classifications.
+
+#### 8. Cost
+
+All figures are from the usage metadata of run 2.8 (`SESSION_LOG.md`, 2026-10-06; version 3, effort
+`none`, temperature 0), still estimates against the OpenAI bill (O2).
+
+| | Calculation | Result |
+|---|---|---|
+| Run 2.8 | 197 calls, 194 posts classified | $0.042574 |
+| Check from the tokens | uncached 1,033,513 − 988,940 = 44,573 × $0.10/M = $0.004457; cached 988,940 × $0.01/M = $0.009889; output 56,454 × $0.50/M = $0.028227 | $0.042573 |
+| Per call | $0.042574 / 197 | $0.000216 |
+| **Per post** | $0.042574 / 194 (the three retried calls included) | **$0.000219, about $0.00022** |
+| **A full pass of 194** | 194 × $0.000219 = $0.0425, plus one cold cache write (about 4,700 tokens × ($0.125 − $0.01)/M = $0.0005) | **about $0.043** |
+| The same at a larger prompt | the output is 66% of the cost and does not grow with the prompt; a prefix 10% longer (about 500 cached tokens × $0.01/M × 194) adds about $0.001 | $0.043–0.05 |
+| A post that takes two attempts | 2 × $0.00022 | $0.00044 |
+| 10 posts | 10 × $0.000219 | $0.0022 |
+| **Worst case of one call, for the cap check** | the request's characters counted as tokens at the cache-write price ($0.125/M) plus the full 2,000 output tokens ($0.50/M = $0.001), computed offline for the 194 posts with `worst_case` | **$0.00329 to $0.00366** |
+
+The cap check stops a call when *spent so far + this call's worst case* would pass the cap. So a cap
+C lets the run go on until it has spent about C − $0.0037:
+
+| Run | Estimate | Proposed cap | Posts the cap allows at the typical rate |
+|---|---|---|---|
+| First real try, `--limit 10` | $0.0022 | **$0.02** | (0.02 − 0.0037) / 0.000219 = 74 |
+| A full pass, `--limit 194` | $0.043 | **$0.10** | (0.10 − 0.0037) / 0.000219 = 440, 2.3 times the pass |
+
+The sum of the 194 worst cases is $0.65. It is the most that the model's own rule could be charged
+for a pass without the cap, and is not an estimate. The cap is Ron's per run (`--cap` has no default);
+the project's hard spend limit is the second line. Stage 2 costs nothing. A monthly full pass of the
+posts the store would hold (4,500–7,500) would be $1–1.7: not planned (#144), and not the real cost of
+a reclassify, which is the churn of the previous point.
+
+#### 9. Tests, files, docs and order
+
+**Tests, all offline** (the network guard stays; fake classifier, fake transport, injected clock and
+sleep, temporary stores of both kinds):
+- **Selection** (`tests/test_reclassify_select.py`): each of the three attributes alone selects;
+  current selects nothing; pending, archived, `no_text`, `no_images`, duplicates and a post with no
+  `Listing` are left out; a flagged post is selected with its record marked; a post with a rejection
+  not given by the model is never selected; ordering and `--limit`/`--allow` narrowing; the shape of
+  today's store (all current) gives an empty plan.
+- **Diff and lifecycle** (`tests/test_reclassify_diff.py`): every `Listing` field detected, the
+  provenance not counted, `areas` added/removed, `price_source` with price; active → rejected,
+  rejected → active, one reason to another, unchanged status; a flagged record written as it was read;
+  `images`, `last_published_at`, the failure fields and the flag fields unchanged; the other-city rule
+  of #214 still decides first.
+- **Stage 1** (`tests/test_reclassify_run.py`): successes become proposal lines; a failed post gets an
+  error line and nothing else; a stop on the cap, the spend limit, quota, auth; **the store file's
+  SHA-256 is identical before and after, and a write raises**; the sentinel key in no log line; the
+  classifier's fingerprint refusal; `proposals.jsonl` flushed per post (killed run keeps its lines);
+  `summary.json` marked `complete` only at the end; the report lists the state changes first, writes
+  the two list files (#218), and sets post text as text.
+- **Stage 2** (`tests/test_apply_reclassify.py`): refuses an incomplete run folder, a short or unmatched
+  prefix, a missing store (not created) and a proposal of another fingerprint; the backup exists and
+  hashes like the store; **every `raw_posts` row identical to the backup's** (invariant 14), on the
+  SQLite and `local_json` stores; a record, a `Listing` or a text hash changed since the run → not
+  written, listed, exit 2; a second apply is a no-op; only the named posts change; the dropped-names
+  file holds the applied posts only; the lifecycle fields other than `state` and `rejection_reason`
+  unchanged; a flagged record unchanged; the write is one transaction (a forced failure leaves both
+  the `Listing` and the record as they were).
+- **Failures** (`tests/test_reclassify_failures.py`): a failed call leaves the old `Listing`,
+  `classification_failures` and `last_classification_error` unchanged (#152).
+- **Labeling** (`tests/test_corrections.py`/`test_regression_prepare.py`, extended, if point 7 is
+  approved): a reviewed post whose store `Listing` was replaced is still found through the proposals;
+  `regression_run --check` no longer refuses it.
+- **Contract** (`tests/test_repository_contract.py`): `save_classification` over an existing `Listing`
+  replaces it and leaves the `RawPost` byte-identical (exists for 2.2; confirmed it covers this).
+- **Helpers moved** (`jobs/common.py`): `rederive_rejections`' existing tests unchanged and green.
+
+**Files touched:**
+
+| File | Change |
+|---|---|
+| `tlv_hunter/postmodel/reclassify.py` (new) | Plain: the selection, the per-field diff, the proposal record |
+| `tlv_hunter/postmodel/reclassify_report.py` (new), `reclassify_report.html` (new) | The report: `summary.json`, `diff.html`; built like `labeling/page.py` (reuses `script_json`) |
+| `tlv_hunter/reclassification_run.py` (new) | Stage 1's loop: wiring over `attempt_post` and the meter, as `classification_run.py` |
+| `tlv_hunter/jobs/reclassify.py` (new) | The plan and `--run` |
+| `tlv_hunter/jobs/apply_reclassify.py` (new) | The dry run and `--apply` |
+| `tlv_hunter/jobs/common.py` | `backup`, `sha256` and `raw_posts` moved here from `rederive_rejections.py` |
+| `tlv_hunter/jobs/rederive_rejections.py` | Imports them; behaviour unchanged |
+| `tlv_hunter/labeling/corrections.py` | `find_reviewed` also reads `reclassify/*/proposals.jsonl` (point 7); read-only |
+| `tests/test_reclassify_*.py`, `tests/test_apply_reclassify.py` (new); the labeling tests above | Tests above |
+| `pyproject.toml`, `uv.lock` | **None.** No dependency change |
+| `tlv_hunter/store/*`, `contracts/*`, `classify/*`, `postmodel/rejects.py`, `reference/*`, `classify/instructions.txt` | **None** |
+
+**Docs touched, after approval:** `CLAUDE.md` (the commands with PAID/WRITES marks; the sentence on who
+reads `OPENAI_API_KEY`, #128/#188: a third reader; the sentence on who writes the production store: a
+fourth, with its lock policy; the new plain modules; the phase line); `PHASE_2.md` (2.9 built);
+`DECISIONS.md` (the decisions of "For Ron", from #217); `BACKLOG.md` (the #144 row, and a row for
+every decision that needs code); `SESSION_LOG.md`. `SCHEMA.md`: nothing — no field changes.
+
+**Order of work:**
+1. `postmodel/reclassify.py` (selection, diff, proposal record) and its tests.
+2. Move the three helpers to `jobs/common.py`; `rederive_rejections`' tests unchanged and green.
+3. The report writer and its tests.
+4. `reclassification_run.py` and `jobs/reclassify.py` (plan, then `--run`), with their tests.
+5. `jobs/apply_reclassify.py` and its tests.
+6. `find_reviewed` and its tests, if approved.
+7. `uv run pytest`, `ruff check`, `ruff format`; then the docs.
+8. The first real `--run` only with a version, model or schema change in the code, on Ron's separate
+   go, at `--limit 10 --cap 0.02`, and an apply only after Ron reads `diff.html`. The version 4 items
+   in `BACKLOG.md` are Ron's and are not part of this task.
+
+#### For Ron before code — answered 2026-10-08 (all as recommended; point 2 changed, #218)
+
+1. **One command or two?** (A) two, stage 1 read-only and paid, stage 2 free and writing — the order
+   "report first" is a physical boundary, the writing command holds no key, Ron reads the diff before
+   anything changes; (B) one command that calls, writes the report, then replaces in the same run, with
+   `--allow` chosen beforehand. *Recommend A.*
+2. **No "apply all".** `--apply` needs `--allow` prefixes, with copy-ready strings in the report;
+   alternative: an `--allow-all-proposed` flag. *Recommend none: #144 says no bulk.* **Ron: no apply
+   all, but list files and `--allow-file` instead of pasted strings (#218).**
+3. **`--run` needs `--limit` or `--allow`,** so the count is always chosen. *Recommend yes.*
+4. **"Not current" is "different from"** (a rollback selects too), shown by the plan's counts. *Recommend
+   as written.*
+5. **Flagged posts:** the `Listing` is replaced, the record is written back unchanged; a flagged post is
+   one with `flagged_by` set. Phase 3 must say what "restore" does after a reclassify (the finding
+   below). *Recommend as written.*
+6. **A change of state is applied like any other,** with the report listing it first and apart; no extra
+   flag. Alternative: `--allow-state-change` for those prefixes. *Recommend none; the separate
+   copy-ready string is enough while there are no users.*
+7. **Posts with a reviewed correction (19 in the regression set, 8 with corrected fields).** (A) read the
+   replaced `Listing`s from `reclassify/*/proposals.jsonl` in `find_reviewed`, so the runner keeps its
+   truth; (B) the plan marks them and apply needs them named, with the runner left to refuse; (C) leave
+   them out of the selection. *Recommend A, with the mark in the plan and the report.* Either way, until
+   phase 3's corrections record exists, a card shows the new answer without Ron's correction.
+8. **The report's place and shapes** (`data/store/reclassify/<run_id>/`: `proposals.jsonl`,
+   `summary.json`, `diff.html`) are new stored files and wait for Ron (invariant 1, as #182 did for the
+   dropped names). *Recommend as written.*
+9. **A third reader of `OPENAI_API_KEY`** (`reclassify --run`), amending #128/#188. *Recommend yes: the
+   key is read only by commands that call the model, and `apply_reclassify` reads none.*
+10. **A fourth writer of the production store, with no lock** (#140 extended; the optimistic re-read per
+    post; skip-and-list instead of failing the run). *Recommend yes; a shared lock is phase 5's.*
+11. **A failed reclassify is recorded nowhere in the store** — only in the report and the log — and a
+    post that keeps failing is paid again each time Ron tries it. *Recommend accepting: #152 says not
+    counted, and a manual command has Ron choose.*
+12. **The caps:** $0.02 for a first `--limit 10`, $0.10 for a full pass of 194 (§8). Ron sets the real
+    one at each run; `--cap` has no default.
+13. **Churn is accepted.** A reclassify replaces `Listing`s even where nothing needed to change (the
+    provenance has to move, or the post would be selected again), and the same prompt gives different
+    answers on many posts (O12). *Recommend: use it for a change of prompt version, model or schema, not
+    to refresh.* Stated on the report page.
+
+#### Conflicts with decisions or invariants
+
+No invariant is violated by the plan; invariants 1, 2, 3, 4, 8, 11, 12, 13, 14 and 15 were checked
+against it. Points that touch a decision or a written rule, for Ron:
+- **#128 / #188 / `CLAUDE.md`:** "Only the commands that call the model read `OPENAI_API_KEY`:
+  `classify_pending` and `regression_run`." `reclassify --run` would be the third. Amends the sentence
+  (point 9).
+- **#182, #214 / `CLAUDE.md`:** the sentences on who constructs the production store for writing name
+  three; `apply_reclassify` is a fourth (point 10). Its lock policy is #140's: none.
+- **Invariant 1:** the three report files are new stored files (point 8). No schema, field or filter
+  rule changes.
+- **#110 / #144 ("a change to a table applies to new posts only"):** since #179 the 71 areas and the
+  known places are in the instructions, so a change to either changes `PROMPT_VERSION` and **selects
+  every stored `Listing`** (194 today). Nothing is automatic and `--run` needs `--limit` or `--allow`,
+  so the sentence holds in effect; it is stated here because the selection, not the rule, is what
+  changes.
+- **#195 / 2.7:** a correction "is never applied to a newer classification" holds; the cost is the
+  break of `regression_run` described in §7, which point 7 answers.
+- **Seams:** none merged or changed. `Repository` is unchanged; the two new commands are wiring, the
+  new modules are plain (`postmodel/`), as `rederive.py` is.
+
+#### Findings (stale or contradicting lines; none was changed)
+
+1. `PHASE_2.md` §2.4, step 4 (about line 486): `classified_lifecycle(existing, listing)`; the code
+   takes `(existing, listing, post)` since #214. The `model_reason(post, listing)` line above it was
+   updated, this one was not.
+2. `CLAUDE.md`'s phase line says "the regression set, 46 posts after #196"; the set file holds 57
+   entries, 51 after #196's six removals (46 + the 5 review posts of #216), the number the task prompt
+   gives.
+3. `BACKLOG.md` says "Last updated: 2026-10-05"; its rows carry 2026-10-06 and 2026-10-08 content.
+4. `SCHEMA.md` Gate E's restore rule ("`state` returns to `"active"`") does not look at the model's
+   rejection. After a reclassify, a restored flagged post whose new `Listing` says `seeking` would come
+   back `"active"`. Phase 3 (Gate C) has to say whether restore consults `model_reason`.
+5. `regression_set.json` holds 57 entries of which 51 count; `PHASE_2.md` 2.6 still reads "46" in its
+   run tables (correct for those runs, at the time).
+6. `review.html` and `corrections.errors_per_field` count a correction whether or not its classification
+   is still the stored one (§7): harmless today, since all 194 `Listing`s are still the reviewed ones.
+7. A slip of mine in this round: I ran `git status --short` once (read-only; the tree was clean, it
+   printed nothing), against "no git commands at all".
+
+#### Built — 2026-10-08, accepted by Ron the same day (subject to his own pytest run)
+
+**No model call, no paid call, no network call, no write to the production store.** The real store's
+SHA-256 after the build is `2fcc382e…`, the value recorded after the 2026-10-08 re-derivation; it has
+no `reclassify/` folder. All the tests use temporary stores.
+
+**Built as planned, with the order of the plan:**
+
+| File | What |
+|---|---|
+| `tlv_hunter/postmodel/reclassify.py` (new) | The selection (`select`, `narrow`), `changed_fields`, `reclassified_lifecycle`, the `Proposal` record (one line of `proposals.jsonl`) and the file-name constants |
+| `tlv_hunter/postmodel/reclassify_report.py` (new) | `Summary`, `append_proposal` (flushed per post), the allow lists, `write_run_files` (the lists and the page, then `summary.json` last), `read_finished_run`, `render_diff` |
+| `tlv_hunter/reclassification_run.py` (new) | `propose` (stage 1, writes nothing to the store) and `apply_proposals` (stage 2) |
+| `tlv_hunter/jobs/reclassify.py` (new) | The plan and `--run` |
+| `tlv_hunter/jobs/apply_reclassify.py` (new) | The dry run and `--apply`, with `--allow` and `--allow-file` |
+| `tlv_hunter/jobs/common.py` | `backup_store`, `sha256_file`, `raw_post_rows` (moved from `rederive_rejections.py`, unchanged) and `append_dropped_names` (the line `classify_pending` wrote) |
+| `tlv_hunter/jobs/rederive_rejections.py`, `jobs/classify_pending.py` | Import the moved helpers; behaviour unchanged, their tests pass as they were |
+| `tlv_hunter/classification_run.py` | `_tokens` renamed `tokens_by_kind` (public, used by the new loop); nothing else |
+| `tlv_hunter/labeling/corrections.py`, `labeling/regression.py`, `jobs/regression_run.py` | `find_reviewed` also reads `reclassify/*/proposals.jsonl` (#222); `prepare` takes the folder; `regression_run` passes `<store_root>/reclassify` |
+
+No change to `store/`, `contracts/`, `classify/`, `postmodel/rejects.py`, `reference/`,
+`classify/instructions.txt`, `PROMPT_VERSION`, `SCHEMA.md`, `pyproject.toml` or `uv.lock`.
+
+**Deviations from the plan, for review:**
+- **The page has no template file.** `diff.html` is built in Python (`reclassify_report.py`), with
+  every value escaped and one small inline script for the filters (all, state changed, failed, one
+  field). The plan listed a `reclassify_report.html`.
+- **The City column of the State changes table** (section 5, block 2) was missing from the first build
+  and was added on Ron's review, as planned: `reclassify.py` computes `other_city_ruling(post, listing)`
+  for the old and the new `Listing` of each proposed post and passes the pairs to `write_run_files` /
+  `render_diff` (`cities`, optional); the report only formats them ("was X (source); becomes Y"), for
+  rows where the old or the new status is `other_city`, with a dash when no city was passed.
+- **`proposals.jsonl` carries `attempts`** (the plan's list of fields did not name it).
+- **The plan mode accepts `--limit` and `--allow`,** to preview the narrowing and its cost; it refuses
+  `--cap` (which goes with `--run`). A `--run` that selects nothing makes no call and no folder.
+- **The list files** start with two `#` comment lines; `--allow-file` ignores them (#218).
+- **`apply_reclassify` logs** an `apply start` and an `apply done` line (JSON, with the apply's own
+  `run_id`, which names its dropped-names file), and prints "still selected for reclassify, any run"
+  after the apply. It also refuses a run whose `summary.json` carries another `PROMPT_FINGERPRINT`
+  than the code's.
+- **The usage mistakes of `reclassify`** (`--cap` without `--run`, `--run` without `--cap`, `--run`
+  without `--limit` or `--allow`, a missing key) print "refused: …" and exit 1, as `rederive_rejections`
+  does, not argparse's exit 2, which here means "stopped early". A `--cap` of 0 or less is still
+  argparse's error.
+- **Plain modules import `labeling.regression_set.text_sha256`** in the wiring module; no new hashing.
+
+**Tests, offline:** 155 new. `test_reclassify_select.py` (39: the selection of every shape, `--allow`
+and `--limit`, the diff, the lifecycle, the proposal record), `test_reclassification_run.py` (46, both
+stores: proposals, failures, stops, the apply, invariant 14, a flagged record, idempotence, "changed
+since"), `test_reclassify_report.py` (18), `test_reclassify_job.py` (22), `test_apply_reclassify.py`
+(20: every refusal, both lists, the combination of `--allow` and `--allow-file`, the backup, the
+dropped-names file read by `review.dropped_names`), `test_reclassify_labeling.py` (4: the runner keeps
+a reviewed post's truth after a reclassify, and `regression_run --check` reads the folder).
+`uv run pytest`: **1254 passed**; `ruff check` and `ruff format --check` clean. The one failure of
+the first run, `test_labeling.py::test_the_proposed_set_holds_the_spike_posts_and_about_fifty`
+(57 entries in the set since the review joined 5 posts, #216), is fixed by #223: the test counts the
+entries whose truth is `"blind"` only.
+
+**Not done, on purpose:** no real `--run` and no real `--apply`. Both wait for Ron's separate go and
+for a change of prompt version, model or schema: the plan on the real store selects 0 posts today.
+
 ---
 
 ## 2.10 Gate D and dedup B — approved (#145)
@@ -1382,18 +1900,21 @@ now the alternative.
 
 ## 4. For Ron's decision
 
-Answered: everything through #208 (2026-10-06). Open now, not resolved here:
+Answered: everything through #222 (2026-10-08). The first run over the store (2.8) was made on
+2026-10-06 (#213). Open today, not resolved here:
 
-1. **The first run over the store (2.8) was not made:** pass 1 of the version 3 run was incomplete
-   (position 24, a seeking post that came back invalid twice), and #208 required no incomplete
-   pass. Ron decides: go anyway (the failure is one post that the pre-model rejects never send, and
-   a failed post only counts one failed run, #139), or another regression run first.
-2. **`gender` fails at 93.8% in pass 2** (positions 34 and 35): the wording names both sexes, or the
-   roommates who stay. No instruction change was made (#207).
-3. **The known places:** their list and areas, and the places whose area surprised me
-   (`SESSION_LOG.md`). Ron adds and corrects entries from error reports.
-4. **The review of a run's pass 1** (`review_page --run <folder>`), which measures the fields not
-   labelled blind (#193).
+1. **The version 4 prompt items** (`BACKLOG.md`, "For the next prompt version", #211): a range of
+   rooms is unclear; a malformed price is unclear; no area names on an other-city post; the gender
+   cases at regression positions 34 and 35 (accepted for now, #210). Ron decides when version 4 is
+   written. A version change is also what first gives task 2.9 something to select.
+2. **Gate D (2.10):** the read-only list of candidate pairs after the first paid run, and Ron's
+   judgement. Not started.
+3. **DoD 4:** the cost of the runs read against the OpenAI bill (the spike's was: $0.03 against
+   $0.0273, `ASSUMPTIONS.md` O2; the five later runs are not), and a real working day measured.
+4. **DoD 5:** Ron's sign-off on the review of the first run. 51 of the 194 classified posts were
+   reviewed (#215, #216); his decision is whether that is enough.
+5. **Task 2.9's build:** Ron's review of it, and a separate go for the first real `--run` (small, with
+   a cap) once there is a change of version, model or schema to select on.
 
 ---
 

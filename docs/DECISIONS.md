@@ -2252,6 +2252,72 @@ the 8 pairs skipped. Three of the corrected posts were already in the set as bli
 correction on file: its pair is excluded for later. The errors per field now read `stated_area_names`
 1 of 51.
 
+**Ron's answers to the plan for task 2.9 (reclassify), 2026-10-08.** The plan is in `PHASE_2.md` 2.9;
+the numbers in brackets are its "For Ron before code" points. Approved as recommended unless marked.
+
+### 217 — Reclassify is two stages and two commands; the selection and its rules
+**Refines #144.** (1) `jobs/reclassify.py` selects, calls the model (`--run`, paid) and writes the diff
+report; it opens the store read-only. `jobs/apply_reclassify.py` replaces the `Listing`s Ron names,
+free, after a backup, and refuses unless the report is complete. (3) `--run` needs `--limit` or
+`--allow`. (4) "Not the current one" is "different from" on `prompt_version`, `schema_version` or
+`model_name`, not "older". (5) A flagged post is one with `flagged_by` set: its `Listing` is replaced and
+its lifecycle record is written back as it was read. (6) A change of state (`active` ↔ `rejected`, or
+one reason to another) is applied like any other difference; the report lists it first and apart, with
+no extra flag. The selection is a plain function over the existing Repository methods: no Repository
+change. *Why (the plan):* the order "report first, then replace" becomes a boundary between two
+commands, and the command that writes the store holds no key.
+
+### 218 — No "apply all"; the run writes two list files, and `--allow-file` reads them
+**Changes point 2 of the plan.** There is still no flag that applies every proposal. `apply_reclassify
+--apply` takes `--allow` (id prefixes of 8 characters or more) and/or `--allow-file <path> [<path>…]`.
+`reclassify --run` writes two list files into the run folder: `allow_unchanged.txt` (the posts whose
+status is unchanged) and `allow_state_changes.txt` (the posts whose state or reason changes). A list
+file holds one `listing_id` per line; blank lines and lines starting with `#` are ignored; an entry is
+checked like an `--allow` prefix. The checks are the same for both: every entry must match a proposal
+of that run, and nothing may be left over. *Why (Ron):* pasting hundreds of ids on a Windows command
+line does not scale as the store grows.
+
+### 219 — The report's place and files
+(8) `<store_root>/reclassify/<run_id>/` (`data/store/reclassify/<run_id>/`), gitignored with `data/`:
+`proposals.jsonl` (one line per post attempted; the old and the new `Listing`; the source of truth of
+the apply, and the archive of every `Listing` it replaces), `summary.json`, `diff.html`, and the two
+list files of #218. New stored files, approved as invariant 1 asks (as #182 did for the dropped names).
+No schema, field or filter rule changes.
+
+### 220 — A third reader of the key and a fourth writer of the store
+(9) `reclassify --run` reads `OPENAI_API_KEY`: the third command, with `classify_pending` and
+`regression_run`; amends #128 and #188. `apply_reclassify` reads none. (10) `apply_reclassify --apply`
+is the fourth command that writes the production store, with `run_once`, `classify_pending` and
+`rederive_rejections`. It takes no lock (#140 extended): it re-reads each record before writing it,
+and a post that changed since the run is not written, is listed, and the exit code is 2. Never beside
+`run_once`. A lock shared by every writer is phase 5's.
+
+### 221 — A failed reclassify, the caps, and the churn
+(11) A failed reclassify leaves the old `Listing` and touches neither `classification_failures` nor
+`last_classification_error` (#152); it is recorded in the report and the log only, and a post that
+keeps failing is paid for again whenever Ron tries it. (12) The caps are Ron's at each run (`--cap`
+has no default): proposed $0.02 for a first `--limit 10`, $0.10 for a full pass of 194. (13) A
+reclassify replaces `Listing`s even where nothing needed to change, and the same prompt gives
+different answers on many posts (O12): it is used for a change of prompt version, model or schema,
+not to refresh. The report page says so at its top.
+
+### 222 — `find_reviewed` also reads the `Listing`s a reclassify replaced
+(7, option A) A correction in `corrections.json` names the classification it reviewed. After a
+reclassify the store holds another one, and `regression_run` would refuse every reviewed set post
+("the reviewed classification is not found"). `labeling/corrections.find_reviewed` also reads the old
+`Listing`s kept in `reclassify/*/proposals.jsonl`; the truth of those posts stays Ron's corrected old
+classification. The plan and the report mark the posts that have a reviewed correction on file. Until
+phase 3's corrections record exists (#173), a card shows the new answer without Ron's correction.
+
+**Ron's review of task 2.9, 2026-10-08.**
+
+### 223 — The size test of the regression set counts the blind entries only
+`tests/test_labeling.py::test_the_proposed_set_holds_the_spike_posts_and_about_fifty` bounds the
+proposed set (45 to 55) by its entries whose `truth` is `"blind"`; a post that joins from a review
+(`"review"`, #195, #216) is not counted, so it can never break the test. The spike-posts and
+"for sale" assertions are unchanged. Recorded as its own decision, not a note under #216, because it
+changes a test's rule and not #216's. *Why (Ron):* the review keeps adding posts to the set.
+
 ---
 
 ## Corrections to recorded facts

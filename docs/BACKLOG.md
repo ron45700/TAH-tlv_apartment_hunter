@@ -7,7 +7,7 @@ is approved*. `SESSION_LOG.md` records *what happened*. None of them tracks whet
 actually reached the code, which is how decisions #37 and #38 were approved on 2026-09-14 and were
 still unimplemented on 2026-10-02.
 
-**Last updated:** 2026-10-05
+**Last updated:** 2026-10-08
 
 ## Rules
 
@@ -22,15 +22,14 @@ still unimplemented on 2026-10-02.
 
 ## Next sprint (in order)
 
-Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is being planned: Gate B approved on
+Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is being built: Gate B approved on
 2026-10-05 (`DECISIONS.md` #81–#125); the model provider is OpenAI, for now (#126); `PHASE_2.md`
-approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6 (set, labelling page, runner), 2.7 (review report) built; instructions version 3 (the known places, #205, approved #209) passed `areas` by reach in both passes. **The first run over the store (2.8) was made on 2026-10-06** (#213): 194 of 195 pending canonicals classified.
+approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6 (set, labelling page, runner), 2.7 (review report) built; **2.9 (reclassify, #217-#222) built and accepted by Ron on 2026-10-08, no real `--run` or `--apply` yet**; instructions version 3 (the known places, #205, approved #209) passed `areas` by reach in both passes. **The first run over the store (2.8) was made on 2026-10-06** (#213): 194 of 195 pending canonicals classified.
 
 | # | Item | Source | Needs |
 |---|---|---|---|
 | 1 | After 2026-10-08: one free GET on an expired run A photo link, to see what an expired link returns (an HTTP status, or a network error or timeout). No Apify call. Record it under `ASSUMPTIONS.md` I7 (`DECISIONS.md` #80 U5) | `DECISIONS.md` #80 | Approved by Ron, 2026-10-04. The 4-day limit on stored-link retries does not rest on the answer |
-| 2 | Ron reads the spike's cost in the OpenAI dashboard and compares it with the usage-metadata total, $0.0273 (`docs/SPIKE_2_1_2026-10-05.md` §5) | `ASSUMPTIONS.md` O2, P19's lesson | Ron, some minutes after the run (2026-10-05) |
-| 3 | Ron reviews the classifications of the first run: `data/labeling/review.html` (194 posts, generated from the store), marks what is wrong and exports `corrections.json` into `data/labeling/` (#172). Things that look wrong, for his decision, are in the table below and in `SESSION_LOG.md` 2026-10-06 | `PHASE_2.md` 2.7, 2.8 | Ron |
+| 2 | Ron's sign-off on the review of the first run. The review was made on 51 of the 194 posts (39 rejected, 12 active; `corrections.json`, #215, #216); what remains is his decision that it is enough (DoD 5). The things that look wrong are in the tables below and in `SESSION_LOG.md` 2026-10-06 and 2026-10-08 | `PHASE_2.md` 2.7, 2.8, §4 | Ron |
 
 ### For the next prompt version (`DECISIONS.md` #211)
 
@@ -65,8 +64,8 @@ approved, the spike run (#126–#156); the model decides the area (#167); tasks 
 
 | Decision | State of the code (checked 2026-10-04) | What has to change |
 |---|---|---|
-| #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Built: the set, the labelling page, the runner (`label_overrides.json`, #196) and the review report (2026-10-06). Version 3 passed `areas` in both passes; `gender` failed in pass 2 and pass 1 was incomplete | Ron's decision on 2.8 (item 3); the review of pass 1. The row leaves when Ron accepts the set |
-| #144 reclassify, manual, replace with a diff report | Nothing exists | Phase 2 (2.9) |
+| #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Built: the set, the labelling page, the runner (`label_overrides.json`, #196) and the review report (2026-10-06). Version 3 passed `areas` in both passes; `gender` failed in pass 2 and pass 1 was incomplete | Ron's sign-off on the review of the first run (next-sprint item 2, DoD 5); the review of pass 1 (`review_page --run`, #193). The row leaves when Ron accepts the set |
+| #144, #217–#222 reclassify: two commands (`jobs/reclassify.py`, paid, store read-only, writes the diff report and two list files; `jobs/apply_reclassify.py`, free, the fourth store writer, `--allow` / `--allow-file`, no apply all); `find_reviewed` reads the replaced `Listing`s | Plan approved 2026-10-08; built 2026-10-08, waiting for review (`PHASE_2.md` 2.9). No real `--run` and no real `--apply`: they wait for Ron's separate go and for a change of prompt version, model or schema (0 posts are selected today) | Ron's review of the build; the first real `--run` at `--limit 10 --cap 0.02` |
 | #145 Gate D after the first paid run | Nothing exists | Phase 2 (2.10) |
 | #77 D4b archiving deletes the image files and removes their `PostImage` entries | Nothing exists; task 1.12 already reads a record archived before #74 without counting its old entries (#77 D4) | Phase 5, the archive job |
 | #47 profiles live in the database; no per-user group subscriptions | `config/users/ron.yaml` holds `user_id` and subscribed groups; the config interface exposes them | Remove the per-user YAML and its interface methods when the user records arrive in phase 3. Until then it is unused, not wrong |
@@ -109,6 +108,7 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | The schema for #173: a new rejection reason and a corrections record, stored apart from the model's answer, so the card shows the corrected value and the model's answer stays for error analysis. Approved by Ron, 2026-10-05 | Gate C |
 | Hiding the non-residential entries of the 71 from the area filter; they stay in the list (`DECISIONS.md` #81). Approved by Ron, 2026-10-05 | Gate C |
 | No orange on the area for a user who chose every entry a stated name covers (for example 30 and 31 for "הצפון הישן"): a per-user display rule (`DECISIONS.md` #112). Approved by Ron, 2026-10-05 | Gate C |
+| Whether "restore" of a flagged post consults `postmodel.rejects.model_reason` after a reclassify. `SCHEMA.md` Gate E says a restore returns the state to `"active"`, without looking at the model's rejection: a restored flagged post whose new `Listing` says `seeking` would come back active. A reclassify keeps a flagged post's flag and state and replaces its `Listing` only (`DECISIONS.md` #144, #217). Not decided (Ron, 2026-10-08) | Gate C |
 | The card's main time is the last publication (the latest repost), shown relative: minutes up to an hour, hours up to 24 h, days after that; earlier publications are in the repost log (`DECISIONS.md` #122). Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | Rooms on a room post: "1 of N" when the total is written, a room with no "of" when it is not; the "1" comes from the apartment kind (`DECISIONS.md` #120). Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | Size on a room post: "X sqm for the room, of Y" when both are written; "X sqm for the room" when only the room's is (`DECISIONS.md` #121). Not stated: a room post that gives only the apartment's size. Approved by Ron, 2026-10-05 | Phase 3 UI design |
@@ -126,7 +126,7 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | A run killed during `fetch()` (Ctrl+C, `taskkill`) does not abort its Apify run: only the run deadline aborts (`DECISIONS.md` #71 F, #79) | The Apify run finishes and is billed, up to the $0.50 cap; its dataset is never read. The watermark does not move |
 | A shared post with its own caption: its `text` is the caption, and `sharedPost.text` (the shared listing) never reaches the model (`DECISIONS.md` #71 H, kept by #107; `ASSUMPTIONS.md` P16) | The model classifies the caption only. 1 of the 35 shared posts in the store, 2026-10-05 |
 | Arnona and house committee keep no period: "400 per two months" and "400 a month" are both stored as 400 (`DECISIONS.md` #116) | A filter or colour on them treats the two alike; the card's original text shows the period |
-| A post that gives only a street: its area rests on what the model knows of Tel Aviv (`DECISIONS.md` #170) | Measured by the regression set's 95% bar on `areas`; a street table as an aid is recorded for later (#169) |
+| A post that gives only a street: its area rests on what the model knows of Tel Aviv (`DECISIONS.md` #170) | Measured by the regression set's bar on `areas`, 90% by reach (`DECISIONS.md` #198); a street table as an aid is recorded for later (#169) |
 | `dedup_a` finds a canonical's stored duplicates through the hashes of the canonical and of its batch duplicates (`DECISIONS.md` #75 D1). A stored duplicate with media whose text was edited later has a different hash and is not found | #70 can miss it, and a canonical with no media can return to `"rejected"` |
 
 ---

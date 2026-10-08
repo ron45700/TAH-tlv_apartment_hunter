@@ -251,7 +251,7 @@ amendment of the same day had code decide it through a street table and a transl
   distance phrase places nothing (#178). Colloquial names ("הצפון הישן", "לב העיר", "יפו") are
   given as examples (#86). Filtering is always by area, never by street.
 - **Known limit** (#170): for a post with only a street, the area rests on what the model knows of
-  Tel Aviv. The regression set measures it (95% on `areas`). A street table as an aid is recorded
+  Tel Aviv. The regression set measures it (90% on `areas`, by reach: #198). A street table as an aid is recorded
   for later, only if the regression set shows the model weak on such posts (#169).
 - **The colour comes from the stored areas** (#110, #112, #113): one area, definite; two or more,
   unclear (orange), matching and alerting if any is chosen, also when one stated name covers
@@ -404,9 +404,9 @@ bootstrap mode, Gate A.
 
 ### Open for Ron
 
-The review of tasks 2.2 and 2.3's code, then the plan for task 2.4 (`PHASE_2.md` §4); the first
-paid run's go comes after the build and a passing regression set (#164). Gate B, the
-model's response and the Gate E failure fields are approved (#125, #151, #152).
+What is open today is in `PHASE_2.md` §4 (the version 4 prompt items, Gate D, the measured working
+day and the bill, Ron's sign-off on the review of the first run). Gate B, the model's response and
+the Gate E failure fields are approved (#125, #151, #152).
 
 ### Recorded, not verified
 

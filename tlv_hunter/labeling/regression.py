@@ -43,7 +43,9 @@ class Prepared:
     refusals: list[str] = field(default_factory=list)
 
 
-def prepare(repo_root: Path, store: Repository) -> Prepared:
+def prepare(repo_root: Path, store: Repository, reclassify_dir: Path | None = None) -> Prepared:
+    """`reclassify_dir` is `<store_root>/reclassify`: where the `Listing`s a reclassify replaced are
+    kept (DECISIONS.md #222), so a reviewed post is still found after one."""
     labeling = repo_root / LABELING_DIR
     prepared = Prepared()
     regression_set = load_regression_set(labeling / REGRESSION_SET_FILE)
@@ -94,7 +96,11 @@ def prepare(repo_root: Path, store: Repository) -> Prepared:
         correction = None if corrections is None else corrections.reviewed().get(entry.listing_id)
         if correction is not None:
             found = find_reviewed(
-                entry.listing_id, correction, store.get_listing(entry.listing_id), runs_dir
+                entry.listing_id,
+                correction,
+                store.get_listing(entry.listing_id),
+                runs_dir,
+                reclassify_dir,
             )
             if found is None:
                 prepared.refusals.append(

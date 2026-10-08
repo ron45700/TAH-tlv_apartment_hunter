@@ -229,7 +229,7 @@ def _log_post(result: PostOutcome) -> None:
         result.outcome,
         result.attempts,
         len(calls),
-        _tokens(calls),
+        tokens_by_kind(calls),
         sum(call.cost for call in calls),
         ",".join(sorted({str(call.reported_model) for call in calls})) or "-",
         sum(call.seconds for call in calls),
@@ -258,7 +258,7 @@ def _log_end(
         sum(outcome.native_city == "rejected" for outcome in outcomes),
         sum(outcome.native_city == "cleared" for outcome in outcomes),
         len(meter.calls),
-        _tokens(meter.calls),
+        tokens_by_kind(meter.calls),
         meter.spent,
         meter.cap,
         ",".join(sorted({str(call.reported_model) for call in meter.calls})) or "-",
@@ -266,7 +266,7 @@ def _log_end(
     )
 
 
-def _tokens(calls: Sequence[CallRecord]) -> dict[str, int]:
+def tokens_by_kind(calls: Sequence[CallRecord]) -> dict[str, int]:
     return {
         "input": sum(call.usage.input_tokens for call in calls),
         "cached": sum(call.usage.cached_tokens for call in calls),
