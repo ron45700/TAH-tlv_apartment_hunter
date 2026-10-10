@@ -9,7 +9,8 @@ holds, say so explicitly and change the entry — do not quietly work around it.
 Superseded decisions are kept, marked, and left in place. Deleting them would lose the fact that
 the question was considered at all.
 
-**Last updated:** 2026-10-05
+**Last updated:** 2026-10-10 (#242–#257, the content of Gate C; #258–#287, Gate C's open points, the technical
+choices and the area grouping; #173, #251, #254 and #257 corrected)
 
 > Written in English like every document in `docs/`.
 >
@@ -458,6 +459,9 @@ its images are deleted at archive. Noted 2026-10-05.*
 can make critical; no value means no effect. One profile holds separate values for a room and for
 an empty apartment. `BASELINE.md` §8.
 
+*Refined by #245–#247 (2026-10-10): two search options, each on or off with its own full set of values; sublets
+are a switch inside each; the sqm filter only in the empty-apartment search.*
+
 ### 52 — Alert rules
 A new, non-rejected post that passes the user's kind and critical conditions, has an explicit
 price and an understood location. Preferences never block an alert. `BASELINE.md` §9.
@@ -535,6 +539,8 @@ Not through an Apify provider. The design stays open to it.
   viewed".
 - Display order: all unviewed posts first, then the viewed ones; within each group, the order in
   `BASELINE.md` §8.
+
+*The trigger and "mark as not viewed": #253 (2026-10-10).*
 
 ### 63 — Gate E: the post lifecycle record and `GroupWatermark`
 **Extends #59; amends Gate A** (approved 2026-10-04). Fields and types are in `SCHEMA.md`, Gate E, and the Gate A
@@ -641,6 +647,7 @@ Approved by Ron, 2026-10-04.
   3.24.0.*
 - **Known limit:** `save_lifecycle` is last-write-wins. Phase 1 has one writer. A contract test pins
   the behaviour, and the concurrent case is an open choice for phase 3 (`BACKLOG.md`).
+  *Settled 2026-10-10: compare and set (#260); the rollback journal stays in Phase 3 (#259).*
 
 *Why:* a generated `text_hash` column would need SQLite 3.31, and the home-server container's
 version is unverified; a plain column removes that dependency. No reason was recorded for the other
@@ -814,6 +821,7 @@ approved it.
    repost against history.
 7. **#70 under dedup B** (a repost with rewritten text): deferred to Gate D.
    *Why:* dedup B's key is not defined yet.
+   *Settled by #252 (2026-10-10): such a post is a new post; nothing ties it to the old one.*
 
 *Extended by #73 (2026-10-04): the re-check in (1) also applies to a `"pending"` post (#73.2), not
 to an archived one (#73.3); (3) is read as #73.5. (5) is kept by #74, which replaces "active
@@ -1223,9 +1231,14 @@ entries stay in the list. **Settles the source in `BASELINE.md` §7 and the choi
 *Why:* the only verified open source with the split Ron asked for; pruning makes the list differ
 from its source.
 
+*Refined by #249 (2026-10-10): the non-residential entries are not hidden from the area filter; they sit in a
+collapsed group at its bottom.*
+
 ### 82 — The model classifies to the 71 entries; any grouping is a display rule
 Any grouping of the entries is decided at Gate C.
 *Why:* merging later is free; splitting later costs a reclassification.
+
+*Settled by #248 (2026-10-10): grouped under region headings, display only; which grouping waits for Ron.*
 
 ### 83 — An area is identified by its municipal number
 The number is `ms_shchuna` in layer 511; the name is a label.
@@ -1359,6 +1372,8 @@ reason recorded.
 ### 99 — Size
 The apartment's size in sqm, plus the room's size only when it is written. No reason recorded.
 
+*The sqm filter: #247 (2026-10-10), the empty-apartment search only.*
+
 ### 100 — Broker, balcony, parking, elevator, air conditioning
 Each is yes or no. A shared balcony is yes. Street parking is no. "Option for parking" is unclear.
 No reason recorded.
@@ -1443,7 +1458,7 @@ at all; a new row needs no model call.
 Orange, by #110's rule (two or more areas). Gate C gets a row: no orange for a user who chose every
 entry the name covers, a per-user display rule. No other reason recorded.
 
-*Since #167 (2026-10-05), an instruction to the model.*
+*Since #167 (2026-10-05), an instruction to the model.* *The Gate C row, generalized: #250 (2026-10-10).*
 
 ### 113 — The two meanings of "unclear" for the area are intended
 Several candidate areas (matches, alerts, orange) and no area at all (no alert). Confirmed by Ron.
@@ -1630,6 +1645,7 @@ shows in the admin's pending list with its reason. Names and types are **propose
 Point 15, as recommended: in phase 2 both are started by hand, never together; phase 5's "one run
 at a time" (#61) covers the job too. The concurrent-write choice stays with phase 3. No reason
 recorded.
+*Since #260 (2026-10-10), this covers the job commands only, not the site.*
 
 ### 141 — A post edited after classification keeps its `Listing`
 Point 16, as recommended, as a post with a verdict keeps its state (#73.2). No reason recorded.
@@ -1833,6 +1849,10 @@ and restores, or leaves the post out. A correction is stored apart from the mode
 card shows the corrected value and the model's answer stays for error analysis. It needs a new
 rejection reason and a corrections record: their schema is settled at Gate C. Ron's requirement;
 no code now.
+*Why (Ron, 2026-10-05):* he wants the errors collected by type, to learn how to improve the work with the model.
+*(Reason added 2026-10-10, from Ron; it was not recorded here before.)*
+
+*Refined by #254–#256 (2026-10-10): fields from a list and a note; retention; corrections admin only.*
 
 ### 174 — Task 2.2: the plan approved, with Ron's answers
 1. The method names `save_classification`, `get_listing` and `find_pending_canonicals`: approved.
@@ -2543,6 +2563,280 @@ other route is an edit to `corrections.json`, which is Ron's. Carrying it needs 
 the reason, applied over the reviewed classification in `labeling/regression.py`), which is a change to that file's shape
 and a few lines of code. Not built; it waits for Ron's go. The model answered `partial` at this position in both passes
 of run `47e96cac0e8d`.
+
+---
+
+## Phase 3: the content of Gate C (2026-10-10)
+
+**Ron opened Phase 3 (the dashboard) on 2026-10-10 and approved the content of Gate C below.** Field names and types
+are **not** approved: they are proposed in `SCHEMA.md`, Gate C (DRAFT), and approved separately, as at Gate B. Where
+an entry says "Ron approved the reviewer's recommendation", the reason given, if any, is the reviewer's, not Ron's.
+
+### 242 — Sign-in: a username and a password, no email
+A user signs in with a username they pick and a password. No email address is asked for or stored. A forgotten password
+is reset by the admin. **Refines #47 and `BASELINE.md` §10.**
+*Ron approved the reviewer's recommendation. The reviewer's reason:* the users are a few close friends, and there is no
+mail infrastructure.
+
+### 243 — One-time keys: no expiry, cancel by hand, a label, and who used it
+A one-time key does not expire. The admin can cancel a key that has not been used, by hand. Each key has a label set at
+creation, and records who used it and when. **Refines #47.**
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 244 — One admin, Ron, created by a command on the machine
+There is one admin, Ron. His account is created by a one-time command run on the machine, not by a key.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 245 — The profile holds two search options, each with its own full set of values
+One profile per user. It holds two search options, "room in a shared flat" and "empty apartment". Each option holds
+its own full, separate set of values: areas, price range, women-only, rooms, floor range, sqm range (only in the
+empty-apartment search, #247), broker, parking, balcony, entry date, and each category's level as in `BASELINE.md` §8.
+Each option can be switched on or off. The UI offers "copy from the other option". **Refines #51** ("one profile holds
+separate values for a room and for an empty apartment") **and replaces the listing-kind row of `BASELINE.md` §8.**
+*Ron approved the reviewer's recommendation. The reviewer's reason:* searching alone and searching with two friends are
+two different searches.
+
+### 246 — Sublets: a switch inside each search option
+Each search option has a "show sublets too" switch, off by default. A sublet post is evaluated against the values of
+the option its `apartment_kind` belongs to. There is no third option and there are no sublet-specific values.
+**Refines #58 and #245.**
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 247 — The sqm filter exists only in the empty-apartment search
+**Settles the question #99 left for Gate C** (which size a room search filters on): in a room search there is no sqm
+filter. Both sizes are shown on the card when written (#99, #121).
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 248 — The area filter shows the 71 grouped under region headings
+**Settles #82's grouping.** The 71 areas are shown grouped under region headings, each with "select all in group".
+What is stored is always the municipal numbers (#83); the grouping is display only. Which grouping: a proposal for Ron
+(`PHASE_3.md`, "Area grouping"); no official grouping that maps to `ms_shchuna` was found (`RESEARCH.md` §16).
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 249 — Non-residential areas are not hidden: a separate collapsed group at the bottom
+**Refines #81 and replaces the "hiding" wording** of `BACKLOG.md`'s row for #81. The non-residential entries of the 71
+are not hidden from the area filter: they sit in a separate collapsed group at the bottom of it. Which entries are
+non-residential: a proposal for Ron (`PHASE_3.md`, "Area grouping").
+*Ron approved the reviewer's recommendation. The reviewer's reason:* a post the model placed in a hidden area could be
+chosen by nobody and would never be shown.
+
+### 250 — No orange on the area when every one of the post's areas is in the user's selection
+**Generalizes #112's Gate C row.** For a given user, the area is not orange when **all** of the post's areas are in
+that user's selection, whatever produced the several areas (one stated name covering several entries, a long street,
+a landmark on a border). Computed per user at display time, never written on the post (invariant 12).
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 251 — Restore removes the report or the flag only; the state is derived, not set to active
+**Changes the approved Gate E rule** ("restore … `state` returns to `"active"`"; `SCHEMA.md` Gate E, #63) **and answers
+`BACKLOG.md`'s row on restore after a reclassify.** **One rule for a reported post and for a post flagged "lied"**
+(#282): restore removes the report or the flag only. The post's state is then what it would be without it, derived
+from the post's classification: `"active"`, or `"rejected"` with the derived reason. **The classification read is the
+model's answer with the admin's corrections in force applied** (#281). A restored archived post stays archived, its
+reason re-derived (#283). The amended rule is proposed in `SCHEMA.md` Gate E, next to the approved text, until Ron
+approves the names.
+*Amended 2026-10-10 (round 2): first recorded for a reported post only, derived from the model's answer; #281 and #282
+widen it.*
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 252 — A `no_images` post that comes back with different text and media is a new post
+**Settles #72.7** (#70 under dedup B; deferred to Gate D, then left for Phase 3 by #230). A post rejected as `no_images`
+that comes back with different text and media is a new post, classified and shown as usual. Nothing is built to tie it
+to the old one. The Gate D key (#230, #232) is not widened.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 253 — Viewed: opening the card marks it viewed
+**Settles the trigger #62 left for the Phase 3 UI design.** Opening the card marks it viewed for that user; scrolling
+past does not. An open card has "mark as not viewed". A card stays viewed when a further publication is grouped into it
+by the Gate D key (#231).
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 254 — The "wrong classification" report: one or more fields from a list, and an optional note
+**Refines #173.** The reporter picks one or more fields from a list, plus an optional free note. The rest of #173
+stands: the post moves to the rejected list for everyone with its own reason, and the admin sees the reports grouped by
+field, corrects by hand and restores, or leaves the post out.
+*Why (Ron, 2026-10-05, #173):* he wants the errors collected by type, to learn how to improve the work with the model.
+
+### 255 — Retention of a reported post; the report and the correction are always kept
+While a post is reported as wrongly classified it is exempt from deletion, like a post flagged "lied". Once corrected
+and restored it follows normal retention. The report and the correction record (the field, the model's value, the
+corrected value) are always kept. **Extends #46 and #63's flagged-post rule; changes invariant 3's wording
+(`CLAUDE.md`).**
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 256 — Corrections: admin only; they override the model's answer until removed
+Only the admin corrects. A correction overrides the model's answer, also after a later reclassify, until the admin
+removes it; the model's answer is kept beside it. The card shows a "corrected by hand" mark on the field. **Refines
+#173; amends #144's "the new `Listing` replaces the old"** for a corrected field: the new `Listing` is still stored,
+and the correction still applies over it. The `Listing` itself is never edited.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 257 — The dashboard gets a polished UI in Phase 3, not in Phase 6
+**A scope change to `BASELINE.md` §12.** The dashboard's polished UI is built in Phase 3, not in Phase 6 ("UI polish
+from Ron's screenshots" leaves Phase 6). Ron will have the assistant build it with his design skills when the UI task is
+reached. Ron's approved card content, field states and colour rules (`BASELINE.md` §6–§8) stay binding; the visual
+design is the UI task's. Nothing of it is built in the round that recorded this.
+*Ron's own request. Why (Ron):* he has design skills that produced a UI he is happy with on his event-seeker project,
+and he wants this UI built the same way.
+*(Corrected 2026-10-10: first recorded as the reviewer's recommendation, with no reason.)*
+
+---
+
+## Phase 3: Ron's answers on the first docs round (2026-10-10)
+
+**Ron decided the points below on 2026-10-10, after reviewing the first Phase 3 docs round with the reviewer.** Names
+and types stay a draft (`SCHEMA.md`, Gate C) until Ron approves them. Where a point asked the assistant to propose a
+detail, the proposal is in `SCHEMA.md` or `PHASE_3.md` and is not part of the decision.
+
+**The technical choices (`PHASE_3.md` §5).**
+
+### 258 — The dashboard framework: React and TypeScript with Vite, served by FastAPI
+Option A of `PHASE_3.md` §5.1: React + TypeScript built with Vite, hand-written CSS, Hebrew fonts through `@fontsource`;
+FastAPI + uvicorn serve the API and the static build; one Docker image, two-stage build. Node is on Ron's laptop from
+event-seeker (checked 2026-10-10: `node` v24.11.1, `npm` 11.6.2) and is reused; `node_modules` are never copied between
+projects. Nothing is installed until a task's plan is approved. **Settles the "Dashboard framework" choice of `BACKLOG.md`
+(#23).**
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 259 — SQLite journal mode: the rollback journal with an explicit busy timeout in Phase 3
+**Settles #65's open choice for Phase 3.** The default rollback journal stays; every connection sets an explicit busy
+timeout. WAL is reconsidered in Phase 5 if waits are seen on the measured working day (DoD 4).
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 260 — Every writer of `PostLifecycle` writes by compare and set; #140 no longer covers the site
+Option 1 of `PHASE_3.md` §5.3. `save_lifecycle` (and the lifecycle half of `save_classification`) writes only if the
+stored record is still the one the writer read, checked inside the write's transaction; otherwise it refuses. This
+applies to every writer: the job commands and the site. **#140's "never at the same time" no longer covers the site**,
+which runs beside the jobs; it still holds among the job commands. **Amends #65** (last write wins), **#140** and **#220**.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+**The area grouping (`PHASE_3.md` §6).**
+
+### 261 — The area filter's groups, and the non-residential group
+**Settles #248 and #249's lists.** The seven region groups of `PHASE_3.md` §6, with Hebrew headings, as proposed, and the
+four entries left undecided placed in regular groups: 40 in the city centre, 29 in the North, 1 and 3 in "North of the
+Yarkon, west". The non-residential group, collapsed at the bottom: 11, 12, 13, 28, 51, 55, 66. Display only; the stored
+values stay the municipal numbers (#83). The grouping is the assistant's, not a municipal division (`RESEARCH.md` §16).
+*Ron approved the reviewer's recommendation. The reviewer's reason, for the four:* when in doubt, a regular group, so
+"select all in group" does not miss a post.
+
+**Gate C's open points (`SCHEMA.md`, Gate C, round 1's list; the number in brackets is the point's).**
+
+### 262 — Accounts: an opaque id, the username's rules, Argon2id, the admin's reset (points 1–5)
+(1) `user_id` is random and opaque, separate from the username. (2) A username is Latin letters, digits, `_`, `.` and `-`
+only, 3 to 32 characters, unique case-insensitively. (3) A username cannot be changed in this version. (4) Passwords are
+hashed with Argon2id; the minimum password length is 8. (5) A reset: the admin sets a temporary password, which must be
+changed at the next sign-in. **Refines #242.**
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 263 — Sessions: a stored record, valid 30 days; a reset ends them all (point 6)
+A session is a stored record, valid 30 days. A password reset ends every existing session of that user. The record is
+proposed in `SCHEMA.md`, Gate C.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 264 — A short delay after five failed sign-ins (point 7)
+After 5 failed sign-in attempts, a short delay. The details are proposed in `SCHEMA.md`, Gate C.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 265 — A user is never deleted, only disabled (point 8)
+The admin can disable a user: a disabled user cannot sign in and their sessions are ended; their profile, viewed records
+and reports are kept. The admin can enable the user again. The field is proposed in `SCHEMA.md`, Gate C.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 266 — A key is shown once; a cancelled key stays cancelled (point 9)
+As proposed: the key is shown to the admin once, at creation, and never again; a cancelled key is not un-cancelled.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 267 — The Gate C records live behind a new interface beside `state/`: an eighth seam (point 10)
+As proposed: a new interface beside `state/`, in the same SQLite file. It is an eighth seam; its name and contract are
+proposed in `PHASE_3.md` 3.4 for `CLAUDE.md`'s table, and wait for Ron.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 268 — A new profile: both options on, nothing set (point 11)
+A new profile has both search options enabled and no values set; `include_sublets` is off and "hide women-only" is on.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 269 — Broker, parking, balcony: a fixed wanted value; the user picks only on and the level (point 12)
+The wanted value is fixed: no broker, has parking, has a balcony. The user only turns the category on and picks its
+level. The drafted `wanted` field is dropped.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 270 — The entry date: a range; "immediate" is the date of evaluation (point 13)
+The entry-date criterion is a range, both ends optional. A post whose entry date is "immediate" compares as the date of
+the evaluation, not the publication date. Which calendar date (invariant 9): proposed in `SCHEMA.md`, Gate C.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 271 — Half rooms and the basement in the ranges (point 14)
+Half rooms are allowed in the rooms range; a basement (-1) can be chosen in the floor range.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 272 — "Copy from the other option" (point 15)
+It copies every value, `include_sublets` included, but not `enabled`. `size_sqm` is never copied into the room option;
+copying into the empty-apartment option leaves its `size_sqm` as it was.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 273 — A post whose kind is unclear or not written (point 16)
+It is shown at the bottom, evaluated against every enabled option, with its kind marked.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 274 — A sublet shows only when its option is on and its switch is on (point 17)
+Confirmed reading of #246.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 275 — With no areas chosen, a several-area post stays orange (point 18)
+**Refines #250.**
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 276 — The viewed record (point 19)
+`ViewedPost` holds the `listing_id` of the post the card shows; reopening the card keeps the first `viewed_at`.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 277 — The report's fields and note (point 20)
+The reportable fields are the list proposed in round 1 (`SCHEMA.md`, Gate C); the note is at most 500 characters. The
+Hebrew labels are the UI task's.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 278 — One report per reporter; rejected while any is open; a restore resolves all (point 21)
+As proposed.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 279 — The new reason is "misclassified", last in Gate E's order; "flagged" shows when both apply (point 22)
+As proposed.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 280 — A report sets `flagged_by` and `flagged_at` to the first reporter (point 23)
+As proposed. So a reclassify treats a reported post as a flagged one (#217 (5)).
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 281 — After a correction, restore derives the state from the corrected value (point 24)
+Restore derives the state from the post as corrected, not from the model's value. **Amends #251.**
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 282 — #251's restore rule covers a post flagged "lied" too (point 25)
+One rule for both: restoring a flagged post or a reported post removes the flag or the report only and derives the
+state. **Amends #251's wording** and `BASELINE.md` §5.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 283 — A restored archived post stays archived (point 26)
+As proposed: its reason is re-derived.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 284 — Corrections: which fields, how stored, and their removal (points 27, 28)
+As proposed: the correctable fields are the reportable list; a value is stored as the field's Gate B type and validated
+as the `Listing` validates it; a removed correction is kept, marked removed.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 285 — `PostLifecycle` goes to `schema_version` 3 (point 29)
+For the new rejection reason; a version-1 or version-2 record still reads.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 286 — "Left out" is not final (point 30)
+The admin can restore a left-out post later; meanwhile the post is kept (#255).
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 287 — The Gate D key compares corrected values (point 31)
+The key compares the post as users see it: the `Listing` with the admin's corrections in force applied. **Refines #230
+and #231.**
+*Ron approved the reviewer's recommendation.* No reason recorded.
 
 ---
 

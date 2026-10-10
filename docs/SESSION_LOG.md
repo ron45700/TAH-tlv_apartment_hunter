@@ -4458,3 +4458,219 @@ STOP. Nothing is applied: all 194 stored `Listing`s are still at prompt 3, and t
 `diff.html`; if he wants any of the five in the store, the free dry run is `uv run python -m tlv_hunter.jobs.apply_reclassify
 dcb4c0cb4b24`, then `--apply --allow-file …` (a separate go; it writes the store, after a backup). Deferred, by Ron: #241's carrier,
 and the reclassify of the other 189. Unchanged: the retry of `73aebb24…`, the bill, the working day and I3 (Phase 3). Phase 3 is next.
+
+## 2026-10-10 — Phase 3 opened: Gate C's content recorded (#242–#257), Gate C drafted, `PHASE_3.md` drafted (docs only)
+
+### Done
+
+**Docs only. No code, no test changed, no paid call (no Apify, no OpenAI), no store write, no git command.** One free
+read-only network request (item C, below). The store was read once, read-only (`mode=ro`), to count posts per area.
+
+- **A. `DECISIONS.md` #242–#257** (Ron, 2026-10-10), in a new section "Phase 3: the content of Gate C", before
+  "Corrections to recorded facts". Reasons as given: the reviewer's for #242, #245 and #249; Ron's earlier one for #254
+  (#173); "Ron approved the reviewer's recommendation. No reason recorded." for the others. Short "settled / refined by"
+  notes added to #51, #62, #72 (point 7), #81, #82, #99, #112 and #173.
+- **B. `SCHEMA.md`, Gate C, DRAFT, NOT APPROVED:** `User`, `SignupKey`, `Profile` with two `SearchOption`s
+  (`RangeCriterion`, `BoolCriterion`, `DateRangeCriterion`), `ViewedPost`, `ClassificationReport`, `FieldCorrection`;
+  passwords Argon2id (alternative: standard-library `scrypt`), keys SHA-256 (high-entropy random keys need no slow hash and
+  can be looked up by hash); **31 numbered open points**. Under Gate E, a "PROPOSED amendments" table (E-1 a new reason,
+  proposed `"misclassified"`; E-2 `flagged_by`'s meaning; E-3 the restore rule of #251; E-4 the deletion exemption of #255;
+  E-5 `schema_version` 3). Gate E's approved text is unchanged. No Telegram field.
+- **C. The area grouping:** one request (below). **No official grouping that maps to `ms_shchuna` was found.** The grouping
+  proposed in `PHASE_3.md` §6 is mine (seven regions), with 7 entries proposed non-residential (11, 12, 13, 28, 51, 55, 66)
+  and 4 left to Ron (1, 3, 29, 40). Recorded in `RESEARCH.md` §16.
+- **D. Technical choices,** `PHASE_3.md` §5, as proposals: the framework (A, Ron's event-seeker stack, recommended; B,
+  FastAPI + Jinja2 + htmx, the no-Node alternative; C and D not recommended), with how each works with
+  `frontend-design`, `design@synced` and `chrome-devtools` (my reading of the plugins; none was used); serving through
+  uvicorn on localhost behind Tailscale Serve; the journal mode (keep the rollback journal with a busy timeout in Phase 3,
+  WAL in Phase 5 if waits are seen); concurrent writes to `PostLifecycle` (compare and set, recommended). Nothing installed.
+- **E. `docs/PHASE_3.md`, DRAFT:** goal, a proposed DoD (8 items), anchors, order of work, tasks 3.1 to 3.10 with what each
+  needs from Ron, §3 the items to close (the BACKLOG "For phase 3" rows, the "Phase 3" rows of "Recorded for a later
+  phase", #47, the admin lists), §4 the four known pairs, §5 the choices, §6 the grouping, §7 for Ron.
+- **F. `BASELINE.md`** (header, §5, §8, §12) and **`CLAUDE.md`** (the phase line, invariant 3) amended.
+
+### The network check (item C)
+
+`GET https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/layers?f=json`, curl's default User-Agent, nothing
+personal. HTTP 200 but **cut off** after 2,274,534 bytes (curl error 18); **not retried** (one check). Saved partial as
+`data/raw/tlv_gis_iview2_layers_2026-10-10.json` (229 complete layers). Layers 510 `רובעים-למס`, 847 `תת רובעים` and 512
+`אזורים סטטיסטיים` carry `k_rova` / `k_tat_rova` codes, no names and no `ms_shchuna`; layer 511's `ms_stat_areas` is null on
+all 71 saved rows. Not seen: the layers after the cut, and the open-data portal.
+
+### Read-only, from the store
+
+194 `Listing`s; areas per post counted. Area 11 (the university) is on 1 active post, area 40 (Sarona) on 5 active posts:
+what #249 guards against. None of 1, 3, 12, 13, 28, 29, 51, 55, 66 is on a post.
+
+### Doc lines touched
+
+- `DECISIONS.md`: "Last updated"; the new section with #242–#257; one-line notes on #51, #62, #72 (7), #81, #82, #99, #112,
+  #173.
+- `SCHEMA.md`: "Last updated" (a new paragraph; the old one now starts "Earlier"); the Gate table's row C; under Gate E, the
+  new subsection "PROPOSED amendments for Gate C" (before `GroupWatermark`); the new "GATE C … DRAFT" section (before "Stub
+  contracts").
+- `BASELINE.md`: the amendment header (one new entry, 4 lines); §5: the repost-of-an-archived-post sentence ("flagged or
+  reported"), a new row "Wrong classification" in the reasons table, new paragraphs "Wrong classification" and "Restore"
+  after "Flagging", and the "Fields and rules" line; §8: a new paragraph "Two search options", the "Listing kind" row, the
+  "Preference by default" row ("sqm range (empty-apartment search only)"), the "Within one profile" paragraph (one sentence
+  added) and two new paragraphs ("The area filter", "The area's colour, per user"), the end of the "Viewed posts" paragraph
+  (the trigger); §12: the Phase 3 row, the Phase 6 row ("UI polish from Ron's screenshots" removed), the "Gates" paragraph
+  (B and D settled; C's state), the "Detailed planning" paragraph (one sentence added) and a new paragraph "The UI".
+- `CLAUDE.md`: the phase line (its last sentence replaced by the Phase 3 sentence); invariant 3 (the reported post, the
+  restored post, the report and correction records never deleted).
+- `RESEARCH.md`: one "Updated" line; new §16.
+- `PHASE_3.md`: new.
+- `BACKLOG.md`: "Last updated"; a sprint-intro paragraph; next-sprint rows 6–9 (Ron's decisions for Phase 3); a pointer line
+  under "For phase 3"; "Decisions pending implementation": the #47, #51/#52 and #62 rows updated, seven rows added
+  (#242–#244, #245–#247, #248–#249, #250, #251, #254–#256, #257); "Recorded for a later phase": eight rows removed, settled
+  by #247–#252, #254 (sqm, grouping, #173's action and schema, hiding, orange, restore, #70 under dedup B); "Open technical
+  choices": three rows point at `PHASE_3.md` §5; "Future": the "UI polish" row removed (#257).
+
+### Contradictions found, not resolved
+
+1. `BASELINE.md` §10, "The site is built first, with a basic design", against #257 (a polished UI in Phase 3); §12's Phase 3
+   is still named "Basic dashboard".
+2. `CLAUDE.md` names four store writers that "never run at the same time (#140)"; the site would write all day beside the
+   jobs (`PHASE_3.md` §5.3). The writer list and #140 need Ron's decision with 3.2.
+3. Gate E's approved restore rule (state back to `"active"`) against #251: intended, and held as a proposed amendment until
+   Ron approves it.
+4. #251 (derived "from the model's answer") against #256 (a correction overrides the model's answer): Gate C open point 24.
+5. #251 names a reported post; the Gate E rule it changes is the flagged post's: open point 25.
+6. #217 (5) and #144 treat a post as flagged by `flagged_by`; whether a report sets it decides what a reclassify does to a
+   reported post: open point 23.
+7. #173 as recorded says "Ron's requirement; no further reason recorded"; the reason now written in #254 ("he wants the
+   errors collected by type") was given in this round as Ron's earlier reason in #173. Recorded as given; #173's text not
+   changed.
+8. The store and `CLAUDE.md`'s seam table: where the Gate C records live (Repository, or a new interface beside `state/`)
+   changes a seam either way: open point 10.
+
+### Docs these changes make stale (not edited)
+
+- `BASELINE.md` §7 ("any grouping … decided at Gate C"; "Gate C may drop the orange"), §9 ("its kind is one the user
+  checked", against two options and the sublet switch), §10 (the basic design; sign-in now a username, #242), §11 (no
+  reports, corrections, pending list or users), §14 "Open for Ron" (points at `PHASE_2.md` §4).
+- `CLAUDE.md`: "Where things are written down" has no `PHASE_3.md` row; the store-writer paragraph (contradiction 2).
+- `PHASE_2.md` §4 "For Ron's decision": its "open today" items (version 4, Gate D, task 2.9) were already stale.
+- `RESEARCH.md` §12 "For Ron to decide" (whether the 71 are grouped): answered by #248.
+- `ASSUMPTIONS.md`: I3 still speaks of Gemini Flash (stale since #126, already); nothing records the grouping finding as an
+  assumption (it is in `RESEARCH.md` §16 only).
+- `SCHEMA.md` Gate C's row in the gate table says "content approved"; `BASELINE.md` §12 likewise; both are right until the
+  names are approved, then both change.
+
+### Deviations
+
+- `RESEARCH.md` was edited (§16), though not named in the round: item C asked for the sources to be recorded as
+  `RESEARCH.md` records them.
+- The network response was truncated; I did not make a second request.
+- A read-only read of the store (counts per area), to support the non-residential proposal. No write.
+- Three throwaway edit scripts in the session's scratchpad (not in the repo).
+
+### Next
+
+STOP. For Ron (`BACKLOG.md` items 6–9): Gate C's names, types and the 31 open points; the three technical choices; the area
+grouping and the non-residential entries; `PHASE_3.md`'s order and DoD. Unchanged: items 1–5 (the expired-link GET, the
+bill, the two deferrals, the five reclassify proposals).
+
+## 2026-10-10 (continued) — Phase 3, round 2: Ron's answers recorded (#258–#287), Gate C revised, plans for 3.4 and 3.5 (docs only)
+
+### Done
+
+**Docs, plus a plan for tasks 3.4 and 3.5. No code, no test changed, no install, no paid call, no store write, no git
+command.** Read under the `external-contract-verification` skill: pypi.org (`argon2-cffi`, `argon2-cffi-bindings`),
+argon2-cffi.readthedocs.io (API, 25.1.0), the OWASP Password Storage Cheat Sheet, docs.python.org 3.12 `sqlite3`. Run:
+`node --version` → **v24.11.1**, `npm --version` → **11.6.2** (Node is present; nothing installed, no `node_modules`
+copied).
+
+- **1. Three recorded items fixed.** #257's reason is Ron's own (his design skills on event-seeker), not the reviewer's;
+  #173 now carries Ron's reason of 2026-10-05 and #254 quotes the same words; #251 re-titled and reworded: one rule for a
+  flagged and a reported post, the state derived from the corrected values, an archived post stays archived (#281–#283).
+- **2–4. Recorded as #258–#287:** the framework (#258), the journal mode (#259), compare and set and #140's new scope
+  (#260), the area grouping with the reviewer's reason for the four (#261), and the 31 points (#262–#287; one entry per
+  point or group of points). "Ron approved the reviewer's recommendation. No reason recorded." where none was given. Notes
+  added to #65 and #140.
+- **5. `SCHEMA.md` Gate C revised, still DRAFT:** a `Session` record; `disabled_at`, `failed_sign_ins`,
+  `last_failed_sign_in_at` on `User`; `CriterionLevel` replaces `BoolCriterion` (`wanted` dropped); `ReportableField`;
+  every answered point written into the rules; round 1's list replaced by an "answered" line; **nine small points R1–R9**
+  for the details Ron asked me to propose; **one table "For Ron's approval: every name and type"**. Gate E's proposed
+  amendments E-1 to E-5 rewritten to the answers; Gate E's approved text untouched.
+- **6. `PHASE_3.md`:** status of each part updated (order and DoD approved; §5 and §6 approved; 3.1 names waiting; 3.2,
+  3.3 decided); §6 now the approved grouping (1 and 3 west of the Yarkon, 29 the North, 40 the city centre; 64 + 7 = 71,
+  checked); **plans for 3.4 and 3.5** written (modules, contract changes, every caller of `save_lifecycle`, tests, the
+  dependency, what I could not verify, points for Ron: 8 for 3.4, 4 for 3.5).
+
+### What the documentation says (the dependency, the timeout)
+
+- `argon2-cffi` **25.1.0**, MIT, Python ≥ 3.8, depends on `argon2-cffi-bindings` (**26.1.0**, Python ≥ 3.10, `cp310-abi3`
+  wheels for Windows x86-64 and manylinux x86-64 / aarch64, uploaded 2026-08-20). `PasswordHasher(time_cost=3,
+  memory_cost=65536, parallelism=4, hash_len=32, salt_len=16, encoding='utf-8', type=Type.ID)`, the defaults being
+  `profiles.RFC_9106_LOW_MEMORY` "but they may vary depending on the platform"; `verify` raises `VerifyMismatchError`;
+  `check_needs_rehash` after each sign-in; `profiles.CHEAPEST` for tests only. OWASP: Argon2id first, minimum 19 MiB, 2
+  iterations, parallelism 1. The plan names `RFC_9106_LOW_MEMORY` explicitly.
+- Python 3.12's `sqlite3.connect(timeout=5.0)` by default. The plan proposes 10 seconds.
+- Recorded as `ASSUMPTIONS.md` I12–I14, ASSUMED (documentation only). **Not read:** `argon2-cffi` 25.1.0's release date
+  (the PyPI page was cut off), `get_default_parameters()` on Windows.
+
+### Doc lines touched
+
+- `DECISIONS.md`: "Last updated"; #173 (two lines added after "no code now."); #251 (title and body rewritten, a dated
+  note); #254 (its reason line); #257 (its reason line, a dated note); a new section "Phase 3: Ron's answers on the first
+  docs round" with #258–#287 before "Corrections to recorded facts"; a note under #65's "Known limit"; a note after
+  #140.
+- `SCHEMA.md`: "Last updated" (a new paragraph, the round-1 one now "Earlier"); the gate table's row C; under Gate E, the
+  "PROPOSED amendments" subsection replaced; the Gate C section replaced.
+- `PHASE_3.md`: title and status; the DoD heading; the anchors table (two rows added, two changed); the order heading;
+  3.1, 3.2, 3.3 replaced; 3.4 and 3.5 replaced by the plans; 3.6 (a "Decided for it" bullet, its needs line); 3.7's,
+  3.8's and 3.9's needs lines (3.8 gains two bullets' worth); §3's framework row and its closing paragraph; §5's heading
+  and intro, 5.1's tooling cell and recommendation line, 5.2's and 5.3's recommendation paragraphs; §6 replaced; §7
+  replaced; 3.4 (c)'s sentence on the order (corrected after a code search: the order is the `Literal` in
+  `contracts/post_lifecycle.py`).
+- `BASELINE.md`: the header (one entry); §3 the "Database" row; §5 the "Wrong classification" paragraph (left out, one
+  open report per reporter, flagged shows) and the "Restore" paragraph (rewritten; "Whether this also applies…" gone); §7
+  the areas bullet ("decided at Gate C" → the grouping, #261) and the colour bullet ("Gate C may drop the orange" → #250);
+  §8 the "Two search options" paragraph (defaults, copy, unclear kind, fixed values, ranges, entry date), "The area
+  filter" (#261), "The area's colour" (#275); §9 item 2 (the search options); §10 the first, second and fourth bullets;
+  §11 four lines (rejected canonicals only, pending, reports, keys and users); §12 the Phase 3 row ("3. Dashboard",
+  sessions), the Gates paragraph (#262–#287), the "Detailed planning" sentence (the framework chosen); §14 "Open for Ron"
+  rewritten.
+- `CLAUDE.md`: the phase line (round 2's state); the store-writer paragraph (a sentence on #260 and #140's scope); the
+  docs table (a `docs/PHASE_3.md` row).
+- `RESEARCH.md` §12: an "answered since" note after "For Ron to decide".
+- `PHASE_2.md` §4: a "Superseded, 2026-10-10" note at its top; the list kept.
+- `ASSUMPTIONS.md`: "Last updated"; I12, I13, I14 added after I8.
+- `BACKLOG.md`: the Phase 3 paragraph of the sprint intro; next-sprint rows 6–9 replaced by 6 (the names, R1–R9), 7
+  (the 3.4 plan), 8 (the 3.5 plan); "Decisions pending implementation": the #248/#249, #250 and #251 rows updated, seven
+  rows added (#258, #259, #260, #262–#266, #267, #268–#274, #276–#280 with #284–#287); "Open technical choices": the
+  dashboard, journal and concurrent-write rows removed (decided).
+
+### Contradictions found, not resolved
+
+1. **#173 never said "no further reason recorded"**: that sentence is #172's (the Phase 2 review report: "Ron's
+   requirement; no further reason recorded"). My round-1 log misquoted it. I added Ron's reason to #173, as asked, and left
+   #172 unchanged. Whether the same reason also belongs to #172 is Ron's.
+2. **"Immediate" as the date of evaluation (#270) and invariant 9:** the Israel calendar date would be a third use of
+   Israel time; the draft proposes the UTC date (R2) so invariant 9 stays as it is.
+3. **A post of unclear or unwritten kind (#273)** is shown under every enabled option; `BASELINE.md` §9 now says a post
+   alerts when it "falls under one of the user's enabled search options". Whether such a post alerts is not decided
+   (Phase 4).
+4. **A report and the post's move to rejected live in two seams** (#267 puts the report in the new interface; Gate E's
+   state is in `store/`), so they cannot be one transaction; the 3.4 plan proposes an order and a retry (point 3).
+
+### Still stale, not touched
+
+- `CLAUDE.md`'s seam table ("Seven seams", no row for the eighth) and the modules paragraph (no `accounts/`,
+  `userdata/`, `jobs/create_admin.py`): they wait for Ron's approval of the names and the plans.
+- `CLAUDE.md`'s Repository row and `store/base.py`'s docstring ("last write wins"): change when 3.4 is built.
+- `ASSUMPTIONS.md` I3 still speaks of Gemini Flash (stale since #126, before this round).
+- `BASELINE.md` §13 and §14 "To verify" have no row for the account items (none was needed before).
+- `DECISIONS.md` #47 ("password on the site") and #59 ("the user, key and profile records"): older wording, refined by
+  #242–#287, not marked.
+
+### Deviations
+
+- `ASSUMPTIONS.md` edited (I12–I14), though not named: the skill asks for each read contract to be tagged there.
+- Five throwaway files in the session's scratchpad (edit scripts and text fragments), not in the repo.
+
+### Next
+
+STOP. For Ron (`BACKLOG.md` items 6–8): the names table in `SCHEMA.md` with E-1 to E-5 and R1–R9; the 3.4 plan and its 8
+points; the 3.5 plan and its 4 points. Then, on his go, 3.4 is built first. Unchanged: items 1–5.

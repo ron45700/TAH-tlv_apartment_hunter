@@ -2715,6 +2715,11 @@ now the alternative.
 
 ## 4. For Ron's decision
 
+> **Superseded, 2026-10-10.** Phase 2's build is closed (2026-10-09). Items 1, 2 and 4 below are closed: version 4 was
+> accepted (#238), Gate D's key is decided (#230, #232), and the first real reclassify run was made (2026-10-09, run
+> `dcb4c0cb4b24`, nothing applied). Item 3, the bill, stays with Ron (`BACKLOG.md`, next-sprint item 2). What is open
+> now is in `BACKLOG.md` and `PHASE_3.md` §7. The list is kept as it was.
+
 Answered: everything through #225 (2026-10-08). The first run over the store (2.8) was made on
 2026-10-06 (#213). Open today, not resolved here:
 

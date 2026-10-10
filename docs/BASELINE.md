@@ -16,6 +16,13 @@ spike's decisions: the setting (#157) in §4, prefix letters and names not in th
 in §7. Then the model decides the area (#167–#170): §4 and §7 rewritten.
 Amended 2026-10-08: Gate D's key (`DECISIONS.md` #230, amended by #232) and that dedup B's result is
 derived from the stored posts, not stored, with its use in Phase 3 (#231): §4 and §12.
+Amended 2026-10-10: the content of Gate C (`DECISIONS.md` #242–#257): §5 (the restore rule, the "wrong
+classification" report and its retention, the admin's corrections), §8 (two search options, sublets, the sqm filter,
+the area filter, the area's colour per user, the viewed trigger) and §12 (Gate C's state; the polished UI moves from
+phase 6 to phase 3).
+Amended again 2026-10-10 (round 2): Ron's answers (`DECISIONS.md` #258–#287): §3 (the eighth seam's interface), §5
+(restore, one rule for flags and reports, from the corrected values), §7, §8 (the profile's defaults and values, the area
+grouping), §9 (the search options), §10, §11, §12 (the phase's name, the choices made), §14.
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -70,7 +77,7 @@ also a later addition and will probably need its own scraper; the design must st
 | Machine | Ron's home server (a laptop being converted), running 24/7. Development and first runs on Ron's personal laptop. |
 | OS | Ubuntu Server LTS or Debian, no desktop. |
 | Runtime | Docker Compose. The same compose file runs on the personal laptop and on the server. |
-| Database | SQLite, one file, behind the `store` interface (posts and their lifecycle records) and the `state` interface (per-group watermarks). Postgres stays a cheap swap. |
+| Database | SQLite, one file, behind the `store` interface (posts and their lifecycle records), the `state` interface (per-group watermarks) and, from phase 3, a third interface for what users and the admin write through the site (`DECISIONS.md` #267; its name waits for Ron). The rollback journal with an explicit busy timeout in phase 3 (#259). Postgres stays a cheap swap. |
 | Images | Downloaded at fetch time to a directory on disk (Facebook image links expire within days). |
 | Remote access | Tailscale. The dashboard is published with Tailscale Serve (HTTPS, tailnet only). Friends get access through Tailscale device sharing. |
 | Telegram | Outbound only: long polling (`getUpdates`) and send calls. No public address or open port. |
@@ -154,7 +161,7 @@ Provider inputs, the field map, traps, the duplicate rate and the group IDs are 
 | **Deleted** | 40 days since last publication. Removed entirely | — |
 
 A repost resets the clock. A repost of an archived post returns it to the state it had: active if
-it was active; rejected, with the same reason, if the model rejected it or a user flagged it;
+it was active; rejected, with the same reason, if the model rejected it or a user flagged or reported it;
 pending if it was never classified, or if it was rejected for having no images and the repost has
 media (`DECISIONS.md` #72.5, #74). A repost extends a post's life; it does not change what is known
 about it.
@@ -170,6 +177,7 @@ about it.
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |
 | Not a listing | By the model | Furniture, a parking space, an office, anything that is not an apartment or a room |
 | Flagged "lied" | By a user | See below |
+| Wrong classification | By a user | See below (#173, #254). Its stored name is proposed at Gate C, not approved |
 
 **Flagging.** Any user can flag a post that passed but is not what it claims (for example, an
 apartment in Netanya that looked like Tel Aviv). The post moves to rejected for everyone and
@@ -178,7 +186,23 @@ exempt from deletion: the full record, including the raw data and not only the t
 permanent regression set for the prompt. Their images are deleted at archive like any post's. A
 restored post follows normal retention.
 
-Fields and rules: `SCHEMA.md`, Gate E (`DECISIONS.md` #63).
+**Wrong classification** (#173, #254–#256). Any user can report, on a card, that the post was classified wrongly:
+they pick one or more fields from a list, with an optional note. The post moves to rejected for everyone, with its
+own reason. The admin sees the reports grouped by field and corrects by hand and restores, or leaves the post out; a
+left-out post can still be restored later (#286). One open report per reporter; the post stays rejected while any report
+is open; a post both flagged "lied" and reported shows as flagged (#278, #279). While reported, the post is exempt from
+deletion like a flagged one; once corrected and restored it follows normal retention. The report and the correction (the field, the model's value, the corrected value) are always kept.
+**Only the admin corrects.** A correction overrides the model's answer, on the card and in the filters, also after a
+later reclassify, until the admin removes it; the model's answer is kept beside it, and the card marks the field
+"corrected by hand".
+
+**Restore** (#251, #281–#283, changing the rule approved at Gate E): one rule for a post flagged "lied" and a reported
+post. Restore removes the flag or the reports only; the post's state is then what it would be without them, derived
+from the post as users see it (the model's answer with the admin's corrections applied): active, or rejected with the
+derived reason. An archived post stays archived, its reason re-derived.
+
+Fields and rules: `SCHEMA.md`, Gate E (`DECISIONS.md` #63); Gate C's records and the proposed Gate E amendments are a
+draft, not approved.
 
 ---
 
@@ -251,7 +275,7 @@ amendment of the same day had code decide it through a street table and a transl
   when the post has Facebook's own location field, its locality decides (#214).
 - **The areas** are a closed list: the municipality's open `שכונות` dataset (GIS layer 511), all
   71 entries, the Old North in its two parts, non-residential entries included (#81), in
-  `reference/areas.yaml`. Any grouping is a display rule, decided at Gate C (#82). An area is
+  `reference/areas.yaml`. The grouping in the area filter is a display rule (#82, #248, #261; §8). An area is
   identified by its municipal number; the name is a label (#83).
 - **The rules, given to the model as instructions** (#88, #112, #124, #167): a stated area decides;
   a street only refines inside it (for example, which part of the Old North); several possible
@@ -265,7 +289,7 @@ amendment of the same day had code decide it through a street table and a transl
   for later, only if the regression set shows the model weak on such posts (#169).
 - **The colour comes from the stored areas** (#110, #112, #113): one area, definite; two or more,
   unclear (orange), matching and alerting if any is chosen, also when one stated name covers
-  several entries (Gate C may drop the orange for a user who chose all of them); none, and the
+  several entries (for a user who chose every one of the post's areas it is not orange, §8, #250); none, and the
   post gave a street or an area name, unclear and never alerted; none, and no location given, not
   written. Shown at the bottom, never alerted, when unclear with no area.
 
@@ -276,16 +300,36 @@ amendment of the same day had code decide it through a street table and a transl
 Each user has one profile. The dashboard can show everything; the profile is the saved filter, and
 the same profile drives that user's Telegram alerts. Changing it affects alerts from then on.
 
+**Two search options** (#245–#247): the profile holds a "room in a shared flat" search and an "empty apartment"
+search. Each can be switched on or off and holds its own full, separate set of the values below, each category with
+its own level. The UI offers "copy from the other option" (every value but on/off; never the sqm range into the room
+search, #272). A post is evaluated by the option its kind belongs to; a post whose kind is unclear or not written is
+evaluated against every enabled option and shown at the bottom, its kind marked (#273). A new profile has both options
+on, nothing set, sublets off, "women only" hidden (#268). Broker, parking and balcony have a fixed wanted value (no
+broker, has parking, has a balcony): the user only turns them on and picks the level (#269). Half rooms and a basement
+can be chosen (#271). The entry date is a range, both ends optional; "immediate" compares as the date of the evaluation
+(#270).
+
 | Level | Categories | Behaviour |
 |---|---|---|
-| **Listing kind** (hard) | Room in a shared flat · empty apartment · sublet | Only checked kinds are shown. Sublet is a basic flag: a post is a sublet or not, with no duration or other detail |
+| **Listing kind** (hard) | Room in a shared flat · empty apartment, as two search options, each on or off; inside each, "show sublets too", off by default | Only posts of a switched-on option are shown. Sublet is a basic flag: a post is a sublet or not, with no duration or other detail. A sublet is evaluated against the values of the option its kind belongs to; no third option and no sublet-specific values (#246) |
 | **Critical, fixed** | Area (multi-select) · price range (min and max both optional) | A post that fails is not shown and does not alert. The user cannot downgrade these. No value entered = not applied |
 | **Critical by default, user may turn off** | "Women only" | Negative only: such posts are hidden. If turned off, they are shown with a red icon |
-| **Preference by default, user may make critical** | Rooms · floor range · sqm range · broker · parking · balcony · entry date | As a preference: affects order and field colour only. As critical: failing posts are not shown |
+| **Preference by default, user may make critical** | Rooms · floor range · sqm range (empty-apartment search only, #247) · broker · parking · balcony · entry date | As a preference: affects order and field colour only. As critical: failing posts are not shown |
 | **Don't care** | Any of the above with no value | No effect on display or order |
 
 Within one profile, room and empty apartment each carry their own values (a room's price range is
-not an apartment's), and every card shows clearly which option it answers.
+not an apartment's), and every card shows clearly which option it answers. A room search has no sqm
+filter; the card shows both sizes when written (#247).
+
+**The area filter** (#248, #249): the 71 areas are shown grouped under region headings, each with "select all in
+group"; the non-residential entries are not hidden but sit in a separate collapsed group at the bottom. What is stored
+is always the municipal numbers; the grouping is display only. The groups and the non-residential entries: `PHASE_3.md`
+§6 (#261).
+
+**The area's colour, per user** (#250, #275): the area is not orange for a user when all of the post's areas are in that
+user's selection, whatever produced the several areas; with no areas chosen, a several-area post stays orange. Computed
+per user at display, never written on the post.
 
 **Order of display:** posts that meet the preferences first; then posts that meet the critical
 conditions but not the preferences; at the bottom, posts where a filtered value is not written or
@@ -294,8 +338,9 @@ unclear. Posts that are known to fail a critical condition are not shown.
 **Viewed posts** (`DECISIONS.md` #62): each user sees which posts they have already viewed. All
 unviewed posts come first, then the viewed ones; within each of the two, the order above. "Viewed"
 belongs to the user and is never written on the post. It survives a repost, since a repost updates
-the existing card, and goes when the post is deleted. The exact trigger is decided in the phase 3
-UI design, with a manual "mark as not viewed".
+the existing card, and goes when the post is deleted. Opening the card marks it viewed; scrolling past does not. An
+open card has "mark as not viewed". A card stays viewed when a further publication is grouped into it by the Gate D
+key (#253).
 
 ---
 
@@ -304,7 +349,8 @@ UI design, with a manual "mark as not viewed".
 A post alerts a user when all of these hold:
 
 1. It is new (not a repost) and not rejected.
-2. Its kind is one the user checked.
+2. It falls under one of the user's enabled search options: the option of its kind, and for a sublet that option's
+   "show sublets too" switch (#245, #246, #274).
 3. It passes every critical condition of that user.
 4. It has an explicit price.
 5. Its location is understood: either a definite area, or a street whose possible areas include
@@ -321,21 +367,29 @@ signing up.
 
 ## 10. Users and access
 
-- An account is created with a one-time key issued by Ron. A used key cannot create another account.
-- Sign-in on the site with a password. Telegram is linked by a code the site shows and the user
-  sends to the bot. Site and Telegram share the same profile.
+- An account is created with a one-time key issued by Ron. A used key cannot create another account. A key has a
+  label, does not expire, is shown once, and can be cancelled while unused; a cancelled key stays cancelled (#243,
+  #266). Ron's own admin account is created by a one-time command on the machine (#244).
+- Sign-in on the site with a username and a password; no email (#242, #262). After 5 failed attempts, a short delay
+  (#264). A session lasts 30 days (#263). A forgotten password is reset by the admin with a temporary password that
+  must be changed, and the reset ends every session (#262, #263). A user is never deleted, only disabled and enabled
+  again by the admin (#265). Telegram is linked by a code the site shows and the user sends to the bot. Site and
+  Telegram share the same profile.
 - Tailscale sharing is a second gate in front of the site.
-- The site is built first, with a basic design. The Telegram Mini App is an adaptation of the same
-  site.
+- The site is built first, with a polished UI built in phase 3 (#257). The Telegram Mini App is an adaptation of the
+  same site.
 
 ## 11. Admin (Ron)
 
-- Rejected posts, all reasons. No other user sees them
-- Flag review by user, and restore
+- Rejected posts, all reasons, canonicals only (#75 B). No other user sees them
+- Pending posts, with the reason of a failed classification and a "retry" (Gate E, #139)
+- Flag review by user, and restore (#251)
+- "Wrong classification" reports grouped by field: restore, correct by hand, or leave out; the corrections in force,
+  and their removal (#173, #254–#256)
 - Archive
 - Daily digest: collected / deduplicated / classified / rejected / alerted, per group; silent-group
   detection; failures. Admin only.
-- Key issuing
+- Key issuing, the key list and cancelling (#243); users: password reset, disable and enable (#262, #265)
 - Run interval, 30 minutes by default, and a "run now" button (phase 5, `DECISIONS.md` #61)
 - Schedule hours (later)
 - `max_posts` (later, phase 6): one value for all groups; a value where groups × `max_posts`
@@ -353,21 +407,27 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 |---|---|---|
 | **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · **Gate E** (post lifecycle fields) · SQLite store · thedoor fetch · pre-model rejects · dedup A · repost log · image download · per-group watermark | A real run stores posts and images with no duplicates, and a second run does not repeat them |
 | **2. Classification** | **Gate B** (field schema from §5–§7) · the model · post-model rejects · street and area · **Gate D** (the key, #230; its use is phase 3's, #231) · reclassify job | Every post has fields and a state |
-| **3. Basic dashboard** | **Gate C** (filter rules, and the user, key, profile and viewed-post records) · users and keys · profile and filters · cards · viewed posts · rejected list · flagging · the same-listing grouping, derived by the Gate D key (#231) | Ron filters and sees real apartments in a browser |
+| **3. Dashboard** | **Gate C** (filter rules, and the user, key, session, profile, viewed-post, report and correction records) · users and keys · profile with two search options and filters · cards · viewed posts · rejected list · flagging · "wrong classification" reports and the admin's corrections · the admin lists · the same-listing grouping, derived by the Gate D key (#231) · **the polished UI** (#257) | Ron filters and sees real apartments in a browser |
 | **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike | A real alert arrives according to Ron's profile |
 | **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
-| **6. Later** | memo23 failover · UI polish from Ron's screenshots · editing the quiet hours, the group list and `max_posts` from the dashboard · Yad2 | |
+| **6. Later** | memo23 failover · editing the quiet hours, the group list and `max_posts` from the dashboard · Yad2 | |
 
 Phases 1–4 run on Ron's personal laptop in Docker.
 
 **Gates.** A (`RawPost`) and E (post lifecycle record and `GroupWatermark`, 2026-10-04) are
-approved. B, C and D are settled with Ron before the code that depends on them. Gate E covers what
+approved. B (2026-10-05) and D (2026-10-08) are settled. **C:** its content approved 2026-10-10 (`DECISIONS.md`
+#242–#257, #262–#287); its names and types are a draft in `SCHEMA.md`, not approved, and are settled before the code
+that depends on them. Gate E covers what
 the lifecycle adds to a stored post: state, rejection reason, who flagged it, last publication
 time, the repost log, and local image paths.
 
 **Detailed planning is one phase ahead.** `PHASE_1.md` details phase 1 only. Two technical choices
 are deliberately left for when their phase is planned: the dashboard framework (phase 3) and the
-Telegram library (phase 4).
+Telegram library (phase 4). The dashboard framework is chosen (#258): React and TypeScript with Vite, hand-written
+CSS, served with the API by FastAPI and uvicorn from one image (`PHASE_3.md` §5.1).
+
+**The UI** (#257): the dashboard gets a polished UI in phase 3, built with Ron's design skills when the UI task is
+reached; §6–§8 stay binding, and the visual design is that task's.
 
 Because history is at most 40 days, adding a field later means reclassifying 40 days of posts, not
 everything. The field list can start lean.
@@ -414,9 +474,9 @@ bootstrap mode, Gate A.
 
 ### Open for Ron
 
-What is open today is in `PHASE_2.md` §4 (the version 4 prompt items, the bill; Gate D is settled, #230). The measured
-working day is Phase 3's (#225) and Ron's sign-off on the review of the first run is given (#224). Gate B,
-the model's response and the Gate E failure fields are approved (#125, #151, #152).
+What is open today is in `BACKLOG.md` ("Next sprint") and `PHASE_3.md` §7: Gate C's names and types, and the plans for
+tasks 3.4 and 3.5. The bill stays with Ron (#225); the measured working day is Phase 3's (task 3.10). Gates B and D, the
+model's response and the Gate E failure fields are approved (#125, #151, #152, #230).
 
 ### Recorded, not verified
 

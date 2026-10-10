@@ -16,6 +16,7 @@ candidate sources for Tel Aviv areas and streets (§12).
 register and the OSM extract (§14). Later the same day: the OpenAI API documentation (§15), the
 provider since `DECISIONS.md` #126; §13 kept as a researched alternative, with Ron's AI Studio
 figures.
+**Updated:** 2026-10-10: an official grouping of the 71 areas looked for (§16).
 
 ---
 
@@ -383,6 +384,9 @@ lists per neighbourhood; commercial, terms not read. The municipality's GIS laye
 grouped (for example, by quarter); whether the municipality's two-part Old North is the split
 (Madlan's is four); how a derived street table is kept current; and, for the address layer, its
 terms.
+*Answered since: the 71 neighbourhoods, the Old North in two parts (`DECISIONS.md` #81); no street table, the model
+decides the area (#167; a street table recorded for later, #169); the 71 are grouped for display only, by the
+assistant's regions, since no official grouping maps to them (#248, #261; §16).*
 
 ---
 
@@ -571,3 +575,26 @@ slightly exceed" it. Responses carry `x-ratelimit-*` headers and, on a 429, `Ret
 `/v1/responses` is a supported batch endpoint.
 
 **Python SDK.** `openai` 3.24.0 on PyPI (2026-10-02), Python ≥ 3.10.
+
+## 16. Is there an official grouping of the 71 areas? (read 2026-10-10)
+
+For Gate C's area filter (`DECISIONS.md` #248, #249). One free, read-only request under the
+`external-contract-verification` skill; no store write, no paid call.
+
+- **The request:** `GET https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/layers?f=json`
+  (every layer's metadata in one response), curl's default User-Agent, nothing personal in it (invariant 15).
+  HTTP 200, but **the transfer was cut off** after 2,274,534 bytes (curl error 18). Not retried. Saved as
+  `data/raw/tlv_gis_iview2_layers_2026-10-10.json` (partial): 229 layers are complete in it.
+- **What it shows:** layer 511 `שכונות` sits in group layer 1014 `חלוקה לאזורים`, with siblings 510
+  `רובעים-למס` (fields `oid`, `k_rova`, `date_import`), 847 `תת רובעים` (`oid`, `k_tat_rova`, `k_rova`,
+  `date_import`) and 512 `אזורים סטטיסטיים` (`ms_ezor`, `k_rova`, `k_tat_rova`, age bands, `shana`, …).
+  **None of them carries `ms_shchuna` or a name**: the quarters are numeric codes on polygons. Layer 511 has a
+  field `ms_stat_areas` (statistical areas) that could link it to 512 and so to a quarter, but it is **null on
+  all 71 rows** (`data/raw/tlv_gis_layer511_rows_2026-10-05.json`). `ms_shchuna` appears in one other layer of
+  the part read, 557 `אזורי שיקום ושיפור תשתיות`, unrelated. §12 already noted 510 as a tax zoning of 15 zones.
+- **Conclusion:** no official grouping of the 71 that maps to `ms_shchuna` was found in this service. A mapping
+  to quarters could be **derived** by placing the 511 polygons in the 510 or 847 polygons, but that is a
+  derivation, not a published grouping, and the quarters would still have no names here. **Not established:**
+  the layers after the cut-off point, and the municipality's open-data portal (not read in this check).
+- **Read-only, from the store (2026-10-10, 194 `Listing`s):** posts carry areas 11 (the university, 1 active)
+  and 40 (Sarona, 5 active), which a "non-residential" label could cover; see `PHASE_3.md`, "Area grouping".
