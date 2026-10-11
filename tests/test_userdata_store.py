@@ -175,6 +175,16 @@ def test_a_key_creates_one_account_and_is_marked_used(store: SqliteUserDataStore
     assert store.get_user(second.user_id) is None
 
 
+def test_find_key_by_hash_finds_a_key_used_or_not(store: SqliteUserDataStore) -> None:
+    key = store.add_key(signup_key(1, "secret-1"))
+    store.add_key(signup_key(2, "secret-2"))
+    assert store.find_key_by_hash(_hash("secret-1")) == key
+    assert store.find_key_by_hash(_hash("unknown")) is None
+    created = _with_friend(store, 3, "noa")
+    used = store.find_key_by_hash(_hash("secret-3"))
+    assert used is not None and used.used_by == created.user_id
+
+
 def test_an_unknown_cancelled_or_another_users_key_is_refused(store: SqliteUserDataStore) -> None:
     key = store.add_key(signup_key(1, "secret-1"))
     user = friend(1, "dana", key.key_id)

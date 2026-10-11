@@ -2,11 +2,11 @@
 
 **Status:** a plan, written 2026-10-10 and revised the same day after Ron's answers. **Approved by Ron (2026-10-10):**
 the content of Gate C (`DECISIONS.md` #242–#257) and its 31 open points (#262–#287); the task order and the DoD; the
-technical choices (§5, #258–#260); the area grouping (§6, #261). **Still waiting for Ron:** Gate C's names and types
-(`SCHEMA.md`, Gate C, DRAFT, one table to approve, and the small points R1–R9); the plans for 3.4 and 3.5 (written below,
-with their own points). No code before a task's plan is approved; no paid call before its own go.
+technical choices (§5, #258–#260); the area grouping (§6, #261); Gate C's names and types and R1–R9 (#288, R7 amended
+by #291); the plans for 3.4 and 3.5 (#289, #290). **Built:** 3.4 (2026-10-10, round 3), 3.5 (2026-10-11, round 4).
+**Next:** 3.6's plan. No code before a task's plan is approved; no paid call before its own go.
 **Owner:** Ron
-**Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gate C (DRAFT, not approved), Gates A, B, E (approved), Gate D
+**Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
 (the key, #230, #232) · **Research:** `RESEARCH.md` §16 (the area grouping check)
 
 **Phase goal:** Ron and his friends sign in to a site on the tailnet, set their profile, and see the real active posts
@@ -110,6 +110,7 @@ evaluation (3.6), the site (3.7), any write of a report or a flag (3.7, 3.8).
 | `get_user(user_id)`, `find_user_by_username(username)`, `list_users()` | Reads; the username is compared in lower case |
 | `save_user(record, expected) -> User` | Compare and set, as for `PostLifecycle` below (sign-in counters, reset, disable) |
 | `add_key(key)`, `list_keys()`, `save_key(record, expected)` | `save_key` is compare and set (cancel) |
+| `find_key_by_hash(key_hash) -> SignupKey \| None` | The key with that hash, used or not; sign-up's lookup (#293, added 2026-10-11) |
 | `add_session(session)`, `find_session(token_hash)` | |
 | `end_session(token_hash, now)`, `end_sessions(user_id, now, keep=None)` | Sets `ended_at` on one session, or on every open session of the user except `keep` (#263, R3, R7) |
 | `get_profile(user_id)`, `save_profile(profile)` | Whole-record replace (point 4 below) |
@@ -244,7 +245,11 @@ seconds** (point 6); measured on the working day (3.10).
 7. The method names of the table in (a).
 8. local_json's compare and set is check-then-write with no lock: right for the tests, not for two processes.
 
-### Open after the build (for Ron, before 3.5)
+### Open after the build (for Ron, before 3.5) — SETTLED by Ron, 2026-10-11 (#291–#293)
+
+Point 1: two calls in a fixed order, the disable first; R7 reworded (#291), built in 3.5's `disable_user`. Point 2:
+stays as built, the run fails; Phase 5 looks at it again with the retention job (#292, `BACKLOG.md`). Point 3:
+`find_key_by_hash` added (#293); sign-up uses it. The text below is the question as it was put.
 
 1. **R7 and the method table.** R7 says disabling a user ends their sessions "in the same transaction"; the approved
    method table has `save_user` (the disable) and `end_sessions` as two methods, so two transactions. Built as tabled;
@@ -256,10 +261,19 @@ seconds** (point 6); measured on the working day (3.10).
 3. **How sign-up knows the key's id:** `create_user(user, profile, key_hash, now)` checks that the key with that hash is
    `user.signup_key_id`; 3.5's sign-up finds the id through `list_keys()` (no method finds a key by its hash).
 
-## 3.5 Accounts — PLAN APPROVED (#290, 2026-10-10); NOT BUILT
+## 3.5 Accounts — PLAN APPROVED (#290, 2026-10-10); BUILT 2026-10-11 (round 4)
 
-**Approved by Ron, with its four points as proposed, the dependency included (#290).** Not built in round 3; nothing
-is installed until Ron's go to build it.
+**Approved by Ron, with its four points as proposed, the dependency included (#290).** **Built in round 4
+(2026-10-11)** with #293 (`find_key_by_hash`) and #291 (disable, then end the sessions); the deviations are listed in
+`SESSION_LOG.md` (2026-10-11). `argon2-cffi` 25.1.0 and `argon2-cffi-bindings` 26.1.0 are installed. `create_admin`
+is tested on a temporary store only: Ron runs it on the production store himself.
+
+**The documentation re-read on 2026-10-11** (argon2-cffi.readthedocs.io, "argon2-cffi 25.1.0 documentation";
+pypi.org JSON) and checked against the installed package: the table below holds. Two details differ from what it
+records or leaves out: `get_default_parameters()` is in `argon2.profiles`, not at the top of `argon2` (on this Windows
+laptop it equals `RFC_9106_LOW_MEMORY`); `InvalidHashError` is a `ValueError`, not a `VerificationError`, so a wrong
+password and a broken stored hash are told apart. 25.1.0's files were uploaded on 2025-06-03. One hash at the
+production parameters took 0.056 s on the laptop, one check 0.057 s (one measurement each).
 
 **Scope.** The account logic over `UserDataStore`, with no web code: the one-time admin command (#244); keys (#243,
 #266); sign-up, sign-in with the delay (#264), sign-out; sessions (#263); the password change and the admin's reset
@@ -324,9 +338,9 @@ production profile. Added with `uv add argon2-cffi` once Ron approves; it is the
 
 ### What I could not verify (3.5)
 
-- `argon2-cffi` 25.1.0's release date: the PyPI page was cut off before it.
+- ~~`argon2-cffi` 25.1.0's release date~~: read on 2026-10-11, 2025-06-03 (pypi.org JSON for the version).
 - That the bindings' wheel installs in the container's base image: depends on the image chosen in 3.9 (ASSUMED until then).
-- `get_default_parameters()` on Windows: not read; the plan does not depend on it, since the profile is named explicitly.
+- ~~`get_default_parameters()` on Windows~~: read on 2026-10-11, equal to `RFC_9106_LOW_MEMORY` (`argon2.profiles`).
 - The time one hash takes on the laptop and the home server, and the memory under several sign-ins at once (64 MiB
   each): not measured; small for a few users.
 

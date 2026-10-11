@@ -2871,7 +2871,29 @@ admin's list; (4) `save_profile` whole-record replace; (5) `StaleRecordError`; (
 dependency `argon2-cffi` with the parameters named explicitly (`PasswordHasher.from_parameters(profiles.RFC_9106_LOW_MEMORY)`);
 `create_admin` named in `CLAUDE.md`'s writer paragraph when built; no command to issue keys before the admin's pages
 (3.8). **Approved, not built:** 3.5 is built in a later round, on Ron's go; nothing is installed until then.
-*Ron approved the reviewer's recommendation.*
+*Ron approved the reviewer's recommendation.* **Built 2026-10-11** (round 4), with #293.
+
+## Phase 3: the three points left by the build of 3.4 (2026-10-11)
+
+### 291 — Disabling a user and ending their sessions stay two calls, in a fixed order
+`save_user` (the disable) and `end_sessions` stay two methods and two transactions, called in a fixed order: disable
+first, then end the sessions. **Amends R7 (#288)**, which said "in the same transaction"; `SCHEMA.md`'s R7 is reworded.
+*Ron approved the reviewer's recommendation. The reviewer's reason:* a session of a disabled user is already invalid by the
+`Session` rule, so a failure between the two calls leaves the user locked out.
+
+### 292 — A run conflict the merge does not cover stays as built: the run fails at once
+When the run and the site both changed the state and the fresh record has no flag or report, `merge_run_record` raises
+and the run fails, no watermark moved (as built in 3.4, `run_merge.py`). Phase 5 looks at it again with the retention
+job (`BACKLOG.md`), with two notes from the review: (a) `merge_run_record` keeps the fresh state whenever its reason is
+`"flagged"` or `"misclassified"`, also when the run was bringing the post back from archive; (b) `ViewedPost` records are
+"deleted with their post" (#62) but `UserDataStore` has no method for it yet.
+*Ron approved the reviewer's recommendation. The reviewer's reason:* the only known case needs an archived post, and
+nothing is archived before Phase 5.
+
+### 293 — `UserDataStore.find_key_by_hash`
+`find_key_by_hash(key_hash) -> SignupKey | None` is added to `UserDataStore` (the Protocol, SQLite, the contract test).
+Sign-up uses it instead of scanning `list_keys()`. `CLAUDE.md`'s seam row and `PHASE_3.md`'s method table name it.
+*Ron approved the reviewer's recommendation.* No reason recorded.
 
 ---
 

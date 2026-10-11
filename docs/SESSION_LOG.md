@@ -4811,3 +4811,130 @@ decided: whether a post of unclear or unwritten kind alerts.
 
 STOP. 3.5 is not started. For Ron: rerun the tests; then `BACKLOG.md` item 6 (R7, the uncovered conflict, the key's id),
 then the go for 3.5.
+
+## 2026-10-11 — Phase 3, round 4: 3.4's three points settled (#291–#293); task 3.5 (accounts) built
+
+3.4 accepted by the reviewer; Ron committed it before this round. **No git command was run this round**, read-only ones
+included. No paid call; no network beyond `uv add argon2-cffi` and the documentation read. The production store was
+opened read-only once (Step 1) and never for writing: its file still dates from 2026-10-08 and no backup was made today.
+
+### Recorded
+
+- **#291** R7: disabling and ending the sessions stay two calls, the disable first. `SCHEMA.md`'s R7 reworded.
+- **#292** the conflict the merge does not cover stays as built (the run fails); a Phase 5 row in `BACKLOG.md` with the
+  review's two notes (the fresh `"flagged"`/`"misclassified"` state kept also on a run bringing a post back from archive;
+  no `UserDataStore` method deletes a post's `ViewedPost` records).
+- **#293** `UserDataStore.find_key_by_hash`. Each with "Ron approved the reviewer's recommendation" and the reason given.
+
+### Step 1, read-only check of the stored `PostLifecycle` records
+
+A scratch script (scratchpad, not in the repo) opened the store with `SqliteRepository(read_only=True)`, took every
+`listing_id` from `query()` and read each through `get_lifecycle`; the stored `schema_version` was counted from the raw
+documents over a second `mode=ro` connection (the Repository upgrades on read and cannot show it). The file's SHA-256
+was the same before and after.
+
+- 266 `RawPost`s, 266 lifecycle rows, none without its post, no post without a record.
+- Stored versions: **71 at version 1, 195 at version 2, none at 3.**
+- **All 266 parse as version 3** through `PostLifecycle.from_stored_json`; 0 failures.
+
+### Built (Step 2), file by file
+
+- `pyproject.toml`, `uv.lock`: `argon2-cffi>=25.1.0` (`uv add`); installed `argon2-cffi` 25.1.0, `argon2-cffi-bindings`
+  26.1.0, `cffi` 2.1.1, `pycparser` 3.11 (the last two pulled in by the bindings).
+- `userdata/base.py`, `userdata/sqlite.py`: `find_key_by_hash(key_hash) -> SignupKey | None` (#293), one lookup on the
+  unique `key_hash` column.
+- `accounts/__init__.py`: the package (plain modules, no storage of their own).
+- `accounts/tokens.py`: `new_key` (128 bits, `token_urlsafe(16)`), `new_session_token` (256 bits), `new_opaque_id`
+  (32 hex), `secret_hash` (SHA-256 hex).
+- `accounts/passwords.py`: `PRODUCTION_HASHER = PasswordHasher.from_parameters(profiles.RFC_9106_LOW_MEMORY)`;
+  `hash_password`, `check_password` (`False` on a mismatch; a broken stored hash still raises), `needs_rehash`,
+  `require_password_length` (8, `PasswordTooShort`), `dummy_check` for an unknown username.
+- `accounts/actions.py`: `create_admin`, `sign_up`, `sign_in`, `sign_out`, `session_user`, `change_password`,
+  `reset_password`, `disable_user`, `enable_user`, `issue_key`, `cancel_key`, `require_new_credentials`; `Refused`
+  (one exception, its message only a reason code), `SignedIn`, `IssuedKey` (the token and the key are left out of the
+  repr). Sign-up looks the key up with `find_key_by_hash`.
+- `jobs/create_admin.py`: the one-time command. Username with `input`, the password twice with `getpass`; Gate C's rules
+  checked before anything is written; then a dated backup, `actions.create_admin`, and the check that every stored
+  `RawPost` is identical to the backup's.
+- Tests: `tests/test_accounts.py` (41), `tests/test_create_admin_job.py` (7), one contract test for `find_key_by_hash` in
+  `tests/test_userdata_store.py`.
+- Docs: `DECISIONS.md` (#291–#293; #290 marked built), `SCHEMA.md` (R7, "Last updated"), `PHASE_3.md` (status line, the
+  method table, "Open after the build" settled, 3.5 built with the documentation re-read), `ASSUMPTIONS.md` (I12, I13),
+  `CLAUDE.md` (status, the command, the seam row, `accounts/`, the fifth writer), `BACKLOG.md`.
+
+### The documentation, re-read under the `external-contract-verification` skill
+
+argon2-cffi.readthedocs.io ("argon2-cffi 25.1.0 documentation") and the pypi.org JSON, then checked against the
+installed package. What the plan recorded holds. **Different from, or missing in, the plan:** `get_default_parameters()`
+is `argon2.profiles.get_default_parameters`, not a top-level `argon2` name (on this laptop it equals
+`RFC_9106_LOW_MEMORY`); `InvalidHashError` subclasses `ValueError`, not `VerificationError` (so `check_password` catches
+only `VerifyMismatchError`). 25.1.0's files were uploaded 2025-06-03 (the plan could not read it). One hash at the
+production parameters took 0.056 s, one check 0.057 s, on the laptop (one measurement). I12 is VERIFIED; I13 is VERIFIED
+on the laptop, still ASSUMED in the container.
+
+### Verified, and how
+
+- **`uv run pytest`: 1479 passed** (1430 at the end of round 3; +41 accounts, +7 `create_admin`, +1 `find_key_by_hash`;
+  0 failed, 475 s). **`uv run ruff check .`: all checks passed. `uv run ruff format --check .`:** one test file needed
+  formatting; after `ruff format`, 172 files formatted, and the accounts tests rerun: 41 passed.
+- The plan's tests 1–8: passwords (a wrong password is `False`; under 8 refused; `$argon2id$`; the production parameters
+  equal `RFC_9106_LOW_MEMORY`; a rehash on other parameters); sign-up (#268's defaults, the key used; unknown, used,
+  cancelled keys; a username in another case, with a Hebrew letter, of 2 or 33 characters); the delay (the 5th failure;
+  29 s later refused with no password check, `retry_after_seconds` 1; 30 s later checked; an unknown username gets
+  `"wrong_credentials"` after exactly one dummy check and stores nothing); sessions (valid 30 days less a second, not at
+  30 days; sign-out; reset ends all; the user's own change keeps the current one; disable ends all); keys (only the hash
+  in the file's bytes; a cancel keeps its first time; a used key cannot be cancelled); admin rules (five actions refused
+  to a friend and to an unknown token; the admin cannot be disabled); `create_admin` (one admin with no key, a second run
+  refused, `getpass` patched, the prompts asked, no password or `$argon2` in the output). Invariant 15: the suite runs
+  under the socket guard.
+- #291 by a test: `end_sessions` failing after the disable leaves the session open but invalid; disabling again ends it
+  and keeps the first `disabled_at`.
+- No password, key, token, their hashes or a password hash in any log line or refusal: a log capture at DEBUG over every
+  action; the log lines name no username.
+
+### Not verified
+
+- `create_admin` on the production store: not run, as instructed. **For Ron:**
+  `uv run python -m tlv_hunter.jobs.create_admin` (in a terminal; not beside `run_once` or `classify_pending`).
+- `getpass` on Ron's Windows terminal, by hand: only patched in tests.
+- That an unknown username takes as long as a known one: only that one check runs; times not compared.
+- Two processes writing a `User` at once: compare and set exercised in one process.
+- The bindings' wheel in the container (I13), and the memory of several sign-ins at once (64 MiB each).
+
+### Deviations (small details, done; none changes a record, a field or a store contract)
+
+1. **Every admin action takes the acting session's token** (`issue_key(store, token, label, now)`; also `cancel_key`,
+   `reset_password`, `disable_user`, `enable_user`): the plan's `issue_key(store, label, now)` had no actor, and the
+   admin-only checks are to be in `actions.py`.
+2. **One refusal type:** `sign_in` returns `SignedIn` or raises `Refused(reason)`, like every action, rather than
+   returning a refusal. "Must change password" is not a refusal at sign-in: `SignedIn.must_change_password` is `True`,
+   and every other signed-in action refuses with `"must_change_password"`.
+3. **A `hasher` keyword** on the password functions and the actions (and on `create_admin.main`), so the tests pass
+   `profiles.CHEAPEST`.
+4. **The dummy hash** is made once per process and per parameter set, not a literal in the code.
+5. **`actions.create_admin`** holds the admin's creation and **`require_new_credentials`** the username and length
+   checks; the command calls both, so a refusal comes before the backup.
+6. **`create_admin` makes a dated backup and checks the stored `RawPost`s**, as the other store writers do; it refuses a
+   missing store; two different passwords are refused with no retry. An existing admin is found only after the prompts
+   and the backup, so a refused second run leaves a backup file.
+7. **`change_password` asks for the current password**, also after a reset; a wrong one is not counted as a failed
+   sign-in. If the password changed between the check and the write: `"changed"`.
+8. **A disabled user** gets `"disabled"` only with the right password; a wrong one gets `"wrong_credentials"` and counts.
+9. **Compare and set** on `User` and `SignupKey` writes: the change is applied again to a fresh read, at most 3 times
+   (`actions.STORE_ATTEMPTS`), then `StaleRecordError`.
+10. Disabling a disabled user keeps the first `disabled_at` and ends any session still open (it completes #291's failure
+    case); cancelling a cancelled key is a no-op. A rehash after sign-in leaves `password_changed_at` as it was. The
+    admin may reset their own password (no rule forbids it). Sign-up does not sign in. `create_admin` prints the username
+    and `user_id` on Ron's console.
+
+### Docs the code made stale
+
+- Fixed: `PHASE_3.md`'s status line (stale since round 3: it said Gate C and the plans waited for Ron); `CLAUDE.md` (the
+  writer paragraph said "none of the four").
+- Not touched: `PHASE_3.md` 3.5's API table still names `get_default_parameters()` without its module (the correction is
+  written just above it); `DECISIONS.md` #288's R7 text is history, amended by #291.
+
+### Next
+
+STOP. 3.6 is not started. For Ron: rerun the tests and ruff; then `BACKLOG.md` item 6 (create the admin), then 3.6's
+plan.

@@ -67,6 +67,10 @@ class UserDataStore(Protocol):
 
     def list_keys(self) -> list[SignupKey]: ...
 
+    def find_key_by_hash(self, key_hash: str) -> SignupKey | None:
+        """The key whose hash is `key_hash`, used or not (#293)."""
+        ...
+
     def save_key(self, record: SignupKey, *, expected: SignupKey) -> SignupKey:
         """Compare and set; a cancelled key is never un-cancelled (#266)."""
         ...

@@ -5,7 +5,10 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-10, round 3 — **Gate C approved by Ron** (`DECISIONS.md` #288): its names and types, points
+**Last updated:** 2026-10-11 — R7 reworded (`DECISIONS.md` #291): disabling a user and ending their sessions are two
+calls in a fixed order, the disable first. No field or type changed.
+
+**Earlier, 2026-10-10, round 3 —** **Gate C approved by Ron** (`DECISIONS.md` #288): its names and types, points
 R1–R9, and the Gate E amendments E-1 to E-5, now written into Gate E's text (amended 2026-10-10); the "PROPOSED"
 table removed. No other gate changed.
 
@@ -897,8 +900,10 @@ above: 1–5 #262; 6 #263; 7 #264; 8 #265; 9 #266; 10 #267; 11 #268; 12 #269; 13
 The details the answers asked the assistant to propose, approved as proposed and written into the records above:
 R1 the delay (30 seconds from the 5th consecutive failure, per username); R2 "immediate" as the UTC date; R3 a
 user's own password change ends their other sessions; R4 one open report per reporter and post; R5 30 days from
-sign-in, not extended; R6 `ended_at` with no stored reason; R7 disabling ends the sessions in the same transaction;
-R8 the admin cannot be disabled; R9 sessions are not deleted in Phase 3.
+sign-in, not extended; R6 `ended_at` with no stored reason; R7 disabling a user and ending their sessions are two
+calls in a fixed order, the disable first, then the sessions ended (amended 2026-10-11, #291: a session of a disabled
+user is already invalid, so a failure between the two leaves the user locked out); R8 the admin cannot be disabled;
+R9 sessions are not deleted in Phase 3.
 
 ## Every name and type (approved 2026-10-10, #288)
 

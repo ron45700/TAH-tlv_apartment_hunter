@@ -166,6 +166,9 @@ class SqliteUserDataStore:
     def list_keys(self) -> list[SignupKey]:
         return self._all(SignupKey, "SELECT doc FROM signup_keys ORDER BY rowid")
 
+    def find_key_by_hash(self, key_hash: str) -> SignupKey | None:
+        return self._get(SignupKey, "SELECT doc FROM signup_keys WHERE key_hash = ?", (key_hash,))
+
     def save_key(self, record: SignupKey, *, expected: SignupKey) -> SignupKey:
         if (record.key_id, record.key_hash) != (expected.key_id, expected.key_hash):
             raise ValueError("a key's id and hash never change")

@@ -7,7 +7,7 @@ is approved*. `SESSION_LOG.md` records *what happened*. None of them tracks whet
 actually reached the code, which is how decisions #37 and #38 were approved on 2026-09-14 and were
 still unimplemented on 2026-10-02.
 
-**Last updated:** 2026-10-10 (round 3)
+**Last updated:** 2026-10-11 (round 4)
 
 ## Rules
 
@@ -29,7 +29,8 @@ approved, the spike run (#126–#156); the model decides the area (#167); tasks 
 **Phase 3 was opened by Ron on 2026-10-10** and the content of Gate C approved (`DECISIONS.md` #242–#257). On the
 same day Ron answered Gate C's 31 open points (#262–#287), chose the technical options (#258–#260), approved the area
 grouping (#261), `PHASE_3.md`'s task order and DoD, **Gate C's names and types (#288)** and the plans for 3.4 and 3.5
-(#289, #290). **Task 3.4 (store) is built** (round 3); **3.5 (accounts) is approved, not built** (item 7).
+(#289, #290). **Task 3.4 (store) is built** (round 3). On 2026-10-11 Ron settled 3.4's three open points (#291–#293)
+and **task 3.5 (accounts) was built** (round 4); the admin is not created yet (item 6).
 
 | # | Item | Source | Needs |
 |---|---|---|---|
@@ -38,8 +39,8 @@ grouping (#261), `PHASE_3.md`'s task order and DoD, **Gate C's names and types (
 | 3 | **Deferred (Ron, 2026-10-09): position 3 keeps failing `furnished` in the regression run.** `DECISIONS.md` #241 (Ron's ruling: `partial`, not `unclear`, on post `0555aa32…`) has no carrier in the set: it needs a Ron-approved changed value of a field measured from the review, a new kind of entry in `label_overrides.json` (a change to its shape) and a few lines in `labeling/regression.py`. Not built now. Ron's reason: not essential, he wants to move on to Phase 3. With that one truth the recomputed verdict of run `47e96cac0e8d` would be `pass` in both passes (`SESSION_LOG.md`, 2026-10-09) | `DECISIONS.md` #238–#241 | Ron, if he ever wants it |
 | 4 | **Deferred (Ron, 2026-10-09): the reclassify of the remaining 189 stored `Listing`s (prompt 3) is not scheduled.** New posts are classified at version 4; the old ones leave by retention. Ron decides later whether to run it (`--limit 194 --cap 0.10`, about $0.042, `PHASE_2.md` 2.9). Until then the store holds two versions side by side (#217) | `DECISIONS.md` #144, #217–#222 | Ron, later |
 | 5 | **The first real `reclassify --run` was made on 2026-10-09** (run `dcb4c0cb4b24`, five named posts, $0.001693, 5 calls, nothing written to the store): `data/store/reclassify/dcb4c0cb4b24/` (`diff.html`, `proposals.jsonl`, `summary.json`, `allow_unchanged.txt`, `allow_state_changes.txt`). `#236` followed at `d269d280` (`stated_area_names` `[]`), not at `4c5bbcaf` (#235: `["בלב העיר"]`); `e6a8b9bb` gets area 42 and a stated name from places it names as nearby (`SESSION_LOG.md`, 2026-10-09). **No `apply_reclassify` yet: it waits for Ron to read `diff.html`** (dry run first: `uv run python -m tlv_hunter.jobs.apply_reclassify dcb4c0cb4b24`) | `PHASE_2.md` 2.9; `DECISIONS.md` #218, #221, #236 | Ron |
-| 6 | **Three points left by the build of 3.4:** R7 (disabling ends the sessions "in the same transaction") against the approved method table, which has two methods; a run conflict the merge rule does not cover (built: the run fails); how sign-up knows the key's id (`list_keys()`) | `PHASE_3.md` 3.4, "Open after the build"; `SESSION_LOG.md` 2026-10-10 round 3 | Ron, before 3.5 |
-| 7 | **Task 3.5 (accounts): approved (#290), not built.** Its go, after item 6. It adds the dependency `argon2-cffi` (`ASSUMPTIONS.md` I12, I13) | `PHASE_3.md` 3.5 | Ron |
+| 6 | **Create the admin on the production store** (#244): Ron runs `uv run python -m tlv_hunter.jobs.create_admin` himself, in a terminal (it asks the username, then the password twice, hidden). It makes a dated backup beside the store first, writes only the `userdata` tables, and prints the backup's path and whether every stored `RawPost` is identical. Not beside `run_once` or `classify_pending` (#140) | `PHASE_3.md` 3.5; `DECISIONS.md` #244, #290 | Ron |
+| 7 | **Task 3.6 (evaluation, `policy/`): its plan to be written**, then Ron's approval | `PHASE_3.md` 3.6 | Ron |
 
 ### For phase 3 (`DECISIONS.md` #214, #225)
 
@@ -83,7 +84,7 @@ Planned in `PHASE_3.md` (draft, 2026-10-10), §3.
 | #56 the bot listens | `notify` is a stub | Phase 4 |
 | #61 admin-set run interval and a manual "run now" | No scheduler exists | Phase 5, with the scheduler. Interval and last-run record approved then |
 | #62, #253 viewed posts, per user; opening the card marks it viewed, "mark as not viewed", a card stays viewed through the Gate D grouping | Records and storage built (3.4); no logic or page | `ViewedPost` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
-| #242–#244 accounts: username and password, no email, admin reset; one-time keys (no expiry, cancel, label, used by and when); one admin created by a command | Records and storage built (3.4); no logic | `User`, `SignupKey` (Gate C draft); `PHASE_3.md` 3.4, 3.5 |
+| #242–#244 accounts: username and password, no email, admin reset; one-time keys (no expiry, cancel, label, used by and when); one admin created by a command | Records, storage (3.4) and logic (3.5, `accounts/`, `jobs/create_admin.py`) built with their tests; the admin not created yet (item 6) | The pages and the cookie (3.7); the admin's key and user pages (3.8) |
 | #245–#247 the profile's two search options, the sublet switch, the sqm filter in the empty-apartment search only | Records and storage built (3.4); no logic or page | `Profile`, `SearchOption` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
 | #248, #249, #261 the area filter grouped (seven regions); non-residential entries (11, 12, 13, 28, 51, 55, 66) in a collapsed group, not hidden | Nothing exists | `PHASE_3.md` §6, 3.7 (where the grouping lives in code is 3.7's plan) |
 | #250, #275 no orange on the area when all of the post's areas are in the user's selection; with none chosen, orange | Nothing exists | `PHASE_3.md` 3.6 |
@@ -92,7 +93,7 @@ Planned in `PHASE_3.md` (draft, 2026-10-10), §3.
 | #257 the polished UI in phase 3 | Nothing exists | `PHASE_3.md` 3.7, with Ron's design skills |
 | #258 the framework: React + TypeScript with Vite, hand-written CSS, `@fontsource`; FastAPI + uvicorn serve the API and the static build; one image, two-stage | Nothing exists; Node v24.11.1 and npm 11.6.2 on Ron's laptop (2026-10-10) | `PHASE_3.md` 3.7, 3.9 |
 | #259 the busy timeout (10 s, `sqlite_busy.py`) is built (3.4); WAL reconsidered in Phase 5 | Built 2026-10-10: every connection passes it | Measured on the working day (3.10). The row leaves then |
-| #262–#266 accounts: opaque `user_id`, the username's rules, Argon2id with 8 characters minimum, the admin's temporary password; sessions of 30 days, ended by a reset; the delay after 5 failures; disable, never delete; keys shown once, never un-cancelled | Records and storage built (3.4: `User`, `Session`, `SignupKey`, `userdata/`); the logic is not | `PHASE_3.md` 3.5 |
+| #262–#266, #291 accounts: opaque `user_id`, the username's rules, Argon2id with 8 characters minimum, the admin's temporary password; sessions of 30 days, ended by a reset; the delay after 5 failures; disable (then end the sessions, #291), never delete; keys shown once, never un-cancelled | Built 2026-10-11 (3.5: `accounts/`, tests in `tests/test_accounts.py`) | The cookie (proposed `HttpOnly`, `Secure`, `SameSite=Strict`, 30 days; verified in 3.7) and the pages (3.7, 3.8) |
 | #268–#274 the profile: defaults, fixed wanted values, the entry-date range and "immediate", half rooms and the basement, "copy from the other option", a post of unclear kind, sublets | Records and storage built (3.4); no logic or page | `Profile`, `SearchOption` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
 | #276–#280, #284–#287 viewed (first time kept); the report's fields and 500-character note, one open report per reporter, `"misclassified"` last, `flagged_by` the first reporter; corrections stored and removed; `PostLifecycle` v3; left out not final; the Gate D key on corrected values | Records and storage built (3.4); no logic or page | Gate C draft, E-1 to E-5; `PHASE_3.md` 3.4, 3.6, 3.8 |
 
@@ -110,6 +111,7 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | Image files with no `PostImage` pointing at them: written by a run that failed after the download and before the store step, for a post that never comes back. A sweep of unreferenced files under `<store_root>/images/` (`DECISIONS.md` #77, plan §3) | Phase 5 |
 | The repost log shows the earliest `posted_at` of the post and its duplicates: the stored canonical can be later than a duplicate that arrived after it (`DECISIONS.md` #75 A). The card's main time is the last publication (#122). A display rule | Phase 3 UI design |
 | The admin lists (rejected, pending, archive) show canonicals only (`DECISIONS.md` #75 B) | Phase 3 |
+| **The run conflict the merge does not cover** (`DECISIONS.md` #292): the run and the site both changed the state and the fresh record has no flag or report; built: the run fails at once (`run_merge.py`). Look at it again with the retention job. Two notes from the review: (a) `merge_run_record` keeps the fresh state whenever its reason is `"flagged"` or `"misclassified"`, also when the run was bringing the post back from archive; (b) `ViewedPost` records are "deleted with their post" (#62) but `UserDataStore` has no method for it yet | Phase 5, the retention job |
 | Whether a duplicate's retention follows its own clock or its canonical's (`DECISIONS.md` #75 B). Note: `dedup_a` raises when a stored duplicate points at a canonical that is not stored, so deleting a canonical before its duplicates would block the run | Phase 5 |
 | The phone as a candidate signal for dedup B; layer 3 of dedup A produces nothing (`DECISIONS.md` #75 C). **What the key settles:** the phone is a signal, never alone, and never an agent number (#230, #232); dedup B is derived, not stored (#231). **What is left:** dedup A's layer 3 still produces nothing, and nothing writes a phone match onto a post | Phase 3 planning |
 | Measure a week of real runs before concluding on volume and monthly cost. Run A, a weekday, returned 212 rows in 24 h with two groups cut off at 50, against the ~125–150 estimated from weekend data (`ASSUMPTIONS.md` P7); the ~$12–16/month Ron accepted may be low. Approved by Ron, 2026-10-04 | Before any conclusion on volume or cost; each run is paid and approved by Ron |
