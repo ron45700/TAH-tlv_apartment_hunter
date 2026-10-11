@@ -50,8 +50,10 @@ class SpyRepository:
         self.upserted.append(post)
         return self._inner.upsert_with_lifecycle(post, initial)
 
-    def save_lifecycle(self, record: PostLifecycle) -> PostLifecycle:
-        return self._inner.save_lifecycle(record)
+    def save_lifecycle(
+        self, record: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> PostLifecycle:
+        return self._inner.save_lifecycle(record, expected=expected)
 
     def get_lifecycle(self, listing_id: str) -> PostLifecycle | None:
         return self._inner.get_lifecycle(listing_id)

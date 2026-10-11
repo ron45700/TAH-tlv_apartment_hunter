@@ -11,7 +11,14 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import CONFIG_ROOT, make_listing, post_with_text
+from tests.conftest import (
+    CONFIG_ROOT,
+    AnotherWriterFirst,
+    make_listing,
+    overwrite_classification,
+    overwrite_lifecycle,
+    post_with_text,
+)
 from tests.test_classification_run import lifecycle
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.contracts.raw_post import RawPost
@@ -51,8 +58,8 @@ def build(tmp_path: Path, posts: list[RawPost]) -> tuple[Path, dict[str, RawPost
         post = post_with_text(posts[i], text, native_location=location)
         repository.upsert_with_lifecycle(post, lifecycle(post))
         answer = make_listing(post.listing_id, post_nature=nature, other_city=city)
-        repository.save_classification(
-            answer, lifecycle(post, state=state, rejection_reason=reason)
+        overwrite_classification(
+            repository, answer, lifecycle(post, state=state, rejection_reason=reason)
         )
         named[name] = post
     # A pre-model reject with a Holon location, a flagged post, and a pending one: never touched.
@@ -109,8 +116,8 @@ def test_a_second_plan_after_the_rule_has_nothing_to_change(tmp_path: Path, post
     for name in CHANGED:
         post = named[name]
         record = repository.get_lifecycle(post.listing_id)
-        repository.save_lifecycle(
-            rederived_lifecycle(record, repository.get_listing(post.listing_id), post)
+        overwrite_lifecycle(
+            repository, rederived_lifecycle(record, repository.get_listing(post.listing_id), post)
         )
     assert plan_rederivation(repository).changes == ()
 
@@ -262,6 +269,22 @@ def test_a_record_that_changed_since_the_plan_is_not_written(
     code, output = run(tmp_path, "--apply", "--allow", allow(named, *CHANGED))
     assert code == 1 and "changed since the plan" in output
     assert status(database, named["cleared"]) == ("rejected", "other_city")
+
+
+def test_a_record_changed_just_before_its_write_is_not_written(
+    tmp_path: Path, posts, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Compare and set (#260): another writer between the re-read and the write."""
+    database, named = build(tmp_path, posts)
+    real = rederive_rejections.SqliteRepository
+
+    def repository(path: Path, **kwargs: Any) -> Any:
+        opened = real(path, **kwargs)
+        return opened if kwargs.get("read_only") else AnotherWriterFirst(opened, times=1)
+
+    monkeypatch.setattr(rederive_rejections, "SqliteRepository", repository)
+    code, output = run(tmp_path, "--apply", "--allow", allow(named, *CHANGED))
+    assert code == 1 and "changed since the plan" in output
 
 
 def _raw(database: Path) -> list[tuple]:

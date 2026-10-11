@@ -27,7 +27,7 @@ from tlv_hunter.postmodel.reclassify import (
     reclassified_lifecycle,
     status_text,
 )
-from tlv_hunter.store.base import Repository
+from tlv_hunter.store.base import Repository, StaleRecordError
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +207,10 @@ def _apply_one(
     if reason is not None:
         return ApplyOutcome(listing_id, "not written", reason)
     lifecycle = reclassified_lifecycle(record, proposal.new.listing, post)
-    repository.save_classification(proposal.new.listing, lifecycle)
+    try:
+        repository.save_classification(proposal.new.listing, lifecycle, expected=record)
+    except StaleRecordError:
+        return ApplyOutcome(listing_id, "not written", "the record changed since the run")
     if on_written is not None:
         on_written(proposal)
     return ApplyOutcome(

@@ -19,12 +19,17 @@ from tlv_hunter.images.download import ImageTransport, download_images, urllib_i
 from tlv_hunter.parsing.datetimes import require_utc
 from tlv_hunter.premodel.rejects import initial_lifecycle
 from tlv_hunter.providers.base import Provider
+from tlv_hunter.run_merge import merge_run_record
 from tlv_hunter.state.base import WatermarkStore
-from tlv_hunter.store.base import Repository
+from tlv_hunter.store.base import Repository, StaleRecordError
 from tlv_hunter.textnorm.annotate import annotate
 from tlv_hunter.watermark.window import CutOff, advance, run_since
 
 logger = logging.getLogger(__name__)
+
+# A record another writer changed during the run is merged and written again, at most this many
+# attempts in all; then the run fails and no watermark moves (DECISIONS.md #289, point 2).
+STORE_ATTEMPTS = 3
 
 
 @dataclass(frozen=True)
@@ -150,9 +155,17 @@ def _repair_missing_lifecycles(repository: Repository) -> tuple[str, ...]:
     """#79 O3: a stored post with no lifecycle record gets its initial one. It should not happen:
     in SQLite `upsert_with_lifecycle` writes both in one transaction."""
     missing = repository.find_without_lifecycle()
+    repaired: list[str] = []
     for post in missing:
-        repository.save_lifecycle(initial_lifecycle(post))
-    listing_ids = tuple(post.listing_id for post in missing)
+        try:
+            repository.save_lifecycle(initial_lifecycle(post), expected=None)
+        except StaleRecordError:
+            logger.warning(
+                "repair: %s got a lifecycle record from another writer; skipped", post.listing_id
+            )
+            continue
+        repaired.append(post.listing_id)
+    listing_ids = tuple(repaired)
     if listing_ids:
         logger.error(
             "repaired %d stored posts with no lifecycle record: %s",
@@ -183,17 +196,42 @@ def _store(result: DedupResult, repository: Repository) -> None:
        usually comes before its canonical; a duplicate stored without its canonical makes every
        later `dedup_a` raise.
 
-    Every post goes through `upsert_with_lifecycle`, which creates a record only, then
-    `save_lifecycle`, which replaces it: a re-fetched post's record has changed.
+    Every post goes through `upsert_with_lifecycle`, which creates a record only; a post that had
+    a record when dedup read it is then written by `save_lifecycle`, compare and set against that
+    read (#260): a re-fetched post's record has changed.
     """
     records = {record.listing_id: record for record in result.lifecycles}
     in_batch = {post.listing_id for post in result.posts}
     for record in result.lifecycles:
         if record.listing_id not in in_batch:
-            repository.save_lifecycle(record)
+            _save(repository, record, result.read[record.listing_id])
     canonicals = [post for post in result.posts if post.is_canonical]
     duplicates = [post for post in result.posts if not post.is_canonical]
     for post in canonicals + duplicates:
         record = records[post.listing_id]
         repository.upsert_with_lifecycle(post, record)
-        repository.save_lifecycle(record)
+        read = result.read[post.listing_id]
+        if read is not None:
+            _save(repository, record, read)
+
+
+def _save(repository: Repository, record: PostLifecycle, read: PostLifecycle | None) -> None:
+    """Compare and set against the record as the run read it (#260). When another writer changed
+    it during the run (a user's flag or report, the admin's restore or retry), the run's change is
+    merged into the fresh record and written again, at most `STORE_ATTEMPTS` attempts in all
+    (#289, point 2). A record the run read as absent is created only."""
+    if read is None:
+        repository.save_lifecycle(record, expected=None)
+        return
+    to_write, expected = record, read
+    for _ in range(STORE_ATTEMPTS):
+        try:
+            repository.save_lifecycle(to_write, expected=expected)
+            return
+        except StaleRecordError:
+            fresh = repository.get_lifecycle(record.listing_id)
+            if fresh is None:
+                raise
+            logger.warning("store: %s changed during the run; merged", record.listing_id)
+            to_write, expected = merge_run_record(read, record, fresh), fresh
+    raise StaleRecordError(record.listing_id)

@@ -21,6 +21,8 @@ from typing import TextIO
 
 from pydantic import ValidationError
 
+from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_ROOT = REPO_ROOT / "config"
 # The one SQLite file both `store` and `state` open, under `store_root` (DECISIONS.md #65).
@@ -116,7 +118,9 @@ def backup_store(database: Path, now: datetime) -> Path:
 def raw_post_rows(path: Path) -> list[tuple[str, str, str | None]]:
     """Every stored `RawPost` row, read-only: invariant 14 is that these are the same before and
     after a command that writes classifications."""
-    connection = sqlite3.connect(f"file:{path.resolve().as_posix()}?mode=ro", uri=True)
+    connection = sqlite3.connect(
+        f"file:{path.resolve().as_posix()}?mode=ro", uri=True, timeout=BUSY_TIMEOUT_SECONDS
+    )
     try:
         return connection.execute(
             "SELECT listing_id, doc, text_hash FROM raw_posts ORDER BY listing_id"

@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import CONFIG_ROOT
+from tests.conftest import CONFIG_ROOT, overwrite_lifecycle
 from tests.test_classify_pending_job import ANSWER, answers
 from tests.test_openai_classifier import FakeTransport, spike_response
 from tests.test_reclassify_job import (
@@ -283,8 +283,8 @@ def test_a_post_that_changed_since_the_run_is_not_written_and_the_exit_is_2(
     stored, folder, run_id = stage1(tmp_path, posts)
     repository = SqliteRepository(database(tmp_path))
     record = repository.get_lifecycle(stored[1].listing_id)
-    repository.save_lifecycle(
-        record.model_copy(update={"state": "rejected", "rejection_reason": "seeking"})
+    overwrite_lifecycle(
+        repository, record.model_copy(update={"state": "rejected", "rejection_reason": "seeking"})
     )
     code, out, _ = apply(
         tmp_path, run_id, "--apply", "--allow-file", str(folder / ALLOW_UNCHANGED_FILE)
@@ -326,7 +326,7 @@ def test_no_dropped_names_file_when_nothing_is_written(tmp_path: Path, posts) ->
     repository = SqliteRepository(database(tmp_path))
     for post in stored:
         record = repository.get_lifecycle(post.listing_id)
-        repository.save_lifecycle(record.model_copy(update={"state": "archived"}))
+        overwrite_lifecycle(repository, record.model_copy(update={"state": "archived"}))
     code, out, _ = apply(
         tmp_path, run_id, "--apply", "--allow-file", str(folder / ALLOW_UNCHANGED_FILE)
     )

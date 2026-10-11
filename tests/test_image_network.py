@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FETCHED_AT
+from tests.conftest import FETCHED_AT, overwrite_lifecycle
 from tests.test_image_download import (
     OK,
     FakeTransport,
@@ -273,7 +273,7 @@ def test_an_http_error_replaces_the_entry_and_ends_the_retries(
     transport = FakeTransport({"p1": [FORBIDDEN]})
     result = _retry(repo, tmp_path, transport, clock, sleep)
     assert result.lifecycles[-1].images == [_failed(post.listing_id, "p1", "http 403")]
-    repo.save_lifecycle(result.lifecycles[-1])
+    overwrite_lifecycle(repo, result.lifecycles[-1])
 
     _retry(repo, tmp_path, transport, clock, sleep)
     assert transport.calls == ["p1"]

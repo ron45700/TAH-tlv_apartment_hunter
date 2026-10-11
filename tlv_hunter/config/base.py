@@ -17,15 +17,9 @@ class CollectionConfig(BaseModel):
     store_root: str
 
 
-class UserConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
-
-    user_id: str
-    subscribed_group_ids: list[str]
-
-
 @runtime_checkable
 class ConfigSource(Protocol):
-    def collection(self) -> CollectionConfig: ...
+    """Collection settings only. User profiles are not config: they live in the store
+    (DECISIONS.md #47; `userdata/`, #267)."""
 
-    def user(self, user_id: str) -> UserConfig: ...
+    def collection(self) -> CollectionConfig: ...

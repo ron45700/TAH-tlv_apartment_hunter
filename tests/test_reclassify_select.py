@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.conftest import make_listing
+from tests.conftest import make_listing, overwrite_classification
 from tests.test_classification_run import lifecycle
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.raw_post import RawPost
@@ -88,7 +88,7 @@ def shapes(make_repository: Callable[[], Repository], posts: list[RawPost]):
     }
     for name, listing in listings.items():
         record = repository.get_lifecycle(named[name].listing_id)
-        repository.save_classification(listing, record)
+        overwrite_classification(repository, listing, record)
     duplicate = next(p).with_changes(is_canonical=False, duplicate_of=named["current"].listing_id)
     repository.upsert_with_lifecycle(duplicate, lifecycle(duplicate))
     named["duplicate"] = duplicate
@@ -156,7 +156,8 @@ def test_when_every_listing_is_current_nothing_is_selected(shapes) -> None:
     for post in named.values():
         listing = repository.get_listing(post.listing_id)
         if listing is not None:
-            repository.save_classification(
+            overwrite_classification(
+                repository,
                 listing.model_copy(
                     update={"prompt_version": "3", "schema_version": 1, "model_name": "gpt-6-luna"}
                 ),

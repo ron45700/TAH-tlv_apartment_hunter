@@ -5,7 +5,7 @@ Layer 3, the phone, produces nothing here (#75 C).
 """
 
 import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -25,6 +25,9 @@ class DedupResult:
     lifecycles: tuple[PostLifecycle, ...]
     """One record per batch post, then every stored canonical outside the batch whose record
     changed."""
+    read: Mapping[str, PostLifecycle | None]
+    """For each record in `lifecycles`, the stored record as it was read (`None`: there was none).
+    The store step writes by compare and set against it (DECISIONS.md #260, #289)."""
 
 
 def dedup_a(batch: Sequence[RawPost], repository: Repository) -> DedupResult:
@@ -67,7 +70,9 @@ def dedup_a(batch: Sequence[RawPost], repository: Repository) -> DedupResult:
             )
 
     result = tuple(assigned[post.listing_id] for post in posts)
-    return DedupResult(posts=result, lifecycles=_lifecycles(result, stored, reader))
+    lifecycles = _lifecycles(result, stored, reader)
+    read = {record.listing_id: reader.get_lifecycle(record.listing_id) for record in lifecycles}
+    return DedupResult(posts=result, lifecycles=lifecycles, read=read)
 
 
 def _collapse_repeats(batch: Sequence[RawPost]) -> list[RawPost]:

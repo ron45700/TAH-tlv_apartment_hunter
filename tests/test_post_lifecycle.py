@@ -1,6 +1,7 @@
 """Gate E records: the approved field sets and rules (SCHEMA.md, Gate E)."""
 
 import json
+import typing
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
@@ -18,7 +19,7 @@ FLAG = {"flagged_by": "ron", "flagged_at": datetime(2026, 10, 4, 9, 0, tzinfo=UT
 
 def _lifecycle(**overrides: Any) -> dict[str, Any]:
     fields: dict[str, Any] = {
-        "schema_version": 2,
+        "schema_version": 3,
         "listing_id": "a" * 64,
         "state": "pending",
         "rejection_reason": None,
@@ -163,15 +164,15 @@ def _version_1_doc(**overrides: Any) -> str:
     return json.dumps({**doc, "schema_version": 1, **overrides})
 
 
-def test_a_stored_version_1_record_reads_as_version_2_with_no_failures() -> None:
+def test_a_stored_version_1_record_reads_as_version_3_with_no_failures() -> None:
     record = PostLifecycle.from_stored_json(_version_1_doc())
-    assert record.schema_version == 2
+    assert record.schema_version == 3
     assert record.classification_failures == 0
     assert record.last_classification_error is None
     assert record.last_published_at == datetime(2026, 10, 4, 8, 0, tzinfo=UTC)
 
 
-def test_a_stored_version_2_record_reads_unchanged() -> None:
+def test_a_stored_version_3_record_reads_unchanged() -> None:
     record = PostLifecycle.model_validate(
         _lifecycle(classification_failures=3, last_classification_error="timeout")
     )
@@ -190,10 +191,50 @@ def test_a_version_2_record_needs_both_new_fields() -> None:
         PostLifecycle.model_validate(fields)
 
 
-@pytest.mark.parametrize("version", [0, 1, 3])
+@pytest.mark.parametrize("version", [0, 1, 2, 4])
 def test_a_record_built_at_another_version_is_refused(version) -> None:
     with pytest.raises(ValidationError, match="schema_version"):
         PostLifecycle.model_validate(_lifecycle(schema_version=version))
+
+
+# --- Gate E amended for Gate C: "misclassified", version 3 (DECISIONS.md #279, #285, #288) ---
+
+
+def test_a_stored_version_2_record_reads_as_version_3_and_nothing_else_changes() -> None:
+    current = PostLifecycle.model_validate(
+        _lifecycle(classification_failures=2, last_classification_error="timeout")
+    )
+    doc = {**current.model_dump(mode="json"), "schema_version": 2}
+    assert PostLifecycle.from_stored_json(json.dumps(doc)) == current
+
+
+def test_a_record_is_written_back_at_version_3() -> None:
+    record = PostLifecycle.from_stored_json(_version_1_doc())
+    assert json.loads(record.model_dump_json())["schema_version"] == 3
+
+
+def test_misclassified_is_a_rejection_reason_with_its_flag() -> None:
+    record = PostLifecycle.model_validate(
+        _lifecycle(
+            state="rejected",
+            rejection_reason="misclassified",
+            flagged_by="0" * 32,
+            flagged_at=datetime(2026, 10, 10, tzinfo=UTC),
+        )
+    )
+    assert record.rejection_reason == "misclassified"
+
+
+def test_misclassified_requires_flagged_by_and_flagged_at() -> None:
+    with pytest.raises(ValidationError, match="misclassified"):
+        PostLifecycle.model_validate(_lifecycle(state="rejected", rejection_reason="misclassified"))
+
+
+def test_misclassified_is_last_in_gate_e_order() -> None:
+    reasons = typing.get_args(
+        typing.get_args(PostLifecycle.model_fields["rejection_reason"].annotation)[0]
+    )
+    assert reasons[-2:] == ("flagged", "misclassified")
 
 
 def test_classification_failures_cannot_be_negative() -> None:

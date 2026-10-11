@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import post_with_text
+from tests.conftest import AnotherWriterFirst, overwrite_lifecycle, post_with_text
 from tests.test_classify_complete import PROVENANCE, extraction
 from tlv_hunter.classification_run import ClassifyRunResult, attempt_post, classify_pending
 from tlv_hunter.classify.base import ClassificationError
@@ -146,9 +146,11 @@ def test_pending_canonicals_become_listings_with_their_states(setup) -> None:
 def test_only_pending_canonicals_are_classified(make_repository: MakeRepository, posts) -> None:
     repository = make_repository()
     pending, active, archived, rejected = store_pending(repository, posts[:4])
-    repository.save_lifecycle(lifecycle(active, state="active"))
-    repository.save_lifecycle(lifecycle(archived, state="archived"))
-    repository.save_lifecycle(lifecycle(rejected, state="rejected", rejection_reason="no_images"))
+    overwrite_lifecycle(repository, lifecycle(active, state="active"))
+    overwrite_lifecycle(repository, lifecycle(archived, state="archived"))
+    overwrite_lifecycle(
+        repository, lifecycle(rejected, state="rejected", rejection_reason="no_images")
+    )
     duplicate = posts[4].with_changes(is_canonical=False, duplicate_of=pending.listing_id)
     repository.upsert_with_lifecycle(duplicate, lifecycle(duplicate))
 
@@ -305,7 +307,7 @@ def test_a_store_error_propagates(setup) -> None:
         def __getattr__(self, name: str) -> Any:
             return getattr(repository, name)
 
-        def save_classification(self, listing, lifecycle) -> None:
+        def save_classification(self, listing, lifecycle, *, expected) -> None:
             raise OSError("disk full")
 
     with pytest.raises(OSError, match="disk full"):
@@ -321,14 +323,15 @@ def test_an_answer_for_a_post_no_longer_pending_is_discarded(setup) -> None:
 
     def flag(during: RawPost) -> None:
         if during.listing_id == post.listing_id:
-            repository.save_lifecycle(
+            overwrite_lifecycle(
+                repository,
                 lifecycle(
                     post,
                     state="rejected",
                     rejection_reason="flagged",
                     flagged_by="ron",
                     flagged_at=datetime(2026, 10, 5, tzinfo=UTC),
-                )
+                ),
             )
 
     classifier.during_call = flag
@@ -343,7 +346,7 @@ def test_an_answer_for_a_post_no_longer_pending_is_discarded(setup) -> None:
 
 def test_limit_counts_after_the_skipped_posts(setup) -> None:
     repository, stored, classifier = setup
-    repository.save_lifecycle(lifecycle(stored[0], classification_failures=3))
+    overwrite_lifecycle(repository, lifecycle(stored[0], classification_failures=3))
     result, _ = run(repository, classifier, limit=2)
     assert classifier.calls == [stored[1].listing_id, stored[2].listing_id]
     assert result.skipped == (stored[0].listing_id,)
@@ -442,3 +445,36 @@ def test_the_native_city_decides_the_rejection_and_the_run_counts_it(
     assert repository.get_listing(holon).other_city is None
     end = next(m for m in caplog.messages if m.startswith("classification done"))
     assert "rejected by the native city 1, model city cleared by it 1" in end
+
+
+# --- compare and set (DECISIONS.md #260, #289): a record changed between the read and the write ---
+
+
+def test_a_record_changed_before_the_write_is_read_again_and_written(setup) -> None:
+    repository, stored, classifier = setup
+    post = stored[0]
+    wrapped = AnotherWriterFirst(repository, times=1)
+    result, _ = run(wrapped, classifier, limit=1)
+    assert result.outcomes[0].outcome == "active"
+    assert repository.get_listing(post.listing_id) is not None
+    # The other writer's change was read again and kept.
+    assert repository.get_lifecycle(post.listing_id).flag_note == "another writer 1"
+
+
+def test_a_record_changed_twice_before_the_write_is_discarded(setup) -> None:
+    repository, stored, classifier = setup
+    post = stored[0]
+    result, _ = run(AnotherWriterFirst(repository, times=2), classifier, limit=1)
+    assert result.outcomes[0].outcome == "discarded"
+    assert repository.get_listing(post.listing_id) is None
+    assert repository.get_lifecycle(post.listing_id).state == "pending"
+
+
+def test_a_failure_whose_record_changed_is_read_again_and_counted(setup) -> None:
+    repository, stored, classifier = setup
+    post = stored[0]
+    classifier.script[post.listing_id] = [ClassificationError("invalid", "bad")] * 5
+    run(AnotherWriterFirst(repository, times=1), classifier, limit=1)
+    record = repository.get_lifecycle(post.listing_id)
+    assert record.classification_failures == 1
+    assert record.flag_note == "another writer 1"

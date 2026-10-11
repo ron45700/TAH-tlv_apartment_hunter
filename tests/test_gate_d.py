@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.conftest import CONFIG_ROOT, make_listing
+from tests.conftest import CONFIG_ROOT, make_listing, overwrite_classification
 from tlv_hunter.areas.reference import load_areas
 from tlv_hunter.contracts.post_lifecycle import PostImage, PostLifecycle
 from tlv_hunter.contracts.raw_post import RAW_POST_SCHEMA_VERSION, Media, RawPost
@@ -332,7 +332,7 @@ def add_pending(repository: Repository, post: RawPost) -> None:
 
 def add(repository: Repository, member: Member) -> None:
     add_pending(repository, member.post)
-    repository.save_classification(member.listing, member.lifecycle)
+    overwrite_classification(repository, member.listing, member.lifecycle)
 
 
 def test_only_active_canonical_classified_posts_are_compared(

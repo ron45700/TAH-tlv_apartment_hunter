@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from tlv_hunter.contracts.group_watermark import GroupWatermark
+from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS
 
 # UPSERT with a conflict target (INSERT ... ON CONFLICT(col) DO UPDATE), 3.24.0.
 MIN_SQLITE_VERSION = (3, 24, 0)
@@ -74,7 +75,7 @@ class SqliteWatermarkStore:
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        conn = sqlite3.connect(self._path, autocommit=True)
+        conn = sqlite3.connect(self._path, autocommit=True, timeout=BUSY_TIMEOUT_SECONDS)
         try:
             yield conn
         finally:

@@ -7,7 +7,7 @@ is approved*. `SESSION_LOG.md` records *what happened*. None of them tracks whet
 actually reached the code, which is how decisions #37 and #38 were approved on 2026-09-14 and were
 still unimplemented on 2026-10-02.
 
-**Last updated:** 2026-10-10
+**Last updated:** 2026-10-10 (round 3)
 
 ## Rules
 
@@ -27,9 +27,9 @@ Phase 1 is complete (2026-10-04, `PHASE_1.md`). Phase 2 is being built: Gate B a
 approved, the spike run (#126–#156); the model decides the area (#167); tasks 2.2 to 2.5 built and accepted (#174–#184). Task 2.6 (set, labelling page, runner), 2.7 (review report) built; **2.9 (reclassify, #217-#222) built and accepted by Ron on 2026-10-08; its first real `--run` (five posts) was made on 2026-10-09, no `--apply` yet**; instructions version 3 (the known places, #205, approved #209) passed `areas` by reach in both passes. **The first run over the store (2.8) was made on 2026-10-06** (#213): 194 of 195 pending canonicals classified. **DoD 5 is signed off (#224); DoD 4, the measured working day, moved to Phase 3 (#225).** **Task 2.10 is done: Gate D's key is decided (#230, rule 1 amended by #232); dedup B is not built, its use moves to Phase 3 as a derived result (#231).** **Phase 2's build is closed (Ron, 2026-10-09).** Instructions version 4 are written (2026-10-08, #233–#237, `PROMPT_VERSION` "4") and accepted (#238); its regression run is marked `fail` in both passes only by position 3's `furnished` (#241, deferred, item 3); #239 and #240 narrow what is compared on review and other-city posts. Two items are deferred (items 3 and 4). Every stored `Listing` is still at version 3: nothing has been applied (item 5).
 
 **Phase 3 was opened by Ron on 2026-10-10** and the content of Gate C approved (`DECISIONS.md` #242–#257). On the
-same day (round 2) Ron answered Gate C's 31 open points (#262–#287), chose the technical options (#258–#260), approved the
-area grouping (#261) and `PHASE_3.md`'s task order and DoD. Gate C's names and types are still a draft in `SCHEMA.md`
-(NOT APPROVED, one table to approve); the plans for 3.4 and 3.5 are written (items 6 to 8).
+same day Ron answered Gate C's 31 open points (#262–#287), chose the technical options (#258–#260), approved the area
+grouping (#261), `PHASE_3.md`'s task order and DoD, **Gate C's names and types (#288)** and the plans for 3.4 and 3.5
+(#289, #290). **Task 3.4 (store) is built** (round 3); **3.5 (accounts) is approved, not built** (item 7).
 
 | # | Item | Source | Needs |
 |---|---|---|---|
@@ -38,9 +38,8 @@ area grouping (#261) and `PHASE_3.md`'s task order and DoD. Gate C's names and t
 | 3 | **Deferred (Ron, 2026-10-09): position 3 keeps failing `furnished` in the regression run.** `DECISIONS.md` #241 (Ron's ruling: `partial`, not `unclear`, on post `0555aa32…`) has no carrier in the set: it needs a Ron-approved changed value of a field measured from the review, a new kind of entry in `label_overrides.json` (a change to its shape) and a few lines in `labeling/regression.py`. Not built now. Ron's reason: not essential, he wants to move on to Phase 3. With that one truth the recomputed verdict of run `47e96cac0e8d` would be `pass` in both passes (`SESSION_LOG.md`, 2026-10-09) | `DECISIONS.md` #238–#241 | Ron, if he ever wants it |
 | 4 | **Deferred (Ron, 2026-10-09): the reclassify of the remaining 189 stored `Listing`s (prompt 3) is not scheduled.** New posts are classified at version 4; the old ones leave by retention. Ron decides later whether to run it (`--limit 194 --cap 0.10`, about $0.042, `PHASE_2.md` 2.9). Until then the store holds two versions side by side (#217) | `DECISIONS.md` #144, #217–#222 | Ron, later |
 | 5 | **The first real `reclassify --run` was made on 2026-10-09** (run `dcb4c0cb4b24`, five named posts, $0.001693, 5 calls, nothing written to the store): `data/store/reclassify/dcb4c0cb4b24/` (`diff.html`, `proposals.jsonl`, `summary.json`, `allow_unchanged.txt`, `allow_state_changes.txt`). `#236` followed at `d269d280` (`stated_area_names` `[]`), not at `4c5bbcaf` (#235: `["בלב העיר"]`); `e6a8b9bb` gets area 42 and a stated name from places it names as nearby (`SESSION_LOG.md`, 2026-10-09). **No `apply_reclassify` yet: it waits for Ron to read `diff.html`** (dry run first: `uv run python -m tlv_hunter.jobs.apply_reclassify dcb4c0cb4b24`) | `PHASE_2.md` 2.9; `DECISIONS.md` #218, #221, #236 | Ron |
-| 6 | **Gate C's names and types:** the one table "For Ron's approval: every name and type", the Gate E amendments E-1 to E-5, and points R1–R9 (the sign-in delay, "immediate" as the UTC date, sessions, one open report per reporter, the admin not disabled) | `SCHEMA.md`, Gate C (DRAFT); `PHASE_3.md` 3.1 | Ron |
-| 7 | **The plan for task 3.4 (store):** the eighth seam `userdata/` and its contract, the Gate C contracts, `PostLifecycle` v3, compare and set in both stores and every caller (the pipeline's merge on a conflict), the busy timeout (10 s), the per-user YAML removed; 8 points | `PHASE_3.md` 3.4 | Ron |
-| 8 | **The plan for task 3.5 (accounts):** `accounts/`, `jobs/create_admin.py`, the dependency `argon2-cffi` (25.1.0, read 2026-10-10) with `RFC_9106_LOW_MEMORY` named explicitly; 4 points | `PHASE_3.md` 3.5 | Ron |
+| 6 | **Three points left by the build of 3.4:** R7 (disabling ends the sessions "in the same transaction") against the approved method table, which has two methods; a run conflict the merge rule does not cover (built: the run fails); how sign-up knows the key's id (`list_keys()`) | `PHASE_3.md` 3.4, "Open after the build"; `SESSION_LOG.md` 2026-10-10 round 3 | Ron, before 3.5 |
+| 7 | **Task 3.5 (accounts): approved (#290), not built.** Its go, after item 6. It adds the dependency `argon2-cffi` (`ASSUMPTIONS.md` I12, I13) | `PHASE_3.md` 3.5 | Ron |
 
 ### For phase 3 (`DECISIONS.md` #214, #225)
 
@@ -78,27 +77,24 @@ Planned in `PHASE_3.md` (draft, 2026-10-10), §3.
 | #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Built: the set, the labelling page, the runner (`label_overrides.json`, #196) and the review report (2026-10-06). Version 3 passed `areas` in both passes; `gender` failed in pass 2 and pass 1 was incomplete. Version 4 ran on 2026-10-08, accepted by Ron (#238); position 3's `furnished` still fails (#241, deferred, item 3) | Ron signed off the review of the first run (DoD 5, #224); what remains is the review of pass 1 (`review_page --run`, #193). The row leaves when Ron accepts the set |
 | #144, #217–#222 reclassify: two commands (`jobs/reclassify.py`, paid, store read-only, writes the diff report and two list files; `jobs/apply_reclassify.py`, free, the fourth store writer, `--allow` / `--allow-file`, no apply all); `find_reviewed` reads the replaced `Listing`s | Built 2026-10-08 and accepted. The first real `--run` was made on 2026-10-09 (five posts, item 5). No real `--apply`: it waits for Ron's go. The remaining 189 are not scheduled (item 4) | Ron's reading of `diff.html`, then his go for `--apply` (item 5) |
 | #77 D4b archiving deletes the image files and removes their `PostImage` entries | Nothing exists; task 1.12 already reads a record archived before #74 without counting its old entries (#77 D4) | Phase 5, the archive job |
-| #47 profiles live in the database; no per-user group subscriptions | `config/users/ron.yaml` holds `user_id` and subscribed groups; the config interface exposes them (`UserConfig`, `user()`; checked 2026-10-10) | Remove the per-user YAML and its interface methods when the user records arrive (`PHASE_3.md` 3.4). Until then it is unused, not wrong |
 | #46 archive and deletion | Nothing exists | Stored shape approved at Gate E (#63); the jobs in phase 5 |
 | #45 sniper removed | Not in the package. Research copies may sit in `data/raw/` (gitignored) | Nothing in code. Ron may delete the research copies |
 | #51, #52 filter model and alert rules | `policy` is a stub | Gate C's content approved (#245–#250); names and types a draft. `PHASE_3.md` 3.6; alerts in phase 4 |
 | #56 the bot listens | `notify` is a stub | Phase 4 |
 | #61 admin-set run interval and a manual "run now" | No scheduler exists | Phase 5, with the scheduler. Interval and last-run record approved then |
-| #62, #253 viewed posts, per user; opening the card marks it viewed, "mark as not viewed", a card stays viewed through the Gate D grouping | Nothing exists | `ViewedPost` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
-| #242–#244 accounts: username and password, no email, admin reset; one-time keys (no expiry, cancel, label, used by and when); one admin created by a command | Nothing exists | `User`, `SignupKey` (Gate C draft); `PHASE_3.md` 3.4, 3.5 |
-| #245–#247 the profile's two search options, the sublet switch, the sqm filter in the empty-apartment search only | Nothing exists | `Profile`, `SearchOption` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
+| #62, #253 viewed posts, per user; opening the card marks it viewed, "mark as not viewed", a card stays viewed through the Gate D grouping | Records and storage built (3.4); no logic or page | `ViewedPost` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
+| #242–#244 accounts: username and password, no email, admin reset; one-time keys (no expiry, cancel, label, used by and when); one admin created by a command | Records and storage built (3.4); no logic | `User`, `SignupKey` (Gate C draft); `PHASE_3.md` 3.4, 3.5 |
+| #245–#247 the profile's two search options, the sublet switch, the sqm filter in the empty-apartment search only | Records and storage built (3.4); no logic or page | `Profile`, `SearchOption` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
 | #248, #249, #261 the area filter grouped (seven regions); non-residential entries (11, 12, 13, 28, 51, 55, 66) in a collapsed group, not hidden | Nothing exists | `PHASE_3.md` §6, 3.7 (where the grouping lives in code is 3.7's plan) |
 | #250, #275 no orange on the area when all of the post's areas are in the user's selection; with none chosen, orange | Nothing exists | `PHASE_3.md` 3.6 |
-| #251, #281–#283 restore: one rule for flagged and reported posts; removes the flag or reports only; the state derived from the corrected values; an archived post stays archived | Not built: Gate E's approved restore rule (state back to `"active"`) is not built either | Gate E amendment E-3 (proposed); `PHASE_3.md` 3.4, 3.8 |
-| #254–#256 the "wrong classification" report, its retention, the admin's corrections | Nothing exists | `ClassificationReport`, `FieldCorrection`, Gate E amendments E-1, E-2, E-4 (proposed); `PHASE_3.md` 3.4, 3.6–3.8. The retention exemption is applied by phase 5's job |
+| #251, #281–#283 restore: one rule for flagged and reported posts; removes the flag or reports only; the state derived from the corrected values; an archived post stays archived | `PostLifecycle` v3 and `"misclassified"` built (3.4); restore itself is not | Gate E amendment E-3 (proposed); `PHASE_3.md` 3.4, 3.8 |
+| #254–#256 the "wrong classification" report, its retention, the admin's corrections | Records and storage built (3.4); no logic or page | `ClassificationReport`, `FieldCorrection`, Gate E amendments E-1, E-2, E-4 (proposed); `PHASE_3.md` 3.4, 3.6–3.8. The retention exemption is applied by phase 5's job |
 | #257 the polished UI in phase 3 | Nothing exists | `PHASE_3.md` 3.7, with Ron's design skills |
 | #258 the framework: React + TypeScript with Vite, hand-written CSS, `@fontsource`; FastAPI + uvicorn serve the API and the static build; one image, two-stage | Nothing exists; Node v24.11.1 and npm 11.6.2 on Ron's laptop (2026-10-10) | `PHASE_3.md` 3.7, 3.9 |
-| #259 an explicit busy timeout on every SQLite connection; the rollback journal stays | No connection sets `timeout` (the default is 5.0 s) | `PHASE_3.md` 3.4 (e) |
-| #260 compare and set for every `PostLifecycle` writer; #140 still holds among the job commands only | `save_lifecycle` is last write wins; a contract test pins it | `PHASE_3.md` 3.4 (d) |
-| #262–#266 accounts: opaque `user_id`, the username's rules, Argon2id with 8 characters minimum, the admin's temporary password; sessions of 30 days, ended by a reset; the delay after 5 failures; disable, never delete; keys shown once, never un-cancelled | Nothing exists | `User`, `Session`, `SignupKey` (Gate C draft); `PHASE_3.md` 3.4, 3.5 |
-| #267 the eighth seam beside `state/` | Nothing exists | `PHASE_3.md` 3.4 (a); its name waits for Ron |
-| #268–#274 the profile: defaults, fixed wanted values, the entry-date range and "immediate", half rooms and the basement, "copy from the other option", a post of unclear kind, sublets | Nothing exists | `Profile`, `SearchOption` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
-| #276–#280, #284–#287 viewed (first time kept); the report's fields and 500-character note, one open report per reporter, `"misclassified"` last, `flagged_by` the first reporter; corrections stored and removed; `PostLifecycle` v3; left out not final; the Gate D key on corrected values | Nothing exists | Gate C draft, E-1 to E-5; `PHASE_3.md` 3.4, 3.6, 3.8 |
+| #259 the busy timeout (10 s, `sqlite_busy.py`) is built (3.4); WAL reconsidered in Phase 5 | Built 2026-10-10: every connection passes it | Measured on the working day (3.10). The row leaves then |
+| #262–#266 accounts: opaque `user_id`, the username's rules, Argon2id with 8 characters minimum, the admin's temporary password; sessions of 30 days, ended by a reset; the delay after 5 failures; disable, never delete; keys shown once, never un-cancelled | Records and storage built (3.4: `User`, `Session`, `SignupKey`, `userdata/`); the logic is not | `PHASE_3.md` 3.5 |
+| #268–#274 the profile: defaults, fixed wanted values, the entry-date range and "immediate", half rooms and the basement, "copy from the other option", a post of unclear kind, sublets | Records and storage built (3.4); no logic or page | `Profile`, `SearchOption` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
+| #276–#280, #284–#287 viewed (first time kept); the report's fields and 500-character note, one open report per reporter, `"misclassified"` last, `flagged_by` the first reporter; corrections stored and removed; `PostLifecycle` v3; left out not final; the Gate D key on corrected values | Records and storage built (3.4); no logic or page | Gate C draft, E-1 to E-5; `PHASE_3.md` 3.4, 3.6, 3.8 |
 
 ---
 
@@ -129,6 +125,7 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | Rooms on a room post: "1 of N" when the total is written, a room with no "of" when it is not; the "1" comes from the apartment kind (`DECISIONS.md` #120). Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | Size on a room post: "X sqm for the room, of Y" when both are written; "X sqm for the room" when only the room's is (`DECISIONS.md` #121). Not stated: a room post that gives only the apartment's size. Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | The entry date's year is never displayed (`DECISIONS.md` #115). Approved by Ron, 2026-10-05 | Phase 3 UI design |
+| **Open, not decided:** whether a post whose kind is unclear or not written (shown at the bottom, under every enabled option, #273) alerts. `BASELINE.md` §9 item 2 does not say (Ron, 2026-10-10, round 3) | Phase 4 |
 
 ---
 

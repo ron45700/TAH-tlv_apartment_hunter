@@ -8,7 +8,12 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import make_listing
+from tests.conftest import (
+    AnotherWriterFirst,
+    make_listing,
+    overwrite_classification,
+    overwrite_lifecycle,
+)
 from tests.test_classification_run import (
     USAGE,
     ScriptedClassifier,
@@ -32,7 +37,8 @@ def old_store(repository: Repository, posts: list[RawPost], count: int = 4, **re
     """`count` canonicals classified at prompt version 2: all selected against version 3."""
     stored = store_pending(repository, posts[:count])
     for post in stored:
-        repository.save_classification(
+        overwrite_classification(
+            repository,
             make_listing(post.listing_id, prompt_version="2"),
             lifecycle(post, state="active", **record),
         )
@@ -298,8 +304,8 @@ def test_a_flagged_record_is_written_back_as_it_was(
     }
     stored = store_pending(repository, posts[:1])
     (post,) = stored
-    repository.save_classification(
-        make_listing(post.listing_id, prompt_version="2"), lifecycle(post, **flag)
+    overwrite_classification(
+        repository, make_listing(post.listing_id, prompt_version="2"), lifecycle(post, **flag)
     )
     was = repository.get_lifecycle(post.listing_id)
     classifier = ScriptedClassifier(CostMeter(cap=1.0), {post.listing_id: ["seeking"]})
@@ -341,13 +347,14 @@ def test_a_listing_or_a_record_that_changed_since_the_run_is_not_written(setup) 
     repository, stored, classifier = setup
     proposals = proposals_for(repository, classifier)
     other = make_listing(stored[0].listing_id, prompt_version="2", gender="women_only")
-    repository.save_classification(other, repository.get_lifecycle(stored[0].listing_id))
+    overwrite_classification(repository, other, repository.get_lifecycle(stored[0].listing_id))
     record = repository.get_lifecycle(stored[1].listing_id)
-    repository.save_lifecycle(
-        record.model_copy(update={"state": "rejected", "rejection_reason": "seeking"})
+    overwrite_lifecycle(
+        repository, record.model_copy(update={"state": "rejected", "rejection_reason": "seeking"})
     )
-    repository.save_lifecycle(
-        repository.get_lifecycle(stored[2].listing_id).model_copy(update={"state": "archived"})
+    overwrite_lifecycle(
+        repository,
+        repository.get_lifecycle(stored[2].listing_id).model_copy(update={"state": "archived"}),
     )
     outcomes = {
         o.listing_id: o for o in apply_proposals(repository=repository, proposals=proposals)
@@ -376,3 +383,16 @@ def test_a_post_that_is_gone_is_reported_not_raised(setup) -> None:
     ghost = Proposal.model_construct(**{**dict(proposals[0]), "listing_id": "e" * 64})
     (outcome,) = apply_proposals(repository=repository, proposals=[ghost])
     assert outcome.result == "not written" and "gone" in outcome.reason
+
+
+def test_a_record_changed_between_the_check_and_the_write_is_not_written(setup) -> None:
+    """Compare and set (#260): a change the checks above cannot see, such as a field the site
+    owns, still stops the write."""
+    repository, stored, classifier = setup
+    proposals = proposals_for(repository, classifier)
+    before = repository.get_listing(stored[0].listing_id)
+    (outcome,) = apply_proposals(
+        repository=AnotherWriterFirst(repository, times=1), proposals=proposals[:1]
+    )
+    assert (outcome.result, outcome.reason) == ("not written", "the record changed since the run")
+    assert repository.get_listing(stored[0].listing_id) == before

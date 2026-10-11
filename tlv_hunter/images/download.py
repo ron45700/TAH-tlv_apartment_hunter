@@ -165,7 +165,8 @@ def download_images(
     )
     lifecycles = tuple(run.records[record.listing_id] for record in result.lifecycles)
     added = tuple(run.records[listing_id] for listing_id in run.added)
-    return DedupResult(posts=result.posts, lifecycles=lifecycles + added)
+    read = {**result.read, **{listing_id: run.stored(listing_id) for listing_id in run.added}}
+    return DedupResult(posts=result.posts, lifecycles=lifecycles + added, read=read)
 
 
 class _Run:

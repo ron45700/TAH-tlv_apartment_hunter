@@ -38,6 +38,7 @@ from tlv_hunter.jobs.common import (
     sha256_file,
 )
 from tlv_hunter.postmodel.rederive import Plan, plan_rederivation, rederived_lifecycle
+from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.store.sqlite import SqliteRepository
 
 EXIT_DONE, EXIT_FAILED = 0, 1
@@ -125,7 +126,12 @@ def _run(
             raise RuntimeError(
                 f"{change.listing_id}: the record changed since the plan; not written"
             )
-        repository.save_lifecycle(rederived_lifecycle(record, listing, post))
+        try:
+            repository.save_lifecycle(rederived_lifecycle(record, listing, post), expected=record)
+        except StaleRecordError as error:
+            raise RuntimeError(
+                f"{change.listing_id}: the record changed since the plan; not written"
+            ) from error
         print(
             f"written: {change.listing_id[:12]} {_status(change.old)} -> {_status(change.new)}",
             file=out,

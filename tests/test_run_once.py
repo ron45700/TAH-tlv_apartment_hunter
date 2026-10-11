@@ -15,8 +15,10 @@ from tests.conftest import (
     KNOWN_DUPLICATE_PAIRS,
     SPIKE_1_1A_PREFIX,
     SQLITE_FILENAME,
+    AnotherWriterFirst,
     load_spike_1_1a,
     load_thedoor_items,
+    overwrite_lifecycle,
 )
 from tlv_hunter import pipeline
 from tlv_hunter.config.yaml_config import YamlConfig
@@ -31,7 +33,7 @@ from tlv_hunter.premodel.rejects import initial_lifecycle
 from tlv_hunter.providers.fixture import FixtureProvider
 from tlv_hunter.providers.thedoor import to_raw_post
 from tlv_hunter.state.sqlite import SqliteWatermarkStore
-from tlv_hunter.store.base import Repository
+from tlv_hunter.store.base import Repository, StaleRecordError
 from tlv_hunter.store.local_json import LocalJsonRepository
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.textnorm.annotate import annotate
@@ -108,9 +110,11 @@ class CrashingRepository:
         self._write("upsert_with_lifecycle", post.listing_id)
         return self._inner.upsert_with_lifecycle(post, initial)
 
-    def save_lifecycle(self, record: PostLifecycle) -> PostLifecycle:
+    def save_lifecycle(
+        self, record: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> PostLifecycle:
         self._write("save_lifecycle", record.listing_id)
-        return self._inner.save_lifecycle(record)
+        return self._inner.save_lifecycle(record, expected=expected)
 
     def get(self, listing_id: str) -> RawPost | None:
         return self._inner.get(listing_id)
@@ -459,16 +463,15 @@ def test_the_store_step_writes_canonicals_before_duplicates(store: Store) -> Non
     order = [listing_id for method, listing_id in repository.writes if method != "save_lifecycle"]
     first_duplicate = min(order.index(listing_id) for listing_id in duplicates)
     assert all(listing_id in duplicates for listing_id in order[first_duplicate:])
-    # Every post: create-only, then the replace.
-    assert repository.writes[0::2] == [("upsert_with_lifecycle", i) for i in order]
-    assert repository.writes[1::2] == [("save_lifecycle", i) for i in order]
+    # Every post is new to the store: created only, with no replace after it (#260, #289).
+    assert repository.writes == [("upsert_with_lifecycle", i) for i in order]
 
 
 def test_a_crash_at_any_write_of_the_store_step_converges(kind: str, tmp_path: Path) -> None:
     batch = _pairs_batch()
     reference = Store(kind, tmp_path / "reference")
     reference.run(ListProvider(batch), T20, window=WINDOW_20)
-    writes = 2 * len(batch)
+    writes = len(batch)
 
     for crash_at in range(writes):
         store = Store(kind, tmp_path / f"crash_{crash_at}")
@@ -495,7 +498,7 @@ def _archived_pair(store: Store) -> tuple[RawPost, RawPost]:
     store.run(ListProvider([canonical]), T20, window=WINDOW_20)
     record = store.repository.get_lifecycle(canonical.listing_id)
     assert record is not None and record.state == "pending"
-    store.repository.save_lifecycle(record.model_copy(update={"state": "archived"}))
+    overwrite_lifecycle(store.repository, record.model_copy(update={"state": "archived"}))
     return canonical, repost
 
 
@@ -510,7 +513,6 @@ def test_a_crash_after_an_archived_canonical_is_saved_converges(kind: str, tmp_p
     assert repository.writes == [
         ("save_lifecycle", canonical.listing_id),
         ("upsert_with_lifecycle", repost.listing_id),
-        ("save_lifecycle", repost.listing_id),
     ]
 
     for crash_at in range(len(repository.writes)):
@@ -618,3 +620,91 @@ def test_bootstrap_a_run_later_a_killed_run_and_the_recovery(kind: str, tmp_path
     assert store.watermarks.get_all() == reference.watermarks.get_all()
     assert store.repository.find_without_lifecycle() == []
     assert store.files() == store.referenced()
+
+
+# --- compare and set in the store step (DECISIONS.md #260, #289 point 2) -----------------------
+
+
+class SiteDuringImages:
+    """Passes through. When the image step asks for the stored photos to retry, which is after
+    dedup read the records and before the store step writes them, `act` runs once: a write by
+    another writer, as the site would make one."""
+
+    def __init__(self, inner: Repository, act: Callable[[], None]) -> None:
+        self._inner = inner
+        self._act: Callable[[], None] | None = act
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    def find_lifecycles_with_image_errors(self, prefixes: Sequence[str]) -> list[PostLifecycle]:
+        if self._act is not None:
+            act, self._act = self._act, None
+            act()
+        return self._inner.find_lifecycles_with_image_errors(prefixes)
+
+
+def _live_pair(store: Store) -> tuple[RawPost, RawPost]:
+    """A stored, active canonical C, and R, its later duplicate, never stored."""
+    posts = {post.source_post_id: post for post in _posts_20()}
+    for pair in sorted(KNOWN_DUPLICATE_PAIRS, key=sorted):
+        canonical, repost = sorted((posts[i] for i in pair), key=lambda p: p.posted_at)
+        if repost.posted_at > canonical.posted_at:
+            break
+    else:
+        raise AssertionError("no known pair with a later repost")
+    store.run(ListProvider([canonical]), T20, window=WINDOW_20)
+    record = store.repository.get_lifecycle(canonical.listing_id)
+    overwrite_lifecycle(store.repository, record.model_copy(update={"state": "active"}))
+    return canonical, repost
+
+
+def test_a_flag_made_during_a_run_survives_the_store_step(store: Store) -> None:
+    canonical, repost = _live_pair(store)
+    flagger = "f" * 32
+
+    def flag() -> None:
+        repository = store.repository
+        current = repository.get_lifecycle(canonical.listing_id)
+        flagged = current.model_copy(
+            update={
+                "state": "rejected",
+                "rejection_reason": "flagged",
+                "flagged_by": flagger,
+                "flagged_at": T20,
+            }
+        )
+        repository.save_lifecycle(flagged, expected=current)
+
+    later = T20 + timedelta(hours=1)
+    store.run(ListProvider([repost]), later, repository=SiteDuringImages(store.repository, flag))
+
+    record = store.repository.get_lifecycle(canonical.listing_id)
+    assert (record.state, record.rejection_reason, record.flagged_by) == (
+        "rejected",
+        "flagged",
+        flagger,
+    )
+    # The run's own change, the repost's publication (#75 F2), stays beside the flag.
+    assert record.last_published_at == repost.posted_at
+    assert max(mark.last_success_at for mark in store.watermarks.get_all()) == later
+
+
+def test_two_conflicts_are_merged_and_the_run_succeeds(store: Store) -> None:
+    canonical, repost = _live_pair(store)
+    repository = AnotherWriterFirst(store.repository, times=pipeline.STORE_ATTEMPTS - 1)
+    store.run(ListProvider([repost]), T20 + timedelta(hours=1), repository=repository)
+    record = store.repository.get_lifecycle(canonical.listing_id)
+    assert repository.interposed == [canonical.listing_id] * (pipeline.STORE_ATTEMPTS - 1)
+    assert record.flag_note == f"another writer {pipeline.STORE_ATTEMPTS - 1}"
+    assert record.last_published_at == repost.posted_at
+
+
+def test_a_conflict_at_every_attempt_fails_the_run_and_moves_no_watermark(store: Store) -> None:
+    canonical, repost = _live_pair(store)
+    marks = store.watermarks.get_all()
+    repository = AnotherWriterFirst(store.repository, times=pipeline.STORE_ATTEMPTS)
+    with pytest.raises(StaleRecordError):
+        store.run(ListProvider([repost]), T20 + timedelta(hours=1), repository=repository)
+    assert repository.interposed == [canonical.listing_id] * pipeline.STORE_ATTEMPTS
+    assert store.watermarks.get_all() == marks  # invariant 2

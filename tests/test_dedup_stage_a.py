@@ -10,7 +10,14 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FETCHED_AT, KNOWN_DUPLICATE_PAIRS, load_spike_1_1a, make_listing
+from tests.conftest import (
+    FETCHED_AT,
+    KNOWN_DUPLICATE_PAIRS,
+    load_spike_1_1a,
+    make_listing,
+    overwrite_classification,
+    overwrite_lifecycle,
+)
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import Media, RawPost
 from tlv_hunter.dedup.stage_a import DedupResult, dedup_a
@@ -47,7 +54,7 @@ def _store(repo: Repository, result: DedupResult) -> None:
     for post in result.posts:
         repo.upsert(post)
     for record in result.lifecycles:
-        repo.save_lifecycle(record)
+        overwrite_lifecycle(repo, record)
 
 
 def _run(repo: Repository, batch: list[RawPost]) -> DedupResult:
@@ -406,7 +413,9 @@ def test_a_repost_returns_an_archived_classified_post_to_active(repo, posts) -> 
     """#89: with no rejection reason, a Listing means the post was active."""
     earlier, later = _pair(posts)
     stored = _seed(repo, earlier, state="archived")
-    repo.save_classification(make_listing(stored.listing_id), repo.get_lifecycle(stored.listing_id))
+    overwrite_classification(
+        repo, make_listing(stored.listing_id), repo.get_lifecycle(stored.listing_id)
+    )
     record = _record(dedup_a([later], repo), earlier)
     assert (record.state, record.rejection_reason) == ("active", None)
 
@@ -437,7 +446,7 @@ def test_a_refetched_stored_duplicate_does_not_bring_back_an_archived_post(repo,
     earlier, later = _pair(posts)
     _run(repo, [earlier, later])
     archived = repo.get_lifecycle(earlier.listing_id).model_copy(update={"state": "archived"})
-    repo.save_lifecycle(archived)
+    overwrite_lifecycle(repo, archived)
     result = dedup_a([later], repo)
     assert earlier.listing_id not in {r.listing_id for r in result.lifecycles}
     assert repo.get_lifecycle(earlier.listing_id).state == "archived"

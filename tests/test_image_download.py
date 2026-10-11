@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import FETCHED_AT, load_spike_1_1a
+from tests.conftest import FETCHED_AT, load_spike_1_1a, overwrite_lifecycle
 from tlv_hunter.contracts.post_lifecycle import PostImage, PostLifecycle
 from tlv_hunter.contracts.raw_post import Media, RawPost
 from tlv_hunter.dedup.stage_a import DedupResult, dedup_a
@@ -185,10 +185,11 @@ def test_a_canonical_without_photos_downloads_nothing(repo, base, tmp_path) -> N
 
 def test_a_repost_downloads_nothing_while_the_canonical_holds_a_photo(repo, base, tmp_path) -> None:
     canonical = _seed(repo, _post(base, "1", [_media("c1")]))
-    repo.save_lifecycle(
+    overwrite_lifecycle(
+        repo,
         repo.get_lifecycle(canonical.listing_id).model_copy(
             update={"images": [_held(canonical.listing_id, "c1")]}
-        )
+        ),
     )
     repost = _post(base, "2", [_media("r1")], minutes=10)
     transport = FakeTransport()
@@ -213,14 +214,15 @@ def test_an_image_held_from_an_earlier_repost_counts(repo, base, tmp_path) -> No
     """#73.5: what we hold includes a photo that came through an earlier repost."""
     canonical = _seed(repo, _post(base, "1", []))
     earlier = _post(base, "2", [_media("e1")], minutes=5)
-    repo.save_lifecycle(
+    overwrite_lifecycle(
+        repo,
         repo.get_lifecycle(canonical.listing_id).model_copy(
             update={
                 "state": "pending",
                 "rejection_reason": None,
                 "images": [_held(earlier.listing_id, "e1")],
             }
-        )
+        ),
     )
     transport = FakeTransport()
     _run(repo, [_post(base, "3", [_media("r1")], minutes=10)], tmp_path, transport)
@@ -241,10 +243,11 @@ def test_a_stored_canonical_outside_the_result_is_returned_at_the_end(repo, base
     """A late, older duplicate leaves the canonical's record unchanged in dedup_a's result; the
     record that gains images is read from the repository and added at the end."""
     canonical = _seed(repo, _post(base, "1", [_media("c1")], minutes=60))
-    repo.save_lifecycle(
+    overwrite_lifecycle(
+        repo,
         repo.get_lifecycle(canonical.listing_id).model_copy(
             update={"images": [_failed(canonical.listing_id, "c1")]}
-        )
+        ),
     )
     late = _post(base, "2", [_media("r1")], minutes=0)
     deduped = dedup_a([late], repo)
@@ -265,10 +268,11 @@ def test_every_change_to_a_stored_canonical_outside_the_result_is_kept(
     """Regression, found building #80: only the first photo recorded into such a record was
     returned; the second was lost."""
     canonical = _seed(repo, _post(base, "1", [_media("c1")], minutes=60))
-    repo.save_lifecycle(
+    overwrite_lifecycle(
+        repo,
         repo.get_lifecycle(canonical.listing_id).model_copy(
             update={"images": [_failed(canonical.listing_id, "c1")]}
-        )
+        ),
     )
     late = _post(base, "2", [_media("r1"), _media("r2")], minutes=0)
     result = download_images(dedup_a([late], repo), repo, tmp_path, FakeTransport())
@@ -379,16 +383,17 @@ def test_a_refetched_repost_retries_only_while_the_canonical_holds_nothing(
     canonical = _seed(repo, _post(base, "1", []))
     repost = _post(base, "2", [_media("r1"), _media("r2")], minutes=10)
     repo.upsert(repost.with_changes(is_canonical=False, duplicate_of=canonical.listing_id))
-    repo.save_lifecycle(initial_lifecycle(repost))
+    overwrite_lifecycle(repo, initial_lifecycle(repost))
     r1 = _held(repost.listing_id, "r1") if r1_held else _failed(repost.listing_id, "r1")
-    repo.save_lifecycle(
+    overwrite_lifecycle(
+        repo,
         repo.get_lifecycle(canonical.listing_id).model_copy(
             update={
                 "state": "pending",
                 "rejection_reason": None,
                 "images": [r1, _failed(repost.listing_id, "r2")],
             }
-        )
+        ),
     )
     transport = FakeTransport()
     result = _run(repo, [repost], tmp_path, transport)

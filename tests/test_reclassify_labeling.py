@@ -7,7 +7,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tests.conftest import CONFIG_ROOT, make_listing
+from tests.conftest import CONFIG_ROOT, make_listing, overwrite_classification
 from tests.test_classification_run import lifecycle
 from tests.test_reclassify_select import proposal
 from tests.test_regression_runner import STORE_ROOT, _repo
@@ -84,7 +84,9 @@ def reviewed_world(tmp_path: Path, posts):
     store = SqliteRepository(database)
     store.upsert_with_lifecycle(post, lifecycle(post))
     old = make_listing(post.listing_id, prompt_version="2", post_nature="for_sale")
-    store.save_classification(old, lifecycle(post, state="rejected", rejection_reason="for_sale"))
+    overwrite_classification(
+        store, old, lifecycle(post, state="rejected", rejection_reason="for_sale")
+    )
     labeling = tmp_path / LABELING_DIR
     (labeling / "regression_set.json").write_text(
         json.dumps(
@@ -136,7 +138,7 @@ def test_the_runner_keeps_the_truth_of_a_reviewed_post_after_a_reclassify(
         post_nature="rental_offer",
         classified_at=datetime(2026, 10, 9, tzinfo=UTC),
     )
-    store.save_classification(new, lifecycle(post, state="active"))
+    overwrite_classification(store, new, lifecycle(post, state="active"))
 
     assert prepared(False).refusals == ["position 1: the reviewed classification is not found"]
 
@@ -154,7 +156,8 @@ def test_the_runner_command_reads_the_replaced_listings_from_the_store_root(
     tmp_path: Path, posts
 ) -> None:
     database, post, old, store, reclassify_dir = reviewed_world(tmp_path, posts)
-    store.save_classification(
+    overwrite_classification(
+        store,
         make_listing(
             post.listing_id, prompt_version="3", classified_at=datetime(2026, 10, 9, tzinfo=UTC)
         ),

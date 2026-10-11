@@ -77,7 +77,7 @@ also a later addition and will probably need its own scraper; the design must st
 | Machine | Ron's home server (a laptop being converted), running 24/7. Development and first runs on Ron's personal laptop. |
 | OS | Ubuntu Server LTS or Debian, no desktop. |
 | Runtime | Docker Compose. The same compose file runs on the personal laptop and on the server. |
-| Database | SQLite, one file, behind the `store` interface (posts and their lifecycle records), the `state` interface (per-group watermarks) and, from phase 3, a third interface for what users and the admin write through the site (`DECISIONS.md` #267; its name waits for Ron). The rollback journal with an explicit busy timeout in phase 3 (#259). Postgres stays a cheap swap. |
+| Database | SQLite, one file, behind the `store` interface (posts and their lifecycle records), the `state` interface (per-group watermarks) and, from phase 3, a third interface for what users and the admin write through the site, `userdata/` (`DECISIONS.md` #267, #289). The rollback journal with an explicit busy timeout in phase 3 (#259). Postgres stays a cheap swap. |
 | Images | Downloaded at fetch time to a directory on disk (Facebook image links expire within days). |
 | Remote access | Tailscale. The dashboard is published with Tailscale Serve (HTTPS, tailnet only). Friends get access through Tailscale device sharing. |
 | Telegram | Outbound only: long polling (`getUpdates`) and send calls. No public address or open port. |
@@ -415,9 +415,9 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 Phases 1–4 run on Ron's personal laptop in Docker.
 
 **Gates.** A (`RawPost`) and E (post lifecycle record and `GroupWatermark`, 2026-10-04) are
-approved. B (2026-10-05) and D (2026-10-08) are settled. **C:** its content approved 2026-10-10 (`DECISIONS.md`
-#242–#257, #262–#287); its names and types are a draft in `SCHEMA.md`, not approved, and are settled before the code
-that depends on them. Gate E covers what
+approved. B (2026-10-05) and D (2026-10-08) are settled. **C is approved** (2026-10-10, `DECISIONS.md` #242–#257,
+#262–#288): its records, names and types are in `SCHEMA.md`, and Gate E is amended for it (`"misclassified"`, the
+restore rule, the exemption of a reported post, `schema_version` 3). Gate E covers what
 the lifecycle adds to a stored post: state, rejection reason, who flagged it, last publication
 time, the repost log, and local image paths.
 

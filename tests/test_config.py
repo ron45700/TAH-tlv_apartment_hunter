@@ -30,11 +30,8 @@ store_root: data/store
 """
 
 
-def _config_dir(tmp_path: Path, collection: str, user: str | None = None) -> YamlConfig:
+def _config_dir(tmp_path: Path, collection: str) -> YamlConfig:
     (tmp_path / "collection.yaml").write_text(collection, encoding="utf-8")
-    if user is not None:
-        (tmp_path / "users").mkdir()
-        (tmp_path / "users" / "ron.yaml").write_text(user, encoding="utf-8")
     return YamlConfig(tmp_path)
 
 
@@ -53,10 +50,10 @@ def test_repo_collection_config_loads() -> None:
     assert collection.store_root == "data/store"
 
 
-def test_repo_user_config_loads() -> None:
-    user = YamlConfig(CONFIG_ROOT).user("ron")
-    assert user.user_id == "ron"
-    assert user.subscribed_group_ids == HANDOFF_GROUP_IDS
+def test_the_per_user_yaml_is_gone() -> None:
+    """#47, task 3.4 (f): profiles live in the store, not in config."""
+    assert not (CONFIG_ROOT / "users").exists()
+    assert not hasattr(YamlConfig(CONFIG_ROOT), "user")
 
 
 def test_newest_activity_is_rejected(tmp_path: Path) -> None:
@@ -108,20 +105,6 @@ def test_unquoted_numeric_group_id_is_rejected(tmp_path: Path) -> None:
     config = _config_dir(tmp_path, VALID_COLLECTION.replace('["35819517694"]', "[35819517694]"))
     with pytest.raises(ValidationError):
         config.collection()
-
-
-def test_user_file_must_match_its_user_id(tmp_path: Path) -> None:
-    config = _config_dir(
-        tmp_path, VALID_COLLECTION, "user_id: someone_else\nsubscribed_group_ids: []\n"
-    )
-    with pytest.raises(ValueError):
-        config.user("ron")
-
-
-def test_path_like_user_id_is_rejected(tmp_path: Path) -> None:
-    config = _config_dir(tmp_path, VALID_COLLECTION)
-    with pytest.raises(ValueError):
-        config.user("../collection")
 
 
 def test_no_module_outside_config_reads_yaml_directly() -> None:

@@ -6,6 +6,17 @@ from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 
 
+class StaleRecordError(RuntimeError):
+    """The stored record is not the one the writer read: another writer came between the read
+    and the write. Nothing was written (DECISIONS.md #260, #289). Raised for a `PostLifecycle`,
+    and by `userdata/` for its records (#289: compare and set "as for PostLifecycle")."""
+
+    def __init__(self, record_id: str) -> None:
+        super().__init__(f"{record_id}: the stored record changed since it was read")
+        self.record_id = record_id
+        self.listing_id = record_id  # the post's, for a PostLifecycle
+
+
 @runtime_checkable
 class Repository(Protocol):
     def upsert(self, post: RawPost) -> RawPost: ...
@@ -16,8 +27,13 @@ class Repository(Protocol):
         """Upsert the post; store `initial` only if the post has no lifecycle record yet."""
         ...
 
-    def save_lifecycle(self, record: PostLifecycle) -> PostLifecycle:
-        """Whole-record replace, last write wins. KeyError if the post is not stored."""
+    def save_lifecycle(
+        self, record: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> PostLifecycle:
+        """Compare and set (DECISIONS.md #260): a whole-record replace, written only if the stored
+        record, read through `PostLifecycle.from_stored_json`, equals `expected`, the record the
+        writer read; `expected=None` writes only if the post has no record yet. Otherwise raises
+        `StaleRecordError` and writes nothing. KeyError if the post is not stored."""
         ...
 
     def get_lifecycle(self, listing_id: str) -> PostLifecycle | None: ...
@@ -29,11 +45,14 @@ class Repository(Protocol):
         ordered by listing_id. Which errors to ask for is the caller's rule (DECISIONS.md #80)."""
         ...
 
-    def save_classification(self, listing: Listing, lifecycle: PostLifecycle) -> None:
+    def save_classification(
+        self, listing: Listing, lifecycle: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> None:
         """Write the Listing and the post's lifecycle record together (DECISIONS.md #131). Replaces
-        an earlier Listing; the lifecycle record is a whole-record replace. KeyError if the post is
-        not stored, ValueError if the two belong to different posts. Never writes the RawPost
-        (invariant 14)."""
+        an earlier Listing; the lifecycle record is written by compare and set against `expected`,
+        as in `save_lifecycle`, and on a stale record neither is written (#260). KeyError if the
+        post is not stored, ValueError if the two belong to different posts. Never writes the
+        RawPost (invariant 14)."""
         ...
 
     def get_listing(self, listing_id: str) -> Listing | None: ...

@@ -180,21 +180,24 @@ def test_opens_a_layout_1_store_and_leaves_its_records_untouched(db_path: Path, 
     ]
     assert _rows(db_path, "SELECT count(*) FROM listings") == [(0,)]
     record = repo.get_lifecycle(posts[0].listing_id)
-    assert (record.schema_version, record.classification_failures) == (2, 0)
+    assert (record.schema_version, record.classification_failures) == (3, 0)
     assert record.last_classification_error is None
     assert len(repo.query()) == len(posts)
 
 
-def test_a_version_1_record_is_written_back_as_version_2_only_when_saved(
+def test_a_version_1_record_is_written_back_as_version_3_only_when_saved(
     db_path: Path, posts
 ) -> None:
+    """Also the compare and set of a version-1 document (#260): the stored document is read
+    through the same reader as the writer's, so the two compare equal."""
     _layout_1_file(db_path, posts[:2])
     repo = SqliteRepository(db_path)
-    repo.save_lifecycle(repo.get_lifecycle(posts[0].listing_id))
+    read = repo.get_lifecycle(posts[0].listing_id)
+    repo.save_lifecycle(read, expected=read)
     versions = dict(
         _rows(db_path, "SELECT listing_id, doc ->> '$.schema_version' FROM post_lifecycle")
     )
-    assert versions == {posts[0].listing_id: 2, posts[1].listing_id: 1}
+    assert versions == {posts[0].listing_id: 3, posts[1].listing_id: 1}
 
 
 @pytest.mark.parametrize("found", [0, 2])
@@ -222,7 +225,9 @@ def test_failure_inside_save_classification_rolls_back_the_listing(
 
     monkeypatch.setattr(PostLifecycle, "model_dump_json", fail)
     with pytest.raises(RuntimeError):
-        repo.save_classification(make_listing(posts[0].listing_id), _pending(posts[0]))
+        repo.save_classification(
+            make_listing(posts[0].listing_id), _pending(posts[0]), expected=_pending(posts[0])
+        )
     monkeypatch.undo()
 
     assert repo.get_listing(posts[0].listing_id) is None
@@ -275,7 +280,9 @@ def test_read_only_refuses_every_write_and_leaves_the_file_untouched(db_path: Pa
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
         reader.upsert(posts[1])
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
-        reader.save_classification(make_listing(posts[0].listing_id), _pending(posts[0]))
+        reader.save_classification(
+            make_listing(posts[0].listing_id), _pending(posts[0]), expected=_pending(posts[0])
+        )
     assert _sha256(db_path) == before
 
 

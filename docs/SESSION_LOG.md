@@ -4674,3 +4674,140 @@ copied).
 
 STOP. For Ron (`BACKLOG.md` items 6–8): the names table in `SCHEMA.md` with E-1 to E-5 and R1–R9; the 3.4 plan and its 8
 points; the 3.5 plan and its 4 points. Then, on his go, 3.4 is built first. Unchanged: items 1–5.
+
+## 2026-10-10 (continued) — Phase 3, round 3: Gate C approved (#288), plans 3.4 and 3.5 approved (#289, #290); task 3.4 built
+
+### Step 1, docs
+
+- `DECISIONS.md`: #288 (Gate C's names and types, E-1 to E-5, R1–R9; the reviewer's reasons for R2 and R8), #289 (the 3.4
+  plan and its eight points; settles #267's name), #290 (the 3.5 plan, its four points, `argon2-cffi`; not built); "Last
+  updated". #172 unchanged.
+- `SCHEMA.md`: Gate C approved (draft marks removed, rules kept; "Points still open" replaced by "R1–R9: approved"; the
+  names table retitled "Every name and type (approved 2026-10-10, #288)"); E-1 to E-5 written into Gate E's text as an
+  amendment dated 2026-10-10 (a dated paragraph; the `schema_version`, `rejection_reason`, `flagged_by`, `flagged_at` rows;
+  the "Restore" and "Flagged posts" rules, the old restore wording kept in italics); the "PROPOSED" table removed; the gate
+  table's rows C and E; "Last updated".
+- `CLAUDE.md`: "Eight seams"; the `userdata/` row in the seam table; the phase line (twice: at Step 1, then after the
+  build).
+- `BASELINE.md` §12, the "Gates" paragraph. `PHASE_3.md`: 3.1 decided; 3.4 and 3.5 plans approved.
+
+### Step 2, task 3.4 built — file by file
+
+**New code**
+- `tlv_hunter/sqlite_busy.py`: `BUSY_TIMEOUT_SECONDS = 10.0`, the one constant (3.4 (e)).
+- `tlv_hunter/run_merge.py`: `merge_run_record(read, run, fresh)`, the merge of #289 point 2 (pure).
+- `tlv_hunter/contracts/user.py` (`User`, the opaque-id and SHA-256 checks), `signup_key.py` (`SignupKey`), `session.py`
+  (`Session`, `SESSION_LIFETIME`), `profile.py` (`Profile`, `SearchOption`, `RangeCriterion`, `DateRangeCriterion`,
+  `CriterionLevel`, `new_profile`), `viewed_post.py` (`ViewedPost`), `classification_report.py`
+  (`ClassificationReport`, `ReportableField`), `field_correction.py` (`FieldCorrection`, values typed from `Listing`'s own
+  field definitions). Strict pydantic models; every Gate C rule that is a validator.
+- `tlv_hunter/userdata/__init__.py`, `base.py` (the `UserDataStore` Protocol with the approved method names; exceptions
+  `KeyNotUsable`, `UsernameTaken`, `AdminExists`, `OpenReportExists`, `CorrectionInForce`), `sqlite.py`
+  (`SqliteUserDataStore`: seven tables, lookup columns, a `userdata` layout row 1, minimum SQLite 3.38.0, `BEGIN
+  IMMEDIATE`, compare and set on users, keys, reports, corrections).
+
+**Changed code**
+- `contracts/post_lifecycle.py`: `schema_version` 3; `"misclassified"` last in the `Literal`; `USER_REASONS`; the rule
+  "`flagged` or `misclassified` requires `flagged_by` and `flagged_at`"; `from_stored_json` reads versions 1 and 2 as 3.
+- `store/base.py`: `StaleRecordError`; `save_lifecycle(record, *, expected)` and `save_classification(listing,
+  lifecycle, *, expected)`, docstrings.
+- `store/sqlite.py`: compare and set inside the write's transaction (`_require_expected`, model equality through
+  `from_stored_json`); the busy timeout on both connection forms.
+- `store/local_json.py`: compare and set, read-compare-write (point 8).
+- `state/sqlite.py`, `jobs/common.py` (`raw_post_rows`): the busy timeout.
+- `dedup/stage_a.py`: `DedupResult.read`, the records as dedup read them. `images/download.py`: adds the records it read
+  for the canonicals it added.
+- `pipeline.py`: `STORE_ATTEMPTS = 3`; `_save` (compare and set against the read; on a conflict re-read, merge, try again;
+  then `StaleRecordError`, the run fails); a post new to the store is written by `upsert_with_lifecycle` alone; the
+  repair writes with `expected=None` and skips a record another writer created.
+- `classification_run.py`: both writes compare and set against the fresh read; one re-read on a conflict, then
+  "discarded".
+- `jobs/rederive_rejections.py`: `expected=record`; a conflict is "the record changed since the plan; not written" (exit 1).
+- `reclassification_run.py`: `expected=record`; a conflict is "not written", "the record changed since the run".
+- `config/base.py`, `config/yaml_config.py`: `UserConfig` and `user()` removed; **`config/users/ron.yaml` deleted** (and
+  its empty folder).
+
+**Tests**
+- New: `tests/test_run_merge.py` (6), `tests/test_sqlite_busy.py` (2), `tests/test_gate_c_contracts.py` (65),
+  `tests/test_userdata_store.py` (20).
+- `tests/conftest.py`: `overwrite_lifecycle`, `overwrite_classification` (setup writes against the stored record) and
+  `AnotherWriterFirst` (a repository whose first writes meet another writer).
+- `test_repository_contract.py`: the last-write-wins test replaced by five compare-and-set tests (both stores);
+  `test_sqlite_store.py`: version 3, and a version-1 document written back by compare and set; `test_post_lifecycle.py`:
+  version 3, `"misclassified"` (5 new); `test_premodel_rejects.py`: version 3; `test_config.py`: three user tests removed,
+  one added (the YAML is gone); `test_run_once.py`: the store step's write sequence (no second write of a new post) and 3
+  new tests (a flag made during a run survives; two conflicts merge; a conflict at every attempt fails the run and moves
+  no watermark), both stores; `test_classification_run.py` (3 new), `test_reclassification_run.py` (1 new),
+  `test_rederive.py` (1 new). Thirteen other test files only switched their setup writes to the two helpers.
+
+### Verified, and how
+
+- **`uv run pytest`: 1430 passed** (the suite had 1310 at the start of the round). `uv run ruff check .`: all checks
+  passed. `uv run ruff format --check .`: 165 files formatted.
+- Compare and set on both stores, in one process, with writes interposed by a wrapper; the store left unchanged on a
+  refused write (contract tests). The merge rule by unit tests. The busy timeout by patching `sqlite3.connect`: every
+  connection of the four modules passes 10.0. The seams kept apart: writing `UserDataStore` leaves `raw_posts`,
+  `post_lifecycle`, `listings` and `group_watermarks` identical. The socket guard was on throughout.
+- **Not opened:** the production store (no step opened it, for reading or writing). No network, no paid call, no
+  dependency added, nothing installed.
+
+### Not verified
+
+- Two real processes writing at once: compare and set was exercised in one process; SQLite's `BEGIN IMMEDIATE` is what
+  serialises two connections, as in the existing stores.
+- The busy timeout's wait itself (`ASSUMPTIONS.md` I14 stays ASSUMED): only that every connection passes it.
+- The production store's version-2 lifecycle documents read as version 3: tested on synthetic documents, not on the store.
+- How often a real run meets a conflict: not measurable before the site exists.
+
+### Deviations
+
+1. **Two plain modules the plan did not name:** `run_merge.py` (the merge, kept out of `pipeline.py`, which holds no
+   logic) and `sqlite_busy.py` (the "one constant"; a constant module rather than a helper shared between seams, #65).
+2. **A conflict the merge rule does not cover** (the run and the site both changed the state, the fresh record has no
+   flag or report): `merge_run_record` raises `StaleRecordError` at once; the run fails, no watermark moves. Failing is the
+   plan's fallback. For Ron (`BACKLOG.md` item 6).
+3. **`save_classification`'s `expected` accepts `None`** (create-only), as `save_lifecycle`'s does; the plan wrote
+   `expected: PostLifecycle`.
+4. **`userdata/` reuses the store's `StaleRecordError`** for its compare and set (the plan: "as for PostLifecycle"); its
+   message now says "stored record" and it carries `record_id` beside `listing_id`.
+5. **Exception names the plan left open:** `AdminExists`, `OpenReportExists`, `CorrectionInForce`.
+6. **`new_profile(user_id, now)`** in `contracts/profile.py`: #268's defaults written in one place (3.5 will call it).
+7. **`create_user` checks that the key with the hash is `user.signup_key_id`** (the plan's signature does not say how the
+   id is known; 3.5 finds it with `list_keys()`). For Ron (item 6).
+8. **Store-level rules beyond the method table**, each from a Gate C rule: `save_user` refuses a changed id or username
+   (#262); `save_key` refuses a changed id or hash and an un-cancel (#266); `save_report` and `save_correction` refuse a
+   changed id, post, reporter or field, and a correction put back in force (#284); `add_key`, `add_report`,
+   `add_correction` take only an unused key, an open report, a correction in force. `find_corrections(in_force=False)`
+   returns every correction, removed ones included. `corrections` has an `in_force` column for the partial unique index.
+9. **The store step** no longer writes a post new to the store twice (the plan's table says so); two `run_once` tests'
+   expected write sequences changed with it.
+10. **My mistakes with git:** one command included `git rm --cached` / `git checkout` for the YAML; the hook blocked it and
+    nothing ran. Later one read-only `git stash list` ran by mistake inside a ruff command; it changed nothing. No other
+    git command.
+
+### Contradiction found, not resolved
+
+- **R7 against the approved method table:** R7 says disabling a user ends their sessions "in the same transaction"; the
+  table gives `save_user` and `end_sessions` as two methods, so two transactions. Built as tabled; disabling is 3.5's, so
+  nothing depends on it yet (`PHASE_3.md` 3.4, "Open after the build"; `BACKLOG.md` item 6).
+
+### Docs the code made stale
+
+- Fixed this round: `CLAUDE.md` (the phase line; the store-writer paragraph, which said "until 3.4 is built … last write
+  wins"; the plain-modules paragraph now names `run_merge.py` and `sqlite_busy.py`; the `config/` row), `BASELINE.md` §3
+  (the third interface is `userdata/`), `PHASE_3.md` 3.4 (built, and "Open after the build").
+- Still stale, not touched: `PHASE_2.md` lines 856 and 1647 ("last write wins, #65", in the 2.5 and 2.9 plans, history);
+  `ASSUMPTIONS.md` I14 (unchanged, still ASSUMED); `CLAUDE.md`'s Repository row lists `save_lifecycle` without the
+  `expected` argument (names only, as for every method there).
+
+### BACKLOG
+
+Rows 6–8 replaced by 6 (the three points left by the build) and 7 (3.5 approved, not built); "Decisions pending
+implementation": #47 and #260 removed (built), #267 removed (built), #259 now "built, measured on the working day", the
+Gate C rows say "records and storage built (3.4); no logic"; "Recorded for a later phase": a Phase 4 row, open, not
+decided: whether a post of unclear or unwritten kind alerts.
+
+### Next
+
+STOP. 3.5 is not started. For Ron: rerun the tests; then `BACKLOG.md` item 6 (R7, the uncovered conflict, the key's id),
+then the go for 3.5.

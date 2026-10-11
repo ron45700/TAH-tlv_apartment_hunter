@@ -5,7 +5,11 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-10, round 2 — **Gate C revised after Ron's answers** (`DECISIONS.md` #258–#287): a `Session` record,
+**Last updated:** 2026-10-10, round 3 — **Gate C approved by Ron** (`DECISIONS.md` #288): its names and types, points
+R1–R9, and the Gate E amendments E-1 to E-5, now written into Gate E's text (amended 2026-10-10); the "PROPOSED"
+table removed. No other gate changed.
+
+**Earlier, 2026-10-10, round 2 —** **Gate C revised after Ron's answers** (`DECISIONS.md` #258–#287): a `Session` record,
 `disabled_at` and the sign-in delay fields on `User`, `CriterionLevel` in place of `wanted`, every answered point written
 in; still DRAFT, NOT APPROVED, with one table of names and types for Ron. Gate E's proposed amendments E-1 to E-5
 revised; its approved text unchanged.
@@ -95,10 +99,10 @@ Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 | Gate | Covers | Status |
 |---|---|---|
 | A | `RawPost` | ✅ Approved 2026-09-14 |
-| E | Post lifecycle record (state, rejection reason, flag, last publication, images, classification failures) and `GroupWatermark` | ✅ Approved 2026-10-04; classification-failure fields approved 2026-10-05 (#139, #152) |
+| E | Post lifecycle record (state, rejection reason, flag, last publication, images, classification failures) and `GroupWatermark` | ✅ Approved 2026-10-04; classification-failure fields approved 2026-10-05 (#139, #152); amended 2026-10-10 for Gate C (`"misclassified"`, the restore rule, the exemption, `schema_version` 3; #288) |
 | B | `Listing`, and the model's response `ListingExtraction` | ✅ Approved 2026-10-05 (#81–#125; the response #137, #151) |
 | D | Dedup stage B key | ✅ Key decided 2026-10-08 (#230, rule 1 amended by #232: a shared phone that is not an agent number and the fields rule, or an identical photo and one of the two rules; nothing else merges). **Nothing is stored:** the result is derived from the stored posts when it is needed, in phase 3 (#231); no field, record or schema change |
-| C | Filter rules, and the user, key, session, profile, viewed-post, report and correction records | 🟨 Content approved 2026-10-10 (#242–#257; round 1's 31 open points answered, #262–#287). **Names and types: DRAFT, NOT APPROVED** (below; one table for Ron's approval at its end, nine small points R1–R9 proposed); the Gate E amendments E-1 to E-5 are proposed next to Gate E |
+| C | Filter rules, and the user, key, session, profile, viewed-post, report and correction records | ✅ Approved 2026-10-10: content #242–#257, #262–#287; names and types, R1–R9 and the Gate E amendments #288 |
 
 ---
 
@@ -327,14 +331,19 @@ an explicit `listing_id` row, the key the record already had. No other field was
 `last_classification_error`; `schema_version` goes to 2. A stored record at version 1 reads as 0
 and `None`. Docs only until task 2.5 (`PHASE_2.md`).
 
+**Amended 2026-10-10** (`DECISIONS.md` #251, #254, #255, #279–#283, #285, #286; names approved with Gate C, #288),
+approved by Ron: the rejection reason `"misclassified"` (E-1), `flagged_by`'s meaning (E-2), the restore rule (E-3),
+the deletion exemption of a reported post (E-4), and `schema_version` 3 (E-5). Every write of the record is a compare
+and set against the record as the writer read it (#260; not a schema change).
+
 | Field | Type | Rule |
 |---|---|---|
-| `schema_version` | `int` | 1 until #152's fields are built, then 2; a version-1 record reads with the two new fields at 0 and `None`. On every record (`PHASE_1.md` §1.0) |
+| `schema_version` | `int` | 1 until #152's fields are built, then 2; a version-1 record reads with the two new fields at 0 and `None`. **3 from 2026-10-10** (`"misclassified"`, #285): a version-1 or version-2 record reads as version 3 and is written back as 3 on its next save. On every record (`PHASE_1.md` §1.0) |
 | `listing_id` | `str` | The post this record belongs to, and the record's key |
 | `state` | `"pending"` / `"active"` / `"rejected"` / `"archived"` | On store: `"pending"`, or `"rejected"` if a pre-model reject applies. In phase 2 the model moves it to `"active"` or `"rejected"`. A repost record has no card of its own; that is `is_canonical` / `duplicate_of` from Gate A, not a state |
-| `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `None` | One reason, the first that applies, in that order. `"other_city"` is decided by Facebook's location field when the post has a usable one, else by the model (#214). `None` when `state` is `"pending"` or `"active"`; required when `"rejected"`; optional when `"archived"` (an archived post keeps its reason) |
-| `flagged_by` | `str` / `None` | A user id. `None` until phase 3. Gate C may refine the type. Set together with `flagged_at`: both or neither |
-| `flagged_at` | `datetime` UTC / `None` | Set together with `flagged_by`: both or neither. `rejection_reason` `"flagged"` requires both |
+| `rejection_reason` | `"no_text"` / `"no_images"` / `"other_city"` / `"seeking"` / `"for_sale"` / `"not_listing"` / `"flagged"` / `"misclassified"` / `None` | One reason, the first that applies, in that order. `"misclassified"` (2026-10-10, #279) is set while any "wrong classification" report of the post is open (Gate C); a post both flagged "lied" and reported shows `"flagged"`. `"other_city"` is decided by Facebook's location field when the post has a usable one, else by the model (#214). `None` when `state` is `"pending"` or `"active"`; required when `"rejected"`; optional when `"archived"` (an archived post keeps its reason) |
+| `flagged_by` | `str` / `None` | A `User.user_id` (Gate C), never a username. Set by a "lied" flag, or by a report: the first reporter (#280), so a reclassify treats a reported post as flagged (#217 (5)). Set together with `flagged_at`: both or neither |
+| `flagged_at` | `datetime` UTC / `None` | Set together with `flagged_by`: both or neither; for a report, the first report's time. `rejection_reason` `"flagged"` or `"misclassified"` requires both |
 | `flag_note` | `str` / `None` | Optional short note from the flagger |
 | `last_published_at` | `datetime` UTC | The latest `posted_at` of the post and all its duplicates (any dedup layer: A now, B in phase 2). A phone-only match is not a duplicate. Never moves backwards |
 | `images` | `list[PostImage]` | One entry per photo attempted: a failed download is recorded too. See below |
@@ -355,10 +364,18 @@ Exactly one of `local_path` and `error` is set.
 ### Rules with no field of their own
 
 - **Repost log:** derived from the records whose `duplicate_of` points at the post. Not stored.
-- **Restore:** restoring a flagged post clears `flagged_by`, `flagged_at`, `flag_note` and
-  `rejection_reason`; `state` returns to `"active"`.
+- **Restore** (amended 2026-10-10, #251, #281–#283): one rule for a post flagged "lied" and a reported post.
+  Restore clears `flagged_by`, `flagged_at` and `flag_note`, marks every open or left-out report of the post
+  `"restored"` (#278, #286), and sets `state` and `rejection_reason` to what they would be with no flag or report,
+  derived by `postmodel.rejects` (the `other_city` rule of #214 included) from the `Listing` with the admin's
+  corrections in force applied (#281): `"active"`, or `"rejected"` with the derived reason. A post that is
+  `"archived"` stays `"archived"`, its reason re-derived (#283). *Until 2026-10-10: restore cleared the flag and
+  `rejection_reason` and set `state` to `"active"`.*
 - **Flagged posts:** archived at 25 days (images deleted) and never deleted. The full record,
   including `raw`, is kept as the prompt regression set. A restored post follows normal retention.
+  **The same for a post whose `rejection_reason` is `"misclassified"`** while it is reported, a left-out post
+  included (2026-10-10, #255, #286). **The report and correction records (Gate C) are never deleted**, also after
+  their post is (#255).
 - **Rejection as `no_images`** (`DECISIONS.md` #67): only when the post has **no media at all**. A
   post whose only media is video or reel is not rejected. For a post that shares another post, the
   same test applies to the shared post's media: it is rejected only if the shared post has no media
@@ -382,23 +399,6 @@ Exactly one of `local_path` and `error` is set.
   that brought it back this run download; a canonical still archived downloads nothing (#77 D4).
   A canonical and its reposts new in the same run: the canonical first, its retry included, then
   its duplicates in canonical-rule order, each checked after the previous one finishes (#77 D3).
-
-### PROPOSED amendments for Gate C — DRAFT, NOT APPROVED (2026-10-10, revised after Ron's answers)
-
-> **Not approved as names.** The approved Gate E text above is unchanged and stays in force until Ron approves these.
-> Their content is decided (`DECISIONS.md` #251, #254, #255, and #279–#283, #285, #286); the names and the exact wording
-> wait for Ron's approval of the names, with Gate C's table.
-
-| # | Approved text it changes | Proposed amendment |
-|---|---|---|
-| E-1 | `rejection_reason`'s values | Add `"misclassified"` (#279), set while any "wrong classification" report of the post is open (#254, #278). **Last** in the order, after `"flagged"`; a post both flagged "lied" and reported shows `"flagged"` (#279). Consistency: `"misclassified"` requires `flagged_by` and `flagged_at`, as `"flagged"` does |
-| E-2 | `flagged_by` (`str` / `None`, "a user id. `None` until phase 3. Gate C may refine the type") | Type unchanged, `str` / `None`. It holds a `User.user_id`, never a username. Set by a "lied" flag, or by a report: the first reporter, with `flagged_at` the first report's time (#280). So a reclassify treats a reported post as flagged (#217 (5)) |
-| E-3 | "**Restore:** restoring a flagged post clears `flagged_by`, `flagged_at`, `flag_note` and `rejection_reason`; `state` returns to `"active"`." | **Restore**, one rule for a flagged and a reported post (#251, #282): it clears `flagged_by`, `flagged_at` and `flag_note`, marks every open or left-out report of the post `"restored"` (#278, #286), and sets `state` and `rejection_reason` to what they would be with no flag or report, derived by `postmodel.rejects` (the `other_city` rule of #214 included) **from the `Listing` with the admin's corrections in force applied** (#281): `"active"`, or `"rejected"` with the derived reason. A post that is `"archived"` stays `"archived"`, its reason re-derived (#283) |
-| E-4 | "**Flagged posts:** archived at 25 days (images deleted) and never deleted. … A restored post follows normal retention." | Add: **a post whose `rejection_reason` is `"misclassified"`** is treated the same while it is reported, a left-out post included (#255, #286): archived at 25 days with its images deleted, never deleted, `raw` kept. Once restored it follows normal retention. **The report and correction records (Gate C) are never deleted**, also after their post is (#255) |
-| E-5 | `schema_version` | Goes to **3** with `"misclassified"` (#285); a version-1 or version-2 record reads unchanged (version 1 as today, through `PostLifecycle.from_stored_json`) |
-
-**Not a schema change, recorded here because it changes how the record is written (#260):** every write of a
-`PostLifecycle` is a compare and set against the record as the writer read it (`PHASE_3.md` 3.4).
 
 ## `GroupWatermark`
 
@@ -682,36 +682,35 @@ Whether the schema pydantic derives passes them is the spike's first question.
 
 ---
 
-# GATE C — users, keys, sessions, profiles, viewed posts, reports and corrections — DRAFT, NOT APPROVED
+# GATE C — users, keys, sessions, profiles, viewed posts, reports and corrections
 
-> **DRAFT, NOT APPROVED (written 2026-10-10; revised the same day after Ron's answers, round 2).** The **content** is
-> approved by Ron (`DECISIONS.md` #242–#257, and #258–#287 for round 1's 31 open points). **Every record name, field
-> name and type below is still a proposal** and waits for Ron's separate approval, as Gate B's did; the table "For Ron's
-> approval: every name and type" at the end of this gate is the one to approve. Nothing here is built. The Gate E
-> amendments this gate needs are proposed next to Gate E's approved text, above. Telegram fields (account linking, sent
-> alerts) are Phase 4's and are not here.
+**Approved:** 2026-10-10 · **Reasons:** `DECISIONS.md` #242–#257 (content), #262–#287 (round 1's open points), #288
+(names and types, points R1–R9, the Gate E amendments) · **Schema version:** 1 on every record
+
+Telegram fields (account linking, sent alerts) are Phase 4's and are not here. The Gate E amendments this gate needs
+are written into Gate E (amended 2026-10-10).
 
 **Common to every record below:**
 - **Per-user data is never on the post** (invariant 12): each record is its own table, keyed by user and/or post.
   `RawPost`, `Listing` and `PostLifecycle` gain no per-user field.
 - Every record has `schema_version` (`int`, starts at 1), as every stored record does (`PHASE_1.md` §1.0).
 - Datetimes are tz-aware UTC (invariant 9), checked by the one `require_utc`.
-- **Where they are stored** (#267): a new interface beside `state/`, in the same SQLite file, an eighth seam; its proposed
-  name and contract are in `PHASE_3.md` 3.4.
+- **Where they are stored** (#267): a new interface beside `state/`, in the same SQLite file, an eighth seam; it is
+  `userdata/`, `UserDataStore` (#289; `PHASE_3.md` 3.4).
 - Ids (`user_id`, `key_id`, `report_id`, `correction_id`) are random and opaque: 32 hex characters from the operating
-  system's secure random source (#262 for `user_id`; the same form proposed for the others).
+  system's secure random source (#262 for `user_id`; the same form for the others, #288).
 
 **Secrets are stored as hashes only.**
 - **Passwords: Argon2id** (#262), stored as the library's encoded string (algorithm, version, parameters, salt and hash
-  in one field). *Why (the proposal's):* a password is chosen by a person and has little entropy, so it needs a slow,
+  in one field). *Why (the assistant's proposal, approved):* a password is chosen by a person and has little entropy, so it needs a slow,
   memory-hard hash with a per-password salt. The parameters are the library's default profile, RFC 9106's low-memory
   option (`PHASE_3.md` 3.5, read 2026-10-10). Minimum length 8 (#262).
-- **One-time keys and session tokens: SHA-256** of the value. *Why (the proposal's):* both are generated by the system
+- **One-time keys and session tokens: SHA-256** of the value. *Why (the assistant's proposal, approved):* both are generated by the system
   with at least 128 random bits (keys) or 256 (session tokens), so a fast hash cannot be brute-forced, and an unsalted
   hash lets the store find the record by its hash in one lookup. The key is shown once, to the admin, at creation (#266);
   the session token lives only in the user's cookie.
 
-## `User` (proposed)
+## `User`
 
 One record per account, keyed by `user_id`. Never deleted (#265).
 
@@ -726,16 +725,16 @@ One record per account, keyed by `user_id`. Never deleted (#265).
 | `signup_key_id` | `str` / `None` | The `SignupKey` used. `None` exactly when `is_admin` is `True`: the admin's account is created by a one-time command on the machine (#244) |
 | `must_change_password` | `bool` | `True` after the admin sets a temporary password (#262); the user must set a new one at the next sign-in before anything else |
 | `password_changed_at` | `datetime` UTC | Set at creation and at every change or reset |
-| `disabled_at` | `datetime` UTC / `None` | **Proposed for #265.** Set by the admin to disable the user; `None` when enabled. A disabled user cannot sign in, and disabling ends their sessions; profile, viewed records and reports are kept; enabling sets it back to `None`. The admin cannot be disabled (proposed, point R8) |
-| `failed_sign_ins` | `int` | **Proposed for #264.** Consecutive failed sign-ins for this username; 0 after a success or a reset |
-| `last_failed_sign_in_at` | `datetime` UTC / `None` | **Proposed for #264.** The time of the last failure; `None` when `failed_sign_ins` is 0 |
+| `disabled_at` | `datetime` UTC / `None` | #265. Set by the admin to disable the user; `None` when enabled. A disabled user cannot sign in, and disabling ends their sessions; profile, viewed records and reports are kept; enabling sets it back to `None`. The admin cannot be disabled (R8) |
+| `failed_sign_ins` | `int` | #264, R1. Consecutive failed sign-ins for this username; 0 after a success or a reset |
+| `last_failed_sign_in_at` | `datetime` UTC / `None` | #264, R1. The time of the last failure; `None` when `failed_sign_ins` is 0 |
 
-**The delay after failed sign-ins (proposed for #264, point R1).** From the 5th consecutive failure on, an attempt made
+**The delay after failed sign-ins (#264, R1).** From the 5th consecutive failure on, an attempt made
 less than 30 seconds after the last failure is refused without checking the password, and says when to try again. A
 success, or the admin's reset, sets the count to 0. An unknown username stores nothing and gets the same answer, after a
 dummy Argon2id check so that it takes the same time.
 
-## `SignupKey` (proposed)
+## `SignupKey`
 
 The one-time key the admin issues (#47, #243). Keyed by `key_id`. Never deleted.
 
@@ -753,7 +752,7 @@ The one-time key the admin issues (#47, #243). Keyed by `key_id`. Never deleted.
 **Rules.** No expiry (#243). A key is usable when `used_by` and `cancelled_at` are both `None`. Using it and creating the
 `User` happen in one transaction, so a key creates one account at most (`BASELINE.md` §10).
 
-## `Session` (proposed for #263)
+## `Session` (#263)
 
 A signed-in browser. Keyed by `token_hash`.
 
@@ -763,14 +762,14 @@ A signed-in browser. Keyed by `token_hash`.
 | `token_hash` | `str` | SHA-256 (hex) of the session token. The token (256 random bits) is only in the user's cookie |
 | `user_id` | `str` | |
 | `created_at` | `datetime` UTC | The sign-in |
-| `expires_at` | `datetime` UTC | `created_at` plus 30 days (#263); not extended by use (proposed, point R5) |
-| `ended_at` | `datetime` UTC / `None` | Set when the session ends before it expires: sign-out, a password reset (every session of the user, #263), the user's own password change (the other sessions, proposed, point R3), or disabling the user (#265) |
+| `expires_at` | `datetime` UTC | `created_at` plus 30 days (#263); not extended by use (R5) |
+| `ended_at` | `datetime` UTC / `None` | Set when the session ends before it expires: sign-out, a password reset (every session of the user, #263), the user's own password change (the other sessions, R3), or disabling the user (#265) |
 
 **Rules.** A session is valid when `ended_at` is `None`, `expires_at` is in the future, and its user is not disabled. A
 session of a user whose `must_change_password` is `True` reaches only the password change. Sessions are not deleted in
-Phase 3 (their removal, if ever, is Phase 5's retention, point R9).
+Phase 3 (R9; their removal, if ever, is Phase 5's retention).
 
-## `Profile` (proposed)
+## `Profile`
 
 One per user (#245), created with the user. Keyed by `user_id`. The saved filter, and in Phase 4 what drives that user's
 alerts (`BASELINE.md` §8).
@@ -790,7 +789,7 @@ alerts (`BASELINE.md` §8).
 `enabled`, `include_sublets` included. Into `room`, `size_sqm` is not copied (it stays `None`, #247); into
 `whole_apartment`, its own `size_sqm` is left as it was.
 
-### `SearchOption` (proposed)
+### `SearchOption`
 
 | Field | Type | Rule |
 |---|---|---|
@@ -806,7 +805,7 @@ alerts (`BASELINE.md` §8).
 | `broker` | `CriterionLevel` / `None` | `None` is "don't care". The wanted value is fixed: no broker (#269) |
 | `parking` | `CriterionLevel` / `None` | The wanted value is fixed: has parking (#269) |
 | `balcony` | `CriterionLevel` / `None` | The wanted value is fixed: has a balcony (#269) |
-| `entry_date` | `DateRangeCriterion` / `None` | Compared with `Listing.entry_date`; `"immediate"` compares as the date of the evaluation (#270): proposed, the UTC calendar date of the evaluation's moment (point R2) |
+| `entry_date` | `DateRangeCriterion` / `None` | Compared with `Listing.entry_date`; `"immediate"` compares as the date of the evaluation (#270): the UTC calendar date of the evaluation's moment (R2) |
 
 **`CriterionLevel`:** `"preference"` / `"critical"`; a category that is turned on starts at `"preference"` (§8).
 **`RangeCriterion[T]`:** `min: T / None`, `max: T / None` (at least one set; `min` ≤ `max` when both), `level:
@@ -822,7 +821,7 @@ CriterionLevel`. **`DateRangeCriterion`:** `earliest: date / None`, `latest: dat
 - **The post a user sees** is the `Listing` with the admin's corrections in force applied (#256). The evaluation, the
   restore's derived state (#281) and the Gate D key (#287) all read it.
 
-## `ViewedPost` (proposed)
+## `ViewedPost`
 
 Which posts a user has viewed (#62, #253). Key: (`user_id`, `listing_id`).
 
@@ -838,7 +837,7 @@ duplicates, and the posts the Gate D key ties to it, #231) has a record for that
 into the card leaves it viewed (#253). "Mark as not viewed" deletes that user's records for every post of the card. A
 record is deleted with its post (#62). Kept for a disabled user (#265).
 
-## `ClassificationReport` (proposed)
+## `ClassificationReport`
 
 A user's "wrong classification" report (#173, #254). Keyed by `report_id`. Never deleted, also after its post is (#255).
 
@@ -861,10 +860,10 @@ A user's "wrong classification" report (#173, #254). Keyed by `report_id`. Never
 `"phone_names"` — Gate B's names. The labels a user sees are the UI task's (#277).
 
 **Rules.** One report per reporter (#278), read here as at most one `"open"` report per reporter and post; the same user can
-report again after a restore (point R4). While any report of the post is `"open"` the post is rejected with
+report again after a restore (R4). While any report of the post is `"open"` the post is rejected with
 `"misclassified"`, unless it is flagged "lied", which shows (#279). The admin's view groups the reports by field (#173).
 
-## `FieldCorrection` (proposed)
+## `FieldCorrection`
 
 The admin's hand correction of one field of one post (#173, #256). Keyed by `correction_id`. Never deleted (#255).
 
@@ -893,25 +892,17 @@ All 31 points of 2026-10-10's first draft are answered by Ron (`DECISIONS.md` #2
 above: 1–5 #262; 6 #263; 7 #264; 8 #265; 9 #266; 10 #267; 11 #268; 12 #269; 13 #270; 14 #271; 15 #272; 16 #273; 17 #274;
 18 #275; 19 #276; 20 #277; 21 #278; 22 #279; 23 #280; 24 #281; 25 #282; 26 #283; 27, 28 #284; 29 #285; 30 #286; 31 #287.
 
-## Points still open (round 2): details the answers asked the assistant to propose
+## Points R1–R9: approved (#288)
 
-Not settled; each is drafted above as proposed.
-- **R1** (#264): the delay is 30 seconds from the 5th consecutive failure on, counted per username.
-- **R2** (#270): "immediate" compares as the **UTC** calendar date of the evaluation's moment, which keeps invariant 9 as
-  it is (and is how #115 completes a year). The Israel calendar date would differ only between 00:00 and 02:00/03:00
-  Israel time, and would add a third place where Israel time is used, so invariant 9 would need amending.
-- **R3** (#263): a user's own password change ends their other sessions and keeps the current one.
-- **R4** (#278): "one report per reporter" read as one **open** report per reporter and post.
-- **R5** (#263): 30 days from sign-in, not extended by use.
-- **R6** (#263): the session's end is one field, `ended_at`, with no stored reason.
-- **R7** (#265): disabling a user ends their sessions by setting `ended_at` on each, in the same transaction.
-- **R8** (#265): the admin cannot be disabled.
-- **R9** (#263): sessions are never deleted in Phase 3.
+The details the answers asked the assistant to propose, approved as proposed and written into the records above:
+R1 the delay (30 seconds from the 5th consecutive failure, per username); R2 "immediate" as the UTC date; R3 a
+user's own password change ends their other sessions; R4 one open report per reporter and post; R5 30 days from
+sign-in, not extended; R6 `ended_at` with no stored reason; R7 disabling ends the sessions in the same transaction;
+R8 the admin cannot be disabled; R9 sessions are not deleted in Phase 3.
 
-## For Ron's approval: every name and type
+## Every name and type (approved 2026-10-10, #288)
 
-Every record, field and type proposed above, in one table. Approving it approves the names; the rules stay as written in
-each record's table.
+Every record, field and type above, in one table. The rules are in each record's table.
 
 | Record | Field | Type |
 |---|---|---|
@@ -992,7 +983,7 @@ each record's table.
 | | `report_id` | `str` / `None` |
 | | `removed_by` | `str` / `None` |
 | | `removed_at` | `datetime` UTC / `None` |
-| `PostLifecycle` (Gate E, E-1 to E-5) | `rejection_reason` | adds `"misclassified"` |
+| `PostLifecycle` (Gate E, amended 2026-10-10) | `rejection_reason` | adds `"misclassified"` |
 | | `flagged_by` | `str` / `None` (a `user_id`) |
 | | `schema_version` | `int`, value 3 |
 

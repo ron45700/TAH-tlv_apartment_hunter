@@ -15,7 +15,7 @@ from tlv_hunter.classify.complete import Completed
 from tlv_hunter.classify.cost import CallRecord, CapReached, CostMeter
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.postmodel.rejects import classified_lifecycle, failed_lifecycle, other_city_ruling
-from tlv_hunter.store.base import Repository
+from tlv_hunter.store.base import Repository, StaleRecordError
 
 logger = logging.getLogger(__name__)
 
@@ -193,11 +193,18 @@ def _save_success(
     on_written: Callable[[Completed], None] | None,
 ) -> tuple[str, Literal["rejected", "cleared"] | None]:
     # Read again right before the write: the record may have changed during the call (#182).
-    fresh = repository.get_lifecycle(post.listing_id)
-    if fresh is None or fresh.state != "pending":
-        return "discarded", None
-    lifecycle = classified_lifecycle(fresh, completed.listing, post)
-    repository.save_classification(completed.listing, lifecycle)
+    # A record changed between that read and the write is read once more (#260, #289).
+    for attempt in (1, 2):
+        fresh = repository.get_lifecycle(post.listing_id)
+        if fresh is None or fresh.state != "pending":
+            return "discarded", None
+        lifecycle = classified_lifecycle(fresh, completed.listing, post)
+        try:
+            repository.save_classification(completed.listing, lifecycle, expected=fresh)
+            break
+        except StaleRecordError:
+            if attempt == 2:
+                return "discarded", None
     if on_written is not None:
         on_written(completed)
     ruling = other_city_ruling(post, completed.listing)
@@ -212,10 +219,18 @@ def _save_success(
 
 
 def _save_failure(post: RawPost, repository: Repository, error: ClassificationError) -> str:
-    fresh = repository.get_lifecycle(post.listing_id)
-    if fresh is None or fresh.state != "pending":
-        return "discarded"
-    repository.save_lifecycle(failed_lifecycle(fresh, str(error)[:ERROR_TEXT_LIMIT]))
+    for attempt in (1, 2):
+        fresh = repository.get_lifecycle(post.listing_id)
+        if fresh is None or fresh.state != "pending":
+            return "discarded"
+        try:
+            repository.save_lifecycle(
+                failed_lifecycle(fresh, str(error)[:ERROR_TEXT_LIMIT]), expected=fresh
+            )
+            break
+        except StaleRecordError:
+            if attempt == 2:
+                return "discarded"
     return f"failed: {error.kind}"
 
 

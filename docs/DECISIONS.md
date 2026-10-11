@@ -10,7 +10,7 @@ Superseded decisions are kept, marked, and left in place. Deleting them would lo
 the question was considered at all.
 
 **Last updated:** 2026-10-10 (#242–#257, the content of Gate C; #258–#287, Gate C's open points, the technical
-choices and the area grouping; #173, #251, #254 and #257 corrected)
+choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290, Gate C approved and the plans for 3.4 and 3.5)
 
 > Written in English like every document in `docs/`.
 >
@@ -2837,6 +2837,41 @@ The admin can restore a left-out post later; meanwhile the post is kept (#255).
 The key compares the post as users see it: the `Listing` with the admin's corrections in force applied. **Refines #230
 and #231.**
 *Ron approved the reviewer's recommendation.* No reason recorded.
+
+---
+
+## Phase 3: Gate C approved, the plans for 3.4 and 3.5 (2026-10-10)
+
+### 288 — Gate C is approved: names and types, points R1–R9, and the Gate E amendments
+**Settles Gate C** (`SCHEMA.md`). Every record, field and type of the table "For Ron's approval: every name and type" of
+2026-10-10, exactly as drafted: `User`, `SignupKey`, `Session`, `Profile`, `SearchOption`, `RangeCriterion`,
+`DateRangeCriterion`, `CriterionLevel`, `ViewedPost`, `ClassificationReport`, `ReportableField`, `FieldCorrection`.
+**The Gate E amendments E-1 to E-5** (`"misclassified"`, `flagged_by`'s meaning, the restore rule, the exemption of a
+reported post, `schema_version` 3), now written into Gate E's text as an amendment dated 2026-10-10. **Points R1–R9** as
+proposed: R1 the sign-in delay of 30 seconds from the 5th consecutive failure, per username; R2 "immediate" compares as
+the UTC date of the evaluation; R3 a user's own password change ends their other sessions; R4 one open report per
+reporter and post; R5 a session lasts 30 days from sign-in, not extended by use; R6 `ended_at` with no stored reason;
+R7 disabling a user ends their sessions in the same transaction; R8 the admin cannot be disabled; R9 sessions are not
+deleted in Phase 3.
+*Ron approved the reviewer's recommendation.* *The reviewer's reasons, for two points:* R2, the UTC date differs from the Israel date only between midnight and
+03:00 and is not worth changing invariant 9; R8, otherwise the admin could lock himself out.
+
+### 289 — The plan for task 3.4 is approved, with its eight points
+`PHASE_3.md` 3.4, (a) to (f), as written: the eighth seam `userdata/` with `UserDataStore` and its method table; the
+Gate C contracts; `PostLifecycle` version 3; compare and set in both stores and every caller, with the pipeline's merge on
+a conflict and its 3 attempts; the busy timeout of 10 seconds; the per-user YAML removed. Its eight points as proposed:
+(1) the name `userdata/`, `UserDataStore`, and its row in `CLAUDE.md`'s seam table; (2) the pipeline's merge and 3
+attempts; (3) a report written before the post's move to rejected, two transactions in two seams, with a retry from the
+admin's list; (4) `save_profile` whole-record replace; (5) `StaleRecordError`; (6) 10 seconds; (7) the method names;
+(8) local_json's compare and set is check-then-write. **Settles #267's name.**
+*Ron approved the reviewer's recommendation.*
+
+### 290 — The plan for task 3.5 is approved, with its four points; not built yet
+`PHASE_3.md` 3.5 as written: `accounts/` (`passwords.py`, `tokens.py`, `actions.py`) and `jobs/create_admin.py`; the
+dependency `argon2-cffi` with the parameters named explicitly (`PasswordHasher.from_parameters(profiles.RFC_9106_LOW_MEMORY)`);
+`create_admin` named in `CLAUDE.md`'s writer paragraph when built; no command to issue keys before the admin's pages
+(3.8). **Approved, not built:** 3.5 is built in a later round, on Ron's go; nothing is installed until then.
+*Ron approved the reviewer's recommendation.*
 
 ---
 

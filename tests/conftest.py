@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from tlv_hunter.contracts.listing import LISTING_SCHEMA_VERSION, Listing
+from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.jobs.common import SQLITE_FILENAME
 from tlv_hunter.providers.thedoor import to_raw_post
@@ -167,6 +168,57 @@ def spike_items() -> list[dict[str, Any]]:
 @pytest.fixture
 def posts(thedoor_items: list[dict[str, Any]]) -> list[RawPost]:
     return [annotate(to_raw_post(item, FETCHED_AT)) for item in thedoor_items]
+
+
+def overwrite_lifecycle(repository: Repository, record: PostLifecycle) -> PostLifecycle:
+    """Test setup: replace a post's lifecycle record, whatever it holds now. Compare and set
+    against the stored record (DECISIONS.md #260), so it never races another writer in a test."""
+    return repository.save_lifecycle(record, expected=repository.get_lifecycle(record.listing_id))
+
+
+def overwrite_classification(
+    repository: Repository, listing: Listing, lifecycle: PostLifecycle
+) -> None:
+    """Test setup: `save_classification` against the stored lifecycle record, whatever it holds."""
+    repository.save_classification(
+        listing, lifecycle, expected=repository.get_lifecycle(lifecycle.listing_id)
+    )
+
+
+class AnotherWriterFirst:
+    """A Repository whose first `times` lifecycle writes each meet another writer: right before
+    the write, the stored record's `flag_note` is changed, as the site would change a field it
+    owns (DECISIONS.md #260). Every other method passes through."""
+
+    def __init__(self, inner: Repository, times: int = 1) -> None:
+        self._inner = inner
+        self.times = times
+        self.interposed: list[str] = []
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    def _another_writer(self, listing_id: str) -> None:
+        current = self._inner.get_lifecycle(listing_id)
+        if self.times > 0 and current is not None:
+            self.times -= 1
+            self.interposed.append(listing_id)
+            note = f"another writer {len(self.interposed)}"
+            self._inner.save_lifecycle(
+                current.model_copy(update={"flag_note": note}), expected=current
+            )
+
+    def save_lifecycle(
+        self, record: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> PostLifecycle:
+        self._another_writer(record.listing_id)
+        return self._inner.save_lifecycle(record, expected=expected)
+
+    def save_classification(
+        self, listing: Listing, lifecycle: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> None:
+        self._another_writer(lifecycle.listing_id)
+        self._inner.save_classification(listing, lifecycle, expected=expected)
 
 
 @pytest.fixture(params=["local_json", "sqlite"])

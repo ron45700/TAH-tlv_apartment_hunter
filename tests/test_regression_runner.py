@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.conftest import CONFIG_ROOT, load_openai_spike, make_listing
+from tests.conftest import CONFIG_ROOT, load_openai_spike, make_listing, overwrite_classification
 from tests.test_classification_run import lifecycle
 from tests.test_classify_complete import extraction
 from tests.test_openai_classifier import FakeTransport, with_answer
@@ -591,8 +591,8 @@ def test_a_review_truth_leaves_an_excluded_field_out(tmp_path: Path, posts) -> N
     store = SqliteRepository(database)
     store.upsert_with_lifecycle(post, lifecycle(post))
     listing = make_listing(post.listing_id, post_nature="rental_offer", other_city="חולון")
-    store.save_classification(
-        listing, lifecycle(post, state="rejected", rejection_reason="other_city")
+    overwrite_classification(
+        store, listing, lifecycle(post, state="rejected", rejection_reason="other_city")
     )
     labeling = tmp_path / LABELING_DIR
     (labeling / "regression_set.json").write_text(
@@ -674,7 +674,7 @@ def _review_post(
     store = SqliteRepository(database)
     store.upsert_with_lifecycle(post, lifecycle(post))
     listing = make_listing(post.listing_id, post_nature=nature, other_city=city)
-    store.save_classification(listing, lifecycle(post, state=state, rejection_reason=reason))
+    overwrite_classification(store, listing, lifecycle(post, state=state, rejection_reason=reason))
     labeling = tmp_path / LABELING_DIR
     entry = {"listing_id": post.listing_id, "case": "c", "source": "store", "truth": "review"}
     (labeling / "regression_set.json").write_text(

@@ -65,12 +65,11 @@ the corrections. No Telegram (Phase 4), no scheduler (Phase 5): collection and c
 
 ---
 
-## 3.1 Gate C: names and types — content decided; NAMES WAITING for Ron
+## 3.1 Gate C: names and types — DECIDED (#288, 2026-10-10)
 
-`SCHEMA.md`, Gate C (DRAFT): `User`, `SignupKey`, `Session`, `Profile` with two `SearchOption`s, `ViewedPost`,
-`ClassificationReport`, `FieldCorrection`; the Gate E amendments E-1 to E-5. Round 1's 31 open points are answered
-(#262–#287). **Needs from Ron:** the one table "For Ron's approval: every name and type", and points R1–R9 (details the
-answers asked the assistant to propose). Approved like Gate B: in writing, then recorded in `DECISIONS.md`.
+`SCHEMA.md`, Gate C, approved: `User`, `SignupKey`, `Session`, `Profile` with two `SearchOption`s, `ViewedPost`,
+`ClassificationReport`, `FieldCorrection`; points R1–R9; the Gate E amendments, written into Gate E. Nothing left for
+Ron.
 
 ## 3.2 Technical choices — DECIDED (#258–#260, 2026-10-10)
 
@@ -82,10 +81,11 @@ left is in the 3.4 and 3.5 plans.
 
 §6 as proposed, with the four undecided entries in regular groups. Nothing left for Ron.
 
-## 3.4 Store: the Gate C records and the lifecycle writes — content approved; PLAN written 2026-10-10, WAITING for Ron
+## 3.4 Store: the Gate C records and the lifecycle writes — PLAN APPROVED (#289); BUILT 2026-10-10 (round 3)
 
-**The plan assumes Ron approves Gate C's names as drafted** (`SCHEMA.md`, Gate C, "For Ron's approval"). Nothing is
-written, installed or changed until Ron approves this plan. No paid call, no network call; the production store is not
+**Approved by Ron, with its eight points as proposed (#289)**; Gate C's names are approved (#288). **Built in round 3
+(2026-10-10)**, with the deviations listed in `SESSION_LOG.md` (2026-10-10, round 3); one gap is open for Ron: R7
+and the method table (below, "Open after the build"). No paid call, no network call; the production store is not
 opened for writing by any step of this task.
 
 **Scope.** (a) The eighth seam and its SQLite store; (b) the Gate C records as contracts; (c) `PostLifecycle` version 3
@@ -93,10 +93,9 @@ and `"misclassified"`; (d) compare and set for every `PostLifecycle` writer, in 
 (e) the explicit busy timeout (#259); (f) the per-user YAML removed (#47). **Not in 3.4:** the account logic (3.5), the
 evaluation (3.6), the site (3.7), any write of a report or a flag (3.7, 3.8).
 
-### (a) The eighth seam — name and contract proposed (#267)
+### (a) The eighth seam (#267; name approved, #289)
 
-**Proposed name: `userdata/`, interface `UserDataStore`.** Proposed row for `CLAUDE.md`'s seam table (not written into
-`CLAUDE.md` until Ron approves the name):
+**`userdata/`, interface `UserDataStore`.** Its row in `CLAUDE.md`'s seam table:
 
 | Module | Contract |
 |---|---|
@@ -245,9 +244,22 @@ seconds** (point 6); measured on the working day (3.10).
 7. The method names of the table in (a).
 8. local_json's compare and set is check-then-write with no lock: right for the tests, not for two processes.
 
-## 3.5 Accounts — content approved (#242–#244, #262–#266); PLAN written 2026-10-10, WAITING for Ron
+### Open after the build (for Ron, before 3.5)
 
-**The plan assumes Ron approves Gate C's names as drafted, and 3.4.** Nothing is installed until Ron approves it.
+1. **R7 and the method table.** R7 says disabling a user ends their sessions "in the same transaction"; the approved
+   method table has `save_user` (the disable) and `end_sessions` as two methods, so two transactions. Built as tabled;
+   disabling is 3.5's, so nothing depends on it yet. Either a method that does both, or `save_user` ending the
+   sessions when it disables, or R7 read as "in the same action".
+2. **A conflict the merge rule does not cover:** the run and the site both changed the state and the fresh record has no
+   flag or report (for example the admin restored an archived post that a repost brought back). Built: the run fails at
+   once, no watermark moves, the next run reads the new record (`run_merge.py`).
+3. **How sign-up knows the key's id:** `create_user(user, profile, key_hash, now)` checks that the key with that hash is
+   `user.signup_key_id`; 3.5's sign-up finds the id through `list_keys()` (no method finds a key by its hash).
+
+## 3.5 Accounts — PLAN APPROVED (#290, 2026-10-10); NOT BUILT
+
+**Approved by Ron, with its four points as proposed, the dependency included (#290).** Not built in round 3; nothing
+is installed until Ron's go to build it.
 
 **Scope.** The account logic over `UserDataStore`, with no web code: the one-time admin command (#244); keys (#243,
 #266); sign-up, sign-in with the delay (#264), sign-out; sessions (#263); the password change and the admin's reset

@@ -12,7 +12,7 @@ from tlv_hunter.contracts.post_lifecycle import (
     PostLifecycle,
 )
 from tlv_hunter.contracts.raw_post import RawPost
-from tlv_hunter.store.base import Repository
+from tlv_hunter.store.base import Repository, StaleRecordError
 
 MakeRepository = Callable[[], Repository]
 
@@ -145,7 +145,7 @@ def test_save_and_get_lifecycle_round_trip_through_a_fresh_instance(
         ],
     )
 
-    assert make_repository().save_lifecycle(record) == record
+    assert make_repository().save_lifecycle(record, expected=None) == record
 
     back = make_repository().get_lifecycle(post.listing_id)
     assert back == record
@@ -156,32 +156,91 @@ def test_save_and_get_lifecycle_round_trip_through_a_fresh_instance(
 def test_save_lifecycle_requires_a_stored_post(make_repository: MakeRepository, posts) -> None:
     repo = make_repository()
     with pytest.raises(KeyError):
-        repo.save_lifecycle(_pending(posts[0]))
+        repo.save_lifecycle(_pending(posts[0]), expected=None)
     assert repo.get_lifecycle(posts[0].listing_id) is None
 
 
-def test_save_lifecycle_is_whole_record_replace_and_last_write_wins(
+# --- compare and set (DECISIONS.md #260, #289): replaces "last write wins" (#65) ---
+
+
+def test_save_lifecycle_writes_when_the_stored_record_is_the_one_read(
     make_repository: MakeRepository, posts
 ) -> None:
-    """Pins a known limit (BACKLOG.md, open technical choices): two writers that both read the
-    same record lose the first writer's change. Phase 1 has one writer."""
     post = posts[0]
     repo = make_repository()
-    repo.upsert(post)
-    repo.save_lifecycle(_pending(post))
+    repo.upsert_with_lifecycle(post, _pending(post))
+    read = repo.get_lifecycle(post.listing_id)
+    changed = read.model_copy(update={"state": "active"})
+    assert repo.save_lifecycle(changed, expected=read) == changed
+    assert make_repository().get_lifecycle(post.listing_id) == changed
+
+
+def test_save_lifecycle_refuses_a_record_another_writer_changed(
+    make_repository: MakeRepository, posts
+) -> None:
+    """Two writers read the same record: the second write is refused, and the first writer's
+    change stays. Before #260 the second write erased the first."""
+    post = posts[0]
+    repo = make_repository()
+    repo.upsert_with_lifecycle(post, _pending(post, state="active"))
 
     read_by_a = repo.get_lifecycle(post.listing_id)
     read_by_b = repo.get_lifecycle(post.listing_id)
-    repo.save_lifecycle(
-        read_by_a.model_copy(update={"flagged_by": "ron", "flagged_at": FETCHED_AT})
+    flagged = read_by_a.model_copy(
+        update={
+            "state": "rejected",
+            "rejection_reason": "flagged",
+            "flagged_by": "ron",
+            "flagged_at": FETCHED_AT,
+        }
     )
-    repo.save_lifecycle(
-        read_by_b.model_copy(update={"state": "rejected", "rejection_reason": "seeking"})
-    )
+    repo.save_lifecycle(flagged, expected=read_by_a)
+    with pytest.raises(StaleRecordError) as raised:
+        repo.save_lifecycle(
+            read_by_b.model_copy(update={"last_published_at": FETCHED_AT}), expected=read_by_b
+        )
+    assert raised.value.listing_id == post.listing_id
+    assert make_repository().get_lifecycle(post.listing_id) == flagged
 
-    final = make_repository().get_lifecycle(post.listing_id)
-    assert final.state == "rejected" and final.rejection_reason == "seeking"
-    assert final.flagged_by is None and final.flagged_at is None
+
+def test_save_lifecycle_with_no_expected_record_creates_only(
+    make_repository: MakeRepository, posts
+) -> None:
+    post = posts[0]
+    repo = make_repository()
+    repo.upsert(post)
+    repo.save_lifecycle(_pending(post), expected=None)
+    with pytest.raises(StaleRecordError):
+        repo.save_lifecycle(_pending(post, state="active"), expected=None)
+    assert make_repository().get_lifecycle(post.listing_id) == _pending(post)
+
+
+def test_save_lifecycle_refuses_an_expected_record_when_there_is_none(
+    make_repository: MakeRepository, posts
+) -> None:
+    post = posts[0]
+    repo = make_repository()
+    repo.upsert(post)
+    with pytest.raises(StaleRecordError):
+        repo.save_lifecycle(_pending(post, state="active"), expected=_pending(post))
+    assert make_repository().get_lifecycle(post.listing_id) is None
+
+
+def test_a_stale_save_classification_writes_neither_record(
+    make_repository: MakeRepository, posts
+) -> None:
+    post = posts[0]
+    repo = make_repository()
+    repo.upsert_with_lifecycle(post, _pending(post))
+    read = repo.get_lifecycle(post.listing_id)
+    repo.save_lifecycle(read.model_copy(update={"classification_failures": 1}), expected=read)
+    with pytest.raises(StaleRecordError):
+        repo.save_classification(
+            make_listing(post.listing_id), _pending(post, state="active"), expected=read
+        )
+    fresh = make_repository()
+    assert fresh.get_listing(post.listing_id) is None
+    assert fresh.get_lifecycle(post.listing_id).classification_failures == 1
 
 
 def test_upsert_alone_creates_no_lifecycle_record(make_repository: MakeRepository, posts) -> None:
@@ -210,7 +269,7 @@ def test_upsert_with_lifecycle_never_overwrites_an_existing_record(
     repo = make_repository()
     existing = _pending(post, state="rejected", rejection_reason="other_city")
     repo.upsert(post)
-    repo.save_lifecycle(existing)
+    repo.save_lifecycle(existing, expected=None)
     refetched = post.with_changes(fetched_at=FETCHED_AT + timedelta(minutes=30), reactions_count=7)
 
     returned = repo.upsert_with_lifecycle(refetched, _pending(post))
@@ -340,7 +399,7 @@ def test_save_classification_writes_both_and_round_trips_through_a_fresh_instanc
         post.listing_id, areas=[30, 31], price=written([4500]), price_source="text"
     )
     active = _pending(post, state="active")
-    make_repository().save_classification(listing, active)
+    make_repository().save_classification(listing, active, expected=_pending(post))
 
     fresh = make_repository()
     assert fresh.get_listing(post.listing_id) == listing
@@ -354,17 +413,22 @@ def test_save_classification_replaces_an_earlier_listing(
     repo = make_repository()
     repo.upsert_with_lifecycle(post, _pending(post))
     repo.save_classification(
-        make_listing(post.listing_id, areas=[37]), _pending(post, state="active")
+        make_listing(post.listing_id, areas=[37]),
+        _pending(post, state="active"),
+        expected=_pending(post),
     )
     second = make_listing(post.listing_id, areas=[52], prompt_version="test-2")
-    repo.save_classification(second, _pending(post, state="active"))
+    active = _pending(post, state="active")
+    repo.save_classification(second, active, expected=active)
     assert make_repository().get_listing(post.listing_id) == second
 
 
 def test_save_classification_requires_a_stored_post(make_repository: MakeRepository, posts) -> None:
     repo = make_repository()
     with pytest.raises(KeyError):
-        repo.save_classification(make_listing(posts[0].listing_id), _pending(posts[0]))
+        repo.save_classification(
+            make_listing(posts[0].listing_id), _pending(posts[0]), expected=None
+        )
     assert repo.get_listing(posts[0].listing_id) is None
 
 
@@ -375,7 +439,9 @@ def test_save_classification_refuses_a_pair_of_two_posts(
     for post in posts[:2]:
         repo.upsert_with_lifecycle(post, _pending(post))
     with pytest.raises(ValueError, match="different posts"):
-        repo.save_classification(make_listing(posts[0].listing_id), _pending(posts[1]))
+        repo.save_classification(
+            make_listing(posts[0].listing_id), _pending(posts[1]), expected=_pending(posts[1])
+        )
     assert repo.get_listing(posts[0].listing_id) is None
 
 
@@ -388,7 +454,9 @@ def test_save_classification_never_touches_the_stored_post(
         repo.upsert_with_lifecycle(post, _pending(post))
     before = {post.listing_id: post.model_dump_json() for post in make_repository().query()}
     for post in posts:
-        repo.save_classification(make_listing(post.listing_id), _pending(post, state="active"))
+        repo.save_classification(
+            make_listing(post.listing_id), _pending(post, state="active"), expected=_pending(post)
+        )
     after = {post.listing_id: post.model_dump_json() for post in make_repository().query()}
     assert after == before
 
@@ -400,9 +468,12 @@ def test_find_pending_canonicals_returns_exactly_the_pending_canonicals(
     pending, active, archived, rejected, duplicate, canonical_no_result = posts[:6]
     for post in (pending, active, archived, rejected):
         repo.upsert_with_lifecycle(_canonical(post), _pending(post))
-    repo.save_lifecycle(_pending(active, state="active"))
-    repo.save_lifecycle(_pending(archived, state="archived"))
-    repo.save_lifecycle(_pending(rejected, state="rejected", rejection_reason="seeking"))
+    repo.save_lifecycle(_pending(active, state="active"), expected=_pending(active))
+    repo.save_lifecycle(_pending(archived, state="archived"), expected=_pending(archived))
+    repo.save_lifecycle(
+        _pending(rejected, state="rejected", rejection_reason="seeking"),
+        expected=_pending(rejected),
+    )
     repo.upsert_with_lifecycle(
         duplicate.with_changes(is_canonical=False, duplicate_of=pending.listing_id),
         _pending(duplicate),

@@ -6,6 +6,8 @@ from pathlib import Path
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
+from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS
+from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.textnorm.phones import canonical_phone
 
 # The JSON functions and operators built in by default, used by
@@ -124,13 +126,16 @@ class SqliteRepository:
             )
             return stored
 
-    def save_lifecycle(self, record: PostLifecycle) -> PostLifecycle:
+    def save_lifecycle(
+        self, record: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> PostLifecycle:
         with self._transaction() as conn:
             exists = conn.execute(
                 "SELECT 1 FROM raw_posts WHERE listing_id = ?", (record.listing_id,)
             ).fetchone()
             if exists is None:
                 raise KeyError(record.listing_id)
+            _require_expected(conn, record.listing_id, expected)
             conn.execute(
                 "INSERT INTO post_lifecycle (listing_id, doc) VALUES (?, ?) "
                 "ON CONFLICT (listing_id) DO UPDATE SET doc = excluded.doc",
@@ -167,7 +172,9 @@ class SqliteRepository:
             ).fetchall()
         return [PostLifecycle.from_stored_json(doc) for (doc,) in rows]
 
-    def save_classification(self, listing: Listing, lifecycle: PostLifecycle) -> None:
+    def save_classification(
+        self, listing: Listing, lifecycle: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> None:
         if listing.listing_id != lifecycle.listing_id:
             raise ValueError(
                 f"listing {listing.listing_id} and lifecycle record {lifecycle.listing_id} "
@@ -179,6 +186,7 @@ class SqliteRepository:
             ).fetchone()
             if exists is None:
                 raise KeyError(listing.listing_id)
+            _require_expected(conn, lifecycle.listing_id, expected)
             conn.execute(
                 "INSERT INTO listings (listing_id, doc) VALUES (?, ?) "
                 "ON CONFLICT (listing_id) DO UPDATE SET doc = excluded.doc",
@@ -230,9 +238,9 @@ class SqliteRepository:
         if self._read_only:
             # mode=ro never creates the file; the URI form is the only way to pass it.
             target = f"{self._path.resolve().as_uri()}?mode=ro"
-            conn = sqlite3.connect(target, uri=True, autocommit=True)
+            conn = sqlite3.connect(target, uri=True, autocommit=True, timeout=BUSY_TIMEOUT_SECONDS)
         else:
-            conn = sqlite3.connect(self._path, autocommit=True)
+            conn = sqlite3.connect(self._path, autocommit=True, timeout=BUSY_TIMEOUT_SECONDS)
         try:
             conn.execute("PRAGMA foreign_keys = ON")
             yield conn
@@ -249,6 +257,20 @@ class SqliteRepository:
                 conn.execute("ROLLBACK")
                 raise
             conn.execute("COMMIT")
+
+
+def _require_expected(
+    conn: sqlite3.Connection, listing_id: str, expected: PostLifecycle | None
+) -> None:
+    """Compare and set, inside the write's transaction (#260): the stored record must be the one
+    the writer read. Compared as models, so a version-1 document read as the current version
+    equals what the writer read through the same reader."""
+    row = conn.execute(
+        "SELECT doc FROM post_lifecycle WHERE listing_id = ?", (listing_id,)
+    ).fetchone()
+    stored = None if row is None else PostLifecycle.from_stored_json(row[0])
+    if stored != expected:
+        raise StaleRecordError(listing_id)
 
 
 def _upsert(conn: sqlite3.Connection, post: RawPost) -> RawPost:

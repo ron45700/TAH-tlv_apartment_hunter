@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import CONFIG_ROOT, make_listing
+from tests.conftest import CONFIG_ROOT, make_listing, overwrite_classification
 from tests.test_classification_run import lifecycle, store_pending
 from tests.test_classify_pending_job import KEY, answers
 from tests.test_openai_classifier import FakeTransport
@@ -54,7 +54,8 @@ def make_old_store(tmp_path: Path, posts, count: int = 3, version: str = "2") ->
     repository = SqliteRepository(path)
     stored = store_pending(repository, posts[:count])
     for post in stored:
-        repository.save_classification(
+        overwrite_classification(
+            repository,
             make_listing(post.listing_id, prompt_version=version),
             lifecycle(post, state="active"),
         )

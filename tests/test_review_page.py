@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.conftest import CONFIG_ROOT, make_listing
+from tests.conftest import CONFIG_ROOT, make_listing, overwrite_classification
 from tests.test_classification_run import lifecycle
 from tlv_hunter.areas.reference import load_areas
 from tlv_hunter.config.yaml_config import YamlConfig
@@ -278,7 +278,7 @@ def _store(tmp_path: Path, posts, count: int = 2) -> tuple[Path, list]:
     chosen = posts[:count]
     for post in chosen:
         store.upsert_with_lifecycle(post, lifecycle(post))
-    store.save_classification(make_listing(chosen[0].listing_id), lifecycle(chosen[0]))
+    overwrite_classification(store, make_listing(chosen[0].listing_id), lifecycle(chosen[0]))
     labeling = tmp_path / LABELING_DIR
     labeling.mkdir(parents=True)
     (labeling / "regression_set.json").write_text(

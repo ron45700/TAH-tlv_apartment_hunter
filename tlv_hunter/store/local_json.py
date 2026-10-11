@@ -7,6 +7,7 @@ from pathlib import Path
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
+from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.textnorm.phones import canonical_phone
 
 RAW_POSTS_COLLECTION = "raw_posts"
@@ -22,6 +23,9 @@ class LocalJsonRepository:
     two leaves a post with no record. `find_without_lifecycle` finds such posts. Likewise
     `save_classification` writes the Listing, then the lifecycle record; a crash between the two
     leaves a Listing beside a "pending" record, which is classified again.
+
+    Compare and set (#260) is read, compare, then write, with no lock: right for one process,
+    which is all a test store has (DECISIONS.md #289, point 8).
     """
 
     def __init__(self, root: Path) -> None:
@@ -48,9 +52,12 @@ class LocalJsonRepository:
             self._write_lifecycle(initial)
         return stored
 
-    def save_lifecycle(self, record: PostLifecycle) -> PostLifecycle:
+    def save_lifecycle(
+        self, record: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> PostLifecycle:
         if not self._post_path(record.listing_id).exists():
             raise KeyError(record.listing_id)
+        self._require_expected(record.listing_id, expected)
         self._write_lifecycle(record)
         return record
 
@@ -79,7 +86,9 @@ class LocalJsonRepository:
             )
         ]
 
-    def save_classification(self, listing: Listing, lifecycle: PostLifecycle) -> None:
+    def save_classification(
+        self, listing: Listing, lifecycle: PostLifecycle, *, expected: PostLifecycle | None
+    ) -> None:
         if listing.listing_id != lifecycle.listing_id:
             raise ValueError(
                 f"listing {listing.listing_id} and lifecycle record {lifecycle.listing_id} "
@@ -87,6 +96,7 @@ class LocalJsonRepository:
             )
         if not self._post_path(listing.listing_id).exists():
             raise KeyError(listing.listing_id)
+        self._require_expected(lifecycle.listing_id, expected)
         self._listings_dir.mkdir(parents=True, exist_ok=True)
         _atomic_write(
             self._listing_path(listing.listing_id),
@@ -130,6 +140,10 @@ class LocalJsonRepository:
 
     def _listing_path(self, listing_id: str) -> Path:
         return self._listings_dir / f"{listing_id}.json"
+
+    def _require_expected(self, listing_id: str, expected: PostLifecycle | None) -> None:
+        if self.get_lifecycle(listing_id) != expected:
+            raise StaleRecordError(listing_id)
 
     def _write_lifecycle(self, record: PostLifecycle) -> None:
         self._lifecycle_dir.mkdir(parents=True, exist_ok=True)
