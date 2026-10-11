@@ -5043,3 +5043,141 @@ row: #294 is built.
 
 STOP. 3.6 is not built. For Ron: rerun the tests and ruff; then the 16 points of `PHASE_3.md` 3.6 and the plan's
 approval.
+
+## 2026-10-11 (continued) — Phase 3, round 6: 3.6's plan approved (#295–#300), #301 recorded; task 3.6 built
+
+Ron reran the suite after round 5 (all passed) and commits round 5 himself. **No git command was run this round**,
+read-only ones included. No paid call, no network call, no dependency added, nothing installed, no site code, no Node,
+no Docker. The production store was opened **read-only once** (test group 9) and never for writing.
+
+### Recorded
+
+- `DECISIONS.md` **#295** (the plan and points 1, 2, 3, 5, 7, 10, 11, 13, 14, 15, 16 as proposed), **#296** (point 4: a
+  correction of `other_city` in force outranks the native location), **#297** (point 6: the earliest post), **#298**
+  (point 8: an unknown preference is not met), **#299** (point 9: parking not written is unknown), **#300** (point 12,
+  option (b)), each "Ron approved the reviewer's recommendation" with the reviewer's reason where one was given; **#301**
+  (Ron's clarification: "derived" means never written on a post; the grouping computed once for all users, held in the
+  site's memory, computed again only when the store changed; a requirement for 3.7's plan). Notes under #214 and #231.
+  "Last updated".
+- **The "when it is needed" wording reworded** (#301). The lines touched: `BASELINE.md` §4, the "Dedup B" bullet's last
+  sentences ("computed from the stored posts when it is needed …" → "derived … never written onto a post … computed once
+  for all users, held in the site's memory, and computed again only when the store changed …"); `SCHEMA.md`, the gate
+  table's row D ("derived from the stored posts when it is needed, in phase 3" → the same reading); `CLAUDE.md`, the
+  phase paragraph ("derived by the key when Phase 3 and 4 need it" → the same reading; "no code implements the key yet"
+  replaced by `dedup/stage_b.py`); `PHASE_3.md`, §3.0's anchor row, 3.6's point 13 ("each request, or once per store
+  change" → settled by #301), and a new paragraph under 3.7 with the requirement. Left as they are: `SCHEMA.md` (Gate C,
+  "The area's colour, per user": "computed at display") and `BASELINE.md` §8 ("computed per user at display"): they are
+  per-user values, computed per request.
+- `BASELINE.md` §8 "Order of display" amended (#298, #299); §5's last paragraph (Gate C "a draft, not approved") and §14
+  "Open for Ron" (Gate C and the 3.4/3.5 plans open) fixed, as reported stale in round 5; the header's amendment line.
+- `SCHEMA.md` Gate B, "The city comes from `RawPost.native_location`…": a correction in force decides first (#296); "Last
+  updated". No field or type changed.
+
+### Built — file by file
+
+- `tlv_hunter/postmodel/seen.py` (new): `SeenListing` (`listing`, `corrected`) and `seen_listing(listing, corrections)`:
+  the corrections in force applied over a copy, validated as a `Listing`; removed ones ignored; another post's
+  correction, or two in force on one field, raise; `price_source` by #295 point 3.
+- `tlv_hunter/postmodel/rejects.py`: `other_city_ruling`, `other_city_name` and `model_reason` take a `Listing` **or a
+  `SeenListing`**; with a seen listing whose `other_city` is corrected, the correction decides first (source
+  `"correction"`, value or null, #296); otherwise #214's order, unchanged for every existing caller (they pass a
+  `Listing`). New `restored_lifecycle(existing, post, seen)`: flag fields cleared, state and reason from `model_reason`
+  over the seen listing, an archived post stays archived with its reason re-derived, every other field kept; refuses a
+  record with no flag or report, or of another post.
+- `tlv_hunter/dedup/stage_b.py` (new): `KeyPost`, `KeyInputs`, `TiedPair`, `Publication`, `Card`, `PhotoHashes`
+  (in-process memo keyed by path, size, mtime), `is_compared`, `load_key_posts` (read-only; `query`, `get_lifecycle`,
+  `get_listing`), `key_agent_numbers`, `pair_rules` (the key; `matched_fields`, `agent_numbers`, `WINDOW`, `MATCHABLE`
+  imported from `gate_d/candidates.py`), `tied_pairs` (only posts sharing a non-agent phone or a photo hash are
+  compared), `cards` (connected groups; the shown post the earliest `posted_at`, then the smaller id; `canonical_ids`,
+  `post_ids` with dedup A duplicates, `last_published_at`, `publications` earliest first), `derive_cards`.
+- `tlv_hunter/policy/base.py`: the stub Protocol replaced by the contract's types: `OptionName`, `Tier`, `FieldState`,
+  `TIER_RANK`, `CATEGORIES`, `Evaluation`, and `Policy` as the callable shape.
+- `tlv_hunter/policy/evaluate.py` (new): `evaluate(seen, profile, now)`: the option by kind; every enabled option for an
+  unclear or unwritten kind (bottom, marked; the better tier's option, `room` on a tie); the sublet switch; each category
+  met, failed or unknown; a failed critical hides, an unknown critical goes to the bottom, an unknown preference is not
+  met; fixed wanted values; inclusive ranges; no size in the room option; "immediate" as the UTC date of `now`; the
+  area's colour; `missing_important`; `women_only_icon`; `corrected`.
+- `tlv_hunter/policy/order.py` (new): `card_viewed`, `ordered`.
+- **Removed:** `tlv_hunter/policy/policy_stub.py`. `ListingStub`, `DecisionStub` and the `notify/` stubs stay.
+- Tests: `tests/test_seen_listing.py` (new, 27: group 1); `tests/test_postmodel_rejects.py` (+15: group 2, and #296);
+  `tests/test_dedup_stage_b.py` (new, 26: groups 3 and 4, the loader, the photo memo); `tests/test_policy.py` (new, 52:
+  groups 5–8); `tests/test_stubs.py` (−1: the policy stub's test and its isinstance line removed, a comment updated);
+  `tests/conftest.py`: `make_correction` and two constants.
+- Docs: `DECISIONS.md`, `BASELINE.md`, `SCHEMA.md`, `CLAUDE.md` (status; the phase paragraph; the `policy/` row; the
+  plain-modules paragraphs name `postmodel/seen.py`, `restored_lifecycle`, the city rule and `dedup/stage_b.py`),
+  `PHASE_3.md` (status, §3.0 row, 3.6 approved and built with the decided points, 3.7's requirement, §4's check, §7),
+  `BACKLOG.md`.
+
+### Test group 9: the four known pairs, read-only, with the built code
+
+A scratch script (scratchpad, not in the repo) ran `load_key_posts` over `SqliteRepository(read_only=True)`, with the
+corrections read over a `mode=ro` connection (0 rows; `SqliteUserDataStore` was not opened, since its constructor starts
+a write transaction), then `tied_pairs` and `cards`. It printed ids, counts and times only.
+- **Store SHA-256 before and after:** `04cefd603c8b86df088e4a2983d73689f01c6075d18cc2548f3a0af8fb039c1e`, unchanged.
+- 139 members, 39 dedup A duplicates in the store, 2 agent numbers.
+- **Tied pairs (4, nothing else):** `00f17259…`/`54ecb1d0…` (rule 1), `40f7f193…`/`7253eefa…` (rule 2),
+  `8ae80944…`/`e81273e6…` (both), `9136a715…`/`9a6252c1…` (rule 2).
+- **Cards:** 135, of which 4 hold two posts; each shows its earlier post: `54ecb1d0…` (with `00f17259…`; 13:01 and 13:06
+  UTC on 2026-10-04), `7253eefa…` (with `40f7f193…`; 04:21, 04:22), `9136a715…` (with `9a6252c1…`; 14:41, 14:46),
+  `e81273e6…` (with `8ae80944…`; 10:31, 10:32). Each card's last publication is its later post's; no dedup A duplicate in
+  any of the four.
+- Times (laptop, one run): load 0.390 s (reads and photo hashes; the disk cache warm after round 5), pairs 0.6 ms, cards
+  0.6 ms.
+
+### Verified, and how
+
+- **`uv run pytest`: 1607 passed** (1488 at the end of round 5; +27 +15 +26 +52 −1; 451 s), run after every code and doc
+  edit but this entry. **`uv run ruff check .`: all checks passed. `uv run ruff format --check .`: 180 files already
+  formatted.**
+- Invariants: a full derivation (load, key, cards, evaluation, order) over a temporary SQLite store leaves it
+  byte-identical, through a Repository double that raises on any write; an AST check that `postmodel/seen.py`,
+  `dedup/stage_b.py` and `policy/*` import no model, no `userdata` and no SQLite store and call no write method of either
+  store; the socket guard on throughout.
+- The key's shared-phone-or-photo search equals the every-pair search on 8 seeded random populations of 30 posts.
+
+### Not verified
+
+- The grouping's cost at the store's full size: only today's 266 posts (round 5's synthetic scale measured the pairing
+  only). How the site holds it is 3.7's (#301).
+- `restored_lifecycle` against a real flagged or reported post: none exists; only synthetic records.
+- A correction meeting a native location on the real store: no correction exists.
+
+### Deviations
+
+1. **The city rule's signature (#296):** `other_city_ruling`, `other_city_name` and `model_reason` take `Listing |
+   SeenListing` (the plan: a `Listing`); `CitySource` gains `"correction"`. A plain `Listing` behaves as before, so no
+   existing caller changed. Only a `SeenListing` knows that a field was corrected, so the rule reads it there.
+2. **`restored_lifecycle(existing, post, seen)` takes the `SeenListing`** (the plan: `SeenListing.listing`), for the same
+   reason: a corrected city must outrank the native location in the restore too.
+3. **`Card` also carries `shown`** (the shown `KeyPost`, so its seen listing is at hand for `evaluate`); `shown_id` is a
+   property of it. `Card.canonical_ids` is the list a "lied" flag is written on (#300); its docstring says so.
+4. **`Evaluation.fields["areas"]`**, when the option's areas are not set and the post has no area, is `"unclear"` or
+   `"not_written"` (the colour of #110), not `"not_applied"`, so the card has the area's state without recomputing it.
+5. **Public helpers the plan did not name:** `is_compared`, `key_agent_numbers` (it builds `gate_d.Member`s, so
+   `agent_numbers` is reused as typed), `pair_rules`, `derive_cards`, `Publication`. `Policy` in `policy/base.py` is a
+   callable type, not a Protocol class.
+6. A post whose (seen) `post_nature` is not an offer is not shown by `evaluate` (the plan said none reaches it).
+7. `tests/test_dedup_stage_b.py` and `tests/test_policy.py` import builders from `tests/test_gate_d.py` (and the latter
+   from the former) rather than copying them.
+
+None changes a record, a stored field or a store contract.
+
+### Docs the code made stale, and stale docs found
+
+- Fixed: `BASELINE.md` §5 and §14 (reported in round 5); `CLAUDE.md`'s "no code implements the key yet" and the
+  `policy/` row ("a stub until phase 3"); `PHASE_3.md` §7.
+- Not touched: `PHASE_3.md` 3.6's plan text (kept as written in round 5, under a heading that says the decisions rule; its
+  (b) still writes `seen` as `SeenListing.listing`, see deviation 2); `PHASE_2.md`'s mentions of `model_reason(post,
+  listing)` (history); `PHASE_3.md` 3.5's API table (`get_default_parameters()` without its module, as before).
+
+### BACKLOG
+
+Item 6 is now 3.7's plan with #301's requirement. "For phase 3": the grouping row (built; #301), the four-pair row
+(checked at the build), the city row (`other_city_name(post, seen)`, #296). "Decisions pending implementation": the rows
+for #51/#52, #62/#253, #245–#247, #251, #254–#256, #268–#274 and #276–#287 say what 3.6 built; the #250/#275 row removed
+(built); a new row for #300 and #301 (3.7, 3.8).
+
+### Next
+
+STOP. 3.7 is not started. For Ron: rerun the tests and ruff; then 3.7's plan, which must say how the site knows the
+store changed and measure a real page load (#301).

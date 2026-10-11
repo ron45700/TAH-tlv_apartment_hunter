@@ -1,11 +1,12 @@
 """The rejection derived from the answer and from Facebook's own location, and the record after a
-classification attempt (DECISIONS.md #92, #93, #139, #152, #214)."""
+classification attempt, the record a restore leaves (DECISIONS.md #92, #93, #139, #152, #214,
+#251, #281-#283), and a correction of the city (#296)."""
 
 from datetime import UTC, datetime
 
 import pytest
 
-from tests.conftest import make_listing
+from tests.conftest import make_correction, make_listing
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import POST_LIFECYCLE_SCHEMA_VERSION, PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
@@ -16,7 +17,9 @@ from tlv_hunter.postmodel.rejects import (
     native_locality,
     other_city_name,
     other_city_ruling,
+    restored_lifecycle,
 )
+from tlv_hunter.postmodel.seen import SeenListing, seen_listing
 
 TLV = "תל אביב - יפו, תל אביב"
 
@@ -239,3 +242,134 @@ def test_the_rule_edits_neither_the_listing_nor_the_post(post: RawPost) -> None:
     classified_lifecycle(record(where), answer, where)
     assert (where.model_dump_json(), answer.model_dump_json()) == before
     assert answer.other_city == "בת ים"  # the model's answer stays as it was
+
+
+# --- a correction of other_city outranks the native location (DECISIONS.md #296) ---
+
+FLAGGER = "f" * 32
+FLAGGED_AT = datetime(2026, 10, 11, 10, 0, tzinfo=UTC)
+
+
+def seen_of(post: RawPost, corrections: dict[str, object] | None = None, **changes) -> SeenListing:
+    listing = listing_of(post, **changes)
+    made = [
+        make_correction(listing, field, value, n=n)
+        for n, (field, value) in enumerate((corrections or {}).items(), start=1)
+    ]
+    return seen_listing(listing, made)
+
+
+def test_a_city_correction_outranks_the_native_location_both_ways(post: RawPost) -> None:
+    holon = located(post, "חולון, תל אביב")
+    rescued = seen_of(holon, {"other_city": None}, other_city="חולון")
+    assert other_city_ruling(holon, rescued) == (None, None)
+    assert model_reason(holon, rescued) is None
+    assert other_city_name(holon, rescued) is None
+    tel_aviv = located(post, TLV)
+    moved = seen_of(tel_aviv, {"other_city": "רמת גן"})
+    assert other_city_ruling(tel_aviv, moved) == ("רמת גן", "correction")
+    assert model_reason(tel_aviv, moved) == "other_city"
+
+
+def test_without_a_city_correction_the_seen_listing_follows_214(post: RawPost) -> None:
+    """#214's order stands between the native location and the model."""
+    holon = located(post, "חולון, תל אביב")
+    seen = seen_of(holon, {"rooms": {"state": "written", "value": 3.0}}, other_city="בת ים")
+    assert other_city_ruling(holon, seen) == other_city_ruling(holon, seen.listing)
+    assert other_city_ruling(holon, seen) == ("חולון", "native_location")
+    assert other_city_ruling(post, seen_of(post, other_city="בת ים")) == ("בת ים", "model")
+    removed = make_correction(listing_of(holon), "other_city", None, removed=True)
+    assert other_city_ruling(holon, seen_listing(listing_of(holon), [removed])) == (
+        "חולון",
+        "native_location",
+    )
+
+
+# --- the restore's derived state (DECISIONS.md #251, #281-#283; test group 2) ---
+
+
+def flagged(post: RawPost, reason: str = "flagged", state: str = "rejected") -> PostLifecycle:
+    return record(
+        post,
+        state=state,
+        rejection_reason=reason,
+        flagged_by=FLAGGER,
+        flagged_at=FLAGGED_AT,
+        flag_note="not what it says",
+        classification_failures=1,
+        last_classification_error="timeout",
+    )
+
+
+def test_a_flagged_active_post_restores_to_active_with_every_other_field_kept(
+    post: RawPost,
+) -> None:
+    existing = flagged(post)
+    restored = restored_lifecycle(existing, post, seen_of(post))
+    assert (restored.state, restored.rejection_reason) == ("active", None)
+    assert (restored.flagged_by, restored.flagged_at, restored.flag_note) == (None, None, None)
+    kept = {"last_published_at", "images", "classification_failures", "last_classification_error"}
+    assert restored.model_dump(include=kept) == existing.model_dump(include=kept)
+
+
+def test_a_reported_post_restores_from_the_corrected_values(post: RawPost) -> None:
+    """#281: the corrected nature decides, not the model's."""
+    seen = seen_of(post, {"post_nature": "for_sale"})
+    restored = restored_lifecycle(flagged(post, "misclassified"), post, seen)
+    assert (restored.state, restored.rejection_reason) == ("rejected", "for_sale")
+
+
+def test_an_other_city_post_by_its_native_location_stays_rejected(post: RawPost) -> None:
+    holon = located(post, "חולון, תל אביב")
+    restored = restored_lifecycle(flagged(holon), holon, seen_of(holon))
+    assert (restored.state, restored.rejection_reason) == ("rejected", "other_city")
+    rescued = seen_of(holon, {"other_city": None})
+    assert restored_lifecycle(flagged(holon), holon, rescued).state == "active"  # #296
+
+
+@pytest.mark.parametrize(("nature", "reason"), [("rental_offer", None), ("seeking", "seeking")])
+def test_an_archived_post_stays_archived_its_reason_re_derived(
+    post: RawPost, nature: str, reason: str | None
+) -> None:
+    """#283."""
+    existing = flagged(post, "flagged", state="archived")
+    restored = restored_lifecycle(existing, post, seen_of(post, post_nature=nature))
+    assert (restored.state, restored.rejection_reason) == ("archived", reason)
+    assert restored.flagged_by is None
+
+
+def test_a_record_with_no_flag_and_no_report_or_of_another_post_is_refused(
+    post: RawPost, posts: list[RawPost]
+) -> None:
+    active = record(post, state="active")
+    with pytest.raises(ValueError, match="no flag and no report"):
+        restored_lifecycle(active, post, seen_of(post))
+    other = located(posts[1], None)
+    with pytest.raises(ValueError, match="does not belong"):
+        restored_lifecycle(flagged(post), post, seen_of(other))
+
+
+@pytest.mark.parametrize(
+    ("location", "changes", "corrections"),
+    [
+        (None, {}, {}),
+        (None, {"post_nature": "seeking"}, {}),
+        (None, {}, {"post_nature": "not_listing"}),
+        (None, {"other_city": "רמת גן"}, {}),
+        ("חולון, תל אביב", {}, {}),
+        (TLV, {"other_city": "עין ורד"}, {"post_nature": "for_sale"}),
+        (None, {"post_nature": "sublet_offer"}, {"rooms": {"state": "written", "value": 2.0}}),
+    ],
+)
+def test_the_restore_and_a_classification_derive_the_same_reason(
+    post: RawPost, location: str | None, changes: dict, corrections: dict
+) -> None:
+    """One implementation of Gate E's order and of #214: `model_reason`."""
+    where = located(post, location)
+    seen = seen_of(where, corrections, **changes)
+    restored = restored_lifecycle(flagged(where), where, seen)
+    classified = classified_lifecycle(record(where), seen.listing, where)
+    assert (restored.state, restored.rejection_reason) == (
+        classified.state,
+        classified.rejection_reason,
+    )

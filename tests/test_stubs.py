@@ -11,8 +11,6 @@ from tlv_hunter.contracts.decision_stub import DecisionStub
 from tlv_hunter.contracts.listing_stub import ListingStub
 from tlv_hunter.notify.base import Notifier
 from tlv_hunter.notify.notifier_stub import RecordingNotifierStub
-from tlv_hunter.policy.base import Policy
-from tlv_hunter.policy.policy_stub import AlwaysNotifyPolicyStub
 from tlv_hunter.providers.base import Provider
 from tlv_hunter.providers.fixture import FixtureProvider
 from tlv_hunter.state.base import WatermarkStore
@@ -42,7 +40,8 @@ def test_stub_names_say_stub() -> None:
     assert (contracts / "listing_stub.py").is_file()
     assert (contracts / "decision_stub.py").is_file()
     # contracts/listing.py exists since Gate B was approved (DECISIONS.md #125, task 2.2);
-    # ListingStub stays for policy/ and notify/ until phases 3 and 4.
+    # ListingStub and DecisionStub stay for notify/ until phase 4 (policy/'s stub left in 3.6,
+    # DECISIONS.md #295).
     assert not (contracts / "decision.py").exists()
 
 
@@ -50,7 +49,6 @@ def test_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
     assert isinstance(FixtureProvider(THEDOOR_20, lambda: FETCHED_AT), Provider)
     assert isinstance(LocalJsonRepository(tmp_path), Repository)
     assert isinstance(YamlConfig(CONFIG_ROOT), ConfigSource)
-    assert isinstance(AlwaysNotifyPolicyStub("ron"), Policy)
     assert isinstance(RecordingNotifierStub(), Notifier)
 
 
@@ -68,11 +66,6 @@ def test_sqlite_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
 def test_sqlite_store_and_watermark_store_have_no_delete() -> None:
     for cls in (SqliteRepository, WatermarkStore, SqliteWatermarkStore):
         assert not any("delete" in name or "remove" in name for name in dir(cls))
-
-
-def test_policy_stub_always_notifies_for_its_user() -> None:
-    decision = AlwaysNotifyPolicyStub("ron").decide(ListingStub(listing_id="abc"))
-    assert decision == DecisionStub(user_id="ron", listing_id="abc", notify=True)
 
 
 def test_recording_notifier_captures_calls() -> None:

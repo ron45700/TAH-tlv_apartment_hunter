@@ -5,8 +5,8 @@ the content of Gate C (`DECISIONS.md` #242–#257) and its 31 open points (#262�
 technical choices (§5, #258–#260); the area grouping (§6, #261); Gate C's names and types and R1–R9 (#288, R7 amended
 by #291); the plans for 3.4 and 3.5 (#289, #290). **Built:** 3.4 (2026-10-10, round 3), 3.5 (2026-10-11, round 4);
 the admin created on the production store by Ron (2026-10-11); `jobs/reset_admin_password.py` (#294, 2026-10-11, round
-5). **3.6's plan is written (2026-10-11, round 5), waiting for Ron** with its points. No code before a task's plan is
-approved; no paid call before its own go.
+5). **3.6: plan and its 16 points approved (#295–#300, 2026-10-11); built in round 6 (2026-10-11).** **Next:** 3.7's
+plan, which must meet #301. No code before a task's plan is approved; no paid call before its own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
 (the key, #230, #232) · **Research:** `RESEARCH.md` §16 (the area grouping check)
@@ -43,7 +43,7 @@ the corrections. No Telegram (Phase 4), no scheduler (Phase 5): collection and c
 | The technical choices: the framework, the journal mode, compare and set | #258, #259, #260 | Approved 2026-10-10 |
 | The area grouping | #261 | Approved 2026-10-10 |
 | The card, the field states, the colours | `BASELINE.md` §6, §7, §8 | Approved; binding on the UI (#257) |
-| The same-listing grouping is derived by the Gate D key, never stored | #230, #231, #232 | Approved |
+| The same-listing grouping is derived by the Gate D key and never written on a post; computed once for all users, held in the site's memory, computed again only when the store changed | #230, #231, #232, #301 | Approved |
 | The other-city name on the card is derived | #214 (`postmodel.rejects.other_city_name`) | Approved |
 | Collection never filters by a user's criteria; per-user data never on the post | Invariants 12, 14 | In force |
 | No personal identifier in any outgoing request | Invariant 15, #212 | In force |
@@ -364,11 +364,15 @@ production profile. Added with `uv add argon2-cffi` once Ron approves; it is the
    paragraph names it.
 4. No command to issue keys before the admin's pages (3.8): the first friend signs up after 3.8.
 
-## 3.6 Evaluation (`policy/`) — PLAN WRITTEN 2026-10-11 (round 5), WAITING for Ron
+## 3.6 Evaluation (`policy/`) — PLAN APPROVED (#295–#300, 2026-10-11); BUILT 2026-10-11 (round 6)
 
-**The content is approved** (#245–#256, #268–#287, R2 of #288); Gate C's names are approved (#288). This plan is not:
-it waits for Ron with its points (below). No code was written for it. No paid call, no network call; the production
-store was opened read-only once, to measure (below), and its SHA-256 was the same before and after.
+**The content is approved** (#245–#256, #268–#287, R2 of #288); Gate C's names are approved (#288). **The plan and its
+16 points were approved by Ron on 2026-10-11:** points 1, 2, 3, 5, 7, 10, 11, 13, 14, 15, 16 as proposed (#295); point 4,
+a correction of `other_city` outranks the native location (#296); point 6, the earliest post (#297); point 8, an unknown
+preference is not met (#298); point 9, parking not written is unknown (#299); point 12, option (b) (#300). Ron's
+clarification #301 (the grouping computed once for all users, held in memory) is for 3.7. **Built in round 6**, with
+the deviations listed in `SESSION_LOG.md` (2026-10-11, round 6); the four-pair check was run read-only at the build (§4).
+The text below is the plan as written in round 5; where a point was decided otherwise, the decision rules.
 
 **Scope.** (a) The post as a user sees it: the `Listing` with the corrections in force applied, and every reader of it;
 (b) the restore's derived state, as a pure function (the write is 3.8's); (c) the Gate D key and the cards it derives,
@@ -618,8 +622,9 @@ orange (#275). Computed per user at evaluation, never written (invariant 12).
     every member of the card, and a report on the shown post only; (c) every member, for both. Recommended: (b).
 13. **Speed at the store's size:** 3.6 uses the existing Repository reads and the in-process photo memo; a bulk read (one
     query for the members' posts, records and `Listing`s, a Repository contract change) is proposed only if 3.7's
-    measurement on the real page needs it. How often the site re-derives (each request, or once per store change) is
-    3.7's plan.
+    measurement on the real page needs it. *Settled by #301:* the grouping is computed once for all users, held in the
+    site's memory and computed again only when the store changed; only each user's filtering and order per request.
+    How the site knows the store changed is 3.7's plan.
 14. **The four-pair check** stays a read-only run at the build, reported in the session log; no new command and no test
     on the production store.
 15. **The stubs:** `policy/policy_stub.py` and `policy/base.py`'s `decide(ListingStub) -> DecisionStub` are replaced;
@@ -637,6 +642,13 @@ the repost (#70, #72.4). The profile editor with the two options, the sublet swi
 and "wrong classification" (#173, #254).
 **The polished UI is built here (#257)**, with Ron's design skills, when this task is reached; `BASELINE.md` §6–§8 stay
 binding. The framework is decided (#258). **Needs from Ron:** the plan's approval; the design direction, at the task.
+
+**Required of 3.7's plan by #301 (Ron, 2026-10-11):** the same-listing grouping (`dedup/stage_b.derive_cards`) is
+computed **once for all users**, held in the site's memory, and computed again **only when the store changed** (a
+collection run, a classification run, a flag, a report, a restore, a correction); only each user's evaluation, filtering
+and order (`policy/`) run per request. The plan must say **how the site knows the store changed**, and must **measure a
+real page load**. From 3.6 (#300): a "lied" flag on a card is written on every one of `Card.canonical_ids`; a "wrong
+classification" report on `Card.shown_id` only.
 
 ## 3.8 The admin lists — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256), plan to be written
 
@@ -694,6 +706,10 @@ and #282).
 (read-only, 2026-10-08, 139 active canonicals; Ron judged all four `same_listing`, #229). No post is in two pairs, and
 none of the eight has an exact-hash duplicate. Each must show as one card; the store will have changed by then, so the
 check reads the store as it is and reports any difference.
+
+**Checked at 3.6's build (2026-10-11, round 6), read-only, with the built `dedup/stage_b.py`:** the four pairs tie and
+nothing else does; 135 cards, 4 of them of two posts, each showing its earlier post (`54ecb1d0…`, `7253eefa…`,
+`9136a715…`, `e81273e6…`). The store's SHA-256 was `04cefd60…` before and after (`SESSION_LOG.md`, 2026-10-11, round 6).
 
 ---
 
@@ -818,11 +834,11 @@ site's code) is decided in 3.7's plan.
 
 ## 7. For Ron's decision
 
-1. **The plan for 3.6 and its 16 points** (3.6, "Points for Ron (3.6)").
+1. **The plan for 3.7**, when written (it must meet #301).
 2. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
    `dcb4c0cb4b24`, the deferred carrier of #241 and the reclassify of the other 189 (`BACKLOG.md`).
 
 Decided and so closed here: the task order and the DoD; the technical choices (#258–#260); the area grouping (#261);
 round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and the Gate E amendments (#288); the plans for
 3.4 and 3.5 (#289, #290) and 3.4's three points left by the build (#291–#293); the admin's password reset on the machine
-(#294).
+(#294); the plan for 3.6 and its 16 points (#295–#300); how the grouping is held (#301).

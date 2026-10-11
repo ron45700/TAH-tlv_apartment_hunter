@@ -23,6 +23,9 @@ phase 6 to phase 3).
 Amended again 2026-10-10 (round 2): Ron's answers (`DECISIONS.md` #258–#287): §3 (the eighth seam's interface), §5
 (restore, one rule for flags and reports, from the corrected values), §7, §8 (the profile's defaults and values, the area
 grouping), §9 (the search options), §10, §11, §12 (the phase's name, the choices made), §14.
+Amended 2026-10-11: §4 (the same-listing grouping is computed once for all users and held in memory, #301), §5 and §14
+(stale lines: Gate C approved), §8 (the order of display: an unknown preference counts as not met, #298; parking not
+written is unknown, #299).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -128,8 +131,11 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   phone that is not an agent number (a number found in four or more of those posts) **and** the fields match
   (price sets equal, rooms equal, an area in common), **or** they hold a byte-identical photo **and** one of
   those two matches. Nothing else merges: a phone, the fields or a photo alone never does. The result is
-  **computed from the stored posts when it is needed**, never written onto a post (#231): the dashboard's
-  lists and cards in phase 3, the alerts in phase 4. How it is computed and shown is planned with phase 3.
+  **derived from the stored posts and never written onto a post** (#231). It is a fact about the posts, the same for
+  every user: **computed once for all users, held in the site's memory, and computed again only when the store changed**
+  (a collection run, a classification run, a flag, a report, a restore, a correction); only each user's filtering and
+  order are computed per request (#301). It serves the dashboard's lists and cards in phase 3 and the alerts in phase 4.
+  The derivation is `dedup/stage_b.py` (task 3.6); how the site holds it is 3.7's plan.
 - **Reposts:** a repost does not create a new card and does not alert again. It updates the post's
   "last published" time and adds a line to a small repost log on the card, so it is easy to see
   that an apartment has been pushed for a while and is still not rented.
@@ -201,8 +207,8 @@ post. Restore removes the flag or the reports only; the post's state is then wha
 from the post as users see it (the model's answer with the admin's corrections applied): active, or rejected with the
 derived reason. An archived post stays archived, its reason re-derived.
 
-Fields and rules: `SCHEMA.md`, Gate E (`DECISIONS.md` #63); Gate C's records and the proposed Gate E amendments are a
-draft, not approved.
+Fields and rules: `SCHEMA.md`, Gate E (`DECISIONS.md` #63), amended for Gate C on 2026-10-10; Gate C's records are
+approved (#288).
 
 ---
 
@@ -332,8 +338,10 @@ user's selection, whatever produced the several areas; with no areas chosen, a s
 per user at display, never written on the post.
 
 **Order of display:** posts that meet the preferences first; then posts that meet the critical
-conditions but not the preferences; at the bottom, posts where a filtered value is not written or
-unclear. Posts that are known to fail a critical condition are not shown.
+conditions but not the preferences; at the bottom, posts where a critical value is not written or
+unclear. A preference that is not written or unclear counts as not met: the post is in the middle group, not at the
+bottom (#298). Parking that is not written is unknown, as stored (#299). Posts that are known to fail a critical
+condition are not shown.
 
 **Viewed posts** (`DECISIONS.md` #62): each user sees which posts they have already viewed. All
 unviewed posts come first, then the viewed ones; within each of the two, the order above. "Viewed"
@@ -474,8 +482,8 @@ bootstrap mode, Gate A.
 
 ### Open for Ron
 
-What is open today is in `BACKLOG.md` ("Next sprint") and `PHASE_3.md` §7: Gate C's names and types, and the plans for
-tasks 3.4 and 3.5. The bill stays with Ron (#225); the measured working day is Phase 3's (task 3.10). Gates B and D, the
+What is open today is in `BACKLOG.md` ("Next sprint") and `PHASE_3.md` §7. Gate C, the plans for 3.4, 3.5 and 3.6 are
+approved (#288–#290, #295). The bill stays with Ron (#225); the measured working day is Phase 3's (task 3.10). Gates B and D, the
 model's response and the Gate E failure fields are approved (#125, #151, #152, #230).
 
 ### Recorded, not verified

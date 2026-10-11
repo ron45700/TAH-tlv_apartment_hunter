@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from tlv_hunter.contracts.field_correction import FIELD_CORRECTION_SCHEMA_VERSION, FieldCorrection
 from tlv_hunter.contracts.listing import LISTING_SCHEMA_VERSION, Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
@@ -153,6 +154,30 @@ def make_listing(listing_id: str, **changes: Any) -> Listing:
         "phone_names": [],
     }
     return Listing.model_validate({**fields, **changes}, strict=False)
+
+
+CORRECTED_AT = datetime(2026, 10, 11, 9, 0, tzinfo=UTC)
+ADMIN_ID = "a" * 32
+
+
+def make_correction(
+    listing: Listing, field: str, corrected_value: Any, *, removed: bool = False, n: int = 1
+) -> FieldCorrection:
+    """An admin's correction of one field of `listing` (Gate C): the model's value is the
+    listing's own; `removed` makes it a removed one; `n` makes the id distinct."""
+    return FieldCorrection(
+        schema_version=FIELD_CORRECTION_SCHEMA_VERSION,
+        correction_id=f"{n:032x}",
+        listing_id=listing.listing_id,
+        field=field,
+        model_value=getattr(listing, field),
+        corrected_value=corrected_value,
+        corrected_by=ADMIN_ID,
+        corrected_at=CORRECTED_AT,
+        report_id=None,
+        removed_by=ADMIN_ID if removed else None,
+        removed_at=CORRECTED_AT if removed else None,
+    )
 
 
 @pytest.fixture

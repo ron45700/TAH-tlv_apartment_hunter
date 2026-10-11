@@ -11,7 +11,8 @@ the question was considered at all.
 
 **Last updated:** 2026-10-10 (#242–#257, the content of Gate C; #258–#287, Gate C's open points, the technical
 choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290, Gate C approved and the plans for 3.4 and 3.5);
-2026-10-11 (#291–#293, 3.4's three points; #294, the admin's password reset on the machine)
+2026-10-11 (#291–#293, 3.4's three points; #294, the admin's password reset on the machine; #295–#301, the plan for
+3.6 and how the grouping is held)
 
 > Written in English like every document in `docs/`.
 >
@@ -2244,6 +2245,8 @@ its locality decides the other-city rejection; when it is absent, the model deci
   `not_listing`, 2 `seeking`. Backup `data/store/tlv_hunter.2026-10-08.backup.sqlite3`, SHA-256
   `c4e2658e…`; the store's after: `2fcc382e…`; every stored `RawPost` identical to the backup's.
 
+*Refined 2026-10-11 by #296: an admin's correction of `other_city` in force decides before the native locality.*
+
 *Data it rests on (read-only, the store of 2026-10-08):* `native_location` is present on 68 of 266
 posts, all `sale_post` from thedoor: 65 "תל אביב - יפו, תל אביב", and one each of Holon, Ramat Gan
 and Be'er Sheva.
@@ -2469,6 +2472,8 @@ day and will probably change, and a derived result follows a key change at once,
 (#92) and the other-city name (#214, option A) already do.
 
 **Open, for Phase 3's planning, not measured:** whether deriving it stays fast enough as the store grows.
+*Measured read-only on 2026-10-11 (`PHASE_3.md` 3.6). Clarified by #301 (2026-10-11): "derived" means never written on a
+post; the grouping is computed once for all users, held in the site's memory, and computed again when the store changed.*
 
 `PHASE_2.md`'s "Plan for dedup B" is kept for the record and marked not built; its findings on #75, on the
 repointing of duplicates and on the agent-number rule are input for Phase 3. Its 17 points are void.
@@ -2910,6 +2915,66 @@ from the machine as the admin's creation is (#244).
 *Ron's decision (2026-10-11). Ron's reason:* if he forgets his password there is no way back, since a reset needs a
 signed-in admin and `create_admin` refuses when an admin exists; he wants a fallback so he is never locked out.
 **Built 2026-10-11** (round 5), tested on a temporary store only.
+
+## Phase 3: the plan for 3.6 approved, and how the grouping is held (2026-10-11)
+
+### 295 — The plan for task 3.6 is approved, with points 1, 2, 3, 5, 7, 10, 11, 13, 14, 15 and 16 as proposed
+`PHASE_3.md` 3.6, (a) to (f), as written, with these points as proposed: (1) the modules `postmodel/seen.py`,
+`postmodel/rejects.restored_lifecycle`, `dedup/stage_b.py`, `policy/evaluate.py`, `policy/order.py`, and `CLAUDE.md`'s
+`policy/` row "`evaluate(seen, profile, now) -> Evaluation`"; (2) `Evaluation` and `FieldState`, names and values as
+proposed, never stored, replacing `policy/`'s use of `DecisionStub`; (3) in the seen copy, `price_source` becomes `None`
+for a corrected `"not_written"` price, `"text"` when the model's was `None` and the corrected price is not, else it is
+kept; (5) a card is a connected group of tied posts; (7) the fields rule and the agent numbers are imported from
+`gate_d/candidates.py` (one implementation); (10) inside a tier, the newest last publication first; (11) a post of unclear
+kind admitted by both options shows the better tier's option, the `room` option's on a tie; (13) 3.6 uses the existing
+Repository reads and an in-process photo memo, a bulk read only if 3.7's measurement needs it; (14) the four-pair check is
+a read-only run at the build, reported in the session log, with no new command and no test on the production store;
+(15) `policy/policy_stub.py` and the stub `Policy` Protocol go, `ListingStub` and `DecisionStub` stay for `notify/`
+until Phase 4; (16) `restored_lifecycle` is built and tested in 3.6, and 3.8 wires the writes and the reports. Points 4, 6,
+8, 9 and 12 were decided between options: #296–#300.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 296 — A correction of `other_city` in force outranks Facebook's location field (point 4)
+When the admin's correction of `other_city` is in force, it decides the city, its value or its null, before the native
+locality. **#214 stays as it is between the native location and the model.** Implemented in the one place that rules on
+the city, `postmodel/rejects.other_city_ruling` (which now takes the seen `Listing`; the source `"correction"`), not as a
+second copy. **Refines #214 and #256.**
+*Ron approved the reviewer's recommendation. The reviewer's reason:* otherwise the admin cannot rescue a Tel Aviv post
+whose location field names another city; a hand correction is the last word (#256).
+
+### 297 — The post a card shows and evaluates: the earliest `posted_at`, then the smaller `listing_id` (point 6)
+Among the card's members. Its seen `Listing` gives the card's fields, its evaluation and its colours.
+*Ron approved the reviewer's recommendation. The reviewer's reason:* consistent with dedup A's "the first stays", and
+viewed marks and reports do not jump between publications.
+
+### 298 — An unknown preference counts as not met; only an unknown critical category sends a post to the bottom (point 8)
+A preference whose value is not written or unclear puts the post in the middle tier (the critical conditions met, not
+every preference). Only an unknown **critical** category sends it to the bottom. **Amends `BASELINE.md` §8's "Order of
+display" wording**, which now says so.
+*Ron approved the reviewer's recommendation. The reviewer's reason:* most posts leave something unwritten; otherwise
+nearly every post would sink to the bottom and the order would mean nothing.
+
+### 299 — Parking not written is unknown, as stored (point 9)
+With parking critical, a post that does not mention parking goes to the bottom; it is not hidden. The card's "none" for
+unwritten parking (`BASELINE.md` §6) stays a display rule.
+*Ron approved the reviewer's recommendation. The reviewer's reason:* Ron's line of not losing posts.
+
+### 300 — A "lied" flag on a card is written on every member; a report on the shown post only (point 12, option (b))
+A "lied" flag made on a card is written on every member of the card (its tied canonical posts); a "wrong
+classification" report on the shown post only. The writes are 3.7's and 3.8's; 3.6's `Card` gives what they need
+(`canonical_ids`, `shown_id`).
+*Ron approved the reviewer's recommendation. The reviewer's reason:* a fake apartment is fake in every publication of
+it; a classification error belongs to one post.
+
+### 301 — "Derived" means never written on a post: the grouping is computed once for all users and held in memory
+**A clarification by Ron, not a change of #231**, and a requirement for 3.7's plan. "Derived at display time" means
+"never written on a post", not "computed on every page load" and not "computed per user". The same-listing grouping is a
+fact about the posts, the same for every user: **it is computed once for all users, held in the site's memory, and
+computed again only when the store changed** (a collection run, a classification run, a flag, a report, a restore, a
+correction). Only the per-user filtering and order are computed per request. **3.7's plan must say how the site knows the
+store changed, and must measure a real page load.** Nothing of it is built in 3.6. The wording "when it is needed" is
+reworded in `BASELINE.md` §4, `SCHEMA.md`'s gate table (row D), `PHASE_3.md` and `CLAUDE.md`.
+*Ron's decision (2026-10-11).* No reason recorded beyond the requirement.
 
 ---
 

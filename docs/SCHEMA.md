@@ -5,7 +5,12 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-11 — R7 reworded (`DECISIONS.md` #291): disabling a user and ending their sessions are two
+**Last updated:** 2026-10-11 (round 6) — rule text only, approved by Ron: a correction of `other_city` in force
+outranks Facebook's location field (Gate B, "The city comes from…", `DECISIONS.md` #296); the gate table's row D says
+the grouping is computed once for all users and held in memory, never written on a post (#301). No field or type
+changed.
+
+**Earlier, 2026-10-11 —** R7 reworded (`DECISIONS.md` #291): disabling a user and ending their sessions are two
 calls in a fixed order, the disable first. No field or type changed.
 
 **Earlier, 2026-10-10, round 3 —** **Gate C approved by Ron** (`DECISIONS.md` #288): its names and types, points
@@ -104,7 +109,7 @@ Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 | A | `RawPost` | ✅ Approved 2026-09-14 |
 | E | Post lifecycle record (state, rejection reason, flag, last publication, images, classification failures) and `GroupWatermark` | ✅ Approved 2026-10-04; classification-failure fields approved 2026-10-05 (#139, #152); amended 2026-10-10 for Gate C (`"misclassified"`, the restore rule, the exemption, `schema_version` 3; #288) |
 | B | `Listing`, and the model's response `ListingExtraction` | ✅ Approved 2026-10-05 (#81–#125; the response #137, #151) |
-| D | Dedup stage B key | ✅ Key decided 2026-10-08 (#230, rule 1 amended by #232: a shared phone that is not an agent number and the fields rule, or an identical photo and one of the two rules; nothing else merges). **Nothing is stored:** the result is derived from the stored posts when it is needed, in phase 3 (#231); no field, record or schema change |
+| D | Dedup stage B key | ✅ Key decided 2026-10-08 (#230, rule 1 amended by #232: a shared phone that is not an agent number and the fields rule, or an identical photo and one of the two rules; nothing else merges). **Nothing is stored:** the result is derived from the stored posts and never written onto a post (#231); it is the same for every user, computed once for all users, held in the site's memory and computed again only when the store changed (#301); no field, record or schema change |
 | C | Filter rules, and the user, key, session, profile, viewed-post, report and correction records | ✅ Approved 2026-10-10: content #242–#257, #262–#287; names and types, R1–R9 and the Gate E amendments #288 |
 
 ---
@@ -538,6 +543,8 @@ street or an area name, unclear, no alert; empty and the post gave no location, 
   locality is `other_city`, even when the model returned `None`. A locality with no Hebrew letter,
   or an empty one, is absent: the model decides. Nothing is stored for it: the source and the city
   to show are derived by `postmodel.rejects.other_city_name` from the `RawPost` and the `Listing`.
+  **An admin's correction of `other_city` in force (Gate C) decides first**, its value or its null, before the
+  native locality (2026-10-11, #296); the post as users see it is passed for it.
 - **The area rules** (#88, #112, #124) are instructions to the model (#167): a stated area decides;
   a street only refines inside it; several possible areas are all returned; nothing the model can
   place returns no area. With no area name and no street, a well-known landmark that places the
