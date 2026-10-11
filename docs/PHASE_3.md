@@ -3,8 +3,10 @@
 **Status:** a plan, written 2026-10-10 and revised the same day after Ron's answers. **Approved by Ron (2026-10-10):**
 the content of Gate C (`DECISIONS.md` #242–#257) and its 31 open points (#262–#287); the task order and the DoD; the
 technical choices (§5, #258–#260); the area grouping (§6, #261); Gate C's names and types and R1–R9 (#288, R7 amended
-by #291); the plans for 3.4 and 3.5 (#289, #290). **Built:** 3.4 (2026-10-10, round 3), 3.5 (2026-10-11, round 4).
-**Next:** 3.6's plan. No code before a task's plan is approved; no paid call before its own go.
+by #291); the plans for 3.4 and 3.5 (#289, #290). **Built:** 3.4 (2026-10-10, round 3), 3.5 (2026-10-11, round 4);
+the admin created on the production store by Ron (2026-10-11); `jobs/reset_admin_password.py` (#294, 2026-10-11, round
+5). **3.6's plan is written (2026-10-11, round 5), waiting for Ron** with its points. No code before a task's plan is
+approved; no paid call before its own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
 (the key, #230, #232) · **Research:** `RESEARCH.md` §16 (the area grouping check)
@@ -37,7 +39,7 @@ the corrections. No Telegram (Phase 4), no scheduler (Phase 5): collection and c
 | Anchor | Source | State |
 |---|---|---|
 | Gate C's content | `DECISIONS.md` #242–#257, #262–#287 | Approved 2026-10-10 |
-| Gate C's names and types; the Gate E amendments | `SCHEMA.md`, Gate C ("For Ron's approval") and "PROPOSED amendments" under Gate E | **DRAFT, waiting for Ron** |
+| Gate C's names and types; the Gate E amendments | `SCHEMA.md`, Gate C, and Gate E (amended 2026-10-10) | Approved 2026-10-10 (#288) |
 | The technical choices: the framework, the journal mode, compare and set | #258, #259, #260 | Approved 2026-10-10 |
 | The area grouping | #261 | Approved 2026-10-10 |
 | The card, the field states, the colours | `BASELINE.md` §6, §7, §8 | Approved; binding on the UI (#257) |
@@ -266,7 +268,17 @@ stays as built, the run fails; Phase 5 looks at it again with the retention job 
 **Approved by Ron, with its four points as proposed, the dependency included (#290).** **Built in round 4
 (2026-10-11)** with #293 (`find_key_by_hash`) and #291 (disable, then end the sessions); the deviations are listed in
 `SESSION_LOG.md` (2026-10-11). `argon2-cffi` 25.1.0 and `argon2-cffi-bindings` 26.1.0 are installed. `create_admin`
-is tested on a temporary store only: Ron runs it on the production store himself.
+is tested on a temporary store only: Ron runs it on the production store himself. **Ron ran it on 2026-10-11:** the
+backup was made, the admin was created, and the stored `RawPost` documents were identical to the backup's.
+
+**Added 2026-10-11 (round 5, #294): `jobs/reset_admin_password.py`**, the admin's fallback for a forgotten password (a
+reset needs a signed-in admin, and `create_admin` refuses once an admin exists). In the pattern of `create_admin`: it
+refuses when there is no admin (read before any question and before the backup, so nothing is written), asks for the
+new password twice with `getpass`, refuses two that differ or one under 8 characters, makes the dated backup, sets the
+new hash through `actions.reset_admin_password` (`must_change_password` `False`, the failure count 0,
+`password_changed_at`), ends every session of the admin, and checks the stored `RawPost`s against the backup. The
+action takes no session token and is called only by this command. Tested on a temporary store only
+(`tests/test_reset_admin_password_job.py`, two tests in `tests/test_accounts.py`); not run on the production store.
 
 **The documentation re-read on 2026-10-11** (argon2-cffi.readthedocs.io, "argon2-cffi 25.1.0 documentation";
 pypi.org JSON) and checked against the installed package: the table below holds. Two details differ from what it
@@ -352,24 +364,267 @@ production profile. Added with `uv add argon2-cffi` once Ron approves; it is the
    paragraph names it.
 4. No command to issue keys before the admin's pages (3.8): the first friend signs up after 3.8.
 
-## 3.6 Evaluation (`policy/`) — content approved, plan to be written
+## 3.6 Evaluation (`policy/`) — PLAN WRITTEN 2026-10-11 (round 5), WAITING for Ron
 
-`policy/` stops being a stub. Pure code over the stored records; nothing written on a post (invariant 12); no model call
-(`BASELINE.md` §2, principle 6).
-- **The post as a user sees it:** the `Listing` with the admin's corrections in force applied over it (#256), never
-  edited.
-- **The same-listing grouping, derived by the Gate D key** (#230, #232), for the lists, the cards and the repost log;
-  never written (#231). **Its first check: the 4 pairs the key finds today** (§4). Open, from #231: whether deriving it
-  stays fast enough as the store grows; measured here, on the real store.
-- **The two search options** (#245–#247): which option evaluates a post, the critical conditions, the preferences, the
-  order of display (§8), viewed before unviewed (#62), the area's colour per user (#250).
-- **The other-city name for the card and the rejected list** comes from `postmodel.rejects.other_city_name(post,
-  listing)` (or `other_city_ruling`), never from `Listing.other_city` alone (#214, option A). For `26e8a28b…` the card
-  shows "רמת גן" while its `other_city` is null.
-- **Decided for it** (#269–#275, #281, #287): fixed wanted values; the entry-date range and "immediate"; a post of
-  unclear kind at the bottom, under every enabled option; sublets; orange with no areas chosen; corrected values read
-  everywhere, the Gate D key included.
-- **Needs from Ron:** the names (3.1) and point R2 ("immediate" as the UTC date); the plan's approval.
+**The content is approved** (#245–#256, #268–#287, R2 of #288); Gate C's names are approved (#288). This plan is not:
+it waits for Ron with its points (below). No code was written for it. No paid call, no network call; the production
+store was opened read-only once, to measure (below), and its SHA-256 was the same before and after.
+
+**Scope.** (a) The post as a user sees it: the `Listing` with the corrections in force applied, and every reader of it;
+(b) the restore's derived state, as a pure function (the write is 3.8's); (c) the Gate D key and the cards it derives,
+never stored; (d) the evaluation of a post against one user's profile, the two search options; (e) the order of a
+user's list, viewed after unviewed; (f) the area's colour per user. **Not in 3.6:** any write (a flag, a report, a
+correction, a restore, a viewed mark: 3.7, 3.8); the pages and the API (3.7); alerts (Phase 4: they read what 3.6
+derives); the admin lists (3.8).
+
+**What every module of 3.6 keeps** (`BASELINE.md` §2 principle 6; invariants 12, 14): pure functions over records the
+caller has read; **nothing written** (no Repository write method, no `UserDataStore` write method is called; one
+function reads image files, read-only); **no model call** and no network; no per-user value on a post. The only
+readers of the store are the loader in (c), which takes a Repository opened by its caller, and the caller's own reads
+of `UserDataStore` (`find_corrections`, `get_profile`, `viewed_listing_ids`), passed in as values.
+
+### (a) The post as a user sees it (#256, #281, #287)
+
+**`postmodel/seen.py`** (new, a plain module beside `rejects.py`):
+
+| Function or type | Contract |
+|---|---|
+| `SeenListing` (frozen dataclass) | `listing: Listing`, the post as users see it, a valid Gate B `Listing`; `corrected: frozenset[ReportableField]`, the fields a correction in force replaced (for the card's "corrected by hand" mark, #256) |
+| `seen_listing(listing, corrections) -> SeenListing` | Applies every correction **in force** (`removed_at` `None`) of `listing.listing_id` over a copy: the field takes `corrected_value`. A removed correction is ignored. Raises `ValueError` for a correction of another post, or two in force on one field (the store forbids it; #284). The result is validated as a `Listing` (`model_validate` of the dump with the fields replaced), so it obeys Gate B's rules. **The stored `Listing` is never edited** (#256). With no correction it returns the `Listing` itself and an empty set |
+
+**The one gap the validation meets — `price_source`** (point 3): Gate B requires `price_source` `None` exactly when
+`price` is `"not_written"`. A correction of `price` from `"not_written"` to a written or unclear value, or the reverse,
+breaks that rule in the copy. Proposed: in the seen copy, `price_source` becomes `None` when the corrected `price` is
+`"not_written"`, and `"text"` when the model's was `None` and the corrected one is not (the admin read it in the post's
+text); otherwise it is kept. `price_source` is not a reportable field, so nothing else moves it.
+
+**Every reader of the post as a user sees it** (`SCHEMA.md`, Gate C, "The post a user sees"):
+
+| Reader | Where | What it reads |
+|---|---|---|
+| The evaluation, the order, the area's colour | `policy/` (d)–(f) | `SeenListing.listing` of the card's shown post |
+| The card (3.7): every field, the "corrected by hand" marks, the city | 3.7's wiring | `SeenListing`; the city through `postmodel.rejects.other_city_name(post, seen.listing)` (#214, below) |
+| The restore's derived state | `postmodel.rejects.restored_lifecycle` (b) | `SeenListing.listing` |
+| The Gate D key | `dedup/stage_b.py` (c) | `SeenListing.listing` of each compared post (#287) |
+| The admin's rejected list (3.8) | 3.8's wiring | the city through `other_city_name(post, seen.listing)` |
+
+Nothing reads `Listing` directly for a user. The corrections come from one `UserDataStore.find_corrections()` call
+(every correction in force, all posts), grouped by `listing_id` by the caller.
+
+### (b) The restore's derived state (#251, #281–#283)
+
+**Where it lives: `postmodel/rejects.py`, beside `classified_lifecycle`.** One new pure function:
+
+| Function | Contract |
+|---|---|
+| `restored_lifecycle(existing, post, seen) -> PostLifecycle` | `existing` is the post's record with a flag or a report (`flagged_by` set); `seen` is `SeenListing.listing` of the post. Returns the record with `flagged_by`, `flagged_at`, `flag_note` cleared and the state derived: when `existing.state` is `"archived"`, it stays `"archived"` and `rejection_reason` becomes `model_reason(post, seen)` (`None` allowed, Gate E) (#283); otherwise `"active"` when `model_reason(post, seen)` is `None`, else `"rejected"` with that reason (#251, #281, #282). Every other field (`last_published_at`, `images`, the failure fields) is kept. Raises `ValueError` for a record with no flag and no report, or whose `listing_id` is not the post's |
+
+**How it reuses `postmodel.rejects`:** the reason comes from **`model_reason(post, listing)`**, the function
+`classified_lifecycle` already uses — Gate E's order, `other_city` first through `other_city_ruling` (Facebook's location
+field when usable, else the model's city, #214), then `post_nature`. There is no second copy of the order or of the
+city rule. The only difference from a classification is the `Listing` passed: the seen one. `rederive.MODEL_REASONS`
+is unchanged. **A pre-model reason** (`no_text`, `no_images`) cannot apply: a flag or a report is made on a card, and only
+an active post has a card.
+
+**What 3.8 adds around it (not 3.6):** read the record, the `RawPost`, the `Listing` and the corrections; call
+`seen_listing` then `restored_lifecycle`; write with `save_lifecycle(…, expected=the record read)` (#260); mark every open
+or left-out report of the post `"restored"` (#278, #286) through `save_report`. The order of those writes is 3.8's plan.
+
+**The other-city name** (#214, option A): the card, the rejected list and the restore all go through
+`other_city_ruling` / `other_city_name` over the seen `Listing`; never `Listing.other_city` alone. For `26e8a28b…` the
+card shows "רמת גן" while its `other_city` is null (its `native_location` decides). **A correction of `other_city`
+meets #214** (point 4): by #214 the native locality decides "even when the model returned one", so a correction of
+`other_city` changes the result only for a post with no usable `native_location`.
+
+### (c) The same-listing grouping, derived by the Gate D key (#230–#232, #287), never stored (#231)
+
+**`dedup/stage_b.py`** (new, a plain module beside `stage_a.py`: reads, writes nothing):
+
+| Function or type | Contract |
+|---|---|
+| `KeyPost` (frozen dataclass) | `post: RawPost`, `lifecycle: PostLifecycle`, `seen: SeenListing`, `photo_hashes: frozenset[str]` |
+| `PhotoHashes` | An in-process memo: `of(store_root, lifecycle) -> frozenset[str]`, the SHA-256 of each stored photo file (`PostImage.local_path` under `<store_root>`), keyed by the file's path, size and modification time. Kept in memory only, never written (#231). A missing file adds nothing |
+| `load_key_posts(store, corrections, store_root, photos) -> KeyInputs` | Read-only. `KeyInputs.members`: the compared posts — canonical (`is_canonical` `True`), a stored `text_hash`, `"active"`, with a `Listing` — as the 2.10 rules define them (#226, #230), each with its seen `Listing`. `KeyInputs.duplicates`: every dedup A duplicate, by its `duplicate_of`. Uses `query()`, `get_lifecycle`, `get_listing` (no Repository change) |
+| `tied_pairs(members) -> tuple[TiedPair, ...]` | The key (#230, rule 1 as amended by #232): two members with **different** text hashes, `posted_at` at most 72 hours apart (inclusive, as `gate_d`), tie when (1) they share a phone that is not an agent number **and** the fields rule matches, or (2) they share a photo hash **and** (a shared non-agent phone **or** the fields rule). **Nothing else ties.** Agent numbers: found in 4 or more members. The fields rule: both prices written and equal as sets, both rooms written and equal, an area in common, **read on the seen `Listing`** (#287). `TiedPair` holds the two ids and which rule fired. Pairs are looked for only among members that share a non-agent phone or a photo hash (both rules need one), not over every pair |
+| `cards(inputs, pairs) -> tuple[Card, ...]` | Every member in exactly one card. **A card** = a connected group of tied members (point 5) and, for each, its dedup A duplicates. `Card.shown_id`: the post the card shows (point 6); `Card.canonical_ids`: the members, by `posted_at` then `listing_id`; `Card.post_ids`: the members and their dedup A duplicates (what `ViewedPost` and "mark as not viewed" cover, `SCHEMA.md` `ViewedPost`); `Card.last_published_at`: the latest of the members' `last_published_at` (each already holds its dedup A duplicates', Gate E) — the card's main time (#122); `Card.publications`: `(listing_id, posted_at)` of every post of the card, earliest first — the repost log's input; its first entry is the earliest `posted_at` (#75 A) |
+
+**Single implementation** (`CLAUDE.md`): the fields rule and the agent-number count already exist in
+`gate_d/candidates.py` (`matched_fields`, `agent_numbers`, `WINDOW`, `AGENT_NUMBER_POSTS`); the key is defined as "among
+the posts the 2.10 rules compare" (#230). Proposed: `stage_b` imports them, and `gate_d` stays the evidence (its own
+rules, its page) and decides nothing (point 7).
+
+**Not tied, on purpose** (from the notes of `PHASE_2.md` 2.10, #231): a post waiting for its classification (no
+`Listing`); a rejected or archived post (a flagged or reported one included); dedup A duplicates (compared through their
+canonical). Phase 4 must not alert a post the key ties to an earlier one (`BACKLOG.md`); 3.6 provides `Card`, which
+Phase 4 reads.
+
+**Measured on the real store, read-only (2026-10-11).** A scratch script (scratchpad, not in the repo) opened the store
+with `SqliteRepository(read_only=True)`, counted the `userdata` rows over a `mode=ro` connection, read the image files,
+and ran the key as above with `gate_d`'s `matched_fields` and `agent_numbers`; the store file's SHA-256 was
+`04cefd603c8b…` before and after.
+- **The store:** 266 posts; 139 members (active canonicals with a `Listing`); 38 pending; no correction, no report, no
+  viewed record, no session; one user.
+- **The four known pairs (§4) still come out tied, and nothing else:** 4 tied pairs, 4 cards of two posts. `54ecb1d0…` /
+  `00f17259…` (rule 1), `7253eefa…` / `40f7f193…` (rule 2), `e81273e6…` / `8ae80944…` (both rules), `9136a715…` /
+  `9a6252c1…` (rule 2). All eight active; none has a dedup A duplicate. Agent numbers: 2. The same result as on
+  2026-10-08 (the store has not changed since then: 266 posts, 139 members).
+- **Times on Ron's laptop (one run each):** reading the posts (`query`) 0.058 s; `get_lifecycle` and `get_listing` for
+  every post, 532 reads, 0.336 s; the SHA-256 of the 620 photo files of the members, 0.669 s (cache state of the disk not
+  controlled); the pairs over every pair of members 35.0 ms, over the members sharing a phone or a photo 0.8 ms (the
+  same 4 pairs).
+- **Scale, synthetic:** the 139 members copied 10 and 36 times (posted 4 days apart, phones and photo hashes made distinct
+  per copy, so no copy ties another): 1,390 members, 8 ms with the shared-phone-or-photo search (every pair: 0.89 s);
+  5,004 members, 21 ms (every pair not run).
+- **Reading:** the key itself stays fast as the store grows; **what grows is reading the store and hashing the photos.**
+  A linear estimate for a store of 40 days (about 8,500 posts at run A's 212 a day; not measured): about 2 s for
+  `query`, about 11 s for the per-post reads, and 10–20 s to hash the photos cold. Hence the in-process photo memo above,
+  and point 13.
+
+### (d) The evaluation of a post against a profile (#245–#247, #268–#275, R2)
+
+**`policy/evaluate.py`** (new); `policy/base.py`'s Protocol becomes `evaluate`; `policy/policy_stub.py` is removed
+(point 15).
+
+| Function or type | Contract |
+|---|---|
+| `evaluate(seen, profile, now) -> Evaluation` | `seen` is the `SeenListing` of the card's shown post; `now` a UTC datetime (`require_utc`). Pure |
+| `Evaluation` (frozen, not stored; names proposed, point 2) | `listing_id`; `shown: bool`; `option: "room" / "whole_apartment" / None` (the option that admits it); `kind_marked: bool` (#273); `tier: "preferences_met" / "critical_met" / "unknown" / None` (`None` when not shown); `fields: Mapping[str, FieldState]`, `FieldState` = `"match"` / `"mismatch"` / `"not_written"` / `"unclear"` / `"not_applied"`, one entry per profile category; `missing_important: frozenset` (`price`, `entry_date` not written, `BASELINE.md` §6); `area_orange: bool` (f); `women_only_icon: bool`; `corrected: frozenset` (from `seen`) |
+
+**Which option evaluates a post** (`SCHEMA.md`, Gate C, "Rules with no field of their own"):
+- `apartment_kind` written `"room"` → the `room` option; `"whole_apartment"` → `whole_apartment`. Not shown when that
+  option is off (#245).
+- **A sublet** (`post_nature` `"sublet_offer"`): through the same option's values, shown only when the option is on
+  **and** its `include_sublets` is on (#246, #274). A `"rental_offer"` ignores the switch.
+- **A post of unclear or unwritten kind** (#273): evaluated against **every enabled option** (a sublet needing that
+  option's switch); shown when one admits it, always in the `"unknown"` tier (the bottom), `kind_marked` `True`. Which
+  option's colours the card shows when both admit it: point 11.
+- Only `"rental_offer"` and `"sublet_offer"` posts are ever active (Gate E's reasons), so no other nature reaches here.
+
+**Each category, as one outcome: met, failed, or unknown** (unknown = the post's value is `"not_written"` or
+`"unclear"`). A category with no value in the option (`[]`, `None`) is `"not_applied"` and has no effect (§8 "Don't
+care").
+
+| Category | Level | Met when | Read from the seen `Listing` |
+|---|---|---|---|
+| Area | critical, fixed (`areas` non-empty) | any of the post's areas is in the option's (#110) | `areas`; `[]` is unknown |
+| Price | critical, fixed (`price_min` or `price_max` set) | the **lowest** amount within the set ends, inclusive (#95) | `price` |
+| "Women only" | critical while `hide_women_only` | `gender` is not `"women_only"`; with the switch off, a `"women_only"` post is shown with `women_only_icon` | `gender` (plain: never unknown, #117) |
+| Rooms | the criterion's `level` | within `min`/`max`, inclusive; halves allowed (#271) | `rooms` (the total in the apartment, #97) |
+| Floor | `level` | within the range, inclusive; -1 a basement (#271) | `floor` |
+| Size | `level`; **`whole_apartment` only** (#247) | within the range, inclusive | `size_sqm` |
+| Broker / parking / balcony | the level set (`CriterionLevel`) | fixed wanted values (#269): broker `False`, parking `True`, balcony `True` | `broker`, `parking`, `balcony` |
+| Entry date | `level` | within `earliest`/`latest`, inclusive. **"immediate" compares as the UTC calendar date of `now`** (#270, R2) | `entry_date` |
+
+**From outcomes to what is shown** (`BASELINE.md` §8): a **failed critical** category → not shown. Otherwise the tier:
+an **unknown critical** category → `"unknown"` (the bottom); else every preference met → `"preferences_met"`; else
+`"critical_met"`. How an unknown **preference** counts is point 8; parking that is not written (shown "none" on the card,
+§6) is point 9. **The field states for the card** (§6): met → `"match"`, failed → `"mismatch"`, `"not_written"` and
+`"unclear"` as stored; `missing_important` for a price or an entry date not written.
+
+### (e) The order of a user's list (`BASELINE.md` §8; #62, #253, #276)
+
+**`policy/order.py`** (new):
+
+| Function | Contract |
+|---|---|
+| `card_viewed(card, viewed_ids) -> bool` | `True` when any of `card.post_ids` is in `viewed_ids` (the user's `viewed_listing_ids`), so a card stays viewed when a further publication joins it (#253) |
+| `ordered(entries, viewed_ids) -> list[(Card, Evaluation)]` | Drops what is not shown; then **all unviewed cards before all viewed ones** (#62); inside each, `"preferences_met"`, then `"critical_met"`, then `"unknown"`; inside a tier, the newest `card.last_published_at` first, then `shown_id` (point 10) |
+
+### (f) The area's colour per user (`BASELINE.md` §7, §8; #110, #112, #113, #250, #275)
+
+In `evaluate`, against the option that evaluates the post: **no areas** → `"unclear"` when the post gives a street or an
+area name (`streets` or `stated_area_names` non-empty), else `"not_written"`; **one area** → definite, never orange;
+**two or more** → orange, **unless every one of them is in the option's `areas`** (#250); with the option's `areas` `[]`,
+orange (#275). Computed per user at evaluation, never written (invariant 12).
+
+### Tests (3.6)
+
+1. **The seen `Listing`:** each reportable field corrected; a removed correction ignored; two fields corrected; the
+   stored `Listing` unchanged (equal before and after); `corrected` lists exactly the replaced fields; a correction of
+   another post, or two in force on one field, raise; the result is a valid `Listing`, `price_source` by point 3.
+2. **The restore's state:** a flagged active post restores to active; a reported post with `post_nature` corrected to
+   `"for_sale"` restores to rejected `for_sale`; an other-city post by `native_location` stays rejected `other_city`; an
+   archived post stays archived with the reason re-derived (`None` or one); the flag fields cleared and every other field
+   kept; a record with no flag or report is refused. **One implementation:** for a table of cases,
+   `restored_lifecycle`'s reason equals `classified_lifecycle`'s on the same seen `Listing`.
+3. **The key, rule by rule:** rule 1; rule 2 with a phone; rule 2 with the fields; **nothing else ties** (a phone alone,
+   the fields alone, a photo alone, an agent phone with the fields, a photo with only an agent phone); the 72-hour bound
+   (72 h ties, 72 h and a second does not); the same text hash is not compared; only members (pending, rejected,
+   archived, duplicates, no `Listing` are not tied); **corrected values** (#287): a correction that makes the fields match
+   ties, one that breaks them unties; the shared-phone-or-photo search equals the every-pair search on seeded random
+   populations.
+4. **Cards:** a connected group is one card; the shown post (point 6); dedup A duplicates in `post_ids` and
+   `publications`; `last_published_at` the latest; `publications` earliest first; every member in one card.
+5. **The evaluation:** the option by kind; an option off; the sublet switch (#274); unclear and unwritten kind under
+   both options, at the bottom, marked (#273); each critical category failing (hidden) and unknown (bottom); "women only"
+   both ways; each preference met, failed, unknown; the fixed wanted values (#269); inclusive ends; half rooms and floor -1
+   (#271); no size in the room option (#247); **"immediate" on the UTC date (R2):** at 22:30 UTC on 2026-10-11 (01:30 on
+   10-12 in Israel) it compares as 2026-10-11; a corrected field read instead of the model's.
+6. **The area's colour:** one area never orange; two areas all chosen, not orange; one of two chosen, orange; none chosen,
+   orange (#275); no area with a street, unclear; no area and no location, not written.
+7. **The order:** unviewed before viewed; the tiers; newest first inside a tier; a card viewed through another of its
+   posts (#253).
+8. **Invariants:** a full derivation (load, key, cards, evaluation, order) over a temporary SQLite store leaves the file
+   byte-identical (invariants 12, 14); nothing in `policy/`, `postmodel/seen.py` or `dedup/stage_b.py` calls a write
+   method (a Repository and a `UserDataStore` double that raise on any write); the socket guard covers invariant 15.
+9. **The four known pairs (§4), the first check:** tests never read the production store (3.4, test 10), so the check is
+   a read-only run at the build (`load_key_posts` over `SqliteRepository(read_only=True)`, the store's SHA-256 before and
+   after), reported in `SESSION_LOG.md` (point 14). Today's result is above: the four tied, nothing else.
+
+### What I could not verify (3.6)
+
+- **The times at the store's full size:** only today's 266 posts were measured; the 40-day figures are a linear estimate,
+  and the synthetic copies measure the pairing only. The photo hashing ran once, with the disk cache in an unknown state.
+- **The agent-number count as the store grows:** the key counts a number over every member (#230), so at 40 days more
+  numbers will reach 4 than over the 27 hours measured; `BACKLOG.md` already re-measures it on a week of data.
+- **The shown post's stability:** a post that arrives later with an earlier `posted_at`, or a change of the key, changes
+  which post a card shows; `ViewedPost` covers every post of the card, so "viewed" survives it (#253), but a report made on
+  the old shown post stays on that post.
+- **How often a correction meets a native location** (point 4): none exists today (0 corrections).
+
+### Points for Ron (3.6)
+
+1. **The modules:** `postmodel/seen.py` (the seen `Listing`), `postmodel/rejects.restored_lifecycle` (the restore's
+   state), `dedup/stage_b.py` (the key, the cards, the photo memo, the loader), `policy/evaluate.py` and `policy/order.py`;
+   `CLAUDE.md`'s `policy/` row becomes "`evaluate(seen, profile, now) -> Evaluation`", and the plain-modules paragraph
+   names `postmodel/seen.py` and `dedup/stage_b.py`.
+2. **The evaluation's result, `Evaluation` and `FieldState`** (names and values above). It is never stored, but it
+   replaces an approved stub contract (`DecisionStub`, `SCHEMA.md` "Stub contracts"), so it is put to Ron.
+3. **`price_source` in the seen copy** when `price` is corrected across `"not_written"`: `None` for a corrected
+   `"not_written"`, `"text"` when the model's was `None`, else kept. Or: refuse such a correction in 3.8, or make the seen
+   post a type other than `Listing`.
+4. **A correction of `other_city` against Facebook's location (#214):** as built today the native locality decides, so
+   the admin's correction counts only on a post with no usable `native_location`. Or: a correction in force outranks the
+   native locality.
+5. **A card is a connected group** (A tied to B and B to C: one card, even if A and C are not tied, or are more than 72
+   hours apart). Or: pairs only, a post joining the earliest post it is tied to (the "chains" rule of `PHASE_2.md` 2.10's
+   void plan).
+6. **The post a card shows, and evaluates:** the earliest `posted_at` among the card's members, then the smaller
+   `listing_id` (as #75 A, D2: the first stays). Its seen `Listing` gives the fields, the evaluation and the colours; the
+   other members' answers are not read for it. Or: the latest member.
+7. **The fields rule and the agent numbers imported from `gate_d/candidates.py`** (one implementation). Or: move them into
+   `dedup/stage_b.py` and have `gate_d` import them.
+8. **An unknown preference** (not written or unclear): proposed, it counts as **not met** (tier `"critical_met"`) and
+   only an unknown **critical** category sends a post to the bottom, reading §8's "a filtered value" as a critical one.
+   Or: any unknown category with a value set, preference included, sends it to the bottom.
+9. **Parking not written** (the card shows "none", §6): proposed, unknown, as stored, so a critical parking sends it to
+   the bottom rather than hiding it. Or: read as "no parking", so it fails.
+10. **Inside a tier:** the newest last publication first. Or another order.
+11. **A post of unclear kind admitted by both options:** proposed, the card shows the `room` option's colours when both
+    admit it in the same tier, else the better tier's; both options' prices are compared. Or: shown once per option.
+12. **A flag or a report on a card that groups several posts** (3.7, 3.8, raised here because the card is 3.6's): the
+    flag or report is written on the shown post, which leaves the members (rejected posts are not members), so **the
+    other posts the key tied to it come back as their own card**. Options: (a) as is; (b) the site writes a "lied" flag on
+    every member of the card, and a report on the shown post only; (c) every member, for both. Recommended: (b).
+13. **Speed at the store's size:** 3.6 uses the existing Repository reads and the in-process photo memo; a bulk read (one
+    query for the members' posts, records and `Listing`s, a Repository contract change) is proposed only if 3.7's
+    measurement on the real page needs it. How often the site re-derives (each request, or once per store change) is
+    3.7's plan.
+14. **The four-pair check** stays a read-only run at the build, reported in the session log; no new command and no test
+    on the production store.
+15. **The stubs:** `policy/policy_stub.py` and `policy/base.py`'s `decide(ListingStub) -> DecisionStub` are replaced;
+    `ListingStub` and `DecisionStub` stay for `notify/` until Phase 4; `tests/test_stubs.py` loses its policy tests.
+16. **`restored_lifecycle` is built and tested in 3.6** (pure); 3.8 wires the writes and the reports.
 
 ## 3.7 The site — content approved, plan and design to be written
 
@@ -563,12 +818,11 @@ site's code) is decided in 3.7's plan.
 
 ## 7. For Ron's decision
 
-1. Gate C's names and types: the one table in `SCHEMA.md` ("For Ron's approval: every name and type"), with the
-   Gate E amendments E-1 to E-5, and points R1–R9 — 3.1.
-2. The plan for 3.4 and its eight points.
-3. The plan for 3.5 and its four points.
-4. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
+1. **The plan for 3.6 and its 16 points** (3.6, "Points for Ron (3.6)").
+2. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
    `dcb4c0cb4b24`, the deferred carrier of #241 and the reclassify of the other 189 (`BACKLOG.md`).
 
-Decided on 2026-10-10 (round 2) and so closed here: the task order and the DoD; the technical choices (#258–#260); the
-area grouping (#261); round 1's 31 open points (#262–#287).
+Decided and so closed here: the task order and the DoD; the technical choices (#258–#260); the area grouping (#261);
+round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and the Gate E amendments (#288); the plans for
+3.4 and 3.5 (#289, #290) and 3.4's three points left by the build (#291–#293); the admin's password reset on the machine
+(#294).

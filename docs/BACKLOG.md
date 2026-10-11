@@ -7,7 +7,7 @@ is approved*. `SESSION_LOG.md` records *what happened*. None of them tracks whet
 actually reached the code, which is how decisions #37 and #38 were approved on 2026-09-14 and were
 still unimplemented on 2026-10-02.
 
-**Last updated:** 2026-10-11 (round 4)
+**Last updated:** 2026-10-11 (round 5)
 
 ## Rules
 
@@ -30,7 +30,9 @@ approved, the spike run (#126–#156); the model decides the area (#167); tasks 
 same day Ron answered Gate C's 31 open points (#262–#287), chose the technical options (#258–#260), approved the area
 grouping (#261), `PHASE_3.md`'s task order and DoD, **Gate C's names and types (#288)** and the plans for 3.4 and 3.5
 (#289, #290). **Task 3.4 (store) is built** (round 3). On 2026-10-11 Ron settled 3.4's three open points (#291–#293)
-and **task 3.5 (accounts) was built** (round 4); the admin is not created yet (item 6).
+and **task 3.5 (accounts) was built** (round 4). **Ron created the admin on the production store on 2026-10-11** (backup
+made; stored `RawPost`s identical). Round 5: `jobs/reset_admin_password.py` built (#294); **3.6's plan written**
+(item 6).
 
 | # | Item | Source | Needs |
 |---|---|---|---|
@@ -39,8 +41,8 @@ and **task 3.5 (accounts) was built** (round 4); the admin is not created yet (i
 | 3 | **Deferred (Ron, 2026-10-09): position 3 keeps failing `furnished` in the regression run.** `DECISIONS.md` #241 (Ron's ruling: `partial`, not `unclear`, on post `0555aa32…`) has no carrier in the set: it needs a Ron-approved changed value of a field measured from the review, a new kind of entry in `label_overrides.json` (a change to its shape) and a few lines in `labeling/regression.py`. Not built now. Ron's reason: not essential, he wants to move on to Phase 3. With that one truth the recomputed verdict of run `47e96cac0e8d` would be `pass` in both passes (`SESSION_LOG.md`, 2026-10-09) | `DECISIONS.md` #238–#241 | Ron, if he ever wants it |
 | 4 | **Deferred (Ron, 2026-10-09): the reclassify of the remaining 189 stored `Listing`s (prompt 3) is not scheduled.** New posts are classified at version 4; the old ones leave by retention. Ron decides later whether to run it (`--limit 194 --cap 0.10`, about $0.042, `PHASE_2.md` 2.9). Until then the store holds two versions side by side (#217) | `DECISIONS.md` #144, #217–#222 | Ron, later |
 | 5 | **The first real `reclassify --run` was made on 2026-10-09** (run `dcb4c0cb4b24`, five named posts, $0.001693, 5 calls, nothing written to the store): `data/store/reclassify/dcb4c0cb4b24/` (`diff.html`, `proposals.jsonl`, `summary.json`, `allow_unchanged.txt`, `allow_state_changes.txt`). `#236` followed at `d269d280` (`stated_area_names` `[]`), not at `4c5bbcaf` (#235: `["בלב העיר"]`); `e6a8b9bb` gets area 42 and a stated name from places it names as nearby (`SESSION_LOG.md`, 2026-10-09). **No `apply_reclassify` yet: it waits for Ron to read `diff.html`** (dry run first: `uv run python -m tlv_hunter.jobs.apply_reclassify dcb4c0cb4b24`) | `PHASE_2.md` 2.9; `DECISIONS.md` #218, #221, #236 | Ron |
-| 6 | **Create the admin on the production store** (#244): Ron runs `uv run python -m tlv_hunter.jobs.create_admin` himself, in a terminal (it asks the username, then the password twice, hidden). It makes a dated backup beside the store first, writes only the `userdata` tables, and prints the backup's path and whether every stored `RawPost` is identical. Not beside `run_once` or `classify_pending` (#140) | `PHASE_3.md` 3.5; `DECISIONS.md` #244, #290 | Ron |
-| 7 | **Task 3.6 (evaluation, `policy/`): its plan to be written**, then Ron's approval | `PHASE_3.md` 3.6 | Ron |
+| 6 | **Task 3.6 (evaluation, `policy/`): the plan is written (2026-10-11, round 5) and waits for Ron's approval, with its 16 points** (the modules; the `Evaluation` result replacing `DecisionStub`; `price_source` in the seen copy; a correction of `other_city` against #214; a card as a connected group; the shown post; the `gate_d` helpers; an unknown preference; parking not written; the order inside a tier; a post of unclear kind under both options; a flag or report on a grouped card; speed; the four-pair check; the stubs; the restore's function) | `PHASE_3.md` 3.6 | Ron |
+| 7 | **If Ron ever forgets the admin password:** `uv run python -m tlv_hunter.jobs.reset_admin_password`, in a terminal (it asks the new password twice, hidden), not beside `run_once` or `classify_pending` (#140). Built and tested on a temporary store; never run on the production store | `DECISIONS.md` #294; `PHASE_3.md` 3.5 | Ron, only when needed |
 
 ### For phase 3 (`DECISIONS.md` #214, #225)
 
@@ -50,8 +52,8 @@ Planned in `PHASE_3.md` (draft, 2026-10-10), §3.
 |---|---|
 | **`ASSUMPTIONS.md` I3 (the model's cost is small), re-planned with DoD 4:** it is the same measurement, so it closes with the working day below | `DECISIONS.md` #228 |
 | **DoD 4, the measured working day (moved from Phase 2):** the number of calls, the tokens and the cost of a day's classification, from the usage metadata and then the OpenAI bill; every paid run under its cap. Done once a dashboard exists, so Ron can also judge how the interface looks on that day | `DECISIONS.md` #225; `PHASE_2.md` DoD 4 |
-| **The same-listing grouping is derived by the Gate D key** (`DECISIONS.md` #230, rule 1 amended by #232), for the lists, the cards and the repost log, and is never written onto a post (#231). How it is computed and shown is planned with Phase 3; whether deriving it stays fast enough as the store grows is not measured | `DECISIONS.md` #231 |
-| **The 4 pairs the key finds today, as a first check** of the derivation: `54ecb1d0…` / `00f17259…`, `7253eefa…` / `40f7f193…`, `e81273e6…` / `8ae80944…`, `9136a715…` / `9a6252c1…` (read-only, 2026-10-08, 139 active canonicals; Ron judged all four `same_listing`, #229). No post is in two pairs, and none of the eight has an exact-hash duplicate | `DECISIONS.md` #230; `PHASE_2.md` 2.10 |
+| **The same-listing grouping is derived by the Gate D key** (`DECISIONS.md` #230, rule 1 amended by #232), for the lists, the cards and the repost log, and is never written onto a post (#231). **Planned in `PHASE_3.md` 3.6 (c)** (waiting for Ron). Measured read-only on 2026-10-11 (266 posts): the pairing takes under 1 ms (21 ms on 5,004 synthetic members); reading the store (0.4 s) and hashing the photos (0.7 s) are what grow | `DECISIONS.md` #231 |
+| **The 4 pairs the key finds today, as a first check** of the derivation: `54ecb1d0…` / `00f17259…`, `7253eefa…` / `40f7f193…`, `e81273e6…` / `8ae80944…`, `9136a715…` / `9a6252c1…` (read-only, 2026-10-08, 139 active canonicals; Ron judged all four `same_listing`, #229). No post is in two pairs, and none of the eight has an exact-hash duplicate. **Checked again read-only on 2026-10-11: the four still tie, and nothing else** (the store unchanged since 2026-10-08). 3.6's build checks them again | `DECISIONS.md` #230; `PHASE_2.md` 2.10; `PHASE_3.md` 3.6 |
 | **Notes from the dedup B plan worth keeping** (`PHASE_2.md` 2.10, "Plan for dedup B", not built): the agent-number threshold of 4 was a gap in one day's data and is to be re-measured on a week of data with `gate_d_pairs` (the count over every post, duplicates included, would give 3 agent numbers instead of 2); **alerts (Phase 4) must not fire for a post the key ties to an earlier one**; the key reads only active canonical posts that have a `Listing`, so a post waiting for its classification is not tied; a derived grouping follows a change of the key at once, so the key can be revised after Phase 3 | `DECISIONS.md` #230–#232 |
 | **The `gate_d_pairs` command runs again on a larger store** (`DECISIONS.md` #226, point 5), to record the rate with its window; it implements the candidate rules, not the key | `DECISIONS.md` #226 |
 | **The key's first lists and cards:** the card's main time is the last publication and the repost log shows the earliest `posted_at` (rows under "Recorded for a later phase"); the retention of a duplicate (Phase 5 row) applies to what the key ties | `DECISIONS.md` #122, #75 |
@@ -84,7 +86,7 @@ Planned in `PHASE_3.md` (draft, 2026-10-10), §3.
 | #56 the bot listens | `notify` is a stub | Phase 4 |
 | #61 admin-set run interval and a manual "run now" | No scheduler exists | Phase 5, with the scheduler. Interval and last-run record approved then |
 | #62, #253 viewed posts, per user; opening the card marks it viewed, "mark as not viewed", a card stays viewed through the Gate D grouping | Records and storage built (3.4); no logic or page | `ViewedPost` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
-| #242–#244 accounts: username and password, no email, admin reset; one-time keys (no expiry, cancel, label, used by and when); one admin created by a command | Records, storage (3.4) and logic (3.5, `accounts/`, `jobs/create_admin.py`) built with their tests; the admin not created yet (item 6) | The pages and the cookie (3.7); the admin's key and user pages (3.8) |
+| #242–#244 accounts: username and password, no email, admin reset; one-time keys (no expiry, cancel, label, used by and when); one admin created by a command | Records, storage (3.4) and logic (3.5, `accounts/`, `jobs/create_admin.py`) built with their tests; the admin created on the production store (Ron, 2026-10-11); the machine reset `jobs/reset_admin_password.py` built (#294) | The pages and the cookie (3.7); the admin's key and user pages (3.8) |
 | #245–#247 the profile's two search options, the sublet switch, the sqm filter in the empty-apartment search only | Records and storage built (3.4); no logic or page | `Profile`, `SearchOption` (Gate C draft); `PHASE_3.md` 3.4, 3.6, 3.7 |
 | #248, #249, #261 the area filter grouped (seven regions); non-residential entries (11, 12, 13, 28, 51, 55, 66) in a collapsed group, not hidden | Nothing exists | `PHASE_3.md` §6, 3.7 (where the grouping lives in code is 3.7's plan) |
 | #250, #275 no orange on the area when all of the post's areas are in the user's selection; with none chosen, orange | Nothing exists | `PHASE_3.md` 3.6 |

@@ -4938,3 +4938,108 @@ on the laptop, still ASSUMED in the container.
 
 STOP. 3.6 is not started. For Ron: rerun the tests and ruff; then `BACKLOG.md` item 6 (create the admin), then 3.6's
 plan.
+
+## 2026-10-11 (continued) — Phase 3, round 5: `jobs/reset_admin_password.py` built (#294); task 3.6's plan written
+
+**No git command was run this round**, read-only ones included. No paid call, no network call, no dependency added,
+nothing installed, no site code, no Node, no Docker. The production store was opened **read-only** once (Step 2's
+measurement) and never for writing; its SHA-256 was `04cefd603c8b…` before and after.
+
+### Recorded as done
+
+- **Ron ran `jobs/create_admin` on the production store on 2026-10-11:** the backup was made, the admin was created, and
+  the stored `RawPost` documents were identical to the backup's. Written into `CLAUDE.md`, `PHASE_3.md` (status, 3.5),
+  `BACKLOG.md` (the item left; the #242–#244 row). The admin's username is written in no doc. The read-only measurement
+  saw one user, no session, no report, no correction, no viewed record.
+
+### Step 1, built — file by file
+
+- `tlv_hunter/accounts/actions.py`: `reset_admin_password(store, new_password, now, *, hasher)` — **takes no session
+  token; its docstring says it is called only by `jobs/reset_admin_password.py`**. Finds the admin (`Refused("no_admin")`
+  if none), checks the length, hashes, writes by compare and set (`_update_user`): the new hash, `must_change_password`
+  `False`, `password_changed_at` = now, `failed_sign_ins` 0, `last_failed_sign_in_at` `None`; then `end_sessions` of the
+  admin. Also: `find_admin(store)`; `require_new_password(password)` (the length rule, now also called by
+  `require_new_credentials`, same behaviour); `"no_admin"` added to `RefusalReason`; the module docstring names the two
+  actions without a token.
+- `tlv_hunter/jobs/reset_admin_password.py` (new): the command. Refuses a missing store; reads read-only (`mode=ro`, the
+  busy timeout) whether the `userdata` layout row exists, so a store with no `userdata` tables is "no admin" and is not
+  created; opens `SqliteUserDataStore`, refuses with no admin **before any question**; prints the admin's username and
+  `user_id` on the console; asks "New password: " and "New password again: " with `getpass`; refuses two that differ or
+  one under 8 characters; then the dated backup, the action, and the `RawPost` check against the backup. Exit 0 or 1.
+- `tests/test_reset_admin_password_job.py` (new, 7): the reset after a backup (the new password works and the old does
+  not; final; failure count 0 after five failures; every session ended; every other `User` field unchanged; one backup;
+  `RawPost`s identical; no password or hash in the output); no `userdata` tables (refused, no question, bytes unchanged,
+  no tables created, no backup); tables with no admin (the same); two passwords that differ and a short one (bytes
+  unchanged, no backup); a missing store; the read-only check passes the busy timeout.
+- `tests/test_accounts.py` (+2, and three lines in the log test): the action is final and ends only the admin's
+  sessions, clears the delay, leaves a friend's record and session alone, and lets the admin act at once; refused with no
+  admin; the log test also runs it and checks no password reaches a log line or a refusal.
+- Docs: `DECISIONS.md` #294 (and "Last updated"); `CLAUDE.md` (status; the commands list; the writer paragraph, "a
+  sixth", "none of the six"; the `accounts/` paragraph names the two token-less actions); `PHASE_3.md` 3.5.
+
+### Verified, and how (Step 1)
+
+- **`uv run pytest`: 1488 passed** (1479 at the end of round 4; +7 command tests, +2 action tests; 492 s). That run was
+  made before three line-length fixes (a test's assertion rewrapped, the module docstring's first line); after them
+  **`uv run ruff check .`: all checks passed; `uv run ruff format --check .`: 174 files already formatted;** and five
+  touched or related test files rerun: 70 passed. The full suite was not run again after those fixes: Ron reruns it.
+- Everything on temporary stores; `getpass` patched; the socket guard on. **`reset_admin_password` was not run on the
+  production store.**
+
+### Step 2, the plan for 3.6 — written into `PHASE_3.md` 3.6 (no code)
+
+(a) the post as a user sees it, `postmodel/seen.py`, and its five readers; (b) the restore's state,
+`postmodel/rejects.restored_lifecycle`, through `model_reason` (no second copy of Gate E's order or of #214); (c) the
+Gate D key and the cards, `dedup/stage_b.py`, never stored, with the measurement below; (d) the evaluation,
+`policy/evaluate.py`; (e) the order, `policy/order.py`; (f) the area's colour; tests (nine groups); what I could not
+verify; **16 points for Ron**, none settled.
+
+**The measurement** (a scratch script in the scratchpad, not in the repo; `SqliteRepository(read_only=True)`, the
+`userdata` counts over `mode=ro`, image files read only; ids and counts printed, no text, phone or username):
+- 266 posts; 139 members (active canonicals with a `Listing`); 38 pending.
+- **The four known pairs still tie, and nothing else ties:** `54ecb1d0…`/`00f17259…` (rule 1), `7253eefa…`/`40f7f193…`
+  (rule 2), `e81273e6…`/`8ae80944…` (both), `9136a715…`/`9a6252c1…` (rule 2); 4 cards of two posts; 2 agent numbers.
+- Times (laptop, one run): `query` 0.058 s; 532 per-post reads 0.336 s; SHA-256 of 620 photo files 0.669 s; pairing over
+  every pair 35.0 ms, over members sharing a phone or a photo 0.8 ms (same 4 pairs). Synthetic copies: 1,390 members
+  8 ms (every pair 0.89 s); 5,004 members 21 ms.
+
+### Not verified
+
+- `reset_admin_password` on the production store, and `getpass` on Ron's Windows terminal by hand.
+- The full suite after the three line-length fixes (only the five related files were rerun).
+- 3.6's times at the store's full size (a linear estimate only), and the photo hashing with a cold disk cache.
+
+### Deviations
+
+1. **The "no admin" check comes before the questions and the backup**, read through a small read-only helper in the
+   command (`_has_userdata_tables`, the `layout_version` row of `userdata`), because opening `SqliteUserDataStore` on a
+   store without its tables would create them, a write before the backup. Ron's order listed the refusals before the
+   backup; this keeps it and asks nothing when there is no admin.
+2. **Two small public helpers in `actions.py`** the instruction did not name: `find_admin` (the command and the action
+   share it) and `require_new_password` (the length check before the backup, as `require_new_credentials` does for
+   `create_admin`).
+3. The command prints the admin's username and `user_id` on Ron's console (as `create_admin` does), so he sees which
+   account changes; no doc holds it.
+4. Two passwords that differ are refused with no retry, as in `create_admin`.
+
+None changes a record, a field, a contract or a rule: no stop was needed.
+
+### Docs the code made stale, and stale docs found
+
+- Fixed: `PHASE_3.md`'s §3.0 row "Gate C's names and types … DRAFT, waiting for Ron" (approved since #288) and §7 "For
+  Ron's decision", which still listed Gate C and the 3.4 and 3.5 plans.
+- Not touched: `BASELINE.md` §14 "Open for Ron" still says Gate C's names and the plans for 3.4 and 3.5 are open;
+  `BASELINE.md` §5's last paragraph still calls Gate C's records "a draft, not approved"; `PHASE_3.md` 3.5's API table
+  still names `get_default_parameters()` without its module (as reported in round 4).
+
+### BACKLOG
+
+Item 6 (create the admin) removed: done by Ron. Item 6 is now 3.6's plan waiting for Ron, with its 16 points; item 7 the
+reset command, for when it is needed. The "For phase 3" rows on the grouping and the four pairs carry today's
+measurement; the #242–#244 row says the admin exists and the reset command is built. No new "pending implementation"
+row: #294 is built.
+
+### Next
+
+STOP. 3.6 is not built. For Ron: rerun the tests and ruff; then the 16 points of `PHASE_3.md` 3.6 and the plan's
+approval.

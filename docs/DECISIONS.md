@@ -10,7 +10,8 @@ Superseded decisions are kept, marked, and left in place. Deleting them would lo
 the question was considered at all.
 
 **Last updated:** 2026-10-10 (#242–#257, the content of Gate C; #258–#287, Gate C's open points, the technical
-choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290, Gate C approved and the plans for 3.4 and 3.5)
+choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290, Gate C approved and the plans for 3.4 and 3.5);
+2026-10-11 (#291–#293, 3.4's three points; #294, the admin's password reset on the machine)
 
 > Written in English like every document in `docs/`.
 >
@@ -2894,6 +2895,21 @@ nothing is archived before Phase 5.
 `find_key_by_hash(key_hash) -> SignupKey | None` is added to `UserDataStore` (the Protocol, SQLite, the contract test).
 Sign-up uses it instead of scanning `list_keys()`. `CLAUDE.md`'s seam row and `PHASE_3.md`'s method table name it.
 *Ron approved the reviewer's recommendation.* No reason recorded.
+
+## Phase 3: the admin's fallback for a forgotten password (2026-10-11)
+
+### 294 — `jobs/reset_admin_password.py`: the admin's own password set on the machine
+A command run on the machine, in the pattern of `create_admin` (#244, #290): it refuses when there is no admin, asks
+for the new password twice with `getpass`, refuses two that differ or one under Gate C's rules (#262), makes the dated
+backup, sets the new hash with `must_change_password` `False`, the failure count 0 and `password_changed_at`, ends
+every session of the admin, then checks the stored `RawPost` documents against the backup. The logic is
+`accounts.actions.reset_admin_password`, an action that takes **no session token** and is called only by this command
+(its docstring says so). It writes only the admin's `User` and `Session` records: a sixth store writer, named in
+`CLAUDE.md`. No record, field, contract or rule changes: it is the admin's reset (#262) with a final password, done
+from the machine as the admin's creation is (#244).
+*Ron's decision (2026-10-11). Ron's reason:* if he forgets his password there is no way back, since a reset needs a
+signed-in admin and `create_admin` refuses when an admin exists; he wants a fallback so he is never locked out.
+**Built 2026-10-11** (round 5), tested on a temporary store only.
 
 ---
 

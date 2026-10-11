@@ -425,6 +425,55 @@ def test_the_admins_reset_ends_every_session_and_the_failure_count(
     assert check_password(reset.password_hash, "temporary-1", hasher)
 
 
+def test_the_admins_own_reset_on_the_machine_is_final_and_ends_every_session(
+    store: SqliteUserDataStore, admin_token: str, hasher: CountingHasher
+) -> None:
+    """#294: no session token; the new password is final; a friend's record is not touched."""
+    friend = _friend(store, admin_token, hasher)
+    friend_token = actions.sign_in(store, "dana", FRIEND_PASSWORD, NOW, hasher=hasher).token
+    actions.reset_password(store, admin_token, _admin_id(store), "temporary-1", NOW, hasher=hasher)
+    temporary = actions.sign_in(store, "ron", "temporary-1", NOW, hasher=hasher)
+    assert temporary.must_change_password
+    for _ in range(actions.FAILURES_BEFORE_DELAY):
+        with _refused("wrong_credentials"):
+            actions.sign_in(store, "ron", "wrong-password", NOW, hasher=hasher)
+    friend_before = store.get_user(friend.user_id)
+    later = NOW + timedelta(seconds=1)  # inside the delay, which the reset clears
+
+    with _refused("password_too_short"):
+        actions.reset_admin_password(store, "short", later, hasher=hasher)
+    reset = actions.reset_admin_password(store, "new-admin-password", later, hasher=hasher)
+
+    assert store.get_user(reset.user_id) == reset
+    assert (
+        reset.is_admin,
+        reset.must_change_password,
+        reset.failed_sign_ins,
+        reset.last_failed_sign_in_at,
+        reset.password_changed_at,
+    ) == (True, False, 0, None, later)
+    assert actions.session_user(store, temporary.token, later) is None
+    assert actions.session_user(store, friend_token, later) is not None
+    assert store.get_user(friend.user_id) == friend_before
+    signed_in = actions.sign_in(store, "ron", "new-admin-password", later, hasher=hasher)
+    assert signed_in.must_change_password is False
+    assert actions.issue_key(store, signed_in.token, "after the reset", later)
+
+
+def test_the_admins_own_reset_is_refused_with_no_admin(
+    store: SqliteUserDataStore, hasher: CountingHasher
+) -> None:
+    with _refused("no_admin"):
+        actions.reset_admin_password(store, "new-admin-password", NOW, hasher=hasher)
+    assert store.list_users() == []
+
+
+def _admin_id(store: SqliteUserDataStore) -> str:
+    admin = actions.find_admin(store)
+    assert admin is not None
+    return admin.user_id
+
+
 def test_the_users_own_change_ends_the_other_sessions_and_keeps_this_one(
     store: SqliteUserDataStore, admin_token: str, hasher: CountingHasher
 ) -> None:
@@ -624,6 +673,9 @@ def test_no_password_key_token_or_hash_reaches_a_log_line_or_a_refusal(
     attempt(lambda: actions.disable_user(store, admin_token, admin.user_id, NOW))
     actions.enable_user(store, admin_token, user.user_id, NOW)
     actions.sign_out(store, token, NOW)
+    attempt(lambda: actions.reset_admin_password(store, "short", NOW, hasher=hasher))
+    actions.reset_admin_password(store, "machine-password-1", NOW, hasher=hasher)
+    secrets_seen.append("machine-password-1")
 
     secrets_seen += [issued.key, spare.key, admin_token, token]
     secrets_seen += [secret_hash(value) for value in (issued.key, spare.key, admin_token, token)]

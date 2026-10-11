@@ -1,10 +1,12 @@
 """The account actions over `UserDataStore` (task 3.5; SCHEMA.md, Gate C; DECISIONS.md #242–#244,
-#262–#266, #288 R1, R3, R5, R7, R8, #290, #291, #293).
+#262–#266, #288 R1, R3, R5, R7, R8, #290, #291, #293, #294).
 
 Sign-up with a one-time key, sign-in with the delay after failures, sign-out, the session check,
 the user's own password change, and the admin's actions: reset, disable and enable, issue and
 cancel keys, and the one admin's creation. **The admin-only checks are here, not in the pages**:
-every admin action takes the acting session's token and refuses unless it is the admin's.
+every admin action takes the acting session's token and refuses unless it is the admin's. Two
+actions take no token, since they are called only by commands run on the machine: the admin's
+creation (#244) and the admin's own password reset (#294).
 
 A refusal is `Refused`, whose message is only its reason: never a password, a key, a token or a
 hash. The log lines name `user_id` and `key_id` only (opaque, #262), never a username.
@@ -64,6 +66,7 @@ RefusalReason = Literal[
     "label_empty",
     "unknown_key",
     "key_used",
+    "no_admin",
 ]
 
 
@@ -279,6 +282,45 @@ def reset_password(
     logger.info("password reset: user %s, by %s", user_id, admin.user_id)
 
 
+def reset_admin_password(
+    store: UserDataStore,
+    new_password: str,
+    now: datetime,
+    *,
+    hasher: PasswordHasher = PRODUCTION_HASHER,
+) -> User:
+    """The admin's own password set on the machine, the fallback for a forgotten one (#294).
+    **It takes no session token: it is called only by `jobs/reset_admin_password.py`**, which runs
+    on the machine; no page calls it. The new password is final (`must_change_password` False),
+    the failure count goes to 0, and every session of the admin ends. `Refused("no_admin")` when
+    there is no admin."""
+    admin = find_admin(store)
+    if admin is None:
+        raise Refused("no_admin")
+    require_new_password(new_password)
+    new_hash = _hash_or_refuse(new_password, hasher)
+    updated = _update_user(
+        store,
+        admin.user_id,
+        lambda fresh: _changed(
+            fresh,
+            password_hash=new_hash,
+            must_change_password=False,
+            password_changed_at=now,
+            failed_sign_ins=0,
+            last_failed_sign_in_at=None,
+        ),
+    )
+    store.end_sessions(admin.user_id, now)
+    logger.info("admin password reset on the machine: user %s", admin.user_id)
+    return updated
+
+
+def find_admin(store: UserDataStore) -> User | None:
+    """The one admin (#244), or `None` before `create_admin` has run."""
+    return next((user for user in store.list_users() if user.is_admin), None)
+
+
 # --- disabling (#265) ---
 
 
@@ -357,6 +399,11 @@ def require_new_credentials(username: str, password: str) -> None:
     username's characters and length, the password's length."""
     if not USERNAME.fullmatch(username):
         raise Refused("username_invalid")
+    require_new_password(password)
+
+
+def require_new_password(password: str) -> None:
+    """Gate C's rule for a new password (#262): at least 8 characters."""
     try:
         require_password_length(password)
     except PasswordTooShort as error:
