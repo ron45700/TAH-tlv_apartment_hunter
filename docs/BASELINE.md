@@ -26,6 +26,9 @@ grouping), §9 (the search options), §10, §11, §12 (the phase's name, the cho
 Amended 2026-10-11: §4 (the same-listing grouping is computed once for all users and held in memory, #301), §5 and §14
 (stale lines: Gate C approved), §8 (the order of display: an unknown preference counts as not met, #298; parking not
 written is unknown, #299).
+Amended again 2026-10-11 (round 7): §6 (the field colours, #309), §8 (a post with no written price at the bottom, #302;
+the saved preferences and the home page's filter, #314, #315), §10 (guests view without signing in; Tailscale the only
+gate for viewing, with its condition, #306, #307).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -265,6 +268,11 @@ approved (#288).
 Balcony and parking are both **stored** as "not written"; the difference above is a display rule
 only, so it can change without reclassifying.
 
+**The colours, refined (2026-10-11, #309):** green for every known positive value (no broker, a balcony, parking, an
+elevator, air conditioning), also when no preference is set and for a guest; red only when the user set a preference
+and it is not met; a known negative value with no preference is shown plain; grey for not written; orange for unclear.
+How the card maps them: `PHASE_3.md` 3.7 (d).
+
 ---
 
 ## 7. Location
@@ -340,8 +348,15 @@ per user at display, never written on the post.
 **Order of display:** posts that meet the preferences first; then posts that meet the critical
 conditions but not the preferences; at the bottom, posts where a critical value is not written or
 unclear. A preference that is not written or unclear counts as not met: the post is in the middle group, not at the
-bottom (#298). Parking that is not written is unknown, as stored (#299). Posts that are known to fail a critical
-condition are not shown.
+bottom (#298). Parking that is not written is unknown, as stored (#299). **A post with no written price is always at
+the bottom, also when the user set no price range** (#302). Posts that are known to fail a critical condition are not
+shown.
+
+**The saved preferences and the home page's filter are two things** (#314, #315). The profile above is what is saved on
+the account and, from Phase 4, what drives the alerts. The filter bar on the home page is what the user is looking at
+now: for a signed-in user it starts from the saved profile, a change there is for this visit only, and "save as my
+preferences" writes it to the profile. The order and the card's colours follow what the bar holds at that moment. A
+guest's bar starts empty and is never saved (§10).
 
 **Viewed posts** (`DECISIONS.md` #62): each user sees which posts they have already viewed. All
 unviewed posts come first, then the viewed ones; within each of the two, the order above. "Viewed"
@@ -383,7 +398,12 @@ signing up.
   must be changed, and the reset ends every session (#262, #263). A user is never deleted, only disabled and enabled
   again by the admin (#265). Telegram is linked by a code the site shows and the user sends to the bot. Site and
   Telegram share the same profile.
-- Tailscale sharing is a second gate in front of the site.
+- **Viewing needs no account** (#306, #307, amended 2026-10-11): anyone who reaches the site can scroll and filter
+  without signing in. **Tailscale is the only gate for viewing posts**; the one-time key guards creating an account, not
+  viewing. A guest's filter lives in the browser only; a guest cannot save preferences, mark a post viewed, flag or
+  report it. An account is needed to save preferences, and from Phase 4 for alerts. **Condition: if the site is ever
+  served outside the tailnet, signing in becomes mandatory for viewing.** *Until 2026-10-11: "Tailscale sharing is a
+  second gate in front of the site."*
 - The site is built first, with a polished UI built in phase 3 (#257). The Telegram Mini App is an adaptation of the
   same site.
 

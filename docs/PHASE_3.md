@@ -5,8 +5,10 @@ the content of Gate C (`DECISIONS.md` #242–#257) and its 31 open points (#262�
 technical choices (§5, #258–#260); the area grouping (§6, #261); Gate C's names and types and R1–R9 (#288, R7 amended
 by #291); the plans for 3.4 and 3.5 (#289, #290). **Built:** 3.4 (2026-10-10, round 3), 3.5 (2026-10-11, round 4);
 the admin created on the production store by Ron (2026-10-11); `jobs/reset_admin_password.py` (#294, 2026-10-11, round
-5). **3.6: plan and its 16 points approved (#295–#300, 2026-10-11); built in round 6 (2026-10-11).** **Next:** 3.7's
-plan, which must meet #301. No code before a task's plan is approved; no paid call before its own go.
+5). **3.6: plan and its 16 points approved (#295–#300, 2026-10-11); built in round 6 (2026-10-11).** **Round 7
+(2026-10-11):** #302 built (a post with no written price always at the bottom); Ron's direction for the site recorded
+(#303–#315); **3.7's plan written, with 26 points, waiting for Ron.** No code before a task's plan is approved; no paid
+call before its own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
 (the key, #230, #232) · **Research:** `RESEARCH.md` §16 (the area grouping check)
@@ -631,7 +633,7 @@ orange (#275). Computed per user at evaluation, never written (invariant 12).
     `ListingStub` and `DecisionStub` stay for `notify/` until Phase 4; `tests/test_stubs.py` loses its policy tests.
 16. **`restored_lifecycle` is built and tested in 3.6** (pure); 3.8 wires the writes and the reports.
 
-## 3.7 The site — content approved, plan and design to be written
+## 3.7 The site — PLAN WRITTEN 2026-10-11 (round 7), waiting for Ron; Ron's direction recorded (#302–#315)
 
 The lists and the cards (`BASELINE.md` §6) with these approved display rules (`BACKLOG.md`, "Recorded for a later
 phase"): the card's main time is the last publication, shown relative (#122); the repost log shows the earliest
@@ -649,6 +651,422 @@ collection run, a classification run, a flag, a report, a restore, a correction)
 and order (`policy/`) run per request. The plan must say **how the site knows the store changed**, and must **measure a
 real page load**. From 3.6 (#300): a "lied" flag on a card is written on every one of `Card.canonical_ids`; a "wrong
 classification" report on `Card.shown_id` only.
+
+**The plan below was written on 2026-10-11 (round 7). Nothing of it is built and nothing is installed.** It follows
+Ron's direction of the same day (#303–#315) and #302 (built: a post with no written price is always at the bottom). A
+static mock, filled from real active posts read-only, is in `data/mock/` (gitignored: real people's text and phones);
+it is a first look, not the design.
+
+### (a) Scope
+
+**In 3.7:** the API and the pages for everyone who is not the admin acting as admin: the list (home), the opened post,
+the filter bar, sign-in, sign-up with a key, the forced password change, the preferences page; the user's writes
+(viewed, "mark as not viewed", a "lied" flag, a "wrong classification" report, saving the preferences); the session
+cookie; the same-listing grouping held in memory (#301); a command that serves the site on the laptop. **Not in 3.7:**
+the admin's pages (3.8; the admin signs in through 3.7's page); serving through Tailscale and Docker (3.9); Telegram
+(Phase 4); favourites, a map, a language switch (#310).
+
+### (b) What I took from Ron's reference screenshots, and what I did differently
+
+| Reference | Taken | Different, or left out |
+|---|---|---|
+| The phone list | One card under the other (#303); the photo at the start (the right, in Hebrew) beside a large price; the location line with a pin; the relative time; feature chips; a WhatsApp button beside a wide button | No heart (favourites, #310); no floating "map" button (#310); no language switch (#310); the wide button opens the post on our site, and the link to the original sits inside (c) |
+| The opened post on a phone | Full screen, a back arrow at the top (#313); a photo carousel with dots; a price block; a rows table (rooms, floor, sqm, entry date) with "—" for not written; a "features" block of chips, the known ones lit and the unstated ones grey; a sticky bottom bar with the main action | Our chips use the colours of #309 (green, plain, red, grey, orange), not just lit and grey; no chips for features we do not store (a safe room, a shelter, renovated, pets); the bottom bar holds "to the original post" and WhatsApp, no map |
+| The desktop grid | A grid (#303); the photo on top; the first lines of text as the heading (here the poster's own text, #312); a grey location line; a row of four stats with icons | The source badge (we have one source); our fourth stat is the entry date, the time moves to the card's foot; the glow (#308) |
+| The preferences pages | Sections as white cards on a warm background; a range as two number boxes and a slider, with a "don't care" button (it is our `None`); entry-date quick chips ("immediate", "from the 1st of next month", "another date"); feature tiles with an icon that light up when chosen; a summary with "edit" per section; a live count "with the current settings: N posts" | Not a step-by-step wizard: one page, two tabs (room, empty apartment) and "copy from the other option" (#272); every category carries its level, "preference" or "must" (§8), where the reference has one global "also show posts that do not mention a feature"; no property types we do not have (an apartment for roommates as a third kind); no email; it is not the filter (#314): the home page has its own bar |
+
+What the references show and the approved rules do not have, listed for Ron (point 25), not added: a filter by street,
+a map, favourites, pets, a safe room or shelter, "renovated", a third kind "apartment for roommates", an email, the
+source badge, a "results include only the last week" line.
+
+### (c) Every item, on the closed card and in the opened post (#303, Ron's request f)
+
+`BASELINE.md` §6, §7, §8 and the marks Ron listed. "Desktop" is the grid card and the dialog (#304); "phone" is the
+stacked card and the full-screen post (#313). **—** means not shown there.
+
+| # | Item | Closed card, desktop | Closed card, phone | Opened post, desktop (dialog) | Opened post, phone (full screen) |
+|---|---|---|---|---|---|
+| 1 | Photos | The first photo on top (4:3, cropped); "1/5" count in a corner | The first photo at the start, square, beside the price | A carousel of every photo, arrows and dots; click enlarges | A swiping carousel at the top, dots |
+| 2 | Video or reel (photos only are downloaded) | A "▶ video" chip on the photo | The same | "Watch the video on Facebook" link per video; from the repost when the media came through one (#70, #72.4) | The same |
+| 3 | The poster's full original text | The first 3 lines, cut with "…", as the card's heading (#312) | The first 2 lines | The whole text, unchanged, line breaks kept, `dir="auto"` | The same |
+| 4 | **Link to the original post** | A small "↗ Facebook" icon link in the card's foot | The same, in the foot | **A main button "to the original post" in the dialog's foot** | **In the sticky bottom bar**, beside WhatsApp |
+| 5 | Price, "X/Y" when several (#95) | Large, beside the kind | Large, at the top beside the photo | The price block, large | The same |
+| 6 | Price not written | "No price" in the important-missing style (point 6) | The same | The same, in the price block | The same |
+| 7 | Entry date as written; its year never shown (#96, #115) | The fourth stat: the text as written, cut to one line | In the line under the price | A row, the text as written in full | The same |
+| 8 | Entry date not written | The fourth stat: "no entry date", important-missing style | The same | The row, the same style | The same |
+| 9 | Location: areas and streets | One line: the areas' names · the streets as written; orange when `area_orange` (#250) | The same, two lines at most | Rows: "area" (each name), "street" (as written), the names the post itself gave (as written) | The same |
+| 10 | No area: unclear (a street given) or not written (#110) | "area unclear" orange / "no location" grey | The same | The same, in the rows | The same |
+| 11 | Listing kind, sublet mark (#246) | A chip "room in a shared flat" / "whole apartment", and "sublet" | The same | The same, under the price | The same |
+| 12 | Kind unclear or not written, marked (#273), and the option it answers (§8) | An orange chip "kind unclear · shown as: room" | The same | The same | The same |
+| 13 | Phone(s), `name-number` (§6) | — | — | Each number as a `tel:` link, with its name | The same |
+| 14 | **WhatsApp** (#311), when the post has a mobile number | A small WhatsApp icon link in the foot | A WhatsApp button (as the phone reference) | A button per mobile number | In the sticky bottom bar (the first mobile number; the others in the rows) |
+| 15 | Publication time: the last publication, relative (#122) | In the foot: "5 hours ago" | Under the location | In the price block | The same |
+| 16 | Repost log, earliest first (#75 A) | "published 3 times" in the foot, when more than one | The same | A list: each publication, relative and Israel time, the earliest first | The same, collapsed |
+| 17 | Broker (no broker is positive, #309) | A chip | A chip | In the features block | The same |
+| 18 | Rooms; on a room post "1 of N" or "a room" (#120) | First stat | In the line under the price | A row | The same |
+| 19 | Floor, "X/Y" when the floors are written (#98, #106); 0 ground, -1 basement | Third stat | — | A row | The same |
+| 20 | Size; on a room post "X sqm for the room, of Y" (#99, #121) | Second stat | — | A row | The same |
+| 21 | Balcony (not written: "not known", grey) | A chip | A chip | Features block | The same |
+| 22 | Parking (not written: "none" in grey, §6, point 7) | A chip | A chip | Features block | The same |
+| 23 | Elevator, air conditioning | Chips | — | Features block | The same |
+| 24 | Furnished yes / partial / no (#102) | — | — | Features block | The same |
+| 25 | Arnona, house committee (#101, #116) | — | — | Two rows: the amount, "included", or orange "unclear" | The same |
+| 26 | "Women only" shown because the bar does not hide it: the red icon (§8) | A red icon chip | The same | The same, under the price | The same |
+| 27 | "Women preferred" (#117) | A plain chip | The same | The same | The same |
+| 28 | **The glow** (#308) | Around the card, with a tier label (d) | The same | A tier label at the top of the price block, with the reason for the bottom tier | The same |
+| 29 | The field colours (#309) | On the stats and chips shown | The same | On every row and chip | The same |
+| 30 | "Corrected by hand" (#256) | A small "✎" on the corrected field, when it is shown closed | The same | "✎ corrected by hand" on each corrected row or chip | The same |
+| 31 | Viewed (#62, #253); signed-in only | The card dimmed, an "eye · viewed" tag | The same | "Mark as not viewed" in the foot | In the top bar's menu |
+| 32 | Flag "lied" (#300); signed-in only | — | — | "Report: the post lies" in the foot's menu, with a confirmation | In the top bar's menu |
+| 33 | "Wrong classification" report (#254); signed-in only | — | — | "Report a wrong classification" in the same menu: a form, the fields as Hebrew labels, a note of up to 500 characters | The same, full screen |
+| 34 | The other city (#214) | — (an other-city post is rejected and never reaches a user; the admin's list shows it, 3.8) | — | — | — |
+
+**The link to the original post** (Ron: it must exist, its place my recommendation): a main button in the opened post
+(the dialog's foot on a desktop, the sticky bottom bar on a phone, as the phone reference does), and a small icon link
+on the closed card, so a user who already knows a post can jump to it. Whether following the icon from the closed card
+marks the card viewed: point 10.
+
+### (d) The glow (#308) and the field colours (#309): my opinion, the alternatives, and colour blindness
+
+**My opinion.** The mapping onto the three tiers is right: it shows on the card what the order already says. Three
+cautions. (1) A grid of thirty cards with strong glows competes with the photos; the glow should be a thin ring and a
+soft shadow, not a halo, strongest for green. (2) **With nothing set, every post with a price and a clear kind is
+"preferences met"** (no preference left unmet), so a guest with an empty bar sees a green grid that means nothing;
+proposed: no green glow while the option that admits the post holds no preference at all, only orange when one is not
+met and red for the bottom (point 2). (3) Red reads "danger": right for a post with no price (#302, Ron's tricksters),
+less so for a post at the bottom because its kind is unclear; so the bottom label always says why ("no price", "kind
+unclear", "area unclear", "entry date not written" for a critical one).
+
+**The alternatives:**
+
+| | Look | For | Against |
+|---|---|---|---|
+| A (recommended) | The ring and soft shadow in the tier's colour, **plus a labelled chip** on the card ("fits all" / "fits partly" / "missing info: no price") | Ron's proposal; readable at a glance and in words | The most visual noise of the three; tuned in the build with the design plugins |
+| B | A coloured band on the card's top edge and the same chip, no glow | Calmer grid | Weaker at a glance |
+| C | No colour on the card: headers between the tiers in the list ("fits all (9)", "fits partly (60)", "missing info (10)") | No colour needed at all | The order is unviewed-then-viewed first (#62), so the headers repeat in the viewed part; the opened post loses the signal |
+
+**Colour blindness.** The state is never carried by colour alone: (1) every tier chip has a **shape and a word**: ✓ in
+a circle "fits all", a half circle "fits partly", ! in a triangle "missing info: …"; (2) every field chip has a glyph
+and its value in words: ✓ known positive, ✕ a preference not met, ? unclear, – not written; (3) the hues are picked
+apart in lightness as well as hue (a blue-leaning green, an amber, a crimson), checked in the build with a
+colour-vision simulation (chrome-devtools' rendering emulation) and the accessibility review; (4) the chips carry an
+accessible name ("balcony: yes, matches your preference").
+
+**How the field colours (#309) sit with 3.6's `FieldState`.** `Evaluation.fields` holds a `FieldState` for the ten
+profile categories only, for the option that admitted the post. The colour of a field is:
+
+| `FieldState` | Colour |
+|---|---|
+| `"match"` | green |
+| `"mismatch"` | red (only a preference can show it: a failed critical category hides the post) |
+| `"not_written"` | grey |
+| `"unclear"` | orange |
+| `"not_applied"` (no value in the option), and every field that is not a category (elevator, air conditioning, furnished, arnona, house committee, building floors, room size) | from the post's own value: a **known positive** green (broker `False`, balcony, parking, elevator, air conditioning `True`); a known negative plain; not written grey; unclear orange; a field with no positive or negative (rooms, floor, size, price, entry date, arnona, house committee, furnished) plain |
+| the area | orange when `area_orange` or no area and a street given; grey with no location; green on `"match"`; else plain |
+| price and entry date not written | the important-missing style (point 6), not grey |
+
+**`policy/evaluate.py` needs no change for it.** A small pure function, proposed `policy/colours.py`,
+`field_colours(seen, evaluation) -> Mapping[str, Colour]`, computes the table above on the server, so the browser holds
+no rule. It imports the wanted values from `policy/evaluate.WANTED` (one implementation, #269) and adds the two the
+card alone uses (elevator, air conditioning `True`, #309). "Furnished: yes" is not in #309's list: plain unless Ron says
+otherwise (point 8).
+
+### (e) Two things: the filter bar on the home page, and the preferences page (#305, #314, #315)
+
+**(i) The filter bar** (my proposal; Ron gave no reference). At the top of the list, sticky as the list scrolls.
+
+- **The two search options (#245):** two toggle chips, "room in a shared flat" and "empty apartment", each on or off;
+  the one last clicked is underlined and is the option the bar's controls edit. A small "both options differ" mark when
+  they hold different values. With one option on, the chips read as a simple switch.
+- **The controls, for the option being edited:** "areas" (a popover with the seven region groups of §6, each with
+  "select all in group" and a count, and the non-residential group collapsed at the bottom, #248, #249, #261); "price"
+  (min and max, #95); "rooms" (min and max, halves, #271); "more" (a panel: floor, sqm in the empty-apartment option only
+  (#247), no broker, parking, balcony, entry date (from, until, "immediate" as a quick chip, #270), "hide women only",
+  "show sublets too" (#246)). In "more", each category has its level, "preference" or "must" (§8); a "must" shows a
+  small "!" on its chip in the bar. A control holding a value is a filled chip with the value ("₪ –6,000"); a click on
+  its "×" clears it (`None`, "don't care").
+- **The count:** "79 posts" beside the controls (from the references' summary), the number of shown cards.
+- **"Save as my preferences"** (signed-in): appears when the bar differs from the saved profile, with "back to my saved
+  preferences" beside it. For a guest the same place says "sign up to save" (#306).
+- **On a phone:** one sticky row: the two option chips and a "filter (3)" button with the number of controls holding a
+  value; the button opens a full-screen sheet with the same controls, "show N posts" at its foot.
+- **How the bar's state is evaluated.** The bar holds the shape of the profile's two options (`SearchOption` ×2). The
+  browser sends it with each list request; the server builds a **transient `Profile`** from it — `user_id` the signed-in
+  user's (a fixed placeholder of 32 zeros for a guest), `updated_at` the request's time — validated by `Profile`'s own
+  rules, and passes it to `policy.evaluate`. It is **never stored**: only "save as my preferences" calls
+  `save_profile`. The glow and the order follow it (#315). `evaluate` does not change.
+- **Its lifetime:** in the tab's memory and `sessionStorage`, so a reload keeps it and a new visit starts again from
+  the saved profile (signed in) or empty (a guest) (#315; point 14).
+
+**(ii) The preferences page.** One page, reached from the user menu, not from the bar. Two tabs, "room in a shared flat"
+and "empty apartment", each with its on/off switch and "copy from the other option" (#272: every value but on/off;
+never the sqm range into the room option). Sections as cards, in the references' direction: areas (the grouped list in
+full, not a popover); price; rooms; floor; sqm (empty apartment only); entry date (from and until, quick chips);
+features (no broker, parking, balcony as tiles, #269); "women only" and "sublets". Each range is two number boxes with a
+slider under them and a "don't care" button; **each category has its level** as a two-way switch "preference / must",
+with one line saying what a "must" hides. A summary at the top ("room: areas 3 · up to ₪4,500 · balcony preferred") and
+the live count "with these preferences: N posts". A sticky "save" bar; leaving with unsaved changes asks first. From
+Phase 4 the page also says these preferences drive the alerts.
+
+**Which settings where.** Every value of the two options is in both, since the bar must hold a whole `Profile` for
+`evaluate`. **Only on the preferences page:** "copy from the other option", the summary, the explanation of the levels,
+and (Phase 4) the Telegram link. **Shown in the bar directly:** the options on/off, areas, price, rooms; the rest in
+"more".
+
+**A guest's filter at sign-up.** The sign-up form has "use my current filter as my preferences", checked when the bar
+holds any value (point 13). Sign-up creates the profile with #268's defaults (as built in 3.5); when the box is checked,
+the site then saves the bar's options as the new user's profile (the user's own save, `save_profile`).
+
+### (f) The screens
+
+| Screen | Who | Contents |
+|---|---|---|
+| The list (home) | Everyone | A header (the site's name, "sign in" or the user menu: preferences, change password, sign out); the filter bar; the count; the grid (desktop) or the stacked list (phone); an empty state ("no post fits; clear a filter"); unviewed before viewed (#62) |
+| The opened post | Everyone; writes signed-in only | The dialog over the list on a desktop (#304), full screen with a back arrow on a phone (#313); its own address (`/post/<id>`), so the browser's back closes it; (c)'s items |
+| Sign-in | A guest | Username, password; the refusals of 3.5 (wrong, the delay with the seconds to wait, disabled) |
+| Sign-up with a key | A guest | The key, a username (the rules of #262 shown), the password twice, "use my current filter"; signed in on success |
+| The forced password change | A user with `must_change_password` | The only screen reachable (Gate C, `Session`); the same form serves "change password" from the menu |
+| The preferences page | A user | (e)(ii) |
+
+The admin's pages are 3.8's.
+
+### (g) The API
+
+One origin: FastAPI serves `/api/*` and the built pages. Every response is JSON, except the photos and the pages.
+**Guest** = no valid session; **user** = a valid session; **admin** = the admin's session. Every `/api` write takes JSON
+only and checks the `Origin` header (point 19).
+
+| Endpoint | Who | Returns |
+|---|---|---|
+| `GET /api/session` | Everyone | `{user: null}` or `{username, is_admin, must_change_password}` |
+| `POST /api/sign-in` `{username, password}` | Guest | Sets the cookie; or a refusal: `wrong`, `delayed` (with the seconds), `disabled` (3.5) |
+| `POST /api/sign-out` | User | Ends the session (`accounts.sign_out`), clears the cookie |
+| `POST /api/sign-up` `{key, username, password, filter?}` | Guest | Creates the user (`accounts.sign_up`), signs in, saves `filter` as the profile when given; or a refusal (the key not usable, the username taken or invalid, the password too short) |
+| `POST /api/password` `{current, new}` | User (also with `must_change_password`) | `accounts.change_password`: the other sessions end (R3) |
+| `GET /api/reference` | Everyone | The 71 areas with their display names, the region groups (§6), the reportable fields (#277) |
+| `GET /api/profile` | User | The saved profile's two options |
+| `PUT /api/profile` `{room, whole_apartment}` | User | `save_profile` (whole record, #289 point 4); the saved profile |
+| `POST /api/cards` `{room, whole_apartment}` | Everyone | The ordered cards for that filter (`policy.order.ordered`): for each, the shown post's summary (the closed card's items of (c)), its tier, option, kind mark, field colours, area orange, women-only icon, corrected fields, the first photo's address, the last publication and the number of publications, and `viewed` for a user; and the count |
+| `GET /api/posts/{listing_id}` | Everyone | The opened post of the card holding that post (any of `Card.post_ids` finds its card): every item of (c), every photo's address, the publications, phones, WhatsApp links; 404 for anything else |
+| `GET /api/photos/{listing_id}/{file}` | Everyone | The photo file from `<store_root>/images/`, only when it is a `PostImage.local_path` of a post of a current card; 404 otherwise (no path is built from the request) |
+| `POST /api/viewed/{listing_id}` | User | `mark_viewed(user, Card.shown_id, now)` (#276) |
+| `DELETE /api/viewed/{listing_id}` | User | `unmark_viewed(user, Card.post_ids)` |
+| `POST /api/flag/{listing_id}` `{note?}` | User | The "lied" flag on every one of `Card.canonical_ids` (#300), (i) below |
+| `POST /api/report/{listing_id}` `{fields, note?}` | User | The report on `Card.shown_id` (#300), (i) below |
+| Every other path | Everyone | The built page (`index.html`), so `/post/<id>` and `/preferences` load the site |
+
+**No rejected, pending or archived post is ever returned to a non-admin:** the cards come only from
+`dedup/stage_b.derive_cards` (its members are active canonicals with a `Listing`) and only those `evaluate` shows;
+`/api/posts` and `/api/photos` answer only for a post of a current card. A test pins each state (j). The admin's
+endpoints are 3.8's.
+
+**The session cookie** (read 2026-10-11: starlette.dev "Responses", `Response.set_cookie(key, value, max_age=None,
+expires=None, path="/", domain=None, secure=False, httponly=False, samesite="lax", partitioned=False)`, where FastAPI's
+"Response Cookies" page sends; MDN "Set-Cookie", modified 2026-09-01). **Proposed:** name `tlv_session`; the value the
+session token of 3.5; `httponly=True` (no script reads it); `secure=True` (MDN: sent only over `https:`, "except on
+localhost", so the laptop's `http://localhost` works and Tailscale Serve's HTTPS does); `samesite="strict"` (MDN: sent
+only for requests from the same site); `path="/"`; `max_age=2592000` (30 days, as the session's `expires_at`, R5; MDN:
+`Max-Age` has precedence over `Expires`); no `domain` (the host only); `partitioned` not passed (Python 3.14+ only). Every
+request checks the token with `accounts.session_user` (valid, not ended, not expired, the user not disabled); a cookie
+that fails it is cleared. Starlette's defaults (`secure=False`, `samesite="lax"`) are never relied on: each attribute is
+passed, and a test reads the `Set-Cookie` header.
+
+### (h) The grouping held in memory (#301), how the site knows the store changed, and the measured page load
+
+**Held:** one `Grouping` object in the site's process: the cards (`derive_cards`), each card's shown `KeyPost` (its seen
+`Listing`, for `evaluate`), and the store generation it was computed at; the photo memo (`PhotoHashes`) lives beside it
+across recomputes, so only changed files are hashed again. Per request, only the per-user part runs: `evaluate` of each
+card's shown post against the bar's transient profile, the user's `viewed_listing_ids`, `ordered`, the field colours.
+One recompute at a time (a lock); requests during it wait for it, so a user who just flagged never sees the old card.
+
+**How the site knows the store changed** (the job commands are separate processes, so nothing in the site's memory
+hears them). Two ways, point 11:
+
+| | How | For | Against |
+|---|---|---|---|
+| **1 (recommended)** | **A store generation counter kept by SQLite itself:** a one-row table and `AFTER INSERT`, `AFTER UPDATE` and `AFTER DELETE` triggers on `raw_posts`, `post_lifecycle`, `listings` (store) and `corrections` (userdata) that add 1. Each request reads the one row (one small query); a different number means recompute. Triggers are part of the database schema (sqlite.org "CREATE TRIGGER": only `TEMP` triggers are limited to the connection that made them), so every writer, in every process, present or future, moves it, and no job command changes | Exact: recomputes on a post change only, never on a viewed mark, a sign-in or a profile save. **Checked in memory (scratchpad, SQLite 3.45.3, 2026-10-11): the store's `INSERT … ON CONFLICT DO UPDATE` fires the `INSERT` trigger for a new row and the `UPDATE` trigger on a conflict, also when the value is unchanged**; sqlite.org's UPSERT page does not say | **A layout change** of `store` and `userdata` (a table and triggers: layout versions 2), so a one-time migration of the production file, with a dated backup, by a new command (a seventh store writer) |
+| 2 | `PRAGMA data_version` on one connection the site keeps open (sqlite.org: two calls on the same connection differ "if changes were committed to the database by any other connection in the interim", other processes included) | No layout change | It moves on **every** commit by another connection, the site's own viewed marks, sign-ins and profile saves included, so the grouping is recomputed far more often than the store's posts change; at 40 days a recompute costs seconds (3.6's estimate) |
+
+**Measuring a real page load** (#301). At build step 7 (k), on a dated copy of the production store (the site writes
+`userdata`, and even opening `SqliteUserDataStore` starts a write transaction, so the real file is not served before
+3.9):
+1. **On the server:** `POST /api/cards` returns a `Server-Timing` header (MDN, modified 2026-07-28: `name;dur=…`,
+   shown in the browser's network timings) with `gen` (the generation read), `group` (a recompute, when one ran), `eval`,
+   `order` and `json`; logged too.
+2. **In the browser:** chrome-devtools' performance trace and Lighthouse, on a desktop window and a phone viewport: the
+   time to the first cards and the total, cold (the first request after the site starts: the whole grouping and the
+   photo hashes), warm, and after a store change (a `classify_pending --limit 1` is not needed: a test write on the copy).
+3. Reported in `SESSION_LOG.md` with the store's size. **Proposed targets** (point 20): a warm `POST /api/cards` under
+   300 ms on the server; the first cards drawn under 1.5 s on Ron's laptop. A bulk read (3.6 point 13) is proposed only if
+   the measurement misses them.
+
+### (i) The writes a user makes (#260, #300), and what the user sees on a conflict
+
+| Write | How | On a conflict or a failure |
+|---|---|---|
+| Viewed (#253, #276) | `mark_viewed(user_id, Card.shown_id, now)` when the opened post loads; insert only if absent (`userdata`, no lifecycle) | None possible beyond a database error: the card simply stays unviewed |
+| Not viewed | `unmark_viewed(user_id, Card.post_ids)` | The same |
+| **"Lied" flag on every member** (#300) | For each of `Card.canonical_ids`: read the lifecycle; when `"active"`, write `state` `"rejected"`, `rejection_reason` `"flagged"`, `flagged_by` the user, `flagged_at` now, the note, by **`save_lifecycle(record, expected=the record read)`**; a member that is no longer active is skipped. The record is built by a new pure function in `postmodel/rejects.py`, `flagged_lifecycle(existing, user_id, now, note)` (one place for Gate E's flag rule) | `StaleRecordError`: re-read once and try again if the post is still active; else that member is reported. The user sees "flagged" when every member was written, "flagged 1 of 2: the post changed meanwhile, try again" otherwise, and the list reloads (the card is gone) |
+| **Report on the shown post** (#300, #278) | `add_report` first (a second open report by the same user is refused: "you already reported this post"), then the lifecycle by compare and set through `reported_lifecycle(existing, user_id, now)` in `postmodel/rejects.py`: `"rejected"`, `"misclassified"` unless already `"flagged"`; `flagged_by`/`flagged_at` set only by the first reporter (#280) | Two seams, two transactions (#289 point 3): when the lifecycle write fails after one retry, the report stays stored and the user sees "report saved; the post will be removed by the admin", and the admin's list shows it (3.8) |
+| Save the preferences | `save_profile` (whole record, #289 point 4) | A database error: "not saved, try again"; the bar keeps its values |
+
+**A stale page:** a write names a post that is no longer in a current card (someone flagged it, a run rejected it): 409,
+"this post was removed meanwhile", and the list reloads. Every write leaves `RawPost` and `Listing` untouched
+(invariant 14) and writes no per-user value on a post (invariant 12): only the lifecycle's flag fields, as Gate E
+allows.
+
+### (j) Invariant 15 on the page
+
+- **No request to any other host.** Fonts bundled by `@fontsource` into the build and served by the site; no CDN; no
+  analytics; no external image: photos come from `/api/photos` (the local store); the Facebook link, the video links
+  and WhatsApp are links the user clicks, never fetched by the page.
+- **Headers on every response:** `Content-Security-Policy: default-src 'self'; img-src 'self' data:; font-src 'self';
+  connect-src 'self'; frame-ancestors 'none'` (so a request to another host fails in the browser even if one slipped in),
+  and `Referrer-Policy: no-referrer` (the tailnet address is not sent to Facebook or WhatsApp when a link is followed;
+  links also carry `rel="noopener noreferrer"`).
+- **FastAPI's telemetry stays off.** FastAPI 0.143.0 depends on `opentelemetry-api` and, since that release (2026-10-08,
+  its release notes), sets up an exporter only on opt-in (`FASTAPI_OTEL_AUTO_CONFIGURE` or `telemetry=`); the plain
+  package installs no SDK. The site never opts in; a test checks it and the socket guard covers the rest.
+- **Checked:** a pytest that every response carries the two headers; a check that the built files name no other host
+  except the link targets (`facebook.com`, `wa.me`); and in chrome-devtools at each build step, the network panel shows no
+  request leaving the site.
+
+### (k) Dependencies (read 2026-10-11 under the `external-contract-verification` skill; nothing installed)
+
+| Package | Version, licence | What was read | Use |
+|---|---|---|---|
+| `fastapi` | 0.143.0 (2026-10-08), MIT, Python ≥ 3.10 | pypi.org JSON: requires `starlette>=0.46.0`, `pydantic>=2.9.0`, `typing-extensions`, `typing-inspection`, `annotated-doc`, `opentelemetry-api>=1.44.0`; extras not used. Docs: "Response Cookies" (set on a `Response` parameter or a returned response; parameters in Starlette's docs); "Static Files" (`app.mount(path, StaticFiles(directory=…), name=…)`); "Testing" (`TestClient`, "first install httpx") | The API and the static pages; no extras |
+| `starlette` | 1.7.0, BSD-3-Clause (pulled by FastAPI) | pypi.org JSON; starlette.dev "Responses" (`set_cookie`, `delete_cookie`, `FileResponse`), "Test Client" (default `base_url` `"http://testserver"`) | Cookies, `FileResponse`, `StaticFiles`, `TestClient` |
+| `uvicorn` | 0.54.0, BSD-3-Clause, Python ≥ 3.10 | pypi.org JSON: `click`, `h11`; the `standard` extra (uvloop, watchfiles, websockets, httptools) not used | The server, bound to `127.0.0.1` |
+| `httpx` (dev) | 0.28.1 (2024-12-06), BSD-3-Clause | pypi.org JSON | For `TestClient`, as FastAPI's page says; **but** starlette.dev's "Test Client" now speaks of `httpx2` and starlette 1.7.0's `full` extra lists both `httpx2>=2.0.0` and `httpx<0.29`: which one 1.7.0's `TestClient` imports is **unknown** until installed (point 17) |
+| `react`, `react-dom` | 19.3.0, MIT (`react-dom` needs `scheduler ^0.28.0`) | registry.npmjs.org | The pages; the same as event-seeker |
+| `vite` | 8.3.4, MIT; Node `^20.19.0 \|\| >=22.12.0` (Ron's 24.11.1 fits) | registry.npmjs.org | Build and dev server |
+| `@vitejs/plugin-react` | 6.1.2, MIT; peer `vite ^8.0.0` | registry.npmjs.org | JSX |
+| `typescript` | 7.0.2, Apache-2.0 (native compiler, per-platform packages) | registry.npmjs.org | Type checking (`tsc --noEmit`, as event-seeker) |
+| `@fontsource/ibm-plex-sans-hebrew` | 5.3.0, OFL-1.1 | registry.npmjs.org (woff/woff2 files; the subsets were not listed) | The font event-seeker uses (point 16) |
+| `vitest` (dev) | 5.0.3, MIT; Node `^22.12.0 \|\| ^24.0.0 \|\| >=26.0.0`; peer `vite` | registry.npmjs.org | Tests of the pure TypeScript (formatting), no DOM: `jsdom` and Testing Library not added |
+| `@types/react`, `@types/react-dom` (dev) | not read | — | Read at the install, with event-seeker's ranges (`^19.3.0`) |
+
+**Event-seeker's own `frontend/package.json`** (read on the laptop, 2026-10-11) holds this exact set (React 19.3, Vite
+8.3.4, plugin-react 6.1.2, TypeScript 7.0.2, Vitest 5.0.3, an IBM Plex Sans Hebrew font, no router), so the method of
+#257 carries over. No router library: a small history-based route for `/`, `/post/<id>`, `/preferences`, `/sign-in`,
+`/sign-up`, `/password`.
+
+**Could not verify:** which client 1.7.0's `TestClient` uses (above); that it makes no socket connection (the docs imply
+it calls the app in process; the suite's socket guard will say); the font's Hebrew subset files; WhatsApp's link format
+(`https://wa.me/<number>`, international, no `+`): its help page did not render to the fetcher, to read in a browser at
+step 6; the transitive npm packages' licences; whether TypeScript 7's native packages install on Linux in 3.9's image.
+
+### (l) The module layout, the tests, and the build in steps
+
+**Python (wiring, like `pipeline.py`; the logic stays in `policy/`, `postmodel/`, `dedup/`, `accounts/`):**
+- `tlv_hunter/web/` (not `site`, which is a Python standard module): `app.py` (`create_app(store_path, store_root)`: the
+  routes, the static pages, the headers), `auth.py` (the cookie and `accounts.session_user`), `grouping.py` (the held
+  grouping and the generation check, (h)), `cards.py` (the card and opened-post payloads, pure), `filters.py` (the bar's
+  JSON to a transient `Profile`), `routes.py`.
+- `policy/colours.py` (`field_colours`, (d)); `postmodel/rejects.py` gains `flagged_lifecycle` and `reported_lifecycle`
+  (i); **the area groups** in `reference/area_groups.yaml`, read only through `areas/reference.py` (the one reader of
+  `reference/`), so the grouping of §6 is data beside the 71 (point 23).
+- `jobs/serve.py`: runs uvicorn on `127.0.0.1` with the store's path; free; the site becomes a store writer beside the
+  jobs (#260). If point 11 is option 1: `jobs/add_store_generation.py`, the one-time migration (dated backup, `RawPost`
+  check, as `create_admin`).
+- `CLAUDE.md`: a row or paragraph for `web/` and the new commands.
+
+**Front end:** `frontend/` at the repository's root (event-seeker's layout): `src/main.tsx`, `src/api.ts`,
+`src/types.ts`, `src/route.ts`, `src/screens/` (List, Post, SignIn, SignUp, Password, Preferences),
+`src/components/` (Card, FilterBar, AreaPicker, RangeField, Chip, Glow, Carousel), `src/format.ts` (relative time,
+"X/Y", "1 of N", sizes), `src/styles/`. `frontend/dist/` and `node_modules/` gitignored; FastAPI serves `dist/`.
+
+**Tests (the suite stays offline: the socket guard; `TestClient` in process; temporary stores only):**
+1. The cookie: the exact `Set-Cookie` attributes; a bad, ended or expired token is a guest and the cookie is cleared.
+2. Guests: list, open, photos, reference work; every write is 401; no viewed field in a guest's cards.
+3. **No rejected, pending, archived or duplicate post reaches a non-admin:** a temporary store with one post in each
+   state: absent from `/api/cards`, 404 from `/api/posts` and `/api/photos`; a duplicate's id opens its canonical's card.
+4. The photo route: only a stored `local_path` of a current card; `..` and other posts' files refused.
+5. The grouping: computed once for many requests (a counter on `derive_cards`); recomputed after a write through each
+   store method (if option 1: the counter moves for `raw_posts`, `post_lifecycle`, `listings`, `corrections`, and not for
+   viewed, sessions, profiles, users).
+6. The bar: a transient profile never saved (a `UserDataStore` double: `save_profile` is called only by `PUT
+   /api/profile` and sign-up); an invalid bar (`min` > `max`, sqm in the room option) is 422.
+7. The writes: a flag on a two-post card writes both members with `expected`; a conflict on one gives the partial
+   answer; a report writes the shown post only, refuses a second open one; `RawPost` and `Listing` rows byte-identical
+   after every write (invariant 14); nothing per user in the post tables (invariant 12).
+8. The headers (CSP, `Referrer-Policy`) on every response; FastAPI's telemetry not configured.
+9. `policy/colours.py`: each row of (d)'s table; `flagged_lifecycle`, `reported_lifecycle`: Gate E's rules (#279, #280).
+10. Front end (Vitest, no DOM): the formatters (#120, #121, #122, #115, #95) and the colour-to-glyph mapping.
+
+**The build, in steps, each ending in something Ron can look at or run:**
+1. *(If point 11 is option 1)* The generation table and triggers, the migration command, its tests. **Ron runs the
+   migration** on the production store (a dated backup is made).
+2. The read-only API: `web/`, the held grouping, `/api/cards`, `/api/posts`, `/api/photos`, `/api/reference`,
+   `jobs/serve.py`, on a dated copy of the store. **Ron runs** `serve` and opens the JSON; the first `Server-Timing`
+   numbers.
+3. The list and the opened post for a guest, **desktop grid and phone list together** (#303), the dialog (#304) and the
+   full-screen post (#313), the glow and the colours, built with `frontend-design` and checked in chrome-devtools at
+   1440 px and 390 × 844 in the same step (screenshots, console, network). **Ron looks at it** with real posts.
+4. The filter bar, desktop and phone sheet, its temporary state. **Ron filters** for real.
+5. Sign-in, sign-up with a key, the forced password change, the cookie; the preferences page; "save as my preferences".
+   **Ron signs in**, saves his preferences.
+6. Viewed, not viewed, the flag, the report, the conflict messages; WhatsApp's link format read. **Ron flags and
+   reports** on the copy.
+7. The measured page load (h), Lighthouse, the `design` plugin's critique and accessibility review, a colour-vision
+   check. **Ron reviews** the numbers and the look.
+
+### (m) What I could not verify
+
+- The times of (h) on a 40-day store; today's store holds 266 posts.
+- `TestClient`'s client package in Starlette 1.7.0, and that it opens no socket (above).
+- WhatsApp's link format (above); the font's subsets.
+- How the site and a job command meet on the busy timeout (#259) when a recompute reads during a run: measured on the
+  working day (3.10).
+- That a dialog with a long Hebrew text and a carousel stays usable at 390 px: the mock shows a first sketch only.
+
+### (n) Points for Ron (3.7)
+
+1. **An unclear price with no price range:** as built, #302 covers a price **not written** only; an unclear price
+   (another currency, a per-roommate price on a whole apartment) counts only against a set range. Or: an unclear price
+   also always at the bottom.
+2. **No green glow while the option holds no preference** (d, caution 2). Or: green whenever the tier is
+   `"preferences_met"`.
+3. **"The area unclear" in red:** by 3.6 an unclear area sends a post to the bottom only when the user chose areas.
+   Kept so (recommended), or, like the price, always at the bottom.
+4. **The glow's form:** A, the ring with a labelled chip (recommended), B or C (d).
+5. **The palette and the glyphs for colour blindness** (d).
+6. **The important-missing style** (`BASELINE.md` §6 left it to this task): a dark slate badge with a "!" and the words
+   ("no price", "no entry date"), stronger than grey and not a tier colour.
+7. **Parking not written:** "no parking" in grey (§6's text with #309's colour), or "parking: not stated".
+8. **Furnished "yes":** plain (not in #309's list, recommended), or green.
+9. **The table of (c)**: which items sit on the closed card (Ron's request f).
+10. **The link to the original post:** a main button inside, a small icon on the closed card (recommended). Following
+    the icon from the closed card: does not mark the card viewed (#253 marks on opening; recommended), or does.
+11. **How the site knows the store changed:** option 1, the generation counter by triggers, a layout change and a
+    one-time migration command with a backup (recommended); or option 2, `PRAGMA data_version`, no layout change, many
+    more recomputes.
+12. **The list in one response** for a filter (no paging) until the measurement says otherwise; the filter sent in a
+    `POST` body.
+13. **A guest's filter at sign-up:** "use my current filter as my preferences", checked when the bar holds a value.
+14. **The bar's lifetime:** the tab's `sessionStorage` (a reload keeps it; a new visit starts from the saved
+    preferences, or empty for a guest).
+15. **Levels in the bar:** inside "more" (recommended), or on the preferences page only.
+16. **The font:** IBM Plex Sans Hebrew, as event-seeker (recommended), or another.
+17. **The dependencies of (k)**, FastAPI 0.143.0 (three days old) and uvicorn without extras; `httpx` or `httpx2` for the
+    tests, whichever Starlette 1.7.0's `TestClient` imports; Vitest for pure logic only.
+18. **The module names of (l):** `tlv_hunter/web/`, `frontend/`, `policy/colours.py`, `flagged_lifecycle` and
+    `reported_lifecycle` in `postmodel/rejects.py`, `jobs/serve.py`.
+19. **Against cross-site requests:** `SameSite=Strict`, JSON-only writes and an `Origin` check, with no extra token.
+20. **The targets of (h):** 300 ms on the server warm; the first cards under 1.5 s.
+21. **A flag on a card of several posts that is written on some members only** (one changed meanwhile): reported to the
+    user as partial, with a retry (recommended); or all-or-nothing, which compare and set on two records in one
+    transaction does not give (`save_lifecycle` writes one record).
+22. **What counts as a mobile number for WhatsApp** (#311): a normalized number starting with `05` and 10 digits long,
+    decided in one place (`textnorm`, beside the one phone normalization).
+23. **The area groups as data**, `reference/area_groups.yaml` read through `areas/reference.py` (recommended), or a
+    table in the site's code (§6's open "where it lives").
+24. **The count in the bar** ("79 posts") and on the preferences page.
+25. **What the references show and the rules do not have**, not added: a street filter, a map, favourites, pets, a safe
+    room or shelter, "renovated", a third kind "apartment for roommates", an email, a source badge, a "last week only"
+    line. Any Ron wants is its own decision.
+26. **The group's name** (`RawPost.group_title`) in the opened post: not in §6, so not shown (recommended), or shown.
 
 ## 3.8 The admin lists — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256), plan to be written
 
@@ -834,11 +1252,12 @@ site's code) is decided in 3.7's plan.
 
 ## 7. For Ron's decision
 
-1. **The plan for 3.7**, when written (it must meet #301).
+1. **The plan for 3.7** (written 2026-10-11, round 7) and its 26 points (3.7 (n)); the mock in `data/mock/`.
 2. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
    `dcb4c0cb4b24`, the deferred carrier of #241 and the reclassify of the other 189 (`BACKLOG.md`).
 
 Decided and so closed here: the task order and the DoD; the technical choices (#258–#260); the area grouping (#261);
 round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and the Gate E amendments (#288); the plans for
 3.4 and 3.5 (#289, #290) and 3.4's three points left by the build (#291–#293); the admin's password reset on the machine
-(#294); the plan for 3.6 and its 16 points (#295–#300); how the grouping is held (#301).
+(#294); the plan for 3.6 and its 16 points (#295–#300); how the grouping is held (#301); the missing price at the bottom
+(#302); Ron's direction for the site (#303–#315).

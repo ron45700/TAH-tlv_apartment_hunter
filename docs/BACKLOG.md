@@ -7,7 +7,7 @@ is approved*. `SESSION_LOG.md` records *what happened*. None of them tracks whet
 actually reached the code, which is how decisions #37 and #38 were approved on 2026-09-14 and were
 still unimplemented on 2026-10-02.
 
-**Last updated:** 2026-10-11 (round 6)
+**Last updated:** 2026-10-11 (round 7)
 
 ## Rules
 
@@ -32,7 +32,9 @@ grouping (#261), `PHASE_3.md`'s task order and DoD, **Gate C's names and types (
 (#289, #290). **Task 3.4 (store) is built** (round 3). On 2026-10-11 Ron settled 3.4's three open points (#291–#293)
 and **task 3.5 (accounts) was built** (round 4). **Ron created the admin on the production store on 2026-10-11** (backup
 made; stored `RawPost`s identical). Round 5: `jobs/reset_admin_password.py` built (#294); 3.6's plan written. **Round 6: 3.6's plan and points
-approved (#295–#300) and 3.6 built; #301 recorded for 3.7** (item 6).
+approved (#295–#300) and 3.6 built; #301 recorded for 3.7** (item 6). **Round 7: #302 built (a post with no written
+price always at the bottom); Ron's direction for the site recorded (#303–#315); 3.7's plan written with 26 points, and a
+static mock in `data/mock/`** (item 6).
 
 | # | Item | Source | Needs |
 |---|---|---|---|
@@ -41,7 +43,7 @@ approved (#295–#300) and 3.6 built; #301 recorded for 3.7** (item 6).
 | 3 | **Deferred (Ron, 2026-10-09): position 3 keeps failing `furnished` in the regression run.** `DECISIONS.md` #241 (Ron's ruling: `partial`, not `unclear`, on post `0555aa32…`) has no carrier in the set: it needs a Ron-approved changed value of a field measured from the review, a new kind of entry in `label_overrides.json` (a change to its shape) and a few lines in `labeling/regression.py`. Not built now. Ron's reason: not essential, he wants to move on to Phase 3. With that one truth the recomputed verdict of run `47e96cac0e8d` would be `pass` in both passes (`SESSION_LOG.md`, 2026-10-09) | `DECISIONS.md` #238–#241 | Ron, if he ever wants it |
 | 4 | **Deferred (Ron, 2026-10-09): the reclassify of the remaining 189 stored `Listing`s (prompt 3) is not scheduled.** New posts are classified at version 4; the old ones leave by retention. Ron decides later whether to run it (`--limit 194 --cap 0.10`, about $0.042, `PHASE_2.md` 2.9). Until then the store holds two versions side by side (#217) | `DECISIONS.md` #144, #217–#222 | Ron, later |
 | 5 | **The first real `reclassify --run` was made on 2026-10-09** (run `dcb4c0cb4b24`, five named posts, $0.001693, 5 calls, nothing written to the store): `data/store/reclassify/dcb4c0cb4b24/` (`diff.html`, `proposals.jsonl`, `summary.json`, `allow_unchanged.txt`, `allow_state_changes.txt`). `#236` followed at `d269d280` (`stated_area_names` `[]`), not at `4c5bbcaf` (#235: `["בלב העיר"]`); `e6a8b9bb` gets area 42 and a stated name from places it names as nearby (`SESSION_LOG.md`, 2026-10-09). **No `apply_reclassify` yet: it waits for Ron to read `diff.html`** (dry run first: `uv run python -m tlv_hunter.jobs.apply_reclassify dcb4c0cb4b24`) | `PHASE_2.md` 2.9; `DECISIONS.md` #218, #221, #236 | Ron |
-| 6 | **Task 3.7 (the site): its plan to be written**, then Ron's approval. It must meet #301: the same-listing grouping computed once for all users, held in the site's memory, computed again only when the store changed; only the per-user evaluation and order per request; the plan says how the site knows the store changed and measures a real page load. A "lied" flag on a card is written on every member, a report on the shown post only (#300) | `PHASE_3.md` 3.7; `DECISIONS.md` #300, #301 | Ron |
+| 6 | **Task 3.7 (the site): the plan is written (2026-10-11, round 7), waiting for Ron's approval and its 26 points** (`PHASE_3.md` 3.7 (n)). It follows Ron's direction (#303–#315) and meets #301 (the grouping held in memory; the store change detected by a generation counter kept by SQLite triggers, option 1, or `PRAGMA data_version`, option 2: point 11; a real page load measured at build step 7). **The mock to open:** `data/mock/site_mock.html` (gitignored: real posts' text and phones; photos from `data/store/images/`) | `PHASE_3.md` 3.7; `DECISIONS.md` #300–#315 | Ron |
 | 7 | **If Ron ever forgets the admin password:** `uv run python -m tlv_hunter.jobs.reset_admin_password`, in a terminal (it asks the new password twice, hidden), not beside `run_once` or `classify_pending` (#140). Built and tested on a temporary store; never run on the production store | `DECISIONS.md` #294; `PHASE_3.md` 3.5 | Ron, only when needed |
 
 ### For phase 3 (`DECISIONS.md` #214, #225)
@@ -97,7 +99,8 @@ Planned in `PHASE_3.md` (draft, 2026-10-10), §3.
 | #262–#266, #291 accounts: opaque `user_id`, the username's rules, Argon2id with 8 characters minimum, the admin's temporary password; sessions of 30 days, ended by a reset; the delay after 5 failures; disable (then end the sessions, #291), never delete; keys shown once, never un-cancelled | Built 2026-10-11 (3.5: `accounts/`, tests in `tests/test_accounts.py`) | The cookie (proposed `HttpOnly`, `Secure`, `SameSite=Strict`, 30 days; verified in 3.7) and the pages (3.7, 3.8) |
 | #268–#274 the profile: defaults, fixed wanted values, the entry-date range and "immediate", half rooms and the basement, "copy from the other option", a post of unclear kind, sublets | Records and storage built (3.4); the evaluation built (3.6); "copy from the other option" and the page not | The profile editor (3.7) |
 | #276–#280, #284–#287 viewed (first time kept); the report's fields and 500-character note, one open report per reporter, `"misclassified"` last, `flagged_by` the first reporter; corrections stored and removed; `PostLifecycle` v3; left out not final; the Gate D key on corrected values | Records and storage built (3.4); the Gate D key on corrected values built (3.6); the reports' and corrections' writes and pages not | `PHASE_3.md` 3.7, 3.8 |
-| #300 a "lied" flag on a card written on every member, a report on the shown post only; #301 the same-listing grouping computed once for all users, held in the site's memory, computed again only when the store changed | 3.6's `Card` gives `canonical_ids` and `shown_id`; nothing writes a flag or a report; nothing holds the grouping in memory | 3.7's plan (how the site knows the store changed; a measured page load) and 3.7, 3.8's writes |
+| #300 a "lied" flag on a card written on every member, a report on the shown post only; #301 the same-listing grouping computed once for all users, held in the site's memory, computed again only when the store changed | 3.6's `Card` gives `canonical_ids` and `shown_id`; nothing writes a flag or a report; nothing holds the grouping in memory | Planned in 3.7 (h), (i) (round 7); built with 3.7 once approved; 3.8's writes |
+| #303–#315 the site's direction: a desktop grid and a phone list built and checked together; the dialog; the top filter bar; guests view without signing in, Tailscale the only gate for viewing; the glow by tier and the field colours (#309, refining `BASELINE.md` §6); WhatsApp as a plain link; no generated title; full screen on a phone; the saved preferences and the bar are two things, the bar temporary with "save as my preferences" | Nothing exists; `policy/evaluate.py` unchanged for #309 (a new `policy/colours.py` is proposed) | 3.7, once its plan and points are approved |
 
 ---
 
@@ -129,6 +132,7 @@ Approved by Ron, 2026-10-04. No code until the phase or gate named.
 | Rooms on a room post: "1 of N" when the total is written, a room with no "of" when it is not; the "1" comes from the apartment kind (`DECISIONS.md` #120). Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | Size on a room post: "X sqm for the room, of Y" when both are written; "X sqm for the room" when only the room's is (`DECISIONS.md` #121). Not stated: a room post that gives only the apartment's size. Approved by Ron, 2026-10-05 | Phase 3 UI design |
 | The entry date's year is never displayed (`DECISIONS.md` #115). Approved by Ron, 2026-10-05 | Phase 3 UI design |
+| **The condition of #307:** guests view posts without signing in only because Tailscale is the gate. **If the site is ever served outside the tailnet, signing in becomes mandatory for viewing** (`BASELINE.md` §10). Approved by Ron, 2026-10-11 | Whenever serving outside the tailnet is planned (not planned) |
 | **Open, not decided:** whether a post whose kind is unclear or not written (shown at the bottom, under every enabled option, #273) alerts. `BASELINE.md` §9 item 2 does not say (Ron, 2026-10-10, round 3) | Phase 4 |
 
 ---
@@ -172,6 +176,7 @@ Left open on purpose until their phase is planned (`DECISIONS.md` #23).
 | Item | Note |
 |---|---|
 | Comparing re-encoded photos (perceptual hashing) to find the rewritten reposts the key of #230 misses: in 7 of the 10 `same_listing` pairs no photo file is identical | `DECISIONS.md` #230. Ron decides after he has used the dashboard. No dependency is added for it |
+| Favourites (a heart on a card) | `DECISIONS.md` #310: not built in 3.7; a later feature that needs its own record (Gate C has none), approved separately |
 | memo23 failover | `BASELINE.md` §12, phase 6 |
 | Editing the schedule and the group list from the dashboard | `BASELINE.md` §12, phase 6 |
 | `max_posts` editable by the admin | `BASELINE.md` §11, §12 phase 6. Approved by Ron, 2026-10-04; recorded, not built. One value for all groups (the actor takes one `maxPosts` per run). On save, the system refuses a value where groups × `max_posts` reaches the charge cap's `maxItems`. Open, decided when planned: whether the charge cap itself is editable |

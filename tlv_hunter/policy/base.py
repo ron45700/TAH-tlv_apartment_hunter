@@ -15,7 +15,8 @@ from tlv_hunter.postmodel.seen import SeenListing
 OptionName = Literal["room", "whole_apartment"]
 Tier = Literal["preferences_met", "critical_met", "unknown"]
 """`BASELINE.md` §8: every preference met; the critical conditions met but not every preference
-(an unknown preference counts as not met, #298); an unknown critical category (the bottom)."""
+(an unknown preference counts as not met, #298); an unknown critical category, or no written price
+whatever the profile holds (#302): the bottom."""
 FieldState = Literal["match", "mismatch", "not_written", "unclear", "not_applied"]
 
 TIER_RANK: Mapping[Tier, int] = {"preferences_met": 0, "critical_met": 1, "unknown": 2}

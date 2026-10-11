@@ -42,9 +42,10 @@ WHOLE = written("whole_apartment")
 
 
 def seen(**changes: Any) -> SeenListing:
-    fields: dict[str, Any] = {"apartment_kind": WHOLE, **changes}
-    if "price" in fields:
-        fields["price_source"] = None if fields["price"]["state"] == "not_written" else "text"
+    """A written price unless `price` is given: no written price sends a post to the bottom
+    (#302), which only the tests that name it should meet."""
+    fields: dict[str, Any] = {"apartment_kind": WHOLE, "price": written([5000]), **changes}
+    fields["price_source"] = None if fields["price"]["state"] == "not_written" else "text"
     return seen_listing(make_listing(LISTING_ID, **fields), [])
 
 
@@ -139,7 +140,7 @@ def test_a_failed_critical_category_hides_the_post(option: dict, post: dict) -> 
     [
         ({"areas": [30]}, {"areas": [], "streets": ["דיזנגוף"]}),
         ({"price_max": 5000}, {"price": UNCLEAR}),
-        ({"price_min": 3000}, {}),  # the price not written
+        ({"price_min": 3000}, {"price": NOT_WRITTEN}),
         ({"rooms": span(3.0, None, "critical")}, {"rooms": UNCLEAR}),
         ({"parking": "critical"}, {}),  # parking not written: unknown, not "no parking" (#299)
         ({"entry_date": dates(date(2026, 11, 1), None, "critical")}, {}),
@@ -150,6 +151,38 @@ def test_an_unknown_critical_category_sends_the_post_to_the_bottom(
 ) -> None:
     evaluation = evaluate(seen(**post), profile(whole=option), NOW)
     assert (evaluation.shown, evaluation.tier) == (True, "unknown")
+
+
+@pytest.mark.parametrize(
+    "option",
+    [
+        {},  # nothing set (#268)
+        {"balcony": "preference"},
+        {"areas": [30]},
+        {"rooms": span(2.0, 4.0, "critical")},
+    ],
+)
+def test_a_post_with_no_written_price_is_always_at_the_bottom(option: dict) -> None:
+    """#302: also when the user set no price range; every other category met."""
+    post = {"price": NOT_WRITTEN, "areas": [30], "rooms": written(3.0), "balcony": written(True)}
+    evaluation = evaluate(seen(**post), profile(whole=option), NOW)
+    assert (evaluation.shown, evaluation.tier) == (True, "unknown")
+    assert evaluation.fields["price"] == "not_applied" and "price" in evaluation.missing_important
+    priced = evaluate(seen(**{**post, "price": written([5000])}), profile(whole=option), NOW)
+    assert priced.tier == "preferences_met"
+
+
+def test_no_written_price_does_not_bring_back_a_post_a_critical_category_hides() -> None:
+    """#302 changes the tier only: a failed critical category still hides the post."""
+    post = seen(price=NOT_WRITTEN, areas=[52])
+    assert not evaluate(post, profile(whole={"areas": [30]}), NOW).shown
+
+
+def test_an_unclear_price_with_no_price_range_is_not_sent_to_the_bottom() -> None:
+    """#302 names a price that is not written; an unclear one counts only against a set range."""
+    post = seen(price=UNCLEAR)
+    assert evaluate(post, profile(), NOW).tier == "preferences_met"
+    assert evaluate(post, profile(whole={"price_max": 6000}), NOW).tier == "unknown"
 
 
 def test_women_only_is_shown_with_the_icon_when_the_switch_is_off() -> None:
@@ -232,7 +265,7 @@ def test_a_corrected_field_is_read_instead_of_the_models() -> None:
 
 
 def test_the_important_fields_missing_and_a_state_for_every_category() -> None:
-    evaluation = evaluate(seen(), profile(), NOW)
+    evaluation = evaluate(seen(price=NOT_WRITTEN), profile(), NOW)
     assert evaluation.missing_important == {"price", "entry_date"}
     assert set(evaluation.fields) == set(CATEGORIES)
     assert evaluation.fields["women_only"] == "match"  # hidden by default (#268), and met

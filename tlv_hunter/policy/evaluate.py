@@ -6,7 +6,8 @@ no model (`BASELINE.md` §2 principle 6; invariant 12).
 
 Each category of an option comes out met, failed, or unknown (the post's value not written or
 unclear). A failed critical category hides the post; an unknown critical one sends it to the bottom;
-an unknown preference counts as not met (#298). Parking not written is unknown, as stored (#299).
+an unknown preference counts as not met (#298). Parking not written is unknown, as stored (#299). A
+post with no written price is always at the bottom, whatever the profile holds (#302).
 """
 
 from dataclasses import dataclass
@@ -138,7 +139,10 @@ def _evaluate_option(
     women_only_icon = listing.gender == "women_only" and not option.hide_women_only
     if any(found.outcome == "failed" for found in critical):
         return _OptionResult(name, False, None, fields, area_orange, women_only_icon)
-    if any(found.outcome == "unknown" for found in critical):
+    # A post with no written price is always at the bottom, also with no price range set (#302).
+    if listing.price.state == "not_written" or any(
+        found.outcome == "unknown" for found in critical
+    ):
         tier: Tier = "unknown"
     elif all(found.outcome == "met" for found in preference):
         tier = "preferences_met"

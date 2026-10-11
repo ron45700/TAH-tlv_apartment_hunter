@@ -12,7 +12,7 @@ the question was considered at all.
 **Last updated:** 2026-10-10 (#242–#257, the content of Gate C; #258–#287, Gate C's open points, the technical
 choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290, Gate C approved and the plans for 3.4 and 3.5);
 2026-10-11 (#291–#293, 3.4's three points; #294, the admin's password reset on the machine; #295–#301, the plan for
-3.6 and how the grouping is held)
+3.6 and how the grouping is held; #302, the missing price at the bottom; #303–#315, Ron's direction for the site)
 
 > Written in English like every document in `docs/`.
 >
@@ -2975,6 +2975,99 @@ correction). Only the per-user filtering and order are computed per request. **3
 store changed, and must measure a real page load.** Nothing of it is built in 3.6. The wording "when it is needed" is
 reworded in `BASELINE.md` §4, `SCHEMA.md`'s gate table (row D), `PHASE_3.md` and `CLAUDE.md`.
 *Ron's decision (2026-10-11).* No reason recorded beyond the requirement.
+
+## Phase 3: the missing price, and Ron's direction for the site (2026-10-11)
+
+**Ron decided #302 and gave the direction for the site (task 3.7) on 2026-10-11.** #303–#306 and #314 are Ron's own
+requests; #308 is his proposal; #307, #309–#313 and #315 were approved by Ron on the reviewer's recommendation. Ron gave
+reference screenshots of other sites for the direction (a phone list of cards, an opened post, a desktop grid, a page
+of personal preferences); they are references for the direction, not designs to copy, and are kept nowhere in the repo.
+
+### 302 — A post with no written price is always in the bottom tier, also with no price range set
+A post whose price is not written (`price.state` `"not_written"`) is in the bottom tier for every user, whatever the
+profile or the filter holds; with a price range set it already was (an unknown critical category). A category that fails
+a critical condition still hides the post: this changes the tier only. **Amends `BASELINE.md` §8's "Order of display"**
+and #298's "only an unknown critical category sends it to the bottom". An unclear price (`"unclear"`) is not covered:
+it still counts only against a set price range (`PHASE_3.md` 3.7, point 1). Built in `policy/evaluate.py` (round 7).
+*Ron's decision (2026-10-11). Ron's reason (given on 2026-10-02):* he sees posts with no price as mostly tricksters.
+
+### 303 — Desktop: cards in a grid; phone: one card under the other; both built and checked together
+On a desktop the list is a grid of cards, in the style of Ron's desktop reference (photo on top, the text, a location
+line, a row of stats). On a phone the cards are one under the other, as in his phone reference (the photo beside the
+price, address, rooms, time, feature chips, a button). Both layouts are built and checked in the same run, with the
+same design plugins and method as his event-seeker project (#257). Which items appear on the closed card and which only
+inside the opened post is the assistant's proposal for Ron's approval (`PHASE_3.md` 3.7 (c)); the link to the original
+post must exist, its place the assistant's recommendation.
+*Ron's own request.* No reason recorded.
+
+### 304 — Desktop: a card opens in a dialog over the list
+Clicking a card on a desktop opens the post in a dialog over the list, not a new page; the X or a click outside it closes
+it.
+*Ron's own request.* No reason recorded.
+
+### 305 — The filter bar is at the top of the page
+Not at the side. Ron gives no reference for it: the assistant proposes it (`PHASE_3.md` 3.7 (e)).
+*Ron's own request.* No reason recorded.
+
+### 306 — Anyone who reaches the site can scroll and filter without signing in
+An account is needed to save preferences, and later (Phase 4) for Telegram alerts. **Changes `BASELINE.md` §10**, with
+#307.
+*Ron's own request.* No reason recorded.
+
+### 307 — Guests: Tailscale is the only gate for viewing posts; sign-in becomes mandatory off the tailnet
+With #306, Tailscale becomes the only gate for viewing posts. A guest cannot save a filter (it lives in the browser
+only), mark a post viewed, flag it or report it. A one-time key guards creating an account, not viewing. **Condition:
+if the site is ever served outside the tailnet, sign-in becomes mandatory for viewing.** **Amends `BASELINE.md` §10**
+("Tailscale sharing is a second gate in front of the site"); the condition is also a `BACKLOG.md` row.
+*Ron approved the reviewer's recommendation.* No reason recorded beyond the condition.
+
+### 308 — A glow around a card by its tier
+Ron's proposal (a glow around a card by how well it fits, and the same colours on the fields inside), with the
+reviewer's mapping onto 3.6's three tiers: **green** = `"preferences_met"`; **orange** = `"critical_met"` (a preference
+not met or not known); **red** = the bottom tier, `"unknown"` (critical information missing: no price (#302), the area
+unclear, the kind unclear). A post that fails a critical condition stays hidden, as approved: it gets no card. The
+assistant's opinion and alternatives, and how the state is carried for someone who cannot tell the colours apart:
+`PHASE_3.md` 3.7 (d).
+*Ron's proposal; the mapping approved by Ron on the reviewer's recommendation.* No reason recorded.
+
+### 309 — Field colours on the card
+**Green** for every known positive value (no broker, a balcony, parking, an elevator, air conditioning), also with no
+preference set and for a guest; **red** only when the user set a preference and it is not met; a known negative value
+with no preference is shown **plain**; **grey** = not written; **orange** = unclear (`BASELINE.md` §6). **Refines
+`BASELINE.md` §6's field states** ("present and matches: green"). How it sits with 3.6's `FieldState`: `PHASE_3.md`
+3.7 (d); `policy/evaluate.py` is not changed for it.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 310 — Not built: favourites, a map, a language switch
+Favourites are a later feature that needs its own record (a `BACKLOG.md` row); a map is not built (no coordinates are
+stored); no language switch (Hebrew only).
+*Ron approved the reviewer's recommendation. The reasons:* favourites need a record Gate C does not have; there are no
+coordinates; the site is Hebrew only.
+
+### 311 — A WhatsApp button when the post has a mobile number
+A plain link the user clicks. Nothing is sent by the system (invariant 15).
+*Ron approved the reviewer's recommendation. The reason:* invariant 15; the system sends nothing.
+
+### 312 — No generated title: the closed card shows the first lines of the poster's text, cut
+The model never summarises (invariant 11), so a card has no title of its own: the closed card shows the first lines of
+the poster's original text, cut.
+*Ron approved the reviewer's recommendation. The reason:* invariant 11.
+
+### 313 — On a phone a post opens full screen with a back arrow
+As in Ron's phone reference.
+*Ron approved the reviewer's recommendation.* No reason recorded.
+
+### 314 — The saved preferences and the home page's filter are two things
+The preferences are what is saved on the account and, from Phase 4, what drives the Telegram alerts. The filter bar on
+the home page is what the user is looking at now: they can filter for other options there without changing their saved
+preferences.
+*Ron's own request.* No reason recorded.
+
+### 315 — The filter bar starts from the saved preferences; a change is temporary; "save as my preferences"
+For a signed-in user the bar opens with their saved preferences as the starting point; a change in the bar is temporary,
+for this visit only; a "save as my preferences" action updates the saved ones. The glow and the order follow what the
+bar holds at that moment, not the saved preferences. A guest's bar starts empty.
+*Ron approved the reviewer's recommendation.* No reason recorded.
 
 ---
 
