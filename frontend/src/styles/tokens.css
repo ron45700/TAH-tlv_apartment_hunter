@@ -1,0 +1,68 @@
+/* The site's tokens: the approved mock's palette (rounds 8 to 10, #321–#343), carried over. The tier
+   hues are apart in lightness as well as hue, a blue-leaning green, an amber, a crimson (#330 point
+   5); every text colour on white is at least 4.5:1. */
+:root {
+  color-scheme: light;
+
+  --page: #f1efeb;
+  --card: #ffffff;
+  --ink: #1d232b;
+  --muted: #56606c;
+  --line: #e2ded7;
+
+  --blue: #1f5fbf;
+  --green: #0d8f73;
+  --amber: #c97d00;
+  --red: #c42e55;
+  --grey: #69717b; /* "לא צוין": grey, still 4.8:1 on white */
+  --missing: #2e3846; /* the important-missing badge: dark slate, words only (#330 point 6) */
+
+  --green-bg: #e2f4ee;
+  --green-ink: #09654f;
+  --amber-bg: #fcefd8;
+  --amber-ink: #7f5200;
+  --red-bg: #fbe5eb;
+  --red-ink: #961c3f;
+  --grey-bg: #f2f1ee;
+
+  /* the foot's outlined buttons (#338): WhatsApp's green is not the glow's */
+  --fb: #1f5fbf;
+  --fb-line: #93b4e6;
+  --wa: #157a3c;
+  --wa-line: #86d1a2;
+
+  /* the header's own cool tint (#342) and the logo's sky and teal (#333) */
+  --head-a: #e3f1f8;
+  --head-b: #e6f4f1;
+  --head-line: #cfe3ea;
+  --teal: #0e7490;
+  --teal-2: #0b7f99;
+
+  --font: 'IBM Plex Sans Hebrew', system-ui, 'Segoe UI', Arial, sans-serif;
+
+  /* one centred column that grows with the screen (#347) */
+  --content-max: 2240px;
+  --gutter: 32px;
+  --grid-gap: 24px;
+  --card-min: 296px;
+  --radius: 14px;
+}
+
+@media (max-width: 1279.98px) {
+  :root {
+    --gutter: 24px;
+  }
+}
+
+@media (max-width: 699.98px) {
+  :root {
+    --gutter: 16px;
+    --grid-gap: 14px;
+  }
+}
+
+@media (min-width: 1800px) {
+  :root {
+    --grid-gap: 28px;
+  }
+}

@@ -25,3 +25,16 @@ def canonical_phone(phone: str) -> str:
     if digits.startswith("972"):
         digits = "0" + digits[3:]
     return digits
+
+
+def whatsapp_number(phone: str) -> str | None:
+    """The number for WhatsApp's click-to-chat link, or `None` when the phone is not a mobile.
+
+    A mobile is a canonical phone of 10 digits starting `05` (DECISIONS.md #330 point 22). The link
+    takes the full international number with no `+`, zeros, brackets or dashes (WhatsApp Help
+    Center, "How to use click to chat", read in a browser 2026-10-13): `0541234567` becomes
+    `972541234567`."""
+    digits = canonical_phone(phone)
+    if len(digits) != 10 or not digits.startswith("05"):
+        return None
+    return "972" + digits[1:]

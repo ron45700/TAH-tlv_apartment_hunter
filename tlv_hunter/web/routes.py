@@ -39,6 +39,8 @@ class Site:
     store_root: Path
     """Where the photos are read, read-only: `<store_root>/images/…` (#331)."""
     clock: Callable[[], datetime]
+    pages: Path | None = None
+    """The front end's build (`frontend/dist`), served beside the API; `None`: the API only."""
 
     @property
     def area_names(self) -> Mapping[int, str]:
@@ -127,7 +129,7 @@ def _cards(site: Site, profile: Profile) -> Response:
     payload = {
         "generation": held.snapshot.generation,
         "count": len(shown),
-        "cards": [card_payload(card, evaluation, names) for card, evaluation in shown],
+        "cards": [card_payload(card, evaluation, profile, names) for card, evaluation in shown],
     }
     body = json.dumps(payload, ensure_ascii=False)
     json_ms = _ms_since(started)

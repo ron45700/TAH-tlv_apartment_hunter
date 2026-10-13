@@ -25,6 +25,9 @@ venv/
 dist/
 build/
 
+# The front end (task 3.7): its packages; its build is dist/ above
+node_modules/
+
 # Editors / OS
 .vscode/
 .idea/

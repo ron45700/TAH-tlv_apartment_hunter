@@ -1,0 +1,736 @@
+/* The closed card (3.7 (c)): fixed slots (#341), the glow (#308, #322), the "i" (#323, #337), the
+   carousel (#327), the chips (#326), the outlined foot buttons (#338). */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--card);
+  border-radius: var(--radius);
+}
+
+/* the glow: a thin ring and a soft shadow in the tier's colour, strongest for green (#330 point 4) */
+.glow-green {
+  box-shadow: 0 0 0 2px var(--green), 0 10px 26px -8px rgb(13 143 115 / 0.5);
+}
+
+.glow-orange {
+  box-shadow: 0 0 0 1.5px var(--amber), 0 8px 22px -10px rgb(201 125 0 / 0.45);
+}
+
+.glow-red {
+  box-shadow: 0 0 0 1.5px var(--red), 0 8px 22px -10px rgb(196 46 85 / 0.45);
+}
+
+.glow-none {
+  box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgb(29 35 43 / 0.06);
+}
+
+/* the whole card opens the post; the photo controls and the foot's links sit above it */
+.card .open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--radius);
+}
+
+.card .media,
+.card .foot .acts {
+  position: relative;
+  z-index: 2;
+}
+
+.media {
+  position: relative;
+}
+
+/* the carousel */
+.car {
+  position: relative;
+  overflow: hidden;
+  background: var(--grey-bg);
+}
+
+.car-card {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.track {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.track img {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  scroll-snap-align: center;
+  display: block;
+  user-select: none;
+}
+
+.car-empty {
+  display: grid;
+  place-items: center;
+  background: #e8eef5;
+}
+
+.car-none {
+  color: var(--grey);
+  font-size: 0.9rem;
+}
+
+/* a reel-only post: the link to its video in the photo's place (round 9) */
+.vlink {
+  position: relative;
+  z-index: 2;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--fb);
+  background: var(--card);
+  border: 1px solid var(--fb-line);
+  border-radius: 999px;
+  padding: 8px 16px;
+}
+
+.nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.car:hover .nav,
+.nav:focus-visible {
+  opacity: 1;
+}
+
+/* the arrows are drawn in CSS: controls, not state glyphs (#332 point 30) */
+.nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid var(--ink);
+  border-right: 2px solid var(--ink);
+}
+
+/* right to left: the previous photo is at the right, the next at the left */
+.nav.prev {
+  right: 8px;
+}
+
+.nav.prev::before {
+  rotate: 45deg;
+  translate: -1px 0;
+}
+
+.nav.next {
+  left: 8px;
+}
+
+.nav.next::before {
+  rotate: -135deg;
+  translate: 1px 0;
+}
+
+.dots {
+  position: absolute;
+  bottom: 9px;
+  inset-inline: 0;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.6);
+  box-shadow: 0 0 2px rgb(0 0 0 / 0.35);
+}
+
+.dots i.on {
+  background: #ffffff;
+}
+
+.count {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(29 35 43 / 0.72);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vchip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgb(29 35 43 / 0.75);
+  color: #ffffff;
+  font-size: 0.75rem;
+}
+
+/* the "i": in the photo's top-left corner, inside the card, faded (#337) */
+.info {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.75);
+  background: rgb(255 255 255 / 0.45);
+  backdrop-filter: blur(3px);
+  color: var(--ink);
+  font: italic 700 0.88rem/1 Georgia, 'Times New Roman', serif;
+  opacity: 0.88;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.info:hover,
+.info:focus-visible,
+.info.open {
+  background: rgb(255 255 255 / 0.94);
+  opacity: 1;
+}
+
+.info .tip {
+  display: none;
+  position: absolute;
+  top: 34px;
+  left: 0;
+  width: max-content;
+  max-width: min(260px, 70vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #ffffff;
+  font: 500 0.84rem/1.4 var(--font);
+  text-align: right;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+}
+
+.info:hover .tip,
+.info:focus-visible .tip,
+.info.open .tip {
+  display: block;
+}
+
+/* the body: every slot keeps its height whatever it holds (#341) */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px 10px;
+}
+
+.kindrow {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.kind {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #24508f;
+}
+
+.kind-unclear {
+  color: var(--amber-ink);
+  background: var(--amber-bg);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.pricerow {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.price {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.price.c-orange {
+  font-size: 1rem;
+  background: var(--amber-bg);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.missing {
+  display: inline-block;
+  background: var(--missing);
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.missing.sm {
+  font-size: 0.74rem;
+  padding: 1px 6px;
+  line-height: 1.35;
+}
+
+.txt {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.txt.clamp {
+  height: calc(3 * 1.45em);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.95rem;
+}
+
+.loc {
+  margin: 0;
+  height: calc(2 * 1.45em + 2px);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.loc.c-orange {
+  color: var(--amber-ink);
+  background: var(--amber-bg);
+  padding: 1px 8px;
+  border-radius: 6px;
+}
+
+.loc.c-green {
+  color: var(--green-ink);
+}
+
+.loc.c-grey {
+  color: var(--grey);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  height: 56px;
+  margin: 2px 0 0;
+  border-block: 1px solid var(--line);
+}
+
+.stat {
+  padding: 6px 4px;
+  text-align: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.stat + .stat {
+  border-inline-start: 1px solid var(--line);
+}
+
+.stat dt {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.stat dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat .note {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: var(--grey);
+}
+
+.one {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the field colours as text (#309, #321) */
+.c-green {
+  color: var(--green-ink);
+}
+
+.c-red {
+  color: var(--red-ink);
+}
+
+.c-grey,
+.ns {
+  color: var(--grey);
+  font-weight: 500;
+}
+
+.c-orange {
+  color: var(--amber-ink);
+}
+
+.fixed {
+  margin-inline-start: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* the phone's line beside the photo; hidden on a wider screen, where the stats hold it */
+.phoneline {
+  display: none;
+}
+
+/* one row of chips, cut rather than wrapped (#341) */
+.feats {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.chip {
+  flex: none;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  padding: 1px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  white-space: nowrap;
+}
+
+.chip.c-green {
+  background: var(--green-bg);
+  border-color: #b4e2d4;
+  color: var(--green-ink);
+}
+
+.chip.c-red {
+  background: var(--red-bg);
+  border-color: #efbccb;
+  color: var(--red-ink);
+}
+
+.chip.c-grey {
+  background: var(--grey-bg);
+  color: var(--grey);
+}
+
+.chip.c-orange {
+  background: var(--amber-bg);
+  border-color: #f0d199;
+  color: var(--amber-ink);
+}
+
+.chip-women {
+  background: var(--red);
+  border-color: var(--red);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* the foot: two fixed rows; the time with three button slots in fixed places, and under the time
+   "פורסם N פעמים" only after a repost, its line kept otherwise (#340, #341) */
+.foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 30px 1.4em;
+  align-items: center;
+  column-gap: 8px;
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.when {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acts {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.slot {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.slot-wa {
+  width: 70px;
+}
+
+.slot-fb {
+  width: 64px;
+}
+
+/* a guest's report slot stays, empty, so nothing moves (#328, #341) */
+.slot-rep {
+  width: 54px;
+}
+
+.reposts {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  font-size: 0.78rem;
+  line-height: 1.4em;
+  white-space: nowrap;
+}
+
+.btn-o {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  background: var(--card);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-fb {
+  color: var(--fb);
+  border-color: var(--fb-line);
+}
+
+.btn-wa {
+  color: var(--wa);
+  border-color: var(--wa-line);
+}
+
+.btn-o:hover {
+  background: #f5f8fc;
+}
+
+.card .open:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.skeleton {
+  height: 520px;
+  background: linear-gradient(180deg, #e9e6e0 0 42%, var(--card) 42%);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* the phone: one card under the other, the photo beside the kind, the price and the location
+   (#303); the three rows beside the 118 px photo add up to its height: 22 + 34 + 62 */
+@media (max-width: 699.98px) {
+  .card {
+    display: grid;
+    grid-template-columns: 118px minmax(0, 1fr);
+    grid-template-rows: 22px 34px 62px auto auto auto auto;
+    column-gap: 12px;
+    padding: 12px;
+  }
+
+  .card .body {
+    display: contents;
+  }
+
+  .card .media {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    width: 118px;
+    height: 118px;
+  }
+
+  .car-card {
+    width: 118px;
+    height: 118px;
+    aspect-ratio: auto;
+    border-radius: 10px;
+  }
+
+  .car-card .count,
+  .car-card .vchip,
+  .car-card .nav {
+    display: none;
+  }
+
+  .car-card .vlink {
+    padding: 6px 8px;
+    font-size: 0.74rem;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .info {
+    top: 6px;
+    left: 6px;
+  }
+
+  .kindrow {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .pricerow {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .loc {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: start;
+  }
+
+  .txt.clamp {
+    grid-column: 1 / -1;
+    height: calc(2 * 1.45em);
+    -webkit-line-clamp: 2;
+    margin-top: 10px;
+    font-size: 0.92rem;
+    color: var(--muted);
+  }
+
+  .stats {
+    display: none;
+  }
+
+  .phoneline {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 1.6em;
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .phoneline .sep {
+    width: 1px;
+    height: 0.9em;
+    background: var(--line);
+  }
+
+  .phoneline .one {
+    min-width: 0;
+  }
+
+  .feats {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+  }
+
+  .foot {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+  }
+
+  .skeleton {
+    height: 250px;
+  }
+}
+
+/* the important-missing badge in a narrow stat wraps to two lines rather than being cut */
+.stat .missing.sm {
+  white-space: normal;
+  line-height: 1.15;
+  padding: 1px 4px;
+}
+
+/* a post with many prices (#95) never widens its card or the page: the closed card cuts the
+   list (the opened post shows it whole) */
+.pricerow {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pricerow .price {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* On a touch screen the small controls get a hit area of about 44 px without growing, so the fixed
+   slots stay as they are (#341): the foot's buttons, the "i", the header's pills. */
+@media (pointer: coarse) {
+  .btn-o,
+  .pill {
+    position: relative;
+  }
+
+  .btn-o::after,
+  .pill::after {
+    content: '';
+    position: absolute;
+    inset: -9px -2px;
+  }
+
+  .info::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}

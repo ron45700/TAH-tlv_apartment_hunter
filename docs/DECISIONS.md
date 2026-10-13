@@ -16,7 +16,7 @@ choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290,
 2026-10-12 (#316–#331, Ron's answers on the 3.7 plan: the store generation counter, one sublet switch per profile, the
 orange-location cap, "not stated", the UI notes on the mock, the remaining points); #331's attribution corrected;
 #332–#339 (round 9: points 27–30, Ron's notes on the round-8 mock); 2026-10-13 (#340–#343, Ron's notes on the
-round-9 mock)
+round-9 mock); #344–#348 (round 11: Ron's answers on round 10, the screen sizes, the mock retired)
 
 > Written in English like every document in `docs/`.
 >
@@ -3274,6 +3274,39 @@ The header (logo and user area) and the filter bar read as two things: the heade
 ### 343 — The user button at the top right is designed more nicely
 The signed-in user's button (#334) gets a designed look; the guest's "התחבר" and "הירשם" sit in the same area.
 *Ron's note on the mock (2026-10-13).* No reason recorded.
+
+## Phase 3: Ron's answers on round 10, and the screens (2026-10-13)
+
+**Ron answered round 10 on 2026-10-13.** #344–#346 are the reviewer's recommendations, approved by Ron; #347 and #348
+are Ron's own.
+
+### 344 — The web tests' loopback exception to the socket guard, on Windows only
+`TestClient` runs the app in an asyncio event loop, and on Windows that loop's self-pipe is a loopback socket pair that
+Python builds by connecting a socket to its own 127.0.0.1 listener (`ASSUMPTIONS.md` I17). `tests/test_web.py` makes
+that one pair without the guarded `connect`, on Windows only; every other connection still raises, and a test asserts
+it. The suite's guard is otherwise unchanged.
+*Ron approved the reviewer's recommendation (round 10).* No reason of his own.
+
+### 345 — The cold grouping is measured in the browser at step 7 before it is precomputed (point 31)
+The grouping stays computed on the first request after a start or a store change. At build step 7 the cold first
+request is measured in the browser, on today's store and on a 40-day synthetic store (#330); only if it still misses
+the 1.5 s first-cards target is the grouping computed at start and after a store change in the background.
+*Ron approved the reviewer's recommendation (round 10).* No reason of his own.
+
+### 346 — The list keeps the poster's whole text until step 7 (point 32)
+Each card in the list carries the whole text; the closed card shows its first lines. Only if step 7's measurement finds
+the page slow does the list send the first lines and the opened post the whole text.
+*Ron approved the reviewer's recommendation (round 10).* No reason of his own.
+
+### 347 — The site looks made for each screen: a 27" monitor, a laptop, an 11" iPad both ways, a phone
+The site must look fitted on Ron's 27" home monitor, a laptop, an 11" iPad in portrait and in landscape, and a phone.
+Whether a wide screen gets more columns or a centred layout is the assistant's call; what matters is that each size
+feels made for it. In the round-10 mock at 27", four columns hugged the right and left the left side empty.
+*Ron's own requirement (2026-10-13).* His reason: the empty left side at 27".
+
+### 348 — The mock is retired: from build step 3 Ron reviews the site itself
+`data/mock/site_mock.html` is no longer updated; the look is reviewed on the site, served from a dated copy (#331).
+*Ron's own decision (2026-10-13).* No reason recorded.
 
 ---
 

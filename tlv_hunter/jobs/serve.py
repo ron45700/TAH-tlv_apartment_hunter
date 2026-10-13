@@ -11,8 +11,10 @@ backup from a read-only connection: a consistent copy, and the store itself is o
 `--copy` it serves the newest copy there and refuses when there is none. The photos are read in
 place from `<store_root>/images/`, read-only.
 
-uvicorn listens on 127.0.0.1 only. In this step the site only reads: a guest's API (3.7 (g)). Like
-the job commands it is a reader of the store; it opens no file but the copy for its records.
+uvicorn listens on 127.0.0.1 only. In this step the site only reads: a guest's API (3.7 (g)) and the
+built pages, `frontend/dist`, when they are built (`npm run build` in `frontend/`); without them it
+serves the API alone and says so. Like the job commands it is a reader of the store; it opens no
+file but the copy for its records.
 
 Exit codes: 0, stopped; 1, refused or failed.
 """
@@ -37,6 +39,7 @@ EXIT_DONE, EXIT_FAILED = 0, 1
 HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 COPIES_DIR = "site"
+PAGES = Path("frontend") / "dist"
 
 
 class Refused(Exception):
@@ -62,9 +65,16 @@ def main(
         store_root = repo_root / config.store_root
         database = store_root / SQLITE_FILENAME
         copy = make_copy(database, clock()) if args.copy else newest_copy(database)
+        pages = repo_root / PAGES
+        built = (pages / "index.html").is_file()
         print(f"serving the copy: {copy}", file=out)
-        print(f"open: http://{HOST}:{args.port}/api/cards", file=out)
-        app = create_app(site_over(copy, store_root, clock=clock))
+        if built:
+            print(f"open: http://{HOST}:{args.port}/", file=out)
+        else:
+            print(f"the pages are not built ({pages}): the API only", file=out)
+            print(f"open: http://{HOST}:{args.port}/api/cards", file=out)
+        site = site_over(copy, store_root, pages=pages if built else None, clock=clock)
+        app = create_app(site)
         run(app, host=HOST, port=args.port)
         return EXIT_DONE
     except Refused as refusal:

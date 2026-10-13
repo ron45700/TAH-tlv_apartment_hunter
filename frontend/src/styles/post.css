@@ -1,0 +1,343 @@
+/* The opened post: a dialog over the list (#304), full screen on a phone (#313). */
+.post {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(20 24 30 / 0.55);
+}
+
+.sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(900px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--card);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.3);
+}
+
+.sheet:focus {
+  outline: none;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 52px;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 0.96);
+  border-bottom: 1px solid var(--line);
+}
+
+/* the X, drawn in CSS: a control, not a state glyph */
+.close {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+}
+
+.close::before,
+.close::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 16px;
+  height: 2px;
+  background: var(--ink);
+  rotate: 45deg;
+}
+
+.close::after {
+  rotate: -45deg;
+}
+
+.back {
+  position: relative;
+  margin-inline-end: auto;
+  min-height: 40px;
+  padding: 0 22px 0 8px;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+}
+
+/* the back arrow points right: back, in a right-to-left page */
+.back::before {
+  content: '';
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  translate: 0 -50%;
+  rotate: 45deg;
+}
+
+.sheet-state {
+  margin: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.car-open {
+  flex: none;
+  aspect-ratio: 16 / 9;
+}
+
+.car-open .nav {
+  opacity: 0.85;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 24px 24px;
+}
+
+.pblock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+/* the tier's words at the top of the price block (#332 point 29) */
+.tierline {
+  margin: 0 0 2px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.t-green {
+  background: var(--green-bg);
+  color: var(--green-ink);
+}
+
+.t-orange {
+  background: var(--amber-bg);
+  color: var(--amber-ink);
+}
+
+.t-red {
+  background: var(--red-bg);
+  color: var(--red-ink);
+}
+
+.t-none {
+  background: var(--grey-bg);
+  color: var(--muted);
+}
+
+.pricerow.big {
+  height: auto;
+}
+
+.pricerow.big .price {
+  font-size: 2rem;
+}
+
+.gender {
+  display: flex;
+  gap: 6px;
+}
+
+.meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.feats-open {
+  height: auto;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.row dt {
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.row dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.content h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.content section {
+  min-width: 0;
+}
+
+.txt.full {
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 70ch;
+}
+
+.phones {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.phones li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.phones a[href^='tel:'] {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.videos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lk {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.log summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.pubs {
+  margin: 6px 0 0;
+  padding-inline-start: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.92rem;
+}
+
+/* the main action: the original post, and WhatsApp (3.7 (c), rows 4 and 14) */
+.bottombar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.btn.primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #ffffff;
+}
+
+.btn.wa {
+  background: #e5f4eb;
+  border-color: #b6dfc6;
+  color: var(--wa);
+}
+
+@media (max-width: 699.98px) {
+  .post {
+    align-items: stretch;
+  }
+
+  .sheet {
+    width: 100vw;
+    max-height: none;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .car-open {
+    aspect-ratio: 4 / 3;
+  }
+
+  .content {
+    padding: 14px 16px 20px;
+  }
+
+  .rows {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bottombar .btn {
+    flex: 1;
+  }
+}
+
+.pricerow.big .price {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

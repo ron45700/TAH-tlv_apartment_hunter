@@ -82,7 +82,7 @@ class Store:
         repository = SqliteRepository(self.db)
         self.userdata = SqliteUserDataStore(self.db)
         self.userdata.create_admin(admin(), new_profile(ADMIN_ID, NOW))
-        active = make_member(1, price=[5000], rooms=3.0, areas=[30])
+        active = make_member(1, price=[5000], rooms=3.0, areas=[30], phone="054-123-4567")
         other = make_member(2, price=[7000], rooms=2.0, areas=[52])
         rejected = make_member(3, price=[5000], areas=[30], nature="seeking")
         archived = make_member(5, price=[6000], areas=[30])
@@ -197,11 +197,93 @@ def test_a_posted_empty_bar_gives_the_same_list_as_a_new_guest(client: TestClien
 
 
 def test_the_api_has_no_write(client: TestClient) -> None:
-    """Build step 2 is read-only: the only POST reads (the bar); nothing else accepts a write."""
+    """Build steps 2 and 3 are read-only: the only POST reads (the bar); nothing else accepts a
+    write."""
     methods = {(route.path, method) for route in router.routes for method in route.methods}
     writes = {(path, m) for path, m in methods if m not in ("GET", "HEAD")}
     assert writes == {("/api/cards", "POST")}
     assert client.put("/api/profile", json={}).status_code in (404, 405)
+
+
+# --- step 3: what the page needs, decided on the server (#330 point 18) ---
+
+
+def test_a_card_carries_its_colours_glow_tier_words_and_whatsapp(
+    client: TestClient, store: Store
+) -> None:
+    cards = {card["id"]: card for card in client.get("/api/cards").json()["cards"]}
+    first, other = cards[store.active], cards[store.other]
+    # The test posts' kind is not written: the bottom, red, with its reason in words (#273, #323).
+    assert first["glow"] == "red" and first["tier_label"] == "חסר מידע: סוג הנכס לא ברור"
+    assert first["colours"]["price"] == "plain" and first["colours"]["areas"] == "plain"
+    assert first["colours"]["entry_date"] == "missing"  # not written: the badge (#330 point 6)
+    assert first["colours"]["balcony"] == "grey"
+    assert first["whatsapp"] == "https://wa.me/972541234567"
+    assert other["whatsapp"] is None
+
+
+def test_the_bar_decides_the_colours(client: TestClient, store: Store) -> None:
+    """The colours follow the bar the request sends (#315): a price range turns the price green."""
+    body = bar(room__price_max=6000, whole_apartment__price_max=6000)
+    cards = {card["id"]: card for card in client.post("/api/cards", json=body).json()["cards"]}
+    assert cards[store.active]["colours"]["price"] == "green"
+
+
+def test_an_opened_post_carries_its_own_colours_and_a_link_per_mobile(
+    client: TestClient, store: Store
+) -> None:
+    opened = client.get(f"/api/posts/{store.active}").json()
+    assert opened["own_colours"]["entry_date"] == "missing"
+    assert opened["phones"] == [
+        {"phone": "0541234567", "name": None, "whatsapp": "https://wa.me/972541234567"}
+    ]
+
+
+# --- step 3: the built pages beside the API (3.7 (g)) ---
+
+
+@pytest.fixture
+def pages(tmp_path: Path) -> Path:
+    built = tmp_path / "dist"
+    (built / "assets").mkdir(parents=True)
+    (built / "index.html").write_text("<!doctype html><title>site</title>", encoding="utf-8")
+    (built / "assets" / "index-abc.js").write_text("console.log(1)", encoding="utf-8")
+    (built / "favicon.svg").write_text("<svg/>", encoding="utf-8")
+    (tmp_path / "secret.txt").write_text("outside the build", encoding="utf-8")
+    return built
+
+
+@pytest.fixture
+def site_with_pages(store: Store, pages: Path) -> TestClient:
+    return TestClient(create_app(site_over(store.db, store.root, pages=pages, clock=lambda: NOW)))
+
+
+def test_every_page_address_gets_the_built_page(site_with_pages: TestClient) -> None:
+    for path in ("/", "/post/abc", "/preferences", "/anything/else"):
+        response = site_with_pages.get(path)
+        assert response.status_code == 200 and "<title>site</title>" in response.text
+        assert response.headers["cache-control"] == "no-cache"
+        assert response.headers["content-security-policy"] == CONTENT_SECURITY_POLICY
+        assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_the_builds_files_are_served_and_nothing_outside_it(site_with_pages: TestClient) -> None:
+    assert site_with_pages.get("/assets/index-abc.js").text == "console.log(1)"
+    assert site_with_pages.get("/favicon.svg").text == "<svg/>"
+    assert site_with_pages.get("/assets/missing.js").status_code == 404
+    for path in ("/..%2Fsecret.txt", "/%2E%2E/secret.txt", "/assets/..%2F..%2Fsecret.txt"):
+        assert "outside the build" not in site_with_pages.get(path).text
+
+
+def test_an_api_path_no_route_answers_stays_404(site_with_pages: TestClient) -> None:
+    assert site_with_pages.get("/api/nothing").status_code == 404
+    assert site_with_pages.get("/api").status_code == 404
+    assert site_with_pages.get("/api/cards").status_code == 200
+
+
+def test_a_build_with_no_page_is_refused(store: Store, tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="index.html"):
+        create_app(site_over(store.db, store.root, pages=tmp_path / "empty", clock=lambda: NOW))
 
 
 # --- 3. nothing but the current cards reaches a guest ---
@@ -394,6 +476,7 @@ def test_serve_copies_the_store_and_serves_the_copy(tmp_path: Path, store: Store
     assert served == [{"host": "127.0.0.1", "port": 8000}]
     copy = database.parent / "site" / "tlv_hunter.2026-10-13.site.sqlite3"
     assert copy.is_file() and f"serving the copy: {copy}" in out.getvalue()
+    assert "the pages are not built" in out.getvalue()  # no frontend/dist under this repo
     assert hashlib.sha256(database.read_bytes()).hexdigest() == before
     with closing(sqlite3.connect(copy)) as conn:
         assert conn.execute("SELECT count(*) FROM raw_posts").fetchone() == (6,)
@@ -402,6 +485,22 @@ def test_serve_copies_the_store_and_serves_the_copy(tmp_path: Path, store: Store
     assert serve.main([], repo_root=repo, clock=lambda: NOW, stream=quiet, run=run) == 0
     assert serve.main(["--copy"], repo_root=repo, clock=lambda: NOW, stream=quiet, run=run) == 0
     assert len(list(copy.parent.iterdir())) == 2
+
+
+def test_serve_serves_the_built_pages_when_there_are_some(tmp_path: Path, store: Store) -> None:
+    repo = _moved_under_a_repo(tmp_path, store)
+    built = repo / "frontend" / "dist"
+    built.mkdir(parents=True)
+    (built / "index.html").write_text("<!doctype html><title>built</title>", encoding="utf-8")
+    pages: list[str] = []
+
+    def run(app: Any, **kwargs: Any) -> None:
+        pages.append(TestClient(app).get("/post/x").text)
+
+    out = io.StringIO()
+    assert serve.main(["--copy"], repo_root=repo, clock=lambda: NOW, stream=out, run=run) == 0
+    assert "open: http://127.0.0.1:8000/\n" in out.getvalue()
+    assert "<title>built</title>" in pages[0]
 
 
 def test_serve_with_no_copy_is_refused(tmp_path: Path, store: Store) -> None:
