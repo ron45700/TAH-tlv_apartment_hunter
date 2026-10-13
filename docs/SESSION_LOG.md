@@ -5544,3 +5544,145 @@ Item 6 rewritten (the migration is next, for Ron); the #316 row (built); a new r
 STOP. For Ron: review round 9; rerun the tests and ruff; **run `uv run python -m tlv_hunter.jobs.add_store_generation`
 on the production store** (every command refuses the store until then); open `data/mock/site_mock.html` and its states;
 then 3.7's build step 2 (the read-only API on a dated copy, #331).
+
+## 2026-10-13 — Phase 3, round 10: Ron ran the migration; Ron's notes on the round-9 mock (#340–#343); 3.7's build step 2 (the read-only API)
+
+**No git command was run, read-only ones included.** No paid call, no front end, no Node, no Docker, no sign-in, no write
+by the site. **Installed:** `fastapi` 0.143.0, `starlette` 1.7.0, `uvicorn` 0.54.0 (`uv add`, exact pins), `httpx2`
+2.13.1 (dev). **The production store was not written:** SHA-256 `c69ceb2c0218c574645d70db2de949abb9f780a042ebbf1379ad67d27497d521`
+at every check (it is the migrated file; byte for byte the same as round 9's migrated scratch copy). It was read: by
+the mock's data script (read-only, hash before and after) and by `serve --copy` (SQLite's online backup from a `mode=ro`
+connection). Network: pypi.org, starlette.dev, fastapi.tiangolo.com (documentation), and 127.0.0.1.
+
+### Recorded
+
+- **Ron ran `add_store_generation` on the production store on 2026-10-13:** layout before `{'store': 1, 'state': 1,
+  'store.listings': 1, 'userdata': 1}`; backup `data\store\tlv_hunter.2026-10-13.backup.sqlite3`; migrated `store`,
+  `store.listings`, `userdata`; layout after `{'store': 2, 'state': 1, 'store.listings': 2, 'userdata': 2}`; RawPost
+  documents identical: True; store generation 0. In `BACKLOG.md` item 6, `PHASE_3.md` 3.7 (build step 1), `CLAUDE.md`.
+- `DECISIONS.md` **#340–#343**, Ron's own notes on the round-9 mock: #340 "published N times" on its own line under the
+  time, only after a repost; #341 the card built of fixed slots, every card uniform; #342 the header's own background;
+  #343 a designed user button. "Last updated".
+
+### Found: round 9 deleted part of `PHASE_3.md`
+
+**Round 9's script replaced 3.7's section (e) by searching for the first `### (e) `, and the first was 3.4's "(e) The
+busy timeout (#259)".** Everything from there to 3.7's (f) was replaced: 3.4 (e), (f), its tests, what could not be
+verified and its points, the open points after the build; all of 3.5; all of 3.6; 3.7's heading, opening and (a)–(d)
+— about 450 lines. Round 9's log reported the edits as done; it did not see this. Found in round 10 when an edit could
+not find 3.7's heading. **Restored in round 10:** 3.7's heading, opening, (a), (b) (as read in round 8, with rounds 8
+and 9's edits), (c) (round 8's text with round 9's ten row edits replayed from round 9's own script) and (d). **Not
+restored: 3.4 (e) to the end of 3.6**, which I never read in full and cannot rebuild truthfully. It was not changed
+after round 7, so it is intact in git (commit `9530e16`, or a later one made before round 9): **Ron restores it from git**;
+a marker stands where it belongs. `BACKLOG.md` "Doc debt" has the row. No other file was touched by that edit (the
+round-9 edits elsewhere replaced exact, unique text).
+
+### Built — 3.7's build step 2: the read-only API for a guest
+
+- **Dependencies, read under the `external-contract-verification` skill (`ASSUMPTIONS.md` I15–I18):** pypi.org JSON for
+  fastapi (0.143.0, MIT, Python ≥ 3.10; `starlette>=0.46.0`, `pydantic>=2.9.0`, `opentelemetry-api>=1.44.0`, …),
+  uvicorn (0.54.0, BSD-3; `click`, `h11`), starlette (**1.8.0 published that morning, 2026-10-13T07:54Z, Python ≥ 3.11 —
+  not taken; 1.7.0 pinned, as read and planned in round 7**), httpx2 (2.13.1, 2026-09-23, BSD-3, pydantic's). FastAPI's
+  release notes for 0.143.0 (2026-10-08): automatic exporter setup opt-in, by `FASTAPI_OTEL_AUTO_CONFIGURE=true` or
+  `telemetry={"auto_configure": True}` — confirmed in the installed source (`fastapi/applications.py` 1033–1045). uvicorn
+  `run(app, *, host="127.0.0.1", port=8000, …)` read in the installed source.
+- **The TestClient finding:** starlette.dev says `TestClient` is built on `httpx2` (plain `httpx` "still supported, but
+  deprecated"); FastAPI's testing page still says install `httpx`. **The installed starlette 1.7.0 imports `httpx2`**
+  (`starlette/testclient.py` lines 32–51; `httpx` only as a fallback with a `StarletteDeprecationWarning`), and its
+  transport calls the app in process. `httpx2` was already in the environment through `openai`; it is now a dev
+  dependency, pinned. **On Windows, `TestClient` opens one loopback socket pair**: it runs the app in an asyncio event
+  loop, whose Proactor self-pipe is `socket.socketpair()`, which Python 3.12 builds on Windows by connecting a socket to
+  its own 127.0.0.1 listener (`asyncio/proactor_events.py:787` → `socket.py:623`). The suite's guard refused every
+  request (25 tests failed). `tests/test_web.py` replaces `socket.socketpair`, on Windows only, by the same loopback pair
+  made without the guarded `connect`; every other `connect`, `create_connection` and `getaddrinfo` still raises, and a
+  test asserts no other `connect` happens and the guard still refuses a real connection (`ASSUMPTIONS.md` I17, ❌ FALSE on
+  Windows: "TestClient opens no socket").
+- `reference/area_groups.yaml` (new): §6's eight groups (#261), as approved; the non-residential group's heading is mine
+  ("אזורים שאינם למגורים", §6 gave none). `tlv_hunter/areas/reference.py`: `AreaGroup`, `load_area_groups()` (every one of
+  the 71 in exactly one group; the one collapsed group last).
+- `tlv_hunter/web/` (new): `grouping.py` (`Grouping.current()`: reads `store_generation()`; when it moved, under a lock
+  and reading it again, `load_key_posts` + `derive_cards`; `Snapshot` with the cards, the members, every post's card;
+  `PhotoHashes` kept across recomputes; `recomputes`), `filters.py` (`Bar`, `transient_profile` — the bar's JSON validated
+  by `Profile`'s own models from the raw body, never stored; `empty_bar`), `cards.py` (the card and the opened post as
+  JSON, pure: the seen listing's fields, the evaluation, photo addresses, video links, phones with names, publications),
+  `routes.py` (`GET /api/reference`, `POST /api/cards`, `GET /api/cards`, `GET /api/posts/{id}`, `GET
+  /api/photos/{id}/{file}`; `Server-Timing` on the cards: `gen`, `group` when it ran, `eval`, `order`, `json`; a photo
+  served only when its name is one of a current member's stored photos), `app.py` (`create_app`: FastAPI with
+  `/docs`, `/redoc`, `/openapi.json` off and `telemetry` all off; `SecurityHeaders`, an ASGI wrapper that puts the CSP and
+  `Referrer-Policy: no-referrer` on every response; `site_over(copy, store_root)`: the copy's Repository `read_only`, the
+  corrections through `UserDataStore`).
+- `tlv_hunter/jobs/serve.py` (new). **How the copy is made (my choice): a flag.** `serve --copy` copies the store into
+  `<store_root>/site/tlv_hunter.<date>.site.sqlite3` (the time added for a second one the same day) with SQLite's online
+  backup from a read-only connection, then serves it; `serve` alone serves the newest copy (so what is saved in a copy
+  from step 5 on survives a restart) and refuses when there is none; it refuses the store itself. uvicorn on 127.0.0.1,
+  port 8000 (`--port`). The photos are read in place from `<store_root>/images/`.
+- `CLAUDE.md`: the two `serve` commands; a `web/` paragraph (the site a store reader in this step); the status.
+- **Tests:** `tests/test_web.py` (new, 29): the client is `httpx2` and connects nowhere; group 2 (the reference; a guest
+  lists, opens and sees a photo; no `viewed`; a posted empty bar equals a new guest's list; no write endpoint); group 3
+  (rejected, pending and archived posts absent from the cards, 404 from posts and photos although their photos are on
+  disk; a duplicate's id opens its canonical's card); group 4 (5 refused photo addresses, `..` included; a stored photo
+  missing on disk); group 5 (computed once for many requests, `group` in `Server-Timing` only then; an unchanged upsert
+  and a correction recompute, a viewed mark does not; 16 concurrent requests compute once); group 6 (the bar filters, is
+  never saved — `save_profile` refused, the file byte-identical; six invalid bars are 422 and echo nothing); group 8 (the
+  two headers on 200, 404, 422 and a photo; FastAPI's pages 404; telemetry off with the variable set to `true`, no SDK);
+  `serve` (the copy made, served, the store unchanged; the newest copy; refused with none; never the store).
+
+### The first numbers (`serve --copy`, today's store, Ron's laptop)
+
+139 compared posts; 123 cards for a new guest's empty bar; 400 KB of JSON. **Cold, the first request:** `gen;dur=1.1,
+group;dur=1324.4, eval;dur=1.2, order;dur=0.2, json;dur=7.4` — 1.69 s at curl. **Warm:** `gen;dur=1.2, eval;dur=2.1,
+order;dur=0.5, json;dur=12.2` (22.5 ms at curl); `gen;dur=0.7, eval;dur=1.6, order;dur=0.3, json;dur=7.9` (15.8 ms);
+`gen;dur=1.2, eval;dur=1.9, order;dur=0.4, json;dur=9.0` (18.2 ms); `gen;dur=1.3, eval;dur=1.1, order;dur=0.3,
+json;dur=13.9` (38.9 ms); `gen;dur=0.7, eval;dur=1.5, order;dur=0.3, json;dur=6.9` (14.5 ms). `/api/reference` 3.3 ms,
+`/api/posts/{id}` 4.6 ms, a 47 KB photo 66.6 ms (`image/jpeg`, both headers), `/docs` 404. The copy left by this run:
+`data/store/site/tlv_hunter.2026-10-13.site.sqlite3`.
+
+### The mock
+
+`data/mock/site_mock.html` replaced, the round-9 method with the store now opening normally: `mock_data.py` read the
+production store with `SqliteRepository(read_only=True)` (SHA-256 `c69ceb2c…` before and after; the same 102 cards).
+**#341:** the card is built of fixed slots (the photo, a one-line kind, the price, 3 lines of text, 2 lines of location,
+the stats, one row of chips, a two-row foot), so every card is the same height and nothing moves; **the first two rows
+put the worst combinations side by side** — a reel-only post with an orange location, no price with a video, 4
+publications with WhatsApp, the women-only icon, the two shortest texts (one kind unclear, one published 3 times with no
+phone). **#340:** the foot's first row holds the time and three fixed button slots (WhatsApp, Facebook, report); under
+the time, "פורסם N פעמים" on its own line only after a repost, the line kept otherwise; a guest's report slot is kept,
+empty. **#342:** the header in a cool tint, the filter bar white. **#343:** the user button a pill with a round avatar
+(the first letter on a sky-to-teal gradient), the name and a chevron. The "i" is now placed against the photo itself (the
+photo and the "i" share one box). **Checked:** desktop 1440 px (signed in, guest, the menu open), and the phone as a real
+390 × 844 page through Chrome's DevTools protocol (six states: width 390, no sideways scroll, 0 console messages, 0
+failed requests, every request `file:`). Fixed after looking: the repost line wrapping in the narrow time column, the
+opened post's chips cut by the closed card's one-row slot, the phone's "i" off the photo's corner, the phone's text running
+under the photo (the three rows beside it now add up to its 118 px).
+
+### Verified
+
+`uv run pytest`: **1686 passed** (1657 + 29), run after the code and again after every doc edit but this entry. `uv run
+ruff check .`: all checks passed; `uv run ruff format --check .`: 192 files already formatted.
+
+### Not verified
+
+- The page load in a browser (step 7); the 40-day store; the cold request with a cold disk cache.
+- The site's `UserDataStore` opening on a copy that has no `userdata` layout (it would lay it out: a write to the copy,
+  not to the store).
+
+### Deviations
+
+1. **`GET /api/cards`** (a new guest's empty bar) beside the planned `POST`: a `POST` cannot be opened from the address
+   bar, and Ron is to look at the JSON in a browser. It reads, like the `POST`.
+2. **Not yet in the payload:** the field colours and the glow (`policy/colours.py`, planned for step 3 with the page that
+   uses them) and the WhatsApp link (step 6, after reading its format).
+3. **The Windows self-pipe exception in `tests/test_web.py`** (above): the guard stays on; one loopback pair the event
+   loop makes for itself is allowed on Windows.
+4. **Starlette 1.7.0, not 1.8.0** (published hours before).
+5. **`PHASE_3.md`'s lost block** (above) is left for Ron to restore from git.
+
+### BACKLOG
+
+Item 6 rewritten (how to run `serve` and what to open); the #316 row removed (done: Ron migrated, the site reads the
+counter); a row for #340–#343; a "Doc debt" row for `PHASE_3.md`'s lost block. "Last updated".
+
+### Next
+
+STOP. For Ron: restore `PHASE_3.md` 3.4 (e) to the end of 3.6 from git (the marker shows where); rerun the tests and
+ruff; run `serve --copy` and open the JSON (`BACKLOG.md` item 6); open the mock; answer points 31 and 32; then step 3.

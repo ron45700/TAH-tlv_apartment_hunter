@@ -11,7 +11,9 @@ the admin created on the production store by Ron (2026-10-11); `jobs/reset_admin
 Ron's notes on the mock (#316–#331)**; built in the round: one sublet switch per profile (#317) and the orange-location
 cap (#320); a new mock. **Round 9 (2026-10-12): points 27–30 and Ron's notes on the round-8 mock approved
 (#332–#339); the bar redesigned; `Profile.from_stored_json`; 3.7's build step 1 built (the store generation counter and
-its migration command, #316), not yet run on the production store.** No code before a task's plan is approved; no paid call before its
+its migration command, #316). **Round 10 (2026-10-13): Ron ran the migration on the production store; Ron's notes on
+the round-9 mock (#340–#343); 3.7's build step 2 built: the read-only API for a guest, served from a dated copy of the
+store.** No code before a task's plan is approved; no paid call before its
 own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
@@ -196,6 +198,163 @@ The contract test `test_save_lifecycle_is_whole_record_replace_and_last_write_wi
 tests below. `CLAUDE.md`'s Repository row and store-writer paragraph change with it (written this round: the decision;
 the method signature when built).
 
+> **⚠️ LOST IN ROUND 9, TO BE RESTORED FROM GIT BY RON.** A faulty edit on 2026-10-12 (round 9) deleted everything
+> from 3.4's "(e) The busy timeout (#259)" to the end of 3.6: 3.4 (e), (f), its tests, what could not be verified and
+> its points, the open points after the build; all of 3.5; all of 3.6. The text was not changed after round 7's commit
+> (`9530e16`), so it is intact in git: put it back here, between 3.4's "(d) Compare and set …" and "## 3.7". 3.7's
+> heading, opening and (a)–(d), deleted by the same edit, were restored in round 10 from what was read in rounds 8 and 9.
+
+## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 and 2 built
+
+The lists and the cards (`BASELINE.md` §6) with these approved display rules (`BACKLOG.md`, "Recorded for a later
+phase"): the card's main time is the last publication, shown relative (#122); the repost log shows the earliest
+`posted_at` of the post and its duplicates (#75 A); rooms on a room post, "1 of N" (#120); size on a room post (#121);
+the entry date's year never displayed (#115); on a card whose media came through a repost, the video link comes from
+the repost (#70, #72.4). The profile editor with the two options, the profile's one sublet switch (#317), "copy from the
+other option" (#245–#247, #272), and the area filter grouped (#248, #249). Viewed: opening a card, "mark as not viewed" (#253). Flag "lied"
+and "wrong classification" (#173, #254).
+**The polished UI is built here (#257)**, with Ron's design skills, when this task is reached; `BASELINE.md` §6–§8 stay
+binding. The framework is decided (#258). **Needs from Ron:** the plan's approval; the design direction, at the task.
+
+**Required of 3.7's plan by #301 (Ron, 2026-10-11):** the same-listing grouping (`dedup/stage_b.derive_cards`) is
+computed **once for all users**, held in the site's memory, and computed again **only when the store changed** (a
+collection run, a classification run, a flag, a report, a restore, a correction); only each user's evaluation, filtering
+and order (`policy/`) run per request. The plan must say **how the site knows the store changed**, and must **measure a
+real page load**. From 3.6 (#300): a "lied" flag on a card is written on every one of `Card.canonical_ids`; a "wrong
+classification" report on `Card.shown_id` only.
+
+**The plan below was written on 2026-10-11 (round 7) and approved by Ron on 2026-10-12 (round 8), with his answers
+and his notes on the mock written into it (#316–#331); in round 9 Ron's notes on the round-8 mock (#332–#339); in round 10 his notes on the round-9 mock (#340–#343).** It follows Ron's direction (#303–#315), #302 (a post with no
+written price is always at the bottom) and #320 (an orange location caps a post at the middle), both built. Build steps 1
+(the store generation counter) and 2 (the read-only API for a guest) are built (rounds 9 and 10). The mock, filled from real active posts read-only, is in `data/mock/`
+(gitignored: real people's text and phones); the round-10 mock replaces round 9's; it is a look, not the design.
+
+**Until 3.9 the site runs on a dated copy of the production store (#331): anything Ron saves there (preferences, viewed
+marks, flags, reports) stays in the copy** and never reaches the production store.
+
+### (a) Scope
+
+**In 3.7:** the API and the pages for everyone who is not the admin acting as admin: the list (home), the opened post,
+the filter bar, sign-in, sign-up with a key, the forced password change, the preferences page; the user's writes
+(viewed, "mark as not viewed", a "lied" flag, a "wrong classification" report, saving the preferences); the session
+cookie; the same-listing grouping held in memory (#301); a command that serves the site on the laptop. **Not in 3.7:**
+the admin's pages (3.8; the admin signs in through 3.7's page); serving through Tailscale and Docker (3.9); Telegram
+(Phase 4); favourites, a map, a language switch (#310).
+
+### (b) What I took from Ron's reference screenshots, and what I did differently
+
+| Reference | Taken | Different, or left out |
+|---|---|---|
+| The phone list | One card under the other (#303); the photo at the start (the right, in Hebrew) beside a large price; the location line with a pin; the relative time; feature chips; a WhatsApp button beside a wide button | No heart (favourites, #310); no floating "map" button (#310); no language switch (#310); the wide button opens the post on our site, and the link to the original sits inside (c) |
+| The opened post on a phone | Full screen, a back arrow at the top (#313); a photo carousel with dots; a price block; a rows table (rooms, floor, sqm, entry date), not written shown as "לא צוין" in grey (#321); a "features" block of chips, the known ones lit and the unstated ones grey; a sticky bottom bar with the main action | Our chips use the colours of #309 (green, plain, red, grey, orange), not just lit and grey; no chips for features we do not store (a safe room, a shelter, renovated, pets); the bottom bar holds "to the original post" and WhatsApp, no map |
+| The desktop grid | A grid (#303); the photo on top; the first lines of text as the heading (here the poster's own text, #312); a grey location line; a row of four stats with icons | The source badge (we have one source); our fourth stat is the entry date, the time moves to the card's foot; the glow (#308) |
+| The preferences pages | Sections as white cards on a warm background; a range as two number boxes and a slider, with a "don't care" button (it is our `None`); entry-date quick chips ("immediate", "from the 1st of next month", "another date"); feature tiles with an icon that light up when chosen; a summary with "edit" per section; a live count "with the current settings: N posts" | Not a step-by-step wizard: one page, two tabs (room, empty apartment) and "copy from the other option" (#272); every category carries its level, "preference" or "must" (§8), where the reference has one global "also show posts that do not mention a feature"; no property types we do not have (an apartment for roommates as a third kind); no email; it is not the filter (#314): the home page has its own bar |
+
+What the references show and the approved rules do not have, listed for Ron (point 25), not added: a filter by street,
+a map, favourites, pets, a safe room or shelter, "renovated", a third kind "apartment for roommates", an email, the
+source badge, a "results include only the last week" line.
+
+### (c) Every item, on the closed card and in the opened post (#303, Ron's request f) — APPROVED with #321–#328 (#330, point 9)
+
+`BASELINE.md` §6, §7, §8 and the marks Ron listed, with Ron's notes on the mock (2026-10-12). "Desktop" is the grid card
+and the dialog (#304); "phone" is the stacked card and the full-screen post (#313). **—** means not shown there.
+
+**The rules over the whole table.** No glyphs anywhere, on the card or inside: colour plus words only, each item keeping
+its accessible name (#323). Every attribute not written reads "לא צוין" in grey (#321), except price and entry date,
+which take the important-missing badge. **On the closed card only the green chips** (#326), plus three items that are
+not green: the red "women only" icon, the important-missing badge, the orange location line. The price, the location
+line, the four stats, the kind and the foot are not chips and stay (#332). **The kind is "דירה שלמה" everywhere**
+(#339). **The three buttons of the foot are outlined in their colour** (#338): "פייסבוק" blue, "וואטסאפ" green (another
+green than the tier's glow), "דיווח" a soft light red. **The card is built of fixed slots** (#341): the photo, the kind
+line, the price, three lines of text, two lines of location, the four stats, one row of chips, and a foot of two fixed
+rows; each slot keeps its place and size when it is empty, so every card is the same height and nothing moves,
+whatever it holds (WhatsApp or not, the report button or not, reposts or not, no photo, a short or long text, no price,
+the "women only" icon, an orange location). **The foot** (#340): the time at the right with the three button slots at
+the left, in fixed places; under the time, on its own line, "פורסם N פעמים" only when there was a repost, its line kept
+when there was none. A guest's report slot stays, empty (#341). **Inside, every chip in its colour**
+(green, orange, grey, plain, and red for a preference not met).
+
+| # | Item | Closed card, desktop | Closed card, phone | Opened post, desktop (dialog) | Opened post, phone (full screen) |
+|---|---|---|---|---|---|
+| 1 | Photos (#327; lazy-loaded, #330) | **A carousel of every photo on the card itself** (4:3, cropped): arrows on hover, dots, "1/5" in a corner (#332, point 30); only the first photo is loaded with the page, the rest as they come into view | **A carousel at the start, swiped**, square, dots | A carousel of every photo, arrows and dots; click enlarges | A swiping carousel at the top, dots |
+| 2 | Video or reel (photos only are downloaded) | A "וידאו" chip on the photo, in words. **A post with no photo but a video or reel** (round 9, Ron's instruction after the check of A4: three of 139 active posts, each a single reel) shows, in the photo's place, the link "צפייה בסרטון בפייסבוק", never "אין תמונות" | The same | "Watch the video on Facebook" link per video; from the repost when the media came through one (#70, #72.4) | The same |
+| 3 | The poster's full original text | The first 3 lines, cut, as the card's heading (#312) | The first 2 lines | The whole text, unchanged, line breaks kept, `dir="auto"` | The same |
+| 4 | **Link to the original post** | A small "פייסבוק" button in the card's foot, outlined in blue (#338); following it does not mark the card viewed (#330, point 10) | The same, in the foot | **A main button "to the original post" in the dialog's foot** | **In the sticky bottom bar**, beside WhatsApp |
+| 5 | Price, "X/Y" when several (#95) | Large, at the top of the text column | Large, at the top beside the photo | The price block, large | The same |
+| 6 | Price not written | The important-missing badge "אין מחיר" (a dark slate badge, words only, #330 point 6) | The same | The same, in the price block | The same |
+| 7 | Entry date as written; its year never shown (#96, #115) | The fourth stat: the text as written, cut to one line | In the line under the price | A row, the text as written in full | The same |
+| 8 | Entry date not written | The fourth stat: the badge "אין תאריך כניסה" | The same | The row, the same badge | The same |
+| 9 | Location: areas and streets | One line: the areas' names · the streets as written; plain, green on `"match"`, **orange when the location is orange** (#250, #320) | The same, two lines at most | Rows: "area" (each name), "street" (as written), the names the post itself gave (as written) | The same |
+| 10 | No area: unclear (a street given) or not written (#110) | The orange line "האזור לא ברור" with the street / "מיקום: לא צוין" in grey | The same | The same, in the rows | The same |
+| 11 | Listing kind, sublet mark (#246) | The kind in words, "חדר בדירת שותפים" / "דירה שלמה" (the one name, #339), and "סאבלט", above the price (not a chip; §8: every card shows the option it answers) | The same | The same, under the price | The same |
+| 12 | Kind unclear or not written, marked (#273), and the option it answers (§8) | The orange mark "סוג לא ברור · מוצג כ: חדר" in the kind's place (#332) | The same | The same | The same |
+| 13 | Phone(s), `name-number` (§6) | — | — | Each number as a `tel:` link, with its name | The same |
+| 14 | **WhatsApp** (#311), when the post has a mobile number (#330, point 22) | A small "וואטסאפ" button in the foot, outlined in green (#338) | A WhatsApp button, outlined in green | A button per mobile number | In the sticky bottom bar (the first mobile number; the others in the rows) |
+| 15 | Publication time: the last publication, relative (#122) | In the foot's first row: "לפני 5 שעות" | The same, in the foot | In the price block | The same |
+| 16 | Repost log, earliest first (#75 A) | "פורסם 3 פעמים" on its own line under the time, only when there was a repost (#340) | The same | A list: each publication, relative and Israel time, the earliest first | The same, collapsed |
+| 17 | Broker (no broker is positive, #309) | A chip only when green ("ללא תיווך") | The same | Features block, in its colour ("לא צוין" grey) | The same |
+| 18 | Rooms; on a room post "1/N" closed (#325), "1 of N" inside (#120) | First stat; a room post "1/2.5"; total not written: "1" with a grey "סה״כ לא צוין" under it (#332) | In the line under the price | A row, #120's wording | The same |
+| 19 | Floor, "X/Y" when the floors are written (#98, #106); 0 ground, -1 basement | Third stat; "לא צוין" grey | — | A row | The same |
+| 20 | Size; on a room post "X sqm for the room, of Y" (#99, #121) | Second stat; "לא צוין" grey | — | A row | The same |
+| 21 | Balcony | A chip only when green | The same | Features block, in its colour; not written "לא צוין" grey (#321) | The same |
+| 22 | Parking | A chip only when green | The same | Features block; not written "לא צוין" grey (#321, replacing §6's "none") | The same |
+| 23 | Elevator, air conditioning | Chips only when green | The same | Features block | The same |
+| 24 | Furnished yes / partial / no (#102) | — | — | Features block; "yes" plain (#330, point 8) | The same |
+| 25 | Arnona, house committee (#101, #116) | — | — | Two rows: the amount, "included", orange "unclear", or "לא צוין" grey | The same |
+| 26 | "Women only" shown because the bar does not hide it (§8) | **The red "נשים בלבד" icon chip** (kept, #326) | The same | The same, under the price | The same |
+| 27 | "Women preferred" (#117) | — (a plain chip, #326, #332) | — | A plain chip under the price | The same |
+| 28 | **The glow** (#308, #322) and the tier (#323) | The ring and soft shadow in the tier's colour; **no glow while the option holds no preference**; a small "i" **in the card's top-left corner, over the photo and inside the card, on a faded semi-transparent background** (#337) shows the tier's label on hover; no label text | The same, over the photo's top-left corner; the "i" on tap | The tier's label and the reason for the bottom tier, in words, at the top of the price block (#332) | The same |
+| 29 | The field colours (#309) | Only the green chips (#326) | The same | On every row and chip | The same |
+| 30 | "Corrected by hand" (#256) | The word "תוקן" beside a corrected item that is shown closed | The same | "תוקן ידנית" on each corrected row or chip | The same |
+| 31 | Viewed (#62, #253); signed-in only | The card dimmed, the word tag "נצפה" | The same | "Mark as not viewed" in the foot | In the top bar's menu |
+| 32 | Flag "lied" (#300); signed-in only | **A report button "דיווח" in the card's foot** (#328), outlined in a soft light red (#338): a small menu, "the post lies" (with a confirmation) | The same | In the foot's menu, with a confirmation | In the top bar's menu |
+| 33 | "Wrong classification" report (#254); signed-in only | The same report button: "wrong classification" opens the post with the form | The same | The same menu: a form, the fields as Hebrew labels, a note of up to 500 characters | The same, full screen |
+| 34 | The other city (#214) | — (an other-city post is rejected and never reaches a user; the admin's list shows it, 3.8) | — | — | — |
+
+**The link to the original post** (Ron: it must exist, its place the reviewer's recommendation, approved, #330 point
+10): a main button in the opened post and a small link on the closed card; following the link from the closed card does
+not mark the card viewed (#253 marks on opening).
+
+### (d) The glow (#308) and the field colours (#309) — DECIDED (#320, #322, #323, #330 points 4, 5)
+
+**The glow** (#330, point 4): a thin ring and a soft shadow in the tier's colour, strongest for green; **green** for
+`"preferences_met"`, **orange** for `"critical_met"`, **red** for the bottom (`"unknown"`). **No green glow while the
+option that admits the post holds no preference at all** (#322): every category of that option is `None` or at the
+level `"critical"`; such a card has no glow. Orange and red are unchanged. The glow never changes the order.
+
+**The tier's label** is not text on the closed card (#323): a small "i" in the card's corner shows it on hover (desktop)
+or tap (phone): "מתאים לכל ההעדפות", "מתאים חלקית", "חסר מידע: …" with the reason for the bottom ("no price", "kind
+unclear", "area unclear", "entry date not written" for a critical one). The "i" is a button whose accessible name is the
+label, so a screen reader reads it.
+
+**An orange location** caps the tier at the middle (#320, built in `policy/evaluate.py`): such a card glows orange at
+most, never green.
+
+**Colour blindness** (#323, #330 point 5). **No glyphs anywhere**: no ✓, no warning sign, no ✕ or ? on the tier or the
+chips; colour plus words only. Every chip carries its value in words ("מרפסת", "ללא תיווך", "חניה: לא צוין"), and every
+chip and the card keep an accessible name that says the state ("balcony: yes, matches your preference"). The hues are
+picked apart in lightness as well as hue (a blue-leaning green, an amber, a crimson) and checked in the build with a
+colour-vision simulation (chrome-devtools' rendering emulation) and the accessibility review. **Ron accepts that a
+colour-blind user needs the "i" to read the tier** (#323).
+
+**How the field colours (#309) sit with 3.6's `FieldState`.** `Evaluation.fields` holds a `FieldState` for the ten
+profile categories only, for the option that admitted the post. The colour of a field is:
+
+| `FieldState` | Colour |
+|---|---|
+| `"match"` | green |
+| `"mismatch"` | red (only a preference can show it: a failed critical category hides the post) |
+| `"not_written"` | grey, the words "לא צוין" (#321) |
+| `"unclear"` | orange |
+| `"not_applied"` (no value in the option), and every field that is not a category (elevator, air conditioning, furnished, arnona, house committee, building floors, room size) | from the post's own value: a **known positive** green (broker `False`, balcony, parking, elevator, air conditioning `True`); a known negative plain; not written grey "לא צוין"; unclear orange; a field with no positive or negative (rooms, floor, size, price, entry date, arnona, house committee, furnished, "yes" included, #330 point 8) plain |
+| the area | orange when `area_orange` or no area and a street given; grey "לא צוין" with no location; green on `"match"`; else plain |
+| price and entry date not written | the important-missing badge (a dark slate badge with the words, #330 point 6), not grey |
+
+**`policy/colours.py`** (#330, point 18), a small pure function, `field_colours(seen, evaluation) -> Mapping[str,
+Colour]`, computes the table above on the server, so the browser holds no rule, and says whether the card glows (#322,
+from the admitting option's values). It imports the wanted values from `policy/evaluate.WANTED` (one implementation,
+#269) and adds the two the card alone uses (elevator, air conditioning `True`, #309).
+
 ### (e) The header, the filter bar on the home page, and the preferences page (#305, #314, #315) — DECIDED (#317, #324, #329, #330, #333–#336, #339); the bar redesigned in round 9
 
 **Right to left, nothing on the left (#324), but the logo (#333).** The site is Hebrew only. The header and the bar
@@ -205,7 +364,10 @@ screen nothing else sits on the left side of the header or the bar.
 **(i) The header** (#333, #334). At the right, **the user area**: a guest sees "התחבר" (sign in) and beside it "הירשם"
 (sign up); a signed-in user sees their username, and clicking it opens a menu with "ההעדפות שלי" (the preferences page)
 and under it "התנתק" (sign out). At the left, **the logo** "TLV Apartment Hunter": a designed mark and wordmark, light
-and cool (pale sky and teal), not the name set in the page's font. Nothing between them.
+and cool (pale sky and teal), not the name set in the page's font. Nothing between them. **The header has its own
+background** (#342), a cool tint, distinct from the white filter bar under it. **The user button** (#343): one pill
+with a round avatar (the username's first letter on a sky-to-teal gradient), the username and a chevron; on a phone the
+avatar and the chevron only. A guest's "התחבר" and "הירשם" are pills of the same height.
 
 **(ii) The filter bar, redesigned (round 9, the reviewer's proposal for #335).** Ron found round 8's bar unclear. Its
 two hard parts were the "option being edited" (one row of controls that silently edited whichever kind chip was last
@@ -326,6 +488,14 @@ hears them). **Decided: option 1 (#316)**; the migration command is built at bui
 | **1 (recommended)** | **A store generation counter kept by SQLite itself:** a one-row table and `AFTER INSERT`, `AFTER UPDATE` and `AFTER DELETE` triggers on `raw_posts`, `post_lifecycle`, `listings` (store) and `corrections` (userdata) that add 1. Each request reads the one row (one small query); a different number means recompute. Triggers are part of the database schema (sqlite.org "CREATE TRIGGER": only `TEMP` triggers are limited to the connection that made them), so every writer, in every process, present or future, moves it, and no job command changes | Exact: recomputes on a post change only, never on a viewed mark, a sign-in or a profile save. **Checked in memory (scratchpad, SQLite 3.45.3, 2026-10-11): the store's `INSERT … ON CONFLICT DO UPDATE` fires the `INSERT` trigger for a new row and the `UPDATE` trigger on a conflict, also when the value is unchanged**; sqlite.org's UPSERT page does not say | **A layout change** of `store` and `userdata` (a table and triggers: layout versions 2), so a one-time migration of the production file, with a dated backup, by a new command (a seventh store writer) |
 | 2 | `PRAGMA data_version` on one connection the site keeps open (sqlite.org: two calls on the same connection differ "if changes were committed to the database by any other connection in the interim", other processes included) | No layout change | It moves on **every** commit by another connection, the site's own viewed marks, sign-ins and profile saves included, so the grouping is recomputed far more often than the store's posts change; at 40 days a recompute costs seconds (3.6's estimate) |
 
+**First numbers, build step 2 (2026-10-13, round 10):** `serve --copy` on Ron's laptop, today's store (139 compared
+posts, 123 cards for a new guest's empty bar, 400 KB of JSON). **Cold**, the first request after start: `gen` 1.1 ms,
+**`group` 1324.4 ms** (reading the store and hashing every photo), `eval` 1.2, `order` 0.2, `json` 7.4; 1.69 s at the
+client. **Warm** (5 requests): `gen` 0.7–1.3 ms, `eval` 1.1–2.1, `order` 0.2–0.5, `json` 6.9–13.9; **14–39 ms at the
+client**. `/api/reference` 3 ms, `/api/posts/{id}` 5 ms, a 47 KB photo 67 ms. The warm target (300 ms on the server) is
+met by far; the cold first request (one per store change or start) is above the 1.5 s first-cards target and is measured
+again in the browser at step 7 (point 31).
+
 **Measuring a real page load** (#301). At build step 7 (l), on a dated copy of the production store (the site writes
 `userdata`, and even opening `SqliteUserDataStore` starts a write transaction, so the real file is not served before
 3.9, #331), **and on a synthetic store of 40 days' size** (#330, point 20), built as in 3.6's measurement:
@@ -391,6 +561,13 @@ allows.
 #257 carries over. No router library: a small history-based route for `/`, `/post/<id>`, `/preferences`, `/sign-in`,
 `/sign-up`, `/password`.
 
+**Installed 2026-10-13 (build step 2), read again under the skill (`ASSUMPTIONS.md` I15–I18):** `fastapi` 0.143.0,
+`starlette` 1.7.0, `uvicorn` 0.54.0, and `httpx2` 2.13.1 (dev) — the client the installed `TestClient` imports
+(`starlette/testclient.py`: `httpx2`, with `httpx` only as a deprecated fallback; FastAPI's testing page still says
+`httpx`, Starlette's says `httpx2`). Starlette 1.8.0 was published the same morning and was not taken. **On Windows
+`TestClient` opens a loopback socket pair** (the event loop's self-pipe, I17): the web tests make that one pair without the
+guarded `connect`; the guard stays on for everything else.
+
 **Pinned exactly (#330, point 17):** every package above at the exact version read at the install (`==` in
 `pyproject.toml`, exact versions in `package.json` with the lock file), read again under the
 `external-contract-verification` skill if the install is later than 2026-10-11. **At the install, before any test is
@@ -446,11 +623,20 @@ step 6; the transitive npm packages' licences; whether TypeScript 7's native pac
 1. **Built in round 9 (2026-10-12):** the generation table and triggers (#316, `store_generation.py`), layout
    versions `store`, `store.listings`, `userdata` 2, `SqliteRepository.store_generation()`, the migration command
    `jobs/add_store_generation.py`, their tests. **Ron runs the migration** on the production store (a dated backup is
-   made); until then every command refuses the store and names the command.
+   made); until then every command refuses the store and names the command. **Ron ran it on 2026-10-13:** layout
+   `store`, `store.listings`, `userdata` 1 → 2, backup `tlv_hunter.2026-10-13.backup.sqlite3`, `RawPost`s identical, counter
+   0.
 2. The read-only API: `web/`, the held grouping, `/api/cards`, `/api/posts`, `/api/photos`, `/api/reference`,
    `jobs/serve.py`, on a dated copy of the store (#331). The dependencies installed, pinned exactly; `TestClient`'s
    client checked before its first test (#330, point 17). **Ron runs** `serve` and opens the JSON; the first `Server-Timing`
-   numbers.
+   numbers. **Built 2026-10-13 (round 10):** `web/` (`app.py`, `grouping.py`, `filters.py`, `cards.py`, `routes.py`),
+   `jobs/serve.py` (`--copy` makes a dated copy in `<store_root>/site/` by SQLite's online backup from a read-only
+   connection; without it the newest copy; never the store itself), `reference/area_groups.yaml` with
+   `areas.reference.load_area_groups`; `GET /api/reference`, `POST /api/cards` (and `GET /api/cards`, a new guest's empty
+   bar, so the list opens in a browser), `GET /api/posts/{id}`, `GET /api/photos/{id}/{file}`; `Server-Timing`; the two
+   headers; FastAPI's pages and telemetry off. Tests: `tests/test_web.py` (groups 2–6, 8, `serve`). **Not yet in the
+   payload:** the field colours and the glow (`policy/colours.py`, step 3, with the page that uses them) and WhatsApp
+   (step 6, its link format read first).
 3. The list and the opened post for a guest, **desktop grid and phone list together** (#303), the dialog (#304) and the
    full-screen post (#313), the glow, the "i" and the colours (#322, #323), the closed card's carousel with lazy-loaded
    photos (#327, #330), only green chips closed (#326), built with `frontend-design` and checked in chrome-devtools at
@@ -562,6 +748,16 @@ decision after it.
     dots. Only the first photo loads with the page; the others as they scroll into view (#330, point 12). The arrows
     are chevrons drawn in CSS, which I read as controls, not state glyphs (#323 names the tier and the chips).
     **Recommended:** keep them. Or: dots only. **Decided: kept (#332).**
+
+**New points from round 10 (for Ron):**
+
+31. **The cold first request** takes 1.3 s on the server (1.7 s at the client) on today's store, above the 1.5 s
+    first-cards target, once per store change or start; warm requests take 14–39 ms. **Recommended:** keep it lazy for now
+    and measure it in the browser at step 7 (with the 40-day store); if it still misses, compute the grouping at start and
+    after a store change in the background, so no visitor waits for it. Or: compute it at start now.
+32. **The list's size:** 400 KB of JSON for 123 cards, since every card carries the poster's whole text (the closed card
+    shows 3 lines, the opened post the rest). **Recommended:** keep it whole until step 7's measurement (warm requests
+    are fast); if the page is slow, send the first lines in the list and the whole text with the opened post.
 
 ## 3.8 The admin lists — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256), plan to be written
 
@@ -747,9 +943,8 @@ built with 3.7.
 
 ## 7. For Ron's decision
 
-1. **Run the migration** (`uv run python -m tlv_hunter.jobs.add_store_generation`, 3.7's build step 1, #316) after
-   reviewing round 9; the round-9 mock in `data/mock/`. The plan, its 30 points and the notes on the mock are approved
-   (#316–#339).
+1. **Round 10's points 31 and 32** (3.7 (n)); `serve` and its JSON (`BACKLOG.md` item 6); the round-10 mock in
+   `data/mock/`. The plan, its 30 points and the notes on the mocks are approved (#316–#343).
 2. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
    `dcb4c0cb4b24`, the deferred carrier of #241 and the reclassify of the other 189 (`BACKLOG.md`).
 
@@ -758,4 +953,4 @@ round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and th
 3.4 and 3.5 (#289, #290) and 3.4's three points left by the build (#291–#293); the admin's password reset on the machine
 (#294); the plan for 3.6 and its 16 points (#295–#300); how the grouping is held (#301); the missing price at the bottom
 (#302); Ron's direction for the site (#303–#315); the plan for 3.7, its 30 points and the notes on the mocks
-(#316–#339).
+(#316–#343).

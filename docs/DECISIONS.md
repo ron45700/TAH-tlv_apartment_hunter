@@ -15,7 +15,8 @@ choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290,
 3.6 and how the grouping is held; #302, the missing price at the bottom; #303–#315, Ron's direction for the site);
 2026-10-12 (#316–#331, Ron's answers on the 3.7 plan: the store generation counter, one sublet switch per profile, the
 orange-location cap, "not stated", the UI notes on the mock, the remaining points); #331's attribution corrected;
-#332–#339 (round 9: points 27–30, Ron's notes on the round-8 mock)
+#332–#339 (round 9: points 27–30, Ron's notes on the round-8 mock); 2026-10-13 (#340–#343, Ron's notes on the
+round-9 mock)
 
 > Written in English like every document in `docs/`.
 >
@@ -3248,6 +3249,31 @@ Blue for Facebook; green for WhatsApp, a different green from the tier's glow; a
 The empty-apartment search and the card both say "דירה שלמה" (round 8's bar said "דירה ריקה"). The value stays
 `whole_apartment` (Gate B, Gate C).
 *Ron approved the reviewer's recommendation.* No reason of his own.
+
+## Phase 3: Ron's notes on the round-9 mock (2026-10-13)
+
+**Ron gave four notes on the round-9 mock on 2026-10-13; all four are Ron's own.** On the same day he ran
+`add_store_generation` on the production store (`SESSION_LOG.md`, round 10).
+
+### 340 — "Published N times" on its own line under the publication time, only when there was a repost
+The card's foot shows the publication time; a post that was reposted shows "פורסם N פעמים" on a line of its own under
+it. A post published once shows no such line. In the round-9 mock it shared the time's line and, with WhatsApp present,
+pushed the report button onto a new line.
+*Ron's note on the mock (2026-10-13).* No reason recorded beyond the layout problem.
+
+### 341 — The card is built of fixed slots: every card looks uniform, whatever it holds
+Any combination fits without breaking or shifting the layout: WhatsApp or not, the report button or not (a guest),
+reposts or not, no photo, a short or a long text, a missing price, the "women only" icon, an orange location. Each item
+has its slot, which keeps its place and size when empty. Checked in the mock with the worst combinations side by side.
+*Ron's note on the mock (2026-10-13).* No reason recorded.
+
+### 342 — The page header has its own background, different from the white filter bar
+The header (logo and user area) and the filter bar read as two things: the header gets its own background colour.
+*Ron's note on the mock (2026-10-13).* No reason recorded.
+
+### 343 — The user button at the top right is designed more nicely
+The signed-in user's button (#334) gets a designed look; the guest's "התחבר" and "הירשם" sit in the same area.
+*Ron's note on the mock (2026-10-13).* No reason recorded.
 
 ---
 

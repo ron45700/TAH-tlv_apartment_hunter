@@ -1,0 +1,30 @@
+# The area filter's region groups (DECISIONS.md #248, #249, #261; PHASE_3.md §6), display only:
+# what is stored is always the municipal numbers (#83). The grouping is the assistant's, approved
+# by Ron on 2026-10-10; it is not a municipal division. Every one of the 71 areas appears exactly
+# once. The non-residential entries are in a collapsed group at the bottom, not hidden (#249).
+# Where it lives: #330, point 23. Read only through tlv_hunter/areas/reference.py.
+groups:
+  - heading: עבר הירקון – מערב
+    collapsed: false
+    areas: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18]
+  - heading: עבר הירקון – מזרח
+    collapsed: false
+    areas: [19, 20, 21, 22, 23, 24, 25, 26, 27]
+  - heading: הצפון הישן והחדש
+    collapsed: false
+    areas: [29, 30, 31, 32, 33, 34, 35, 36]
+  - heading: מרכז העיר
+    collapsed: false
+    areas: [37, 38, 39, 40, 41]
+  - heading: יפו
+    collapsed: false
+    areas: [42, 43, 44, 45, 46, 47, 48, 49]
+  - heading: דרום העיר
+    collapsed: false
+    areas: [50, 52, 53, 54, 56]
+  - heading: מזרח העיר
+    collapsed: false
+    areas: [57, 58, 59, 60, 61, 62, 63, 64, 65, 67, 68, 69, 70, 71]
+  - heading: אזורים שאינם למגורים
+    collapsed: true
+    areas: [11, 12, 13, 28, 51, 55, 66]

@@ -7,6 +7,10 @@ identity, the name a label (#83), and five entries carry a hand-corrected displa
 malls, hospitals, stations and the like, each with its coordinates, their source and date, and the
 areas it lies in. Ron adds entries by hand; the loader refuses an entry that is incomplete, whose
 areas are not municipal numbers, or whose name is written twice.
+
+`reference/area_groups.yaml` holds the area filter's region groups (#248, #249, #261; #330, point
+23): display only; every one of the 71 appears exactly once, and the collapsed non-residential group
+is last.
 """
 
 from datetime import date
@@ -19,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 REFERENCE_ROOT = Path(__file__).resolve().parents[2] / "reference"
 AREAS_FILE = "areas.yaml"
 AREA_COUNT = 71
+AREA_GROUPS_FILE = "area_groups.yaml"
 KNOWN_PLACES_FILE = "known_places.yaml"
 # A place outside this box is a typo, not a place in Tel Aviv-Yafo (its municipal area is a few
 # kilometres wide); WGS84.
@@ -140,3 +145,31 @@ def load_known_places(root: Path = REFERENCE_ROOT) -> tuple[KnownPlace, ...]:
                 raise ValueError(f"{path}: {key!r} is written for {seen[key]!r} and {place.name!r}")
             seen[key] = place.name
     return places
+
+
+class AreaGroup(BaseModel):
+    """One heading of the area filter (#248): display only; the numbers are what is stored."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    heading: str
+    collapsed: bool
+    areas: list[int]
+
+
+def load_area_groups(root: Path = REFERENCE_ROOT) -> tuple[AreaGroup, ...]:
+    """The region groups, in display order. Raises unless every one of the 71 areas is in exactly
+    one group and the only collapsed group is the last (#249, #261)."""
+    path = Path(root) / AREA_GROUPS_FILE
+    entries = _load_mapping(path).get("groups")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError(f"{path}: expected a list under 'groups'")
+    groups = tuple(AreaGroup.model_validate(entry) for entry in entries)
+    numbers = [number for group in groups for number in group.areas]
+    if sorted(numbers) != list(range(1, AREA_COUNT + 1)):
+        raise ValueError(f"{path}: every area 1-{AREA_COUNT} must be in exactly one group")
+    if [group.collapsed for group in groups] != [False] * (len(groups) - 1) + [True]:
+        raise ValueError(f"{path}: the one collapsed group must be the last")
+    if any(not group.heading.strip() for group in groups):
+        raise ValueError(f"{path}: every group needs a heading")
+    return groups
