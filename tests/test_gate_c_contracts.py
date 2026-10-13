@@ -1,6 +1,7 @@
 """Gate C's records (SCHEMA.md, Gate C; DECISIONS.md #288): the approved names and every rule
 that is a validator (task 3.4 (b))."""
 
+import json
 import typing
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -132,10 +133,10 @@ def round_trip[M: BaseModel](record: M) -> M:
         ),
         (SignupKey, "schema_version key_id key_hash label created_at used_by used_at cancelled_at"),
         (Session, "schema_version token_hash user_id created_at expires_at ended_at"),
-        (Profile, "schema_version user_id room whole_apartment updated_at"),
+        (Profile, "schema_version user_id room whole_apartment include_sublets updated_at"),
         (
             SearchOption,
-            "enabled include_sublets areas price_min price_max hide_women_only rooms "
+            "enabled areas price_min price_max hide_women_only rooms "
             "floor size_sqm broker parking balcony entry_date",
         ),
         (DateRangeCriterion, "earliest latest level"),
@@ -274,8 +275,9 @@ def test_a_session_holds_only_a_hash() -> None:
 
 def test_a_new_profile_has_both_options_on_and_nothing_set() -> None:
     profile = round_trip(new_profile(USER_ID, NOW))
+    assert profile.schema_version == 2 and not profile.include_sublets  # one switch (#317)
     for searched in (profile.room, profile.whole_apartment):
-        assert searched.enabled and not searched.include_sublets and searched.hide_women_only
+        assert searched.enabled and searched.hide_women_only
         assert searched.areas == [] and searched.price_min is None and searched.rooms is None
         assert searched.broker is None and searched.entry_date is None
 
@@ -295,6 +297,63 @@ def test_a_full_option_round_trips() -> None:
     )
     profile = new_profile(USER_ID, NOW).model_copy(update={"whole_apartment": full})
     round_trip(Profile.model_validate(profile.model_dump()))
+
+
+def version_1_doc(room_sublets: bool, whole_sublets: bool) -> str:
+    """A profile as version 1 stored it: an `include_sublets` in each option, none on the
+    profile."""
+    data = new_profile(USER_ID, NOW).model_dump(mode="json")
+    del data["include_sublets"]
+    data["schema_version"] = 1
+    data["room"]["include_sublets"] = room_sublets
+    data["whole_apartment"]["include_sublets"] = whole_sublets
+    return json.dumps(data)
+
+
+@pytest.mark.parametrize(
+    ("room_sublets", "whole_sublets", "switched"),
+    [(False, False, False), (True, False, True), (False, True, True), (True, True, True)],
+)
+def test_a_stored_version_1_profile_reads_as_version_2(
+    room_sublets: bool, whole_sublets: bool, switched: bool
+) -> None:
+    """#317: read-time only, as `PostLifecycle.from_stored_json`; on when either option's
+    switch was on. Ron's stored profile has both off."""
+    read = Profile.from_stored_json(version_1_doc(room_sublets, whole_sublets))
+    assert read == new_profile(USER_ID, NOW).model_copy(update={"include_sublets": switched})
+    assert read.schema_version == 2
+    assert "include_sublets" not in read.room.model_dump()
+    round_trip(read)
+
+
+def test_a_version_2_profile_with_a_per_option_switch_is_refused() -> None:
+    data = json.loads(new_profile(USER_ID, NOW).model_dump_json())
+    data["room"]["include_sublets"] = True
+    with pytest.raises(ValidationError):
+        Profile.from_stored_json(json.dumps(data))
+
+
+def test_a_version_1_profile_with_a_profile_switch_is_refused() -> None:
+    data = json.loads(version_1_doc(False, False))
+    data["include_sublets"] = True
+    with pytest.raises(ValueError, match="version-1"):
+        Profile.from_stored_json(json.dumps(data))
+
+
+def test_plain_model_validate_json_converts_nothing() -> None:
+    """Only `from_stored_json` reads version 1 (the review of round 8): pydantic's own reader is
+    untouched and refuses it."""
+    with pytest.raises(ValidationError, match="schema_version"):
+        Profile.model_validate_json(version_1_doc(True, False))
+    assert "model_validate_json" not in Profile.__dict__
+
+
+@pytest.mark.parametrize("version", [0, 3])
+def test_an_unknown_profile_version_is_refused(version: int) -> None:
+    data = json.loads(new_profile(USER_ID, NOW).model_dump_json())
+    data["schema_version"] = version
+    with pytest.raises(ValidationError, match="schema_version"):
+        Profile.from_stored_json(json.dumps(data))
 
 
 @pytest.mark.parametrize("areas", [[0], [72], [31, 30], [30, 30]])

@@ -3,6 +3,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
+from tlv_hunter import store_generation
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
@@ -15,11 +16,13 @@ from tlv_hunter.textnorm.phones import canonical_phone
 # (DECISIONS.md #80). It covers UPSERT with a conflict target, 3.24.0 (#65).
 MIN_SQLITE_VERSION = (3, 38, 0)
 LAYOUT_MODULE = "store"
-LAYOUT_VERSION = 1
-# The listings table has its own layout row, created when absent, so a store at layout 1 opens
-# unchanged and needs no migration (DECISIONS.md #65; task 2.2, option C).
+# Version 2 (DECISIONS.md #316): the store generation counter and its triggers; a file at version 1
+# is refused until `jobs/add_store_generation.py` migrates it.
+LAYOUT_VERSION = 2
+# The listings table has its own layout row, created when absent (DECISIONS.md #65; task 2.2,
+# option C). Version 2 adds its counter triggers (#316).
 LISTINGS_LAYOUT_MODULE = "store.listings"
-LISTINGS_LAYOUT_VERSION = 1
+LISTINGS_LAYOUT_VERSION = 2
 
 _CREATE_LAYOUT_VERSION = (
     "CREATE TABLE IF NOT EXISTS layout_version (module TEXT PRIMARY KEY, version INTEGER NOT NULL)"
@@ -34,6 +37,14 @@ _CREATE_LISTINGS_TABLES = (
     "CREATE TABLE listings ("
     "listing_id TEXT PRIMARY KEY REFERENCES raw_posts (listing_id), doc TEXT NOT NULL)",
 )
+# What each module's version 2 adds (#316): run after its tables on a new file, and alone by the
+# migration on a file at version 1. One definition for both.
+STORE_GENERATION_STATEMENTS = (
+    *store_generation.CREATE_TABLE,
+    *store_generation.triggers("raw_posts"),
+    *store_generation.triggers("post_lifecycle"),
+)
+LISTINGS_GENERATION_STATEMENTS = store_generation.triggers("listings")
 
 
 class SqliteRepository:
@@ -66,9 +77,17 @@ class SqliteRepository:
             return
         with self._transaction() as conn:
             conn.execute(_CREATE_LAYOUT_VERSION)
-            self._ensure_layout(conn, LAYOUT_MODULE, LAYOUT_VERSION, _CREATE_TABLES)
             self._ensure_layout(
-                conn, LISTINGS_LAYOUT_MODULE, LISTINGS_LAYOUT_VERSION, _CREATE_LISTINGS_TABLES
+                conn,
+                LAYOUT_MODULE,
+                LAYOUT_VERSION,
+                (*_CREATE_TABLES, *STORE_GENERATION_STATEMENTS),
+            )
+            self._ensure_layout(
+                conn,
+                LISTINGS_LAYOUT_MODULE,
+                LISTINGS_LAYOUT_VERSION,
+                (*_CREATE_LISTINGS_TABLES, *LISTINGS_GENERATION_STATEMENTS),
             )
 
     def _ensure_layout(
@@ -97,12 +116,20 @@ class SqliteRepository:
             if required:
                 raise RuntimeError(f"{self._path}: no layout row for module {module!r}")
             return False
+        if row[0] == version - 1 == 1:
+            raise RuntimeError(store_generation.not_migrated(self._path, module, version, row[0]))
         if row[0] != version:
             raise RuntimeError(
                 f"{self._path}: module {module!r} expects layout version "
                 f"{version}, found {row[0]}; no automatic migration"
             )
         return True
+
+    def store_generation(self) -> int:
+        """The store generation counter (#316): it moves on every change of `raw_posts`,
+        `post_lifecycle`, `listings` and `corrections`, by any writer in any process."""
+        with self._connect() as conn:
+            return store_generation.read_generation(conn)
 
     def upsert(self, post: RawPost) -> RawPost:
         with self._transaction() as conn:

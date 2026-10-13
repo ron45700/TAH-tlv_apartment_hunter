@@ -1,5 +1,6 @@
 """The evaluation of a post against one user's profile (`PHASE_3.md` 3.6 (d), (f); `BASELINE.md`
-§7, §8; SCHEMA.md, Gate C; DECISIONS.md #245–#247, #250, #269–#275, #288 R2, #295, #298, #299).
+§7, §8; SCHEMA.md, Gate C; DECISIONS.md #245–#247, #250, #269–#275, #288 R2, #295, #298, #299, #302,
+#317, #320).
 
 Pure: it reads the post as users see it (`SeenListing`) and the profile, writes nothing and calls
 no model (`BASELINE.md` §2 principle 6; invariant 12).
@@ -7,7 +8,9 @@ no model (`BASELINE.md` §2 principle 6; invariant 12).
 Each category of an option comes out met, failed, or unknown (the post's value not written or
 unclear). A failed critical category hides the post; an unknown critical one sends it to the bottom;
 an unknown preference counts as not met (#298). Parking not written is unknown, as stored (#299). A
-post with no written price is always at the bottom, whatever the profile holds (#302).
+post with no written price is always at the bottom, whatever the profile holds (#302). An orange
+location caps the tier at the middle (#320): two or more areas not all chosen, or no area while the
+post gives a street or an area name; a post with no location at all is not capped.
 """
 
 from dataclasses import dataclass
@@ -59,20 +62,20 @@ class _OptionResult:
 
 def evaluate(seen: SeenListing, profile: Profile, now: datetime) -> Evaluation:
     """The post evaluated by the option its kind names, or by every enabled option when its kind
-    is unclear or not written (#273); a sublet only through an option whose `include_sublets` is
-    on (#246, #274). "immediate" compares as the UTC calendar date of `now` (R2)."""
+    is unclear or not written (#273); a sublet only when the profile's one `include_sublets` is on,
+    through those same options (#246, #274, #317). "immediate" compares as the UTC calendar date of
+    `now` (R2)."""
     today = require_utc(now).date()
     listing = seen.listing
     kind = listing.apartment_kind
     kind_marked = kind.state != "written"
     names: tuple[OptionName, ...] = OPTION_ORDER if kind.value is None else (kind.value,)
     results = []
-    if listing.post_nature in OFFERS:
+    sublet_hidden = listing.post_nature == "sublet_offer" and not profile.include_sublets
+    if listing.post_nature in OFFERS and not sublet_hidden:
         for name in names:
             option: SearchOption = getattr(profile, name)
             if not option.enabled:
-                continue
-            if listing.post_nature == "sublet_offer" and not option.include_sublets:
                 continue
             result = _evaluate_option(listing, option, name, today)
             if result.shown:
@@ -144,10 +147,12 @@ def _evaluate_option(
         found.outcome == "unknown" for found in critical
     ):
         tier: Tier = "unknown"
-    elif all(found.outcome == "met" for found in preference):
+    elif all(found.outcome == "met" for found in preference) and not (
+        area_orange or fields["areas"] == "unclear"
+    ):
         tier = "preferences_met"
     else:
-        tier = "critical_met"
+        tier = "critical_met"  # a preference not met, or an orange location (#320)
     return _OptionResult(name, True, tier, fields, area_orange, women_only_icon)
 
 

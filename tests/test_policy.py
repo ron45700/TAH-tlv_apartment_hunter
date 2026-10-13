@@ -1,6 +1,7 @@
 """Task 3.6 (d)–(f), test groups 5 to 8: the evaluation of a post against a profile, the area's
 colour, the order of a user's list, and that the derivation writes nothing (`policy/`;
-`BASELINE.md` §7, §8; DECISIONS.md #245–#247, #250, #253, #269–#275, #288 R2, #295, #298, #299)."""
+`BASELINE.md` §7, §8; DECISIONS.md #245–#247, #250, #253, #269–#275, #288 R2, #295, #298, #299,
+#302, #317, #320)."""
 
 import ast
 from datetime import UTC, date, datetime, timedelta
@@ -49,12 +50,18 @@ def seen(**changes: Any) -> SeenListing:
     return seen_listing(make_listing(LISTING_ID, **fields), [])
 
 
-def profile(room: dict[str, Any] | None = None, whole: dict[str, Any] | None = None) -> Profile:
+def profile(
+    room: dict[str, Any] | None = None,
+    whole: dict[str, Any] | None = None,
+    *,
+    sublets: bool = False,
+) -> Profile:
     base = new_profile(USER_ID, NOW)
     return base.model_copy(
         update={
             "room": base.room.model_copy(update=room or {}),
             "whole_apartment": base.whole_apartment.model_copy(update=whole or {}),
+            "include_sublets": sublets,
         }
     )
 
@@ -84,13 +91,28 @@ def test_an_option_switched_off_shows_nothing() -> None:
     assert evaluate(seen(), p, NOW).shown
 
 
-def test_a_sublet_needs_its_options_switch_and_a_rental_ignores_it() -> None:
-    """#246, #274."""
+def test_a_sublet_needs_the_profiles_one_switch_and_its_kinds_option() -> None:
+    """#246, #274, #317: one switch per profile; the option of the post's kind must be on."""
     sublet = seen(post_nature="sublet_offer")
     assert not evaluate(sublet, profile(), NOW).shown
-    assert evaluate(sublet, profile(whole={"include_sublets": True}), NOW).shown
-    assert not evaluate(sublet, profile(room={"include_sublets": True}), NOW).shown
+    shown = evaluate(sublet, profile(sublets=True), NOW)
+    assert (shown.shown, shown.option) == (True, "whole_apartment")
+    assert not evaluate(sublet, profile(whole={"enabled": False}, sublets=True), NOW).shown
+    room_sublet = seen(apartment_kind=ROOM, post_nature="sublet_offer")
+    assert evaluate(room_sublet, profile(sublets=True), NOW).option == "room"
+    assert not evaluate(room_sublet, profile(room={"enabled": False}, sublets=True), NOW).shown
     assert evaluate(seen(post_nature="rental_offer"), profile(), NOW).shown
+
+
+def test_a_sublet_is_evaluated_with_its_options_values() -> None:
+    """#246, #317: the option of its kind decides, as for a rental."""
+    sublet = seen(post_nature="sublet_offer", price=written([5000]))
+    assert not evaluate(sublet, profile(whole={"price_max": 4000}, sublets=True), NOW).shown
+    room_cap = profile(room={"price_max": 4000}, sublets=True)
+    assert evaluate(sublet, room_cap, NOW).tier == "preferences_met"
+    balcony = profile(whole={"balcony": "preference"}, sublets=True)
+    assert evaluate(sublet, balcony, NOW).tier == "critical_met"
+    assert not evaluate(seen(post_nature="rental_offer"), profile(sublets=True), NOW).kind_marked
 
 
 @pytest.mark.parametrize("kind", [UNCLEAR, NOT_WRITTEN])
@@ -108,8 +130,11 @@ def test_a_post_of_unclear_kind_is_evaluated_under_every_enabled_option_at_the_b
     neither = profile(room={"price_max": 3000}, whole={"price_max": 3000})
     assert not evaluate(post, neither, NOW).shown
     sublet = seen(apartment_kind=kind, post_nature="sublet_offer")
-    switched = profile(whole={"include_sublets": True})
-    assert evaluate(sublet, switched, NOW).option == "whole_apartment"
+    assert not evaluate(sublet, profile(), NOW).shown  # #273 with the one switch (#317)
+    switched = evaluate(sublet, profile(sublets=True), NOW)
+    assert (switched.shown, switched.tier, switched.option) == (True, "unknown", "room")
+    room_off = profile(room={"enabled": False}, sublets=True)
+    assert evaluate(sublet, room_off, NOW).option == "whole_apartment"
 
 
 @pytest.mark.parametrize(
@@ -310,6 +335,62 @@ def test_no_area_is_unclear_with_a_street_or_a_name_and_not_written_without(
     assert with_street.fields["areas"] == named.fields["areas"] == "unclear"
     assert nothing.fields["areas"] == "not_written"
     assert not (with_street.area_orange or nothing.area_orange)
+
+
+# --- 6b. an orange location caps the tier at the middle (#320) ---
+
+
+@pytest.mark.parametrize("chosen", [[], [30], [30, 52]])
+def test_several_areas_not_all_chosen_are_never_preferences_met(chosen: list[int]) -> None:
+    """#320 case (b), with and without chosen areas; every other category met."""
+    result = evaluate(seen(areas=[30, 31]), profile(whole={"areas": chosen}), NOW)
+    assert (result.shown, result.area_orange, result.tier) == (True, True, "critical_met")
+
+
+def test_several_areas_all_chosen_are_not_capped() -> None:
+    result = evaluate(seen(areas=[30, 31]), profile(whole={"areas": [30, 31]}), NOW)
+    assert (result.area_orange, result.tier) == (False, "preferences_met")
+
+
+@pytest.mark.parametrize("post", [{"streets": ["דיזנגוף"]}, {"stated_area_names": ["הצפון הישן"]}])
+def test_no_area_with_a_street_or_a_name_and_no_areas_chosen_is_capped(post: dict) -> None:
+    """#320 case (a): no areas chosen; the location is unclear, so the middle, not the top."""
+    result = evaluate(seen(**post), profile(), NOW)
+    assert (result.shown, result.fields["areas"], result.tier) == (True, "unclear", "critical_met")
+
+
+@pytest.mark.parametrize("post", [{"streets": ["דיזנגוף"]}, {"stated_area_names": ["הצפון הישן"]}])
+def test_no_area_with_a_street_and_areas_chosen_stays_at_the_bottom(post: dict) -> None:
+    """Unchanged by #320: with areas chosen it is an unknown critical category."""
+    result = evaluate(seen(**post), profile(whole={"areas": [30]}), NOW)
+    assert (result.shown, result.tier) == (True, "unknown")
+
+
+def test_a_post_with_no_location_at_all_is_not_capped() -> None:
+    """#320 does not cover a post that gives no location: with no areas chosen it stays top."""
+    result = evaluate(seen(), profile(), NOW)
+    assert (result.fields["areas"], result.area_orange, result.tier) == (
+        "not_written",
+        False,
+        "preferences_met",
+    )
+    assert evaluate(seen(), profile(whole={"areas": [30]}), NOW).tier == "unknown"
+
+
+def test_the_cap_never_lifts_a_post_from_the_bottom_and_needs_no_preference() -> None:
+    """The cap lowers only: a post already at the bottom stays there."""
+    no_price = seen(areas=[30, 31], price=NOT_WRITTEN)
+    assert evaluate(no_price, profile(), NOW).tier == "unknown"
+    unclear_kind = seen(areas=[30, 31], apartment_kind=UNCLEAR)
+    assert evaluate(unclear_kind, profile(), NOW).tier == "unknown"
+
+
+def test_the_cap_weighs_in_the_choice_between_two_options() -> None:
+    """A post of unclear kind is at the bottom either way; a sublet of a written kind follows
+    its own option. The capped tier is the one the option comparison sees (#295 point 11)."""
+    post = seen(areas=[30, 31])
+    room_all = profile(room={"areas": [30, 31]}, whole={"areas": [30]})
+    assert evaluate(post, room_all, NOW).tier == "critical_met"  # whole_apartment's, capped
 
 
 # --- 7. the order ---

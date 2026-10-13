@@ -12,7 +12,10 @@ the question was considered at all.
 **Last updated:** 2026-10-10 (#242–#257, the content of Gate C; #258–#287, Gate C's open points, the technical
 choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290, Gate C approved and the plans for 3.4 and 3.5);
 2026-10-11 (#291–#293, 3.4's three points; #294, the admin's password reset on the machine; #295–#301, the plan for
-3.6 and how the grouping is held; #302, the missing price at the bottom; #303–#315, Ron's direction for the site)
+3.6 and how the grouping is held; #302, the missing price at the bottom; #303–#315, Ron's direction for the site);
+2026-10-12 (#316–#331, Ron's answers on the 3.7 plan: the store generation counter, one sublet switch per profile, the
+orange-location cap, "not stated", the UI notes on the mock, the remaining points); #331's attribution corrected;
+#332–#339 (round 9: points 27–30, Ron's notes on the round-8 mock)
 
 > Written in English like every document in `docs/`.
 >
@@ -2981,7 +2984,7 @@ reworded in `BASELINE.md` §4, `SCHEMA.md`'s gate table (row D), `PHASE_3.md` an
 **Ron decided #302 and gave the direction for the site (task 3.7) on 2026-10-11.** #303–#306 and #314 are Ron's own
 requests; #308 is his proposal; #307, #309–#313 and #315 were approved by Ron on the reviewer's recommendation. Ron gave
 reference screenshots of other sites for the direction (a phone list of cards, an opened post, a desktop grid, a page
-of personal preferences); they are references for the direction, not designs to copy, and are kept nowhere in the repo.
+of personal preferences); they are references for the direction, not designs to copy.
 
 ### 302 — A post with no written price is always in the bottom tier, also with no price range set
 A post whose price is not written (`price.state` `"not_written"`) is in the bottom tier for every user, whatever the
@@ -3067,7 +3070,184 @@ preferences.
 For a signed-in user the bar opens with their saved preferences as the starting point; a change in the bar is temporary,
 for this visit only; a "save as my preferences" action updates the saved ones. The glow and the order follow what the
 bar holds at that moment, not the saved preferences. A guest's bar starts empty.
-*Ron approved the reviewer's recommendation.* No reason recorded.
+*Ron approved the reviewer's recommendation.* No reason recorded. **Amended by #335 (2026-10-12): "save as my
+preferences" is removed for now; a "ההעדפות שלי" button resets the bar to the saved preferences.**
+
+## Phase 3: Ron's answers on the 3.7 plan (2026-10-12)
+
+**Ron answered the 3.7 plan's 26 points and gave his notes on the mock on 2026-10-12.** #317 (with his reason), #320
+(his own rule), #321 (his generalisation of point 7) and #323–#329 (his notes on the mock) are Ron's own; the rest,
+#331 included, are the reviewer's recommendations, approved by Ron. *(Corrected 2026-10-12, round 9: #331 was first
+written as Ron's own decision.)*
+
+### 316 — How the site knows the store changed: a store generation counter kept by SQLite triggers (point 11, option 1)
+A one-row table and `AFTER INSERT`, `AFTER UPDATE` and `AFTER DELETE` triggers on `raw_posts`, `post_lifecycle`,
+`listings` (store) and `corrections` (userdata) that add 1; each request reads the one row, and a different number means
+the grouping is computed again (#301). A layout change of `store` and `userdata`, so a one-time migration of the
+production file by a new command (a seventh store writer), after a dated backup. **The migration command is planned for
+3.7's build step 1; it is not built in round 8.** Option 2 (`PRAGMA data_version`) is not used.
+*Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 317 — One sublet switch per profile, not one per search option (a Gate C change)
+`SearchOption.include_sublets` is removed; `Profile.include_sublets` (`bool`, `False` for a new profile) replaces it.
+**A change to Gate C's names and types (#288), approved explicitly by Ron.** A post whose `post_nature` is
+`"sublet_offer"` is shown only when the profile's switch is on **and** the option of its kind is enabled, and it is
+evaluated with that option's values, as before (#246, #274). A post of unclear or unwritten kind follows #273, with the
+one switch in place of the per-option one. `Profile`'s `schema_version` becomes 2. A stored version-1 profile reads as
+version 2, the switch on when either option's switch was on (the one stored profile, Ron's, has both off): a read-time
+conversion only, as `PostLifecycle.from_stored_json` does; no migration command, and the production store is not
+written. "Copy from the other option" (#272) no longer carries a sublet switch. Built in round 8
+(`contracts/profile.py`, `policy/evaluate.py`). **Amends #246, #268, #272, #274 and `SCHEMA.md` Gate C.**
+*Ron's decision (2026-10-12). Ron's reason:* "a sublet is another kind of rental, in the same general category of what
+one is looking for; if I tick sublet and room, I am looking for both".
+
+### 318 — An unclear price counts only against a set price range (point 1, as built)
+#302 covers a price that is **not written** only. An unclear price (`"unclear"`) sends a post to the bottom only when the
+option holds a price range.
+*Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 319 — An area that cannot be placed sends a post to the bottom only when the user chose areas (point 3, as built)
+As built in 3.6. With no areas chosen, such a post is capped at the middle by #320.
+*Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 320 — An orange location caps a post's tier at the middle: never "preferences_met"
+A post whose location is orange is at most `"critical_met"` (the middle group); it can never be `"preferences_met"`. An
+orange location is one of two cases: (a) no area while the post gives a street or an area name, with no areas chosen
+(with areas chosen the post is already at the bottom, unchanged, #319); (b) `area_orange`, two or more areas not all in
+the user's selection (#250, #275), with or without chosen areas. **A post that gives no location at all (not written) is
+not covered** and stays as it is. The cap only lowers: a post at the bottom stays there, and a failed critical category
+still hides the post. Built in round 8 (`policy/evaluate.py`). **Amends `BASELINE.md` §8's "Order of display".**
+*Ron's own rule (2026-10-12). Ron's reason:* "first the certain things, and only then those that are unsure of
+something".
+
+### 321 — Every attribute not clearly stated is shown as "not stated" ("לא צוין") in grey (point 7, generalised)
+Every attribute whose value is not written is shown as "לא צוין" in grey. **This replaces `BASELINE.md` §6's "none" for
+parking and "not known" for balcony.** A display rule only: nothing stored changes, and #299 (parking not written is
+unknown in the evaluation) stands. Price and entry date not written keep the important-missing style (point 6, #330).
+*Ron's decision (2026-10-12), generalising the reviewer's point 7.* No reason recorded.
+
+### 322 — No green glow while the option that admits the post holds no preference (point 2)
+A card has no green glow while the option that admits its post holds no preference at all; it then has no glow. Orange
+and red are unchanged. The tier and the order are unchanged: this is the glow only.
+*Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 323 — The tier is shown by the glow and a small "i"; no glyphs anywhere (Ron's note on the mock, a)
+The tier's label is not shown as text on the card. A small "i" shows the label's text on hover (desktop) or tap
+(phone). No glyphs anywhere: no ✓, no warning sign, on the tier label and on the field chips alike; colour plus words
+only. The accessible name is kept (the card and each chip still say their state in words to a screen reader).
+**Replaces the shapes and glyphs of `PHASE_3.md` 3.7 (d)'s colour-blindness paragraph.**
+*Ron's note on the mock (2026-10-12).* He accepts that a colour-blind user needs the "i" to read the tier.
+
+### 324 — Nothing on the left side of the page; the site fully Hebrew, right to left (Ron's note on the mock, b)
+The header and the filter bar hold nothing on the left side. The round-7 mock's left-side items ("my preferences", the
+user chip, the post count, "save as my preferences") move. The new arrangement is the reviewer's proposal, shown in the
+round-8 mock (`PHASE_3.md` 3.7 (e)).
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 325 — On the closed card, a room post's rooms read "1/2.5", with no words (Ron's note on the mock, c)
+The closed card shows a room post's rooms as "1/N", N the apartment's rooms (#120's "1 of N" without the words). Inside
+the post #120's wording stays. What shows when the total is not written is the reviewer's proposal (`PHASE_3.md` 3.7,
+point 27).
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 326 — The closed card shows only green chips; the opened post every chip in its colour (Ron's note on the mock, d)
+On the closed card only the green chips are shown. Three items stay on it although they are not green: the red "women
+only" icon, the important-missing badge ("no price", "no entry date"), and the orange location line. Inside the post,
+every chip is shown in its colour (green, orange, grey, plain).
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 327 — The photos can be swiped or paged on the closed card itself (Ron's note on the mock, e)
+Not only one photo: the closed card holds the carousel too.
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 328 — A report button on the closed card, for signed-in users only (Ron's note on the mock, f)
+The closed card has a report button with the two reports, "lied" (#300) and "wrong classification" (#254). A guest does
+not see it (#307).
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 329 — The sublet chip sits in the filter bar's top row (Ron's note on the mock, g)
+Beside "room in a shared flat" and "empty apartment"; it is the profile's one switch (#317). It is disabled, or clearly
+explained, when both kinds are off.
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 330 — The other points of the 3.7 plan approved as recommended, with Ron's amendments
+Points 4, 5, 6, 8, 9, 10 and 12–26 of `PHASE_3.md` 3.7 (n), as the reviewer recommended, with these amendments:
+- **4, the glow's form:** the ring and soft shadow, with the "i" of #323; no labelled chip.
+- **9, the table of (c):** with the changes of #323–#328.
+- **12, the list in one response**, the filter in a `POST` body; **the photos lazy-loaded.**
+- **17, the dependencies:** exact pinned versions; at the install, check which client Starlette's `TestClient` imports,
+  before any test is written on it; read WhatsApp's link format before building on it.
+- **20, the targets** (300 ms on the server warm; the first cards under 1.5 s): **also measured on a synthetic store of
+  40 days' size**, as in 3.6, not only on today's.
+
+As recommended, unamended: 5 (the palette apart in lightness as well as hue; its glyphs are dropped by #323), 6 (the
+important-missing style, a dark slate badge with the words; its "!" dropped by #323), 8 (furnished "yes" plain), 10 (a
+main button to the original post inside, a small icon on the closed card; following the icon does not mark the card
+viewed), 13 (a guest's filter at sign-up; **removed by #336**), 14 (the bar in `sessionStorage`), 15 (the levels inside "more"), 16 (IBM Plex
+Sans Hebrew), 18 (the module names), 19 (`SameSite=Strict`, JSON-only writes and an `Origin` check), 21 (a partial flag
+reported, with a retry), 22 (a mobile number starts with `05` and has 10 digits, decided in `textnorm`), 23
+(`reference/area_groups.yaml` read through `areas/reference.py`), 24 (the count in the bar and on the preferences page),
+25 (nothing the references show and the rules do not have is added), 26 (the group's name not shown).
+*Ron approved the reviewer's recommendations, with the amendments above.* No reason of his own.
+
+### 331 — Until 3.9 the site runs on a copy of the store
+Until task 3.9, the site runs on a dated copy of the production store, so **anything Ron saves there (preferences,
+viewed marks, flags, reports) stays in the copy** and never reaches the production store. Written explicitly in the
+3.7 plan.
+*Ron approved the reviewer's recommendation.* No reason of his own. *(Corrected in round 9: first written as "Ron's
+decision".)*
+
+## Phase 3: Ron's notes on the round-8 mock, and build step 1 (2026-10-12)
+
+**Ron approved points 27–30 and gave his notes on the round-8 mock on 2026-10-12.** #333–#335, #337 and #338 are Ron's
+own; #332, #336 and #339 are the reviewer's recommendations, approved by Ron.
+
+### 332 — Points 27–30 of 3.7 (n) as recommended
+(27) On the closed card a room post whose apartment's total is not written shows "1" with a grey "סה״כ לא צוין" under
+it. (28) "Only green chips" (#326) covers the feature chips only (broker, balcony, parking, elevator, air conditioning,
+"women preferred"); the price, the location line, the four stats, the kind line with the sublet mark and the unclear-kind
+mark stay on the closed card; "women preferred" moves inside. (29) Inside the opened post the tier's label, and for the
+bottom tier its reason, are written in words at the top of the price block. (30) The carousel's arrows on the closed card
+are controls, not the glyphs #323 removes; arrows on hover and dots on a desktop, a swipe and dots on a phone.
+*Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 333 — The site's name is a designed logo, "TLV Apartment Hunter", on the left
+A designed logo, light and cool, not the name set in the page's font. It sits on the **left** of the header: **the one
+deliberate exception to #324**; everything else stays off the left.
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 334 — The user area, top right
+A guest sees "התחבר" (sign in) and beside it "הירשם" (sign up). A signed-in user sees their username; clicking it opens
+a menu with "ההעדפות שלי" (to the preferences page) and under it "התנתק" (sign out). **Replaces** the round-8 header's
+"ההעדפות שלי" link and user chip, which Ron found unclear.
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 335 — The bar: the saved preferences, a temporary change, a reset button; "save as my preferences" removed for now
+The filter bar opens on the saved preferences (a guest's starts empty), and a change in it is temporary. When the bar
+differs from the saved preferences, a button "ההעדפות שלי" resets it to them. **"שמירה כהעדפות שלי" (save as my
+preferences) is removed for now: preferences are changed only on the preferences page. Amends #315.** Ron also found
+the bar as a whole not clear or convenient enough: it is redesigned to be clearer and easier to use (`PHASE_3.md` 3.7
+(e), the round-9 mock).
+*Ron's note on the mock (2026-10-12). Ron's reason (for removing the save):* "so that, at least for now, the two states
+are clear".
+
+### 336 — No "use my current filter as my preferences" at sign-up
+The sign-up form has no such box; a new user sets preferences on the preferences page. **Amends #330, point 13.**
+*Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 337 — The "i" in the card's top-left corner, over the photo, inside the card
+It sits in the card's top-left corner, over the photo and inside the card's edge (in the round-8 mock it stuck out of
+it). Its background is semi-transparent and faded, so it does not cover the photo, and it stays easy to see and hover.
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 338 — The WhatsApp, Facebook and report buttons each have a thin outline in their colour
+Blue for Facebook; green for WhatsApp, a different green from the tier's glow; a soft light red for report.
+*Ron's note on the mock (2026-10-12).* No reason recorded.
+
+### 339 — One name for the kind everywhere: "דירה שלמה"
+The empty-apartment search and the card both say "דירה שלמה" (round 8's bar said "דירה ריקה"). The value stays
+`whole_apartment` (Gate B, Gate C).
+*Ron approved the reviewer's recommendation.* No reason of his own.
 
 ---
 

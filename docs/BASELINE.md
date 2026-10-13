@@ -29,6 +29,12 @@ written is unknown, #299).
 Amended again 2026-10-11 (round 7): §6 (the field colours, #309), §8 (a post with no written price at the bottom, #302;
 the saved preferences and the home page's filter, #314, #315), §10 (guests view without signing in; Tailscale the only
 gate for viewing, with its condition, #306, #307).
+Amended 2026-10-12 (round 8): §5 (the stale line on the reported reason's name, approved as `"misclassified"`, #288),
+§6 ("not stated" in grey for every attribute not written, #321; the closed card shows only green chips, #326), §8 (one
+sublet switch per profile, #317; an orange location caps the tier at the middle, #320; no green glow while the option
+holds no preference, #322), §9 (the sublet switch, #317).
+Amended again 2026-10-12 (round 9): §8 (the bar resets to the saved preferences; "save as my preferences" removed for
+now, #335, amending #315).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -186,7 +192,7 @@ about it.
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |
 | Not a listing | By the model | Furniture, a parking space, an office, anything that is not an apartment or a room |
 | Flagged "lied" | By a user | See below |
-| Wrong classification | By a user | See below (#173, #254). Its stored name is proposed at Gate C, not approved |
+| Wrong classification | By a user | See below (#173, #254). Stored as `"misclassified"` (approved at Gate C, #288) |
 
 **Flagging.** Any user can flag a post that passed but is not what it claims (for example, an
 apartment in Netanya that looked like Tel Aviv). The post moves to rejected for everyone and
@@ -245,8 +251,8 @@ approved (#288).
   (#98, #106)
 - Size in sqm: the apartment's; the room's too, only when written (#99). On a room post: "X sqm
   for the room, of Y" when both are written; "X sqm for the room" when only the room's is (#121)
-- Balcony (not written is shown as "not known")
-- Parking (not written is shown as "none")
+- Balcony
+- Parking
 - Arnona and house committee, as two separate fields
 - "Women only"
 - "Women preferred" (עדיפות לבנות). This is not "women only": it is a mark on the card and hides
@@ -265,13 +271,20 @@ approved (#288).
 | Unclear | The poster wrote something ambiguous ("option for parking", "all included"). Nothing read is kept for it (#109); the original text is on the card | Orange |
 | Important and missing | Price or entry date not written | Its own colour, stronger than grey. Chosen at UI stage |
 
-Balcony and parking are both **stored** as "not written"; the difference above is a display rule
-only, so it can change without reclassifying.
+**Not stated** (2026-10-12, #321): every attribute that is not written is shown as "לא צוין" ("not stated") in grey,
+balcony and parking included. *Until 2026-10-12 parking not written was shown as "none" and balcony as "not known".* A
+display rule only: nothing stored changes, and in the evaluation parking not written stays unknown (#299). Price and
+entry date not written keep the important-missing style.
 
 **The colours, refined (2026-10-11, #309):** green for every known positive value (no broker, a balcony, parking, an
 elevator, air conditioning), also when no preference is set and for a guest; red only when the user set a preference
 and it is not met; a known negative value with no preference is shown plain; grey for not written; orange for unclear.
 How the card maps them: `PHASE_3.md` 3.7 (d).
+
+**The closed card and the opened post** (2026-10-12, #326): the closed card shows only the green chips, plus three items
+that are not green: the red "women only" icon, the important-missing badge ("no price", "no entry date"), and the orange
+location line. The opened post shows every chip in its colour (green, orange, grey, plain). Every item and where it sits:
+`PHASE_3.md` 3.7 (c).
 
 ---
 
@@ -319,14 +332,16 @@ search. Each can be switched on or off and holds its own full, separate set of t
 its own level. The UI offers "copy from the other option" (every value but on/off; never the sqm range into the room
 search, #272). A post is evaluated by the option its kind belongs to; a post whose kind is unclear or not written is
 evaluated against every enabled option and shown at the bottom, its kind marked (#273). A new profile has both options
-on, nothing set, sublets off, "women only" hidden (#268). Broker, parking and balcony have a fixed wanted value (no
+on, nothing set, sublets off, "women only" hidden (#268). **Sublets are one switch for the whole profile** (#317,
+2026-10-12; until then one per option): a sublet is shown only when the switch is on and the option of its kind is on,
+and is evaluated with that option's values. Broker, parking and balcony have a fixed wanted value (no
 broker, has parking, has a balcony): the user only turns them on and picks the level (#269). Half rooms and a basement
 can be chosen (#271). The entry date is a range, both ends optional; "immediate" compares as the date of the evaluation
 (#270).
 
 | Level | Categories | Behaviour |
 |---|---|---|
-| **Listing kind** (hard) | Room in a shared flat · empty apartment, as two search options, each on or off; inside each, "show sublets too", off by default | Only posts of a switched-on option are shown. Sublet is a basic flag: a post is a sublet or not, with no duration or other detail. A sublet is evaluated against the values of the option its kind belongs to; no third option and no sublet-specific values (#246) |
+| **Listing kind** (hard) | Room in a shared flat · empty apartment, as two search options, each on or off; and one "show sublets too" for the profile, off by default (#317) | Only posts of a switched-on option are shown. Sublet is a basic flag: a post is a sublet or not, with no duration or other detail. A sublet is shown only with the profile's switch on, and is evaluated against the values of the option its kind belongs to; no third option and no sublet-specific values (#246, #317) |
 | **Critical, fixed** | Area (multi-select) · price range (min and max both optional) | A post that fails is not shown and does not alert. The user cannot downgrade these. No value entered = not applied |
 | **Critical by default, user may turn off** | "Women only" | Negative only: such posts are hidden. If turned off, they are shown with a red icon |
 | **Preference by default, user may make critical** | Rooms · floor range · sqm range (empty-apartment search only, #247) · broker · parking · balcony · entry date | As a preference: affects order and field colour only. As critical: failing posts are not shown |
@@ -349,14 +364,23 @@ per user at display, never written on the post.
 conditions but not the preferences; at the bottom, posts where a critical value is not written or
 unclear. A preference that is not written or unclear counts as not met: the post is in the middle group, not at the
 bottom (#298). Parking that is not written is unknown, as stored (#299). **A post with no written price is always at
-the bottom, also when the user set no price range** (#302). Posts that are known to fail a critical condition are not
-shown.
+the bottom, also when the user set no price range** (#302). **An orange location caps a post at the middle group**
+(#320, Ron, 2026-10-12: "first the certain things, and only then those that are unsure of something"): it is never in
+the first group when its areas are two or more and not all chosen, or when it has no area but gives a street or an area
+name and no areas are chosen; with areas chosen such a post is already at the bottom. A post that gives no location at
+all is not covered. Posts that are known to fail a critical condition are not shown.
+
+**The glow** (#308, #322): green for the first group, orange for the middle, red for the bottom; **no green glow while
+the option that admits the post holds no preference at all** (the card then has no glow). The glow does not change the
+order.
 
 **The saved preferences and the home page's filter are two things** (#314, #315). The profile above is what is saved on
 the account and, from Phase 4, what drives the alerts. The filter bar on the home page is what the user is looking at
-now: for a signed-in user it starts from the saved profile, a change there is for this visit only, and "save as my
-preferences" writes it to the profile. The order and the card's colours follow what the bar holds at that moment. A
-guest's bar starts empty and is never saved (§10).
+now: for a signed-in user it starts from the saved profile and a change there is for this visit only; when the bar
+differs from the saved profile, a "ההעדפות שלי" button resets it to them. **The bar never saves: the preferences are
+changed only on the preferences page** (#335, 2026-10-12, amending #315, which had a "save as my preferences" in the bar;
+Ron: "so that, at least for now, the two states are clear"). The order and the card's colours follow what the bar holds
+at that moment. A guest's bar starts empty and is never saved (§10).
 
 **Viewed posts** (`DECISIONS.md` #62): each user sees which posts they have already viewed. All
 unviewed posts come first, then the viewed ones; within each of the two, the order above. "Viewed"
@@ -372,8 +396,8 @@ key (#253).
 A post alerts a user when all of these hold:
 
 1. It is new (not a repost) and not rejected.
-2. It falls under one of the user's enabled search options: the option of its kind, and for a sublet that option's
-   "show sublets too" switch (#245, #246, #274).
+2. It falls under one of the user's enabled search options: the option of its kind, and for a sublet the profile's
+   one "show sublets too" switch (#245, #246, #274, #317).
 3. It passes every critical condition of that user.
 4. It has an explicit price.
 5. Its location is understood: either a definite area, or a street whose possible areas include

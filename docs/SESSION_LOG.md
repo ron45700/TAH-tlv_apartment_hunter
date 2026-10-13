@@ -5274,3 +5274,273 @@ favourites (#310). No row for #302: built.
 ### Next
 
 STOP. For Ron: rerun the tests and ruff; open `data/mock/site_mock.html`; then 3.7's plan and its 26 points.
+
+## 2026-10-12 — Phase 3, round 8: Ron's answers on the 3.7 plan (#316–#331); one sublet switch per profile and the orange-location cap built; a new mock
+
+**No git command was run this round, read-only ones included** (ignore rules read from `.gitignore`: `data/` is ignored).
+No paid call, nothing installed, no site code, no Node, no Docker. The production store was opened **read-only once**
+(the mock's data): SHA-256 `04cefd603c8b86df088e4a2983d73689f01c6075d18cc2548f3a0af8fb039c1e` before and after,
+unchanged. Network: none, apart from Chrome's DevTools protocol on 127.0.0.1 (the 390 px check below).
+
+### Recorded
+
+`DECISIONS.md` **#316–#331**, a new section "Phase 3: Ron's answers on the 3.7 plan (2026-10-12)": #316 point 11, option 1
+(the migration command planned for build step 1, not built); **#317 one sublet switch per profile (a Gate C change,
+approved explicitly by Ron, with his reason)**; #318 point 1 as built; #319 point 3 as built; **#320 Ron's own rule, the
+orange-location cap (with his reason)**; #321 "לא צוין" in grey for every attribute not written (point 7, generalised by
+Ron); #322 point 2, no green glow while the option holds no preference; #323–#329 Ron's notes on the mock (a)–(g); #330
+the other points as recommended, with Ron's amendments to 4, 9, 12, 17, 20; #331 the site on a copy of the store until
+3.9. "Ron approved the reviewer's recommendation" with no reason where Ron gave none. "Last updated".
+
+### Built — file by file
+
+- `tlv_hunter/contracts/profile.py`: `SearchOption.include_sublets` removed; `Profile.include_sublets: bool` added;
+  `PROFILE_SCHEMA_VERSION` 2; `new_profile` sets it `False`. **A stored version-1 profile reads as version 2**: the
+  classmethod `Profile.model_validate_json` (which `UserDataStore` already calls for every stored profile) converts a
+  version-1 document first (`_version_1_as_2`: the switch on when either option's was on; a version-1 document that already
+  carries a profile-level switch is refused). Read-time only; nothing rewritten; the production store not opened for it.
+- `tlv_hunter/policy/evaluate.py`: a sublet is shown only when `profile.include_sublets` is on, through the enabled option
+  of its kind and with that option's values (#317; a post of unclear kind under #273 with the one switch). **The
+  orange-location cap (#320):** in `_evaluate_option`, `"preferences_met"` also needs neither `area_orange` nor (no area,
+  a street or a name given, no areas chosen); otherwise `"critical_met"`. The cap only lowers: a post at the bottom stays
+  there, a failed critical still hides it, a post with no location at all is not covered. The capped tier is the one the
+  choice between two options sees. Docstrings updated.
+- Tests: `tests/test_policy.py` (the `profile()` helper takes `sublets=`; the sublet test rewritten for the one switch;
+  +1 sublet-values test; the unclear-kind test checks the one switch; **+11 for #320**: case (b) with no, some and other
+  chosen areas, all chosen not capped, case (a) with a street and with a name, the same with areas chosen still at the
+  bottom, no location not capped, the cap never lifts a post from the bottom, the cap in the choice between options);
+  `tests/test_gate_c_contracts.py` (the approved names: `include_sublets` on `Profile`; the new profile; **+8**: a
+  version-1 profile reads as version 2 for the four switch combinations, a version-2 profile with a per-option switch
+  refused, a version-1 one with a profile switch refused, versions 0 and 3 refused); `tests/test_userdata_store.py`
+  (**+1**: a stored version-1 row read through `get_profile` as version 2, the row not rewritten by the read).
+
+### Docs
+
+- `SCHEMA.md` Gate C: `Profile.include_sublets` (with the read of version 1), `SearchOption` without it, the new
+  profile, "copy from the other option", "which option evaluates a post", the names table; the gate's approval line and
+  "Last updated" say #317 and `Profile` version 2.
+- `BASELINE.md`: §5 the stale "proposed at Gate C, not approved" (now `"misclassified"`, #288); §6 balcony and parking
+  lines, "not stated" (#321), the closed card and the opened post (#326); §8 the one sublet switch (#317), the cap
+  (#320), the glow (#322); §9 item 2 (the switch); the header's amendment line.
+- `PHASE_3.md`: status; **the phase goal aligned with #306** (anyone on the tailnet scrolls and filters without signing
+  in; signed-in users save, mark, flag, report); 3.7's heading (approved); the opening paragraph and **#331 written
+  explicitly**; (b) "לא צוין"; **(c) rewritten** with #321–#328 (the rules over the table, the carousel, the badge, the
+  location line, "1/N", only green chips, the "i", "תוקן" in words, the report button); **(d) rewritten** (decided; no
+  glyphs; #322; #320); **(e) rewritten** (nothing on the left, the header from the right, the bar's two rows with the
+  sublet chip in the top row and its disabled state, the phone row, the transient profile with the switch, the
+  preferences page with the switch at the top); (f) the header; (g) the switch in `PUT /api/profile` and
+  `POST /api/cards`, every photo's address; (h) option 1 decided, the 40-day synthetic store, the targets; (k) exact pins,
+  `TestClient`'s client and WhatsApp's format checked first; (l) the build steps and test groups 5, 9, 10; (m); **(n)
+  each of the 26 points marked decided, and new points 27–30**; §6 where the groups live (#330 point 23); §7.
+- **Fixes asked for:** the sentence on Ron's reference screenshots in `DECISIONS.md`'s #302–#315 introduction no longer
+  says where they are kept; `BASELINE.md` §5's rejection table; `PHASE_3.md`'s phase goal.
+- `BACKLOG.md`: item 6 (approved; points 27–30; build step 1 the migration; #331; the mock); the #245–#247 row (#317
+  built); new rows #316, #320, #321–#330, #331. `CLAUDE.md`'s status line (3.7 approved; #317, #320 built).
+
+### The mock
+
+`data/mock/site_mock.html` replaced (gitignored), built by two scratch scripts (scratchpad, not in the repo):
+`mock_data.py` read the store read-only (`SqliteRepository(read_only=True)`, corrections over a `mode=ro` connection, 0
+rows; SHA-256 above), derived the 135 cards with `dedup/stage_b`, evaluated them with the **round-8** `policy.evaluate`
+against a sample filter (room: up to ₪5,500, balcony a preference, "women only" shown; empty apartment: up to ₪12,000,
+rooms from 2 a must, no preference; sublets on; no areas) and wrote `data/mock/posts.json`: 102 shown — 45
+`preferences_met` (6 green, 39 with no glow by #322), 31 `critical_met` (25 of them capped by #320), 26 `unknown`; 4
+sublets. `mock_html.py` builds **one responsive page** from 12 real cards: the header and bar from the right with
+nothing on the left, the sublet chip in the top row (clickable: both kinds off disables it with its line), closed cards
+with the photo carousel (arrows on hover, dots, swipe; first photo eager, the rest lazy), only green chips plus the
+women-only icon, the badge and the orange location line, the "i" with the tier's words, the report button; green,
+orange, red and no-glow cards; two orange-location cards in the middle group (#320 a and b); a viewed card last; every
+card opens (`:target`) as a dialog above 700 px and full screen below, with every chip in its colour and "לא צוין" in
+grey. Inline CSS and a 40-line inline script; photos as `../store/images/…`; the only external addresses are link targets
+(facebook.com, wa.me), never fetched.
+
+**Checked:** desktop at 1440 px with headless Chrome screenshots (the grid and the opened dialog). **The phone as a real
+390 × 844 page:** the chrome-devtools plugin did not connect this session (a 30-second connect timeout), and headless
+Chrome's `--window-size=390` gives a 512 px layout viewport (measured), so a scratch script (`cdp_shot.py`, stdlib only)
+drove Chrome through its DevTools protocol on 127.0.0.1 with `Emulation.setDeviceMetricsOverride` (390 × 844, mobile,
+touch): `innerWidth` 390, `scrollWidth` 390 (no horizontal scroll), no element outside the page, 0 console messages or
+exceptions, 0 failed requests, every request `file:`; screenshots of the list, the whole page, and two opened posts.
+Fixed after looking: photos blank in the first shots (`decoding="async"` removed), the entry badge wrapping, the phone's
+count and filter button scrolled out of the top row, the "i" placed mid-card on a phone.
+
+### Verified
+
+- `uv run pytest`: **1634 passed** (1613 + 21) after the code change; **1634 passed** again after every doc edit but this entry (388 s).
+  `uv run ruff check .`: all checks passed; `uv run ruff format --check .`: 180 files already formatted (`ruff format`
+  reformatted one of the edited test files once, before the first run).
+
+### Not verified
+
+- WhatsApp's link format (the mock's links are not relied on); the font (system fonts in the mock).
+- Real touch on a phone: the 390 px check is an emulated mobile viewport.
+- The carousel's arrows in RTL were checked only in the code's logic (`scrollBy` with the sign reversed for RTL), not
+  clicked in a screenshot.
+
+### Deviations
+
+1. **The version-1 read is an override of `Profile.model_validate_json`, not a `from_stored_json` method.** The first try,
+   a `model_validator(mode="before")`, made pydantic validate every stored profile in Python strict mode, which refuses
+   the JSON datetime strings (12 tests failed). `PostLifecycle`'s pattern (a `from_stored_json` classmethod) would have
+   needed `userdata/sqlite.py`'s `get_profile` to call it: a file outside the round's list, where Ron said to stop and
+   ask. Overriding the classmethod the store already calls keeps the change inside `contracts/profile.py`. If Ron
+   prefers the explicit `Profile.from_stored_json` and the one-line change in `userdata/sqlite.py`, it is a small change.
+2. **chrome-devtools did not connect**; the 390 px check used Chrome's DevTools protocol directly (above).
+3. `tests/test_userdata_store.py` gained one test (a store-level read of a version-1 row); it is a test only, no code
+   outside the two files.
+4. The tier's label in words inside the opened post, "women preferred" moved inside, and the reading of "only green
+   chips" are my readings, shown in the mock and asked as points 28 and 29.
+
+### BACKLOG
+
+Item 6 rewritten; the #245–#247 row (#317 built); new rows for #316, #320, #321–#330, #331. "Last updated".
+
+### Next
+
+STOP. For Ron: rerun the tests and ruff; open `data/mock/site_mock.html` (wide and narrow window); answer 3.7's points
+27–30; then build step 1 (the generation counter and its migration command, #316).
+
+## 2026-10-12 (continued) — Phase 3, round 9: Ron's notes on the round-8 mock (#332–#339); `Profile.from_stored_json`; 3.7's build step 1 (the store generation counter)
+
+**No git command was run, read-only ones included.** No paid call, nothing installed, no site code, no Node, no Docker.
+**The production store was not written and not migrated.** It was read only by `sha256sum`, by `cp` to scratch copies,
+and by one `mode=ro` query (the A4 check); its SHA-256 was `04cefd603c8b86df088e4a2983d73689f01c6075d18cc2548f3a0af8fb039c1e`
+at every check, before and after each step. No network, apart from Chrome's DevTools protocol on 127.0.0.1.
+
+### Recorded
+
+`DECISIONS.md`: **#331's attribution corrected** (the reviewer's recommendation, approved by Ron, not Ron's own; the
+section's opening sentence too, with a note). A new section, "Ron's notes on the round-8 mock, and build step 1": **#332**
+points 27–30 as recommended (reviewer, approved); **#333** the logo "TLV Apartment Hunter" on the left, the one exception
+to #324 (Ron's own); **#334** the user area top right, its menu (Ron's own); **#335** the bar opens on the saved
+preferences, a change is temporary, a "ההעדפות שלי" reset, **"save as my preferences" removed for now**, amending #315,
+with Ron's reason, and the bar redesigned (Ron's own); **#336** no filter box at sign-up, amending #330 point 13
+(reviewer, approved); **#337** the "i" over the photo's top-left corner, faded (Ron's own); **#338** the outlined foot
+buttons (Ron's own); **#339** "דירה שלמה" everywhere (reviewer, approved). #315 and #330 carry "amended by" notes. A4
+(Ron: "a check, not a decision") has no number: its finding is below, its display rule in `PHASE_3.md` 3.7 (c), row 2.
+
+### A4: why an active post showed "אין תמונות"
+
+Read-only (`mode=ro`, the store's SHA-256 unchanged): **of the 139 active posts, 3 have no saved photo, and all three are
+reel-only** — `7efe8a98…` (the mock's card, `post_type` `__reel__`), `e7531005…` and `e0975a43…` (both `shared_reel`, the
+text from the shared post); each has a single `Reel` media item and no photo, and their lifecycle records hold no image
+entry and no download error. Only photos are downloaded, so nothing was lost. **Such a card now shows the link to the
+video in the photo's place** (`PHASE_3.md` 3.7 (c), row 2; the mock). No rejection rule was touched.
+
+### Built — file by file
+
+- **B1, the profile read (the review of round 8):** `tlv_hunter/contracts/profile.py`: the `model_validate_json` override
+  is gone; **`Profile.from_stored_json(doc)`** reads a stored version-1 profile as version 2 (the same `_version_1_as_2`).
+  `tlv_hunter/userdata/sqlite.py`: `get_profile` reads through it. Plain `model_validate_json` converts nothing.
+- **B2, the store generation counter (#316, build step 1):**
+  - `tlv_hunter/store_generation.py` (new, a plain module like `sqlite_busy.py`): the one-row table `store_generation (id
+    = 1, generation)`, `CREATE TABLE IF NOT EXISTS` and `INSERT OR IGNORE`; `triggers(table)`, the `AFTER INSERT`, `AFTER
+    UPDATE` and `AFTER DELETE` triggers that add 1; `read_generation`; `MIGRATION_COMMAND`; `not_migrated(…)`, the refusal
+    naming the command.
+  - **Where the table lives, and the layout versions (my choice):** the table belongs to neither seam's records; whichever
+    of `store/` and `userdata/` lays out a new file first creates it (both statements are idempotent). **`store` 1 → 2**
+    (the table and the triggers on `raw_posts`, `post_lifecycle`), **`store.listings` 1 → 2** (the trigger on `listings`),
+    **`userdata` 1 → 2** (the table and the trigger on `corrections`); `state` unchanged (no counted table). Each module's
+    version-2 statements (`STORE_GENERATION_STATEMENTS`, `LISTINGS_GENERATION_STATEMENTS`, `USERDATA_GENERATION_STATEMENTS`)
+    are one definition, used for a new file and by the migration.
+  - `tlv_hunter/store/sqlite.py`: the versions, the statements, the refusal of a layout-1 row naming the command, and
+    **`SqliteRepository.store_generation()`** (also read-only). **No contract change:** the method is on the SQLite class
+    only, not in the `Repository` protocol, so `local_json` and the contract tests are untouched.
+  - `tlv_hunter/userdata/sqlite.py`: version 2, its statements, the same refusal.
+  - `tlv_hunter/jobs/add_store_generation.py` (new, **the seventh store writer**): finds the store as `create_admin` does;
+    reads the layout rows (`mode=ro`); refuses a file already migrated, at any other version, or with no store layout,
+    before the backup; **dated backup first**; one `BEGIN IMMEDIATE` transaction that re-reads the rows, runs each present
+    module's statements and sets its row to 2 (a module whose row is absent is left for its seam to lay out at version 2);
+    **then the stored `RawPost` check against the backup; prints the layout before and after and the counter**. `migrate(
+    database, now, out)` is public, so the tests and the command share one path.
+  - `CLAUDE.md`: the command in the list; the store-writer paragraph (the seventh; "none of the seven takes a lock"); the
+    `store/` row (`store_generation()`); the status.
+- **Tests:** `tests/test_store_generation.py` (new, 10): the counter at 0 on a new store and seen by a reader; **every
+  Repository write moves it** (`upsert` new, **`upsert` of an unchanged post: an upsert conflict with an unchanged value
+  moves it**, `upsert_with_lifecycle` (its `DO NOTHING` lifecycle insert alone does not), `save_lifecycle` changed and
+  unchanged, `save_classification` by 2); **`add_correction` and `save_correction` move it; 13 other userdata writes do
+  not** (`create_admin`, `create_user`, `save_user`, `add_key`, `save_key`, `add_session`, `end_session`, `end_sessions`,
+  `save_profile`, `mark_viewed`, `unmark_viewed`, `add_report`, `save_report`), nor the watermarks; a delete in each of the
+  four tables moves it by 1; another connection moves it; the user-data store can lay out a new file first.
+  `tests/test_add_store_generation_job.py` (new, 10): the migration after a backup, every table's rows unchanged, 12
+  triggers, the output; the counter moves after and every opener opens; **a second run refused, no second backup, the
+  file unchanged**; a new file is already migrated; **an unmigrated file refused by every opener** (`SqliteRepository`,
+  `SqliteRepository(read_only=True)`, `SqliteUserDataStore`), each naming the command, the file unchanged; a file with no
+  userdata yet; any other layout refused before the backup (3 cases); no store. The unmigrated file is built as the
+  production file is today: a layout-2 file with records, its counter table and triggers dropped, its rows set back to 1.
+  Changed: `tests/test_sqlite_store.py` (layout 2 pinned with its triggers; mismatches at 0 and 3; **the phase-1 file
+  tests now refuse first, then migrate**: a refused test added, the others migrate through `migrate`),
+  `tests/test_userdata_store.py` (version 2; a layout-1 refusal naming the command), `tests/test_watermark_store.py`
+  (the store's rows at 2), `tests/test_gate_c_contracts.py` (`from_stored_json`; **plain `model_validate_json` refuses
+  version 1** and `Profile` defines no `model_validate_json`).
+
+### Tried on a copy of the production store (scratchpad, not the store)
+
+`migrate` on a scratch copy of the production file: layout `{'store': 1, 'state': 1, 'store.listings': 1, 'userdata': 1}`
+→ 2, 2, 2 (state 1); **stored `RawPost` documents identical: True; counter 0**; Ron's stored version-1 profile read as
+version 2, sublets off; one upsert moved the counter to 1; a second migration refused. The production file's SHA-256
+unchanged before and after.
+
+### Docs
+
+`DECISIONS.md` (above, "Last updated"); `BASELINE.md` §8 (the bar resets to the saved preferences, no save in the bar,
+#335 with Ron's reason; the header line); `PHASE_3.md` (status; 3.7's heading and opening; **(c)** the rules line (#332,
+#338, #339), rows 1, 2 (the reel-only card), 4, 11, 12, 14, 18, 27, 28 (the "i", #337), 32; **(e) rewritten**: the
+header (#333, #334), **the bar redesigned** — three labelled switches, one values row per kind labelled with the kind's
+name (no hidden "option being edited"), a status line in words ("לפי ההעדפות השמורות" / "סינון זמני, שונה מההעדפות שלך")
+with the "ההעדפות שלי" reset, no save; the preferences page the only place to save; sign-up without the box; **(f)** the
+header and sign-up rows; **(g)** sign-up without `filter`; **(l)** test group 6, build steps 1 (built), 4, 5; **(n)**
+points 27–30 decided; §7); `BACKLOG.md` (item 6: **Ron runs the migration; until then every command refuses the store**;
+the #316 row built; a row for #332–#339; the #303–#315 row); `CLAUDE.md`.
+
+### The mock
+
+`data/mock/site_mock.html` replaced (gitignored). **The method, adapted:** the store's code now refuses the unmigrated
+production file, so the data script read **a migrated scratch copy** (`cp` of the production file, `migrate` on the
+copy, then `SqliteRepository(read_only=True)` on the copy; copy SHA-256 `c69ceb2c…` before and after the read). The
+production file was hashed before and after (unchanged). Same 12 real cards and sample filter as round 8 (102 shown).
+Shown: **the logo** on the left (a first sketch: a mark of three buildings over a wave, pale sky to teal, and the
+wordmark "TLV / Apartment Hunter"); **the user area** at the right, a guest ("התחבר", "הירשם") and signed in ("ron" and
+its menu, "ההעדפות שלי", "התנתק"); **the redesigned bar** as saved and changed (the empty apartment's price cap at ₪9,000:
+87 posts, a real count on this data, the chip dashed, the status line, the "ההעדפות שלי" reset); the sublet switch
+disabled with its line when both kinds are off; **the "i"** over the photo's top-left corner, faded; **the outlined
+buttons**; "דירה שלמה" everywhere; **the reel-only card** with its video link; the report controls hidden from a guest.
+Each state has its own address (`?user=guest`, `?user=ron&menu=open`, `?user=ron&bar=changed`), listed at the page's
+foot. **Checked:** desktop at 1440 px (headless Chrome screenshots of each state and of an opened post); **the phone as a
+real 390 × 844 page** through Chrome's DevTools protocol on 127.0.0.1 (chrome-devtools not connected this session, as in
+round 8): six states, `innerWidth` 390, `scrollWidth` 390, 0 console messages, 0 failed requests, every request `file:`.
+Fixed after looking: the "i" placed under the photo (a round-8 rule made it relative; then the phone's grid), the user
+button's arrow over the name, the report button visible to a guest.
+
+### Verified
+
+`uv run pytest`: **1657 passed** (1634 + 23), after the code and again after every doc edit but this entry. `uv run ruff
+check .`: all checks passed; `uv run ruff format --check .`: 184 files already formatted.
+
+### Not verified
+
+- The migration on the production file itself: by design (Ron runs it).
+- The measure of the 390 px page lists closed dropdown menus whose boxes lie outside the page; they are not displayed and
+  the page does not scroll sideways, but an opened report menu near the left edge was not checked on the phone.
+- The logo is a sketch, not a designed logo; the bar's phone sheet is described, not drawn.
+
+### Deviations
+
+1. **The mock's data came from a migrated scratch copy**, not from the store opened read-only: the store's code refuses
+   the unmigrated file by design.
+2. **The read method is `SqliteRepository.store_generation()` only**, not in the `Repository` protocol: no contract
+   change. If the site's code later needs it through the protocol, that is a contract change for Ron.
+3. `SqliteWatermarkStore` does not refuse an unmigrated file: `state`'s layout is unchanged and holds no counted table.
+   Every command that opens the store also opens `SqliteRepository` or `SqliteUserDataStore`, which refuse.
+4. A4 has no decision number (Ron called it a check); the video-link rule sits in `PHASE_3.md` 3.7 (c) as Ron's round-9
+   instruction.
+
+### BACKLOG
+
+Item 6 rewritten (the migration is next, for Ron); the #316 row (built); a new row for #332–#339; the #303–#315 row.
+"Last updated".
+
+### Next
+
+STOP. For Ron: review round 9; rerun the tests and ruff; **run `uv run python -m tlv_hunter.jobs.add_store_generation`
+on the production store** (every command refuses the store until then); open `data/mock/site_mock.html` and its states;
+then 3.7's build step 2 (the read-only API on a dated copy, #331).

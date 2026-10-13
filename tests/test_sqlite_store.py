@@ -1,15 +1,18 @@
 """What is specific to SqliteRepository. The shared contract is in test_repository_contract.py."""
 
 import hashlib
+import io
 import json
 import sqlite3
 from contextlib import closing
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from tests.conftest import SQLITE_FILENAME, make_listing
 from tlv_hunter.contracts.post_lifecycle import POST_LIFECYCLE_SCHEMA_VERSION, PostLifecycle
+from tlv_hunter.jobs.add_store_generation import migrate
 from tlv_hunter.store import sqlite as store_sqlite
 from tlv_hunter.store.sqlite import SqliteRepository
 
@@ -49,11 +52,20 @@ def test_creates_its_tables_and_its_layout_row(db_path: Path) -> None:
         "post_lifecycle",
         "raw_posts_text_hash",
         "listings",
+        "store_generation",
     } <= tables
     assert sorted(_rows(db_path, "SELECT module, version FROM layout_version")) == [
-        ("store", 1),
-        ("store.listings", 1),
+        ("store", 2),
+        ("store.listings", 2),
     ]
+    triggers = {
+        name for (name,) in _rows(db_path, "SELECT name FROM sqlite_master WHERE type = 'trigger'")
+    }
+    assert triggers == {
+        f"{table}_generation_{event}"
+        for table in ("raw_posts", "post_lifecycle", "listings")
+        for event in ("insert", "update", "delete")
+    }
 
 
 def test_reopening_an_existing_file_keeps_the_data(db_path: Path, posts) -> None:
@@ -115,12 +127,12 @@ def test_minimum_version_is_met_by_this_interpreter() -> None:
     assert sqlite3.sqlite_version_info >= store_sqlite.MIN_SQLITE_VERSION
 
 
-@pytest.mark.parametrize("found", [0, 2])
+@pytest.mark.parametrize("found", [0, 3])
 def test_refuses_a_layout_version_mismatch(db_path: Path, found: int) -> None:
     SqliteRepository(db_path)
     with closing(sqlite3.connect(db_path)) as conn, conn:
         conn.execute("UPDATE layout_version SET version = ? WHERE module = 'store'", (found,))
-    with pytest.raises(RuntimeError, match=rf"'store' expects layout version 1, found {found}"):
+    with pytest.raises(RuntimeError, match=rf"'store' expects layout version 2, found {found}"):
         SqliteRepository(db_path)
 
 
@@ -161,8 +173,24 @@ def _layout_1_file(path: Path, posts) -> None:
         conn.commit()
 
 
-def test_opens_a_layout_1_store_and_leaves_its_records_untouched(db_path: Path, posts) -> None:
-    _layout_1_file(db_path, posts)
+NOW = datetime(2026, 10, 12, 9, 0, tzinfo=UTC)
+
+
+def _migrated_layout_1_file(path: Path, posts) -> None:
+    """A phase-1 file, migrated by `jobs/add_store_generation.py` (#316)."""
+    _layout_1_file(path, posts)
+    assert migrate(path, NOW, io.StringIO()) == 0
+
+
+def test_a_layout_1_store_is_refused_until_migrated(db_path: Path, posts) -> None:
+    _layout_1_file(db_path, posts[:1])
+    for read_only in (False, True):
+        with pytest.raises(RuntimeError, match="add_store_generation"):
+            SqliteRepository(db_path, read_only=read_only)
+
+
+def test_a_migrated_layout_1_store_opens_with_its_records_untouched(db_path: Path, posts) -> None:
+    _migrated_layout_1_file(db_path, posts)
     before_posts = _rows(db_path, "SELECT listing_id, text_hash, doc FROM raw_posts ORDER BY 1")
     before_records = _rows(db_path, "SELECT listing_id, doc FROM post_lifecycle ORDER BY 1")
 
@@ -175,8 +203,8 @@ def test_opens_a_layout_1_store_and_leaves_its_records_untouched(db_path: Path, 
     )
     assert _rows(db_path, "SELECT listing_id, doc FROM post_lifecycle ORDER BY 1") == before_records
     assert sorted(_rows(db_path, "SELECT module, version FROM layout_version")) == [
-        ("store", 1),
-        ("store.listings", 1),
+        ("store", 2),
+        ("store.listings", 2),
     ]
     assert _rows(db_path, "SELECT count(*) FROM listings") == [(0,)]
     record = repo.get_lifecycle(posts[0].listing_id)
@@ -190,7 +218,7 @@ def test_a_version_1_record_is_written_back_as_version_3_only_when_saved(
 ) -> None:
     """Also the compare and set of a version-1 document (#260): the stored document is read
     through the same reader as the writer's, so the two compare equal."""
-    _layout_1_file(db_path, posts[:2])
+    _migrated_layout_1_file(db_path, posts[:2])
     repo = SqliteRepository(db_path)
     read = repo.get_lifecycle(posts[0].listing_id)
     repo.save_lifecycle(read, expected=read)
@@ -200,7 +228,7 @@ def test_a_version_1_record_is_written_back_as_version_3_only_when_saved(
     assert versions == {posts[0].listing_id: 3, posts[1].listing_id: 1}
 
 
-@pytest.mark.parametrize("found", [0, 2])
+@pytest.mark.parametrize("found", [0, 3])
 def test_refuses_a_listings_layout_version_mismatch(db_path: Path, found: int) -> None:
     SqliteRepository(db_path)
     with closing(sqlite3.connect(db_path)) as conn:
@@ -209,7 +237,7 @@ def test_refuses_a_listings_layout_version_mismatch(db_path: Path, found: int) -
         )
         conn.commit()
     with pytest.raises(
-        RuntimeError, match=rf"'store.listings' expects layout version 1, found {found}"
+        RuntimeError, match=rf"'store.listings' expects layout version 2, found {found}"
     ):
         SqliteRepository(db_path)
 
@@ -263,14 +291,18 @@ def test_read_only_never_creates_a_missing_file(db_path: Path) -> None:
     assert not db_path.exists()
 
 
-def test_read_only_opens_a_layout_1_store_and_adds_no_layout_row(db_path: Path, posts) -> None:
-    _layout_1_file(db_path, posts[:2])
+def test_read_only_opens_a_migrated_layout_1_store_and_adds_no_layout_row(
+    db_path: Path, posts
+) -> None:
+    _migrated_layout_1_file(db_path, posts[:2])
+    files = sorted(db_path.parent.iterdir())
     before = _sha256(db_path)
     reader = SqliteRepository(db_path, read_only=True)
     assert reader.get(posts[0].listing_id) == posts[0]
+    assert reader.store_generation() == 0
     assert _sha256(db_path) == before
-    assert _rows(db_path, "SELECT module, version FROM layout_version") == [("store", 1)]
-    assert [path.name for path in db_path.parent.iterdir()] == [db_path.name]
+    assert _rows(db_path, "SELECT module, version FROM layout_version") == [("store", 2)]
+    assert sorted(db_path.parent.iterdir()) == files
 
 
 def test_read_only_refuses_every_write_and_leaves_the_file_untouched(db_path: Path, posts) -> None:
@@ -298,14 +330,14 @@ def test_read_only_refuses_a_file_with_no_store_layout(db_path: Path) -> None:
 def test_read_only_refuses_a_layout_version_mismatch(db_path: Path, module: str) -> None:
     SqliteRepository(db_path)
     with closing(sqlite3.connect(db_path)) as conn:
-        conn.execute("UPDATE layout_version SET version = 2 WHERE module = ?", (module,))
+        conn.execute("UPDATE layout_version SET version = 3 WHERE module = ?", (module,))
         conn.commit()
-    with pytest.raises(RuntimeError, match=rf"'{module}' expects layout version 1, found 2"):
+    with pytest.raises(RuntimeError, match=rf"'{module}' expects layout version 2, found 3"):
         SqliteRepository(db_path, read_only=True)
 
 
 def test_read_only_get_listing_on_a_store_with_no_listings_table_is_none(
     db_path: Path, posts
 ) -> None:
-    _layout_1_file(db_path, posts[:1])
+    _migrated_layout_1_file(db_path, posts[:1])
     assert SqliteRepository(db_path, read_only=True).get_listing(posts[0].listing_id) is None

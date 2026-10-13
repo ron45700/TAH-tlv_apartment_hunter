@@ -2,7 +2,9 @@
 
 One JSON document per record, written and read by the pydantic model, plus lookup columns only
 (#65). Its own tables and layout row; it never touches `raw_posts`, `post_lifecycle`, `listings`
-or `group_watermarks`. A report's or a correction's `listing_id` has no foreign key: they outlive
+or `group_watermarks`. Its layout version 2 adds a trigger on `corrections` that moves the store
+generation counter (#316, `store_generation.py`), whose one-row table it creates when it lays out
+a new file first. A report's or a correction's `listing_id` has no foreign key: they outlive
 their post (#255). SQLite only, as `state/` is (#64).
 """
 
@@ -14,6 +16,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from tlv_hunter import store_generation
 from tlv_hunter.contracts.classification_report import ClassificationReport
 from tlv_hunter.contracts.field_correction import FieldCorrection
 from tlv_hunter.contracts.profile import Profile
@@ -34,7 +37,9 @@ from tlv_hunter.userdata.base import (
 # The same minimum as `store/` (#289, 3.4 (a)).
 MIN_SQLITE_VERSION = (3, 38, 0)
 LAYOUT_MODULE = "userdata"
-LAYOUT_VERSION = 1
+# Version 2 (DECISIONS.md #316): the counter trigger on `corrections`; a file at version 1 is
+# refused until `jobs/add_store_generation.py` migrates it.
+LAYOUT_VERSION = 2
 
 _CREATE_LAYOUT_VERSION = (
     "CREATE TABLE IF NOT EXISTS layout_version (module TEXT PRIMARY KEY, version INTEGER NOT NULL)"
@@ -64,6 +69,13 @@ _CREATE_TABLES = (
 )
 
 
+# What version 2 adds (#316): run after the tables on a new file, and alone by the migration.
+USERDATA_GENERATION_STATEMENTS = (
+    *store_generation.CREATE_TABLE,
+    *store_generation.triggers("corrections"),
+)
+
+
 class SqliteUserDataStore:
     """One connection per operation; every write in `BEGIN IMMEDIATE`."""
 
@@ -80,11 +92,15 @@ class SqliteUserDataStore:
                 "SELECT version FROM layout_version WHERE module = ?", (LAYOUT_MODULE,)
             ).fetchone()
             if row is None:
-                for statement in _CREATE_TABLES:
+                for statement in (*_CREATE_TABLES, *USERDATA_GENERATION_STATEMENTS):
                     conn.execute(statement)
                 conn.execute(
                     "INSERT INTO layout_version (module, version) VALUES (?, ?)",
                     (LAYOUT_MODULE, LAYOUT_VERSION),
+                )
+            elif row[0] == LAYOUT_VERSION - 1 == 1:
+                raise RuntimeError(
+                    store_generation.not_migrated(self._path, LAYOUT_MODULE, LAYOUT_VERSION, row[0])
                 )
             elif row[0] != LAYOUT_VERSION:
                 raise RuntimeError(
@@ -224,7 +240,10 @@ class SqliteUserDataStore:
     # --- profiles ---
 
     def get_profile(self, user_id: str) -> Profile | None:
-        return self._get(Profile, "SELECT doc FROM profiles WHERE user_id = ?", (user_id,))
+        """Through `Profile.from_stored_json`: a version-1 profile reads as version 2 (#317)."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT doc FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+        return None if row is None else Profile.from_stored_json(row[0])
 
     def save_profile(self, profile: Profile) -> Profile:
         with self._transaction() as conn:

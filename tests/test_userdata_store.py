@@ -2,6 +2,7 @@
 temporary file per test, never the production store."""
 
 import hashlib
+import json
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime, timedelta
@@ -281,6 +282,23 @@ def test_save_profile_replaces_the_whole_record(store: SqliteUserDataStore) -> N
     assert store.get_profile(_id(5)) is None
 
 
+def test_a_stored_version_1_profile_is_read_as_version_2(store: SqliteUserDataStore) -> None:
+    """#317: the one stored profile (Ron's) is version 1 with both switches off; it reads as
+    version 2 with the profile's switch off, and the stored row is not rewritten by the read."""
+    data = new_profile(ADMIN_ID, NOW).model_dump(mode="json")
+    del data["include_sublets"]
+    data["schema_version"] = 1
+    for name in ("room", "whole_apartment"):
+        data[name]["include_sublets"] = False
+    stored = json.dumps(data)
+    with closing(sqlite3.connect(store._path)) as conn, conn:
+        conn.execute("UPDATE profiles SET doc = ? WHERE user_id = ?", (stored, ADMIN_ID))
+    assert store.get_profile(ADMIN_ID) == new_profile(ADMIN_ID, NOW)
+    with closing(sqlite3.connect(store._path)) as conn:
+        (doc,) = conn.execute("SELECT doc FROM profiles WHERE user_id = ?", (ADMIN_ID,)).fetchone()
+    assert doc == stored
+
+
 def test_viewed_keeps_the_first_time_and_is_unmarked(store: SqliteUserDataStore) -> None:
     store.mark_viewed(ADMIN_ID, "p1", NOW)
     store.mark_viewed(ADMIN_ID, "p1", NOW + timedelta(days=1))
@@ -361,10 +379,20 @@ def test_a_layout_row_and_refusal_on_a_mismatch(path: Path) -> None:
     SqliteUserDataStore(path)
     with closing(sqlite3.connect(path)) as conn:
         rows = conn.execute("SELECT module, version FROM layout_version").fetchall()
-        assert rows == [("userdata", 1)]
-        conn.execute("UPDATE layout_version SET version = 2 WHERE module = 'userdata'")
+        assert rows == [("userdata", 2)]
+        conn.execute("UPDATE layout_version SET version = 3 WHERE module = 'userdata'")
         conn.commit()
-    with pytest.raises(RuntimeError, match="'userdata' expects layout version 1, found 2"):
+    with pytest.raises(RuntimeError, match="'userdata' expects layout version 2, found 3"):
+        SqliteUserDataStore(path)
+
+
+def test_a_userdata_layout_1_is_refused_with_the_migration_command(path: Path) -> None:
+    """#316: a file laid out before the counter is refused until it is migrated."""
+    SqliteUserDataStore(path)
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("UPDATE layout_version SET version = 1 WHERE module = 'userdata'")
+        conn.commit()
+    with pytest.raises(RuntimeError, match="found 1.*add_store_generation"):
         SqliteUserDataStore(path)
 
 

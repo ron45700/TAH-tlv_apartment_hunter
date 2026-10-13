@@ -5,7 +5,9 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-11 (round 6) — rule text only, approved by Ron: a correction of `other_city` in force
+**Last updated:** 2026-10-12 (round 8) — **a field moved, approved explicitly by Ron (`DECISIONS.md` #317):**
+`include_sublets` is now one switch on `Profile` (schema version 2), no longer one per `SearchOption`; a stored version-1
+profile reads as version 2. Before that, 2026-10-11 (round 6) — rule text only, approved by Ron: a correction of `other_city` in force
 outranks Facebook's location field (Gate B, "The city comes from…", `DECISIONS.md` #296); the gate table's row D says
 the grouping is computed once for all users and held in memory, never written on a post (#301). No field or type
 changed.
@@ -695,7 +697,8 @@ Whether the schema pydantic derives passes them is the spike's first question.
 # GATE C — users, keys, sessions, profiles, viewed posts, reports and corrections
 
 **Approved:** 2026-10-10 · **Reasons:** `DECISIONS.md` #242–#257 (content), #262–#287 (round 1's open points), #288
-(names and types, points R1–R9, the Gate E amendments) · **Schema version:** 1 on every record
+(names and types, points R1–R9, the Gate E amendments) · **Amended 2026-10-12:** #317 (one sublet switch per
+profile) · **Schema version:** 1 on every record but `Profile`, which is 2 (#317)
 
 Telegram fields (account linking, sent alerts) are Phase 4's and are not here. The Gate E amendments this gate needs
 are written into Gate E (amended 2026-10-10).
@@ -786,17 +789,18 @@ alerts (`BASELINE.md` §8).
 
 | Field | Type | Rule |
 |---|---|---|
-| `schema_version` | `int` | Starts at 1 |
+| `schema_version` | `int` | 2 since 2026-10-12 (#317). A stored version-1 profile reads as version 2: its two per-option `include_sublets` become the profile's one, `True` when either was (read-time only; written as version 2 at its next save) |
 | `user_id` | `str` | The user it belongs to, and the key |
 | `room` | `SearchOption` | The "room in a shared flat" search: posts whose `apartment_kind` is `"room"` (#245) |
 | `whole_apartment` | `SearchOption` | The "empty apartment" search: posts whose `apartment_kind` is `"whole_apartment"` (#245). The name follows Gate B's value |
+| `include_sublets` | `bool` | **One switch for the profile** (#317, amending #246 and #274; until 2026-10-12 one per `SearchOption`). "Show sublets too", `False` by default. A post whose `post_nature` is `"sublet_offer"` shows only when this is `True` **and** the option of its kind is `enabled`; it is evaluated with that option's values |
 | `updated_at` | `datetime` UTC | The last save. A change affects alerts from then on (§8) |
 
-**A new profile** (#268): both options `enabled`, every value unset (`[]` or `None`), `include_sublets` `False`,
-`hide_women_only` `True`.
+**A new profile** (#268): both options `enabled`, every value unset (`[]` or `None`), `hide_women_only` `True`; the
+profile's `include_sublets` `False` (#317).
 
 **"Copy from the other option"** (#272), a UI action that writes one option's values over the other's: every field except
-`enabled`, `include_sublets` included. Into `room`, `size_sqm` is not copied (it stays `None`, #247); into
+`enabled` (the sublet switch is the profile's, #317, so it is not copied). Into `room`, `size_sqm` is not copied (it stays `None`, #247); into
 `whole_apartment`, its own `size_sqm` is left as it was.
 
 ### `SearchOption`
@@ -804,7 +808,6 @@ alerts (`BASELINE.md` §8).
 | Field | Type | Rule |
 |---|---|---|
 | `enabled` | `bool` | The option is on or off (#245). Off: no post is shown or alerted through it |
-| `include_sublets` | `bool` | "Show sublets too", `False` by default (#246). A post whose `post_nature` is `"sublet_offer"` shows only when the option is `enabled` **and** this is `True` (#274) |
 | `areas` | `list[int]` | Municipal numbers (`ms_shchuna`, 1–71), sorted, no repeats (#83). `[]` means not applied. **Critical, fixed** (#51). A post matches when any of its areas is in the list (#110) |
 | `price_min` | `int` / `None` | ILS. **Critical, fixed** (#51). Compared with the post's lowest price (#95). `None` means not applied |
 | `price_max` | `int` / `None` | As `price_min`. When both are set, `price_min` ≤ `price_max` |
@@ -824,8 +827,9 @@ CriterionLevel`. **`DateRangeCriterion`:** `earliest: date / None`, `latest: dat
 
 **Rules with no field of their own.**
 - **Which option evaluates a post:** the one its `apartment_kind` names (`"room"` or `"whole_apartment"`); a sublet through
-  the same option's values (#246, #274). A post whose `apartment_kind` is `"unclear"` or `"not_written"` is evaluated
-  against every enabled option and shown at the bottom, with its kind marked (#273).
+  the same option's values, when the profile's `include_sublets` is on (#246, #274, #317). A post whose `apartment_kind`
+  is `"unclear"` or `"not_written"` is evaluated against every enabled option and shown at the bottom, with its kind
+  marked (#273); a sublet of unclear kind only with the profile's switch on (#317).
 - **The area's colour, per user** (#250, #275): not orange when every one of the post's areas is in the option's `areas`;
   with `areas` `[]` a several-area post stays orange. Computed at display, never stored.
 - **The post a user sees** is the `Listing` with the admin's corrections in force applied (#256). The evaluation, the
@@ -912,7 +916,7 @@ calls in a fixed order, the disable first, then the sessions ended (amended 2026
 user is already invalid, so a failure between the two leaves the user locked out); R8 the admin cannot be disabled;
 R9 sessions are not deleted in Phase 3.
 
-## Every name and type (approved 2026-10-10, #288)
+## Every name and type (approved 2026-10-10, #288; `include_sublets` moved to `Profile` on 2026-10-12, #317)
 
 Every record, field and type above, in one table. The rules are in each record's table.
 
@@ -948,9 +952,9 @@ Every record, field and type above, in one table. The rules are in each record's
 | | `user_id` | `str` |
 | | `room` | `SearchOption` |
 | | `whole_apartment` | `SearchOption` |
+| | `include_sublets` | `bool` (#317, moved from `SearchOption`) |
 | | `updated_at` | `datetime` UTC |
 | `SearchOption` (inside `Profile`) | `enabled` | `bool` |
-| | `include_sublets` | `bool` |
 | | `areas` | `list[int]` |
 | | `price_min` | `int` / `None` |
 | | `price_max` | `int` / `None` |

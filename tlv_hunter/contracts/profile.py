@@ -1,19 +1,20 @@
-"""Gate C: a user's profile, its two search options (SCHEMA.md, Gate C; DECISIONS.md #245–#247,
-#268–#272, #288).
+"""Gate C: a user's profile, its two search options and its one sublet switch (SCHEMA.md, Gate C;
+DECISIONS.md #245–#247, #268–#272, #288, #317).
 
 The evaluation of a post against a profile is `policy/`'s (task 3.6); this module holds the
 record and its rules only.
 """
 
+import json
 from datetime import date, datetime
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from tlv_hunter.contracts.user import require_opaque_id
 from tlv_hunter.parsing.datetimes import require_utc
 
-PROFILE_SCHEMA_VERSION = 1
+PROFILE_SCHEMA_VERSION = 2
 AREA_NUMBERS = range(1, 72)  # ms_shchuna 1–71 (#81, #83)
 LOWEST_FLOOR = -1  # a basement (#118, #271)
 
@@ -62,7 +63,6 @@ class SearchOption(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     enabled: bool
-    include_sublets: bool
     areas: list[int]
     price_min: int | None
     price_max: int | None
@@ -122,7 +122,22 @@ class Profile(BaseModel):
     user_id: str
     room: SearchOption
     whole_apartment: SearchOption
+    include_sublets: bool
+    """One switch for the profile (#317): a sublet shows only through an enabled option of its
+    kind, and only when this is on."""
     updated_at: datetime
+
+    @classmethod
+    def from_stored_json(cls, doc: str) -> "Profile":
+        """Read a stored profile. A version-1 one reads as version 2 (#317): its two per-option
+        `include_sublets` become the profile's one switch, on when either was on. Read-time only,
+        as `PostLifecycle.from_stored_json` does: it is written as version 2 the next time it is
+        saved, and nothing is rewritten in bulk. `UserDataStore` reads profiles only through here;
+        plain `model_validate_json` converts nothing."""
+        data = json.loads(doc)
+        if isinstance(data, dict) and data.get("schema_version") == 1:
+            doc = json.dumps(_version_1_as_2(data))
+        return cls.model_validate_json(doc)
 
     @field_validator("user_id")
     @classmethod
@@ -144,12 +159,27 @@ class Profile(BaseModel):
         return self
 
 
+def _version_1_as_2(data: dict[str, Any]) -> dict[str, Any]:
+    if "include_sublets" in data:
+        raise ValueError("a version-1 profile has no profile-level include_sublets")
+    converted = {**data, "schema_version": PROFILE_SCHEMA_VERSION}
+    switched = False
+    for name in ("room", "whole_apartment"):
+        option = data.get(name)
+        if isinstance(option, dict) and "include_sublets" in option:
+            option = dict(option)
+            if option.pop("include_sublets") is True:
+                switched = True
+            converted[name] = option
+    converted["include_sublets"] = switched
+    return converted
+
+
 def new_profile(user_id: str, now: datetime) -> Profile:
-    """A new user's profile (#268): both options on, nothing set, sublets off, "women only"
+    """A new user's profile (#268): both options on, nothing set, sublets off (#317), "women only"
     hidden."""
     option = SearchOption(
         enabled=True,
-        include_sublets=False,
         areas=[],
         price_min=None,
         price_max=None,
@@ -167,5 +197,6 @@ def new_profile(user_id: str, now: datetime) -> Profile:
         user_id=user_id,
         room=option,
         whole_apartment=option,
+        include_sublets=False,
         updated_at=now,
     )
