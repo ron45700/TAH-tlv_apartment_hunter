@@ -16,7 +16,8 @@ choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290,
 2026-10-12 (#316–#331, Ron's answers on the 3.7 plan: the store generation counter, one sublet switch per profile, the
 orange-location cap, "not stated", the UI notes on the mock, the remaining points); #331's attribution corrected;
 #332–#339 (round 9: points 27–30, Ron's notes on the round-8 mock); 2026-10-13 (#340–#343, Ron's notes on the
-round-9 mock); #344–#348 (round 11: Ron's answers on round 10, the screen sizes, the mock retired)
+round-9 mock); #344–#348 (round 11: Ron's answers on round 10, the screen sizes, the mock retired); 2026-10-14
+(#349–#351, round 12: 3.7's rebuilt text and points 33–35 accepted; the card's buttons packed to the left)
 
 > Written in English like every document in `docs/`.
 >
@@ -3307,6 +3308,29 @@ feels made for it. In the round-10 mock at 27", four columns hugged the right an
 ### 348 — The mock is retired: from build step 3 Ron reviews the site itself
 `data/mock/site_mock.html` is no longer updated; the look is reviewed on the site, served from a dated copy (#331).
 *Ron's own decision (2026-10-13).* No reason recorded.
+
+## Phase 3: Ron's answers on round 11, and the card's button row (2026-10-14)
+
+**Ron answered round 11 on 2026-10-14.** #349 is Ron's own acceptance; #350 approves the reviewer's recommendations as
+built; #351 is Ron's own note on the site.
+
+### 349 — 3.7 as rebuilt in round 10 is accepted; the six differences round 11 listed stay
+`PHASE_3.md` 3.7, its opening to (d), stays as rebuilt in round 10. The six differences round 11 found not explained by
+any decision (`SESSION_LOG.md`, 2026-10-13, round 11, A) stay as they are.
+*Ron's decision (2026-10-14).* No reason recorded.
+
+### 350 — Points 33, 34 and 35 of 3.7 (n) approved as built
+(33) A room post that gives only the apartment's size: the closed card's size stat reads "80" with a grey "כל הדירה"
+under it; inside, "80 מ״ר (כל הדירה)". (34) A card with no glow keeps its "i", which says "לא הוגדרו העדפות בחיפוש
+הזה". (35) Every photo, the first included, loads as it comes near the view.
+*Ron approved the reviewer's recommendations.* No reason of his own.
+
+### 351 — The card's buttons pack to the left, with no reserved place
+In the card's foot the buttons pack to the left; from the left: report, WhatsApp, Facebook. A button that is absent (a
+guest has no report; a post with no mobile number has no WhatsApp) leaves no gap. **Amends #341 for the button row
+only:** the foot's two rows, its fixed height and every card's uniform height stay. Built in round 12.
+*Ron's note on the site (2026-10-14). Ron's reason:* with the places reserved, one can guess where the hidden report
+button is.
 
 ---
 

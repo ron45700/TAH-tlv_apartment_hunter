@@ -11,10 +11,11 @@ backup from a read-only connection: a consistent copy, and the store itself is o
 `--copy` it serves the newest copy there and refuses when there is none. The photos are read in
 place from `<store_root>/images/`, read-only.
 
-uvicorn listens on 127.0.0.1 only. In this step the site only reads: a guest's API (3.7 (g)) and the
-built pages, `frontend/dist`, when they are built (`npm run build` in `frontend/`); without them it
-serves the API alone and says so. Like the job commands it is a reader of the store; it opens no
-file but the copy for its records.
+uvicorn listens on 127.0.0.1 only. It serves the API (3.7 (g)) and the built pages, `frontend/dist`,
+when they are built (`npm run build` in `frontend/`); without them it serves the API alone and says
+so. From build step 5 the site writes the copy's user-data tables (sessions, users, profiles, #331),
+never the store itself; it opens no file but the copy for its records. Sign in at `/sign-in`: the
+session cookie is `Secure`, which Chrome sends over `http://127.0.0.1` (`ASSUMPTIONS.md` I24).
 
 Exit codes: 0, stopped; 1, refused or failed.
 """

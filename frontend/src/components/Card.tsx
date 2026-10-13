@@ -132,21 +132,19 @@ export function Card({ card, now, onOpen }: Props) {
         </div>
         <div className="foot">
           <span className="when">{relativeTime(card.last_published_at, now)}</span>
+          {/* The buttons pack to the left with no reserved place (#351, amending #341 for this row):
+              from the left, report, WhatsApp, Facebook; an absent one (a guest's report, a post
+              with no mobile number's WhatsApp) leaves no gap. In the right-to-left row the first
+              in order sits furthest right. The report button is build step 6's. */}
           <div className="acts">
-            <span className="slot slot-wa">
-              {card.whatsapp && (
-                <a className="btn-o btn-wa" href={card.whatsapp} target="_blank" rel="noopener noreferrer">
-                  וואטסאפ
-                </a>
-              )}
-            </span>
-            <span className="slot slot-fb">
-              <a className="btn-o btn-fb" href={card.permalink} target="_blank" rel="noopener noreferrer">
-                פייסבוק
+            <a className="btn-o btn-fb" href={card.permalink} target="_blank" rel="noopener noreferrer">
+              פייסבוק
+            </a>
+            {card.whatsapp && (
+              <a className="btn-o btn-wa" href={card.whatsapp} target="_blank" rel="noopener noreferrer">
+                וואטסאפ
               </a>
-            </span>
-            {/* A guest's report slot stays, empty, so nothing moves (#328, #341). */}
-            <span className="slot slot-rep" />
+            )}
           </div>
           <span className="reposts">{reposts}</span>
         </div>

@@ -15,7 +15,10 @@ its migration command, #316). **Round 10 (2026-10-13): Ron ran the migration on 
 the round-9 mock (#340–#343); 3.7's build step 2 built: the read-only API for a guest, served from a dated copy of the
 store.** **Round 11 (2026-10-13): this file's lost block restored; Ron's answers on round 10 (#344–#348: points 31 and 32,
 the screen sizes, the mock retired); 3.7's build step 3 built: the site itself for a guest (`frontend/`, the list and
-the opened post, `policy/colours.py`).** No code before a task's plan is approved; no paid call before its
+the opened post, `policy/colours.py`).** **Round 12 (2026-10-14): Ron's answers on round 11 (#349–#351: 3.7's rebuilt
+text and points 33–35 accepted; the card's buttons packed to the left); 3.7's build steps 4 and 5 built: the filter
+bar, sign-in, sign-up, the forced password change, the preferences page and the session cookie (`web/auth.py`).** No
+code before a task's plan is approved; no paid call before its
 own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
@@ -644,7 +647,7 @@ orange (#275). Computed per user at evaluation, never written (invariant 12).
     `ListingStub` and `DecisionStub` stay for `notify/` until Phase 4; `tests/test_stubs.py` loses its policy tests.
 16. **`restored_lifecycle` is built and tested in 3.6** (pure); 3.8 wires the writes and the reports.
 
-## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 3 built
+## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 5 built
 
 The lists and the cards (`BASELINE.md` §6) with these approved display rules (`BACKLOG.md`, "Recorded for a later
 phase"): the card's main time is the last publication, shown relative (#122); the repost log shows the earliest
@@ -713,7 +716,9 @@ rows; each slot keeps its place and size when it is empty, so every card is the 
 whatever it holds (WhatsApp or not, the report button or not, reposts or not, no photo, a short or long text, no price,
 the "women only" icon, an orange location). **The foot** (#340): the time at the right with the three button slots at
 the left, in fixed places; under the time, on its own line, "פורסם N פעמים" only when there was a repost, its line kept
-when there was none. A guest's report slot stays, empty (#341). **Inside, every chip in its colour**
+when there was none. A guest's report slot stays, empty (#341). *Amended by #351 (round 12) for the button row
+only: the buttons pack to the left with no reserved place; from the left report, WhatsApp, Facebook; an absent one
+leaves no gap.* **Inside, every chip in its colour**
 (green, orange, grey, plain, and red for a preference not met).
 
 | # | Item | Closed card, desktop | Closed card, phone | Opened post, desktop (dialog) | Opened post, phone (full screen) |
@@ -1106,6 +1111,23 @@ step 6; the transitive npm packages' licences; whether TypeScript 7's native pac
    switches, one values row per kind, the status line and the "ההעדפות שלי" reset (#335). **Ron filters** for real.
 5. Sign-in, sign-up with a key (no filter box, #336), the forced password change, the cookie; the preferences page, the
    only place preferences are saved (#335). **Ron signs in**, saves his preferences.
+   **Steps 4 and 5 built together, 2026-10-14 (round 12):** `web/auth.py` (the cookie exactly as (g): `tlv_session`,
+   `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, `Max-Age` 2,592,000, no `Domain`; every request through
+   `accounts.session_user`; a cookie that fails is cleared on any response; writes JSON only, 415 otherwise, and
+   `Origin`'s host equal to `Host`, 403 otherwise; I23, I24); `routes.py`: `GET /api/session`, `POST /api/sign-in`
+   (`wrong` 401, `delayed` 429 with `Retry-After` and the seconds, `disabled` 403), `POST /api/sign-out`, `POST
+   /api/sign-up` (no `filter`; signed in after it), `POST /api/password`, `GET` and `PUT /api/profile`; a user whose
+   password change is due reaches only the change and sign-out (403 elsewhere); a guest's write is 401. The site writes
+   the copy's user-data tables only (#331): sessions, users, profiles, and a key marked used at sign-up.
+   `frontend/`: `bar.ts` (the profile's shape, "changed" field by field, "copy from the other option", the values
+   in words, Israel's date for "immediate", a 422 in words), `components/FilterBar.tsx`, `fields.tsx` (the area
+   picker and every field), `controls.tsx` (the switch, the level, the popover, the number box, the two-thumb
+   slider), `Header.tsx` (the user menu), `screens/Account.tsx` (sign-in, sign-up, the password change),
+   `screens/Preferences.tsx`; `route.ts` gains the four screens and the question before leaving unsaved changes;
+   the bar in `sessionStorage` (key `tlv.bar`, kept per viewer). The card's buttons pack to the left (#351).
+   Tests: `tests/test_web_accounts.py` (groups 1, 2, 6, the write checks, the refusals, the logs);
+   `frontend/src/bar.test.ts`, `frontend/src/components/Card.test.tsx`. Checked in Chrome at the six sizes of round
+   11 over a scratch copy (`SESSION_LOG.md`, round 12).
 6. Viewed, not viewed, the report button on the closed card (#328), the flag, the report, the conflict messages;
    WhatsApp's link format read first. **Ron flags and reports** on the copy (they stay in it, #331).
 7. The measured page load (h), on the copy and on a 40-day synthetic store (#330), Lighthouse, the `design` plugin's
@@ -1220,6 +1242,7 @@ decision after it.
     are fast); if the page is slow, send the first lines in the list and the whole text with the opened post.
 
 **New points from round 11 (for Ron; each is built as described, and changes in a line if Ron prefers the other):**
+**Points 33–35 were approved by Ron on 2026-10-14 as built (#350).**
 
 33. **A room post that gives only the apartment's size** (`BASELINE.md` §6 does not state it, #121). **Built:** the closed
     card's size stat reads "80" with a grey "כל הדירה" under it (as the rooms' "סה״כ לא צוין", #332); inside, "80 מ״ר (כל
@@ -1230,6 +1253,23 @@ decision after it.
     photo, the first included, loads as it comes near the view (the browser's lazy loading), so a list of 123 cards does
     not fetch 123 photos at once; measured at 1440 px, scrolling the whole list fetched 180 of 544 photos. Or: each
     card's first photo with the page.
+
+**New points from round 12 (for Ron; each is built as described, and changes in a line if Ron prefers the other):**
+
+36. **Where "שינוי סיסמה" lives.** (f) says the password form "serves 'change password' from the menu", and #334 (later,
+    Ron's own) names exactly two menu items, "ההעדפות שלי" and "התנתק". **Built:** the menu keeps #334's two items; the
+    link "שינוי סיסמה" sits on the preferences page, under the summary. Or: a third item in the menu.
+37. **What the quick chip "מיידי" sets** (#270 makes "immediate" a quick chip; its meaning in the range is not written).
+    **Built:** "מיידי" sets the range's end to today in Israel ("until today"), so posts available now match, an
+    "immediate" post included (it compares as the evaluation's date, #270). The two date boxes set any range. Or: a chip
+    with another meaning, or more chips ("from the 1st of next month").
+38. **The live count on the preferences page** (#330 point 24) asks `POST /api/cards` with the page's values, a moment
+    after the last change, and reads its count: no count-only endpoint was added to (g). On today's store a warm request
+    is tens of milliseconds and about 400 KB. **Built so;** measured with the rest at step 7 (#346), and a count-only
+    answer added only if it is slow.
+39. **The phone's sticky bar is 149 px** of an 844 px screen: the three switches wrap to two lines (each 44 px tall on
+    touch) and the status line with "סינון (N)" is under them, as (e) describes. **Built so.** Or: the sublet switch moves
+    into the sheet on a phone (one line saved), which (e) does not say.
 
 ## 3.8 The admin lists — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256), plan to be written
 
@@ -1415,8 +1455,9 @@ built with 3.7.
 
 ## 7. For Ron's decision
 
-1. **Look at the site itself** (build step 3, `BACKLOG.md` item 6) at each screen size, and **round 11's points 33–35**
-   (3.7 (n)). The plan, its 32 points and the notes on the mocks are approved (#316–#348).
+1. **Sign in on the site and use the bar and the preferences page** (build steps 4 and 5, `BACKLOG.md` item 6) at each
+   screen size, and **round 12's points 36–39** (3.7 (n)). The plan, its 35 points and the notes on the mocks are
+   approved (#316–#351).
 2. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
    `dcb4c0cb4b24`, the deferred carrier of #241 and the reclassify of the other 189 (`BACKLOG.md`).
 
@@ -1425,4 +1466,5 @@ round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and th
 3.4 and 3.5 (#289, #290) and 3.4's three points left by the build (#291–#293); the admin's password reset on the machine
 (#294); the plan for 3.6 and its 16 points (#295–#300); how the grouping is held (#301); the missing price at the bottom
 (#302); Ron's direction for the site (#303–#315); the plan for 3.7, its 32 points and the notes on the mocks
-(#316–#346); the screen sizes (#347); the mock retired (#348).
+(#316–#346); the screen sizes (#347); the mock retired (#348); 3.7's rebuilt text and points 33–35 (#349, #350); the
+card's button row (#351).

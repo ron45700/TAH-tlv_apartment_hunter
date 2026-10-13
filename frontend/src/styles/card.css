@@ -487,8 +487,9 @@
   font-weight: 600;
 }
 
-/* the foot: two fixed rows; the time with three button slots in fixed places, and under the time
-   "פורסם N פעמים" only after a repost, its line kept otherwise (#340, #341) */
+/* the foot: two fixed rows (#340, #341); the time, and the buttons packed to the left with no
+   reserved place, an absent one leaving no gap (#351, amending #341 for this row); under the time
+   "פורסם N פעמים" only after a repost, its line kept otherwise */
 .foot {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -511,25 +512,8 @@
 .acts {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-.slot {
-  display: inline-flex;
-  justify-content: center;
-}
-
-.slot-wa {
-  width: 70px;
-}
-
-.slot-fb {
-  width: 64px;
-}
-
-/* a guest's report slot stays, empty, so nothing moves (#328, #341) */
-.slot-rep {
-  width: 54px;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .reposts {

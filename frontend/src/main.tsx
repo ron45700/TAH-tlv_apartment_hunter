@@ -14,6 +14,8 @@ import './styles/tokens.css'
 import './styles/base.css'
 import './styles/card.css'
 import './styles/post.css'
+import './styles/bar.css'
+import './styles/forms.css'
 import { App } from './App'
 
 createRoot(document.getElementById('root')!).render(

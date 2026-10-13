@@ -196,13 +196,19 @@ def test_a_posted_empty_bar_gives_the_same_list_as_a_new_guest(client: TestClien
     assert card_ids(client.post("/api/cards", json=bar())) == card_ids(client.get("/api/cards"))
 
 
-def test_the_api_has_no_write(client: TestClient) -> None:
-    """Build steps 2 and 3 are read-only: the only POST reads (the bar); nothing else accepts a
-    write."""
+def test_the_api_writes_only_the_account_and_the_profile() -> None:
+    """Build steps 4 and 5 add the account's writes and the profile's save; the bar's POST reads.
+    Viewed, flag and report are step 6's (`tests/test_web_accounts.py` has the writes' tests)."""
     methods = {(route.path, method) for route in router.routes for method in route.methods}
     writes = {(path, m) for path, m in methods if m not in ("GET", "HEAD")}
-    assert writes == {("/api/cards", "POST")}
-    assert client.put("/api/profile", json={}).status_code in (404, 405)
+    assert writes == {
+        ("/api/cards", "POST"),
+        ("/api/sign-in", "POST"),
+        ("/api/sign-out", "POST"),
+        ("/api/sign-up", "POST"),
+        ("/api/password", "POST"),
+        ("/api/profile", "PUT"),
+    }
 
 
 # --- step 3: what the page needs, decided on the server (#330 point 18) ---

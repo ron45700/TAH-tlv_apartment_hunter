@@ -5862,3 +5862,139 @@ removed (the card shows it); the rows for #340–#343, #332–#339, #321–#330,
 
 STOP. For Ron: build and open the site (`BACKLOG.md` item 6) at your screen sizes; answer points 33–35; delete
 `data/PHASE_3_before_round9.md`; then step 4, the header's user area and the filter bar.
+
+## 2026-10-14 — Phase 3, round 12: Ron's answers on round 11 (#349–#351); the card's button row; 3.7's build steps 4 and 5 (the filter bar, sign-in, the preferences page)
+
+**Git:** read-only commands only (`git status`, `git diff --stat`); nothing changed in the repository's history. No paid
+call, no Docker, no admin page, no viewed, flag or report. **The production store was not written:** SHA-256
+`c69ceb2c0218c574645d70db2de949abb9f780a042ebbf1379ad67d27497d521` at the start and the end, as at the end of round 11.
+**Ron's site copies in `data/store/site/` were not opened for writing** (their times are rounds 10 and 11's). The
+browser check ran on a **scratch copy** of the newest site copy, in the session's scratchpad (SQLite's online backup from
+a read-only connection), on port 8765: on that scratch file only, the admin's password was set to a test one, a key was
+issued, a test user signed up, and that user's password was reset. Nothing installed. Network: developer.mozilla.org
+(two pages) and 127.0.0.1.
+
+### A. Recorded
+
+`DECISIONS.md` **#349–#351**, a new section: #349, 3.7 as rebuilt in round 10 accepted, round 11's six unexplained
+differences staying (Ron's own); #350, points 33–35 approved as built (the reviewer's); **#351, the card's buttons pack
+to the left with no reserved place, from the left report, WhatsApp, Facebook; an absent one leaves no gap; amends #341
+for the button row only** (Ron's own, with his reason). "Last updated". `PHASE_3.md`: the status, 3.7's heading, (c)'s
+rules paragraph marked as amended by #351, steps 4–5's "built" paragraph, "Points 33–35 approved", new points 36–39, §7.
+
+### B. Built
+
+**Read first:** Starlette 1.7.0's installed `set_cookie` and `delete_cookie` (every attribute a parameter; `delete_cookie`
+sets `max-age=0` and `expires=0`); `Request.state` keeps its values in `scope["state"]`. MDN "Origin" (modified
+2026-08-07) and "Set-Cookie" (2026-09-01). **Found from them:** under the site's own `Referrer-Policy: no-referrer`, a
+same-origin write would carry `Origin: null`; the page asks each request for `referrerPolicy: 'same-origin'`, and Chrome
+then sent `origin: http://127.0.0.1:8765` (`ASSUMPTIONS.md` I23). MDN says `Secure` works "except on localhost" without
+naming `127.0.0.1`; Chrome 155 keeps and sends it there (I24).
+
+- **`tlv_hunter/web/auth.py`** (new): `tlv_session`, `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, `Max-Age`
+  2,592,000 (from `SESSION_LIFETIME`), no `Domain`, each passed explicitly; `viewer()` checks the cookie through
+  `accounts.session_user`; `ClearFailedCookie`, an ASGI wrapper that clears a failed cookie on whatever response the
+  request gets (unless the route set or cleared it itself); `check_write`: JSON only (415), `Origin`'s host equal to
+  `Host` (403; the scheme is not compared, for 3.9's HTTPS in front of plain HTTP).
+- **`tlv_hunter/web/routes.py`:** `Site` gains `userdata` and `hasher` (tests pass `CHEAPEST`); `GET /api/session`;
+  `POST /api/sign-in` (`{"refusal": "wrong"}` 401 for a wrong password and an unknown username alike, `delayed` 429 with
+  `retry_after_seconds` and `Retry-After`, `disabled` 403); `POST /api/sign-up` (no `filter` field, #336: an extra field
+  is 422; the user is then signed in); `POST /api/sign-out`; `POST /api/password` (the other sessions end, R3);
+  `GET /api/profile`, `PUT /api/profile` (`owned_profile`, the same validation as the bar; a database error is 503,
+  "not saved"). A user whose password change is due reaches only the change and sign-out (403 elsewhere). Signing in or
+  up again ends the session the browser held. `web/filters.py`: `owned_profile`, `bar_json`. `web/app.py`: the wrapper;
+  `site_over` passes the user-data store and the hasher.
+- **The front end:** `bar.ts` (the profile's shape; "changed" field by field, whatever the key order; "copy from the
+  other option" by #272/#317; the held-controls count of "סינון (N)"; the values in words, a "must" adding "חובה", no
+  glyph; Israel's date for "מיידי"; the server's 422 in words); `components/controls.tsx` (switch, level, popover,
+  number box, a two-thumb slider running right to left like the boxes); `components/fields.tsx` (the area picker:
+  §6's groups, "בחירת הכל" per group, the non-residential group collapsed at the bottom; price with no level; the
+  ranges with their level; the features; the entry date; "women only"; `MoreFields`); `components/FilterBar.tsx`
+  (desktop: row 1 the three switches, the sublet switch disabled with its line when both kinds are off, the status line
+  in words and "ההעדפות שלי"; one values row per kind; popovers; phone: the sticky row, the status line with "סינון
+  (N)", the full-screen sheet with "הצגת N מודעות"); `Header.tsx` (the user pill with avatar, name and chevron; the menu
+  "ההעדפות שלי", "התנתק"; a guest's pills now links); `screens/Account.tsx` (sign-in with the delay's countdown,
+  sign-up, the password change, forced or chosen); `screens/Preferences.tsx` (the sublet switch on top, two tabs with
+  their switch and "העתקה מ…", sections as cards, the levels and the line on "חובה", the summary, the live count, the
+  sticky save at the right on a desktop and at the bottom below 960 px, "שינוי סיסמה"); `route.ts` (the four screens;
+  the question before leaving unsaved changes on a link, back/forward, a reload or a closed tab); `App.tsx` (the
+  session, the saved profile, the bar in `sessionStorage` under `tlv.bar` per viewer, the list following the bar a
+  moment after the last change, the screens' guards); `api.ts` (every call; `ApiError` carries the refusal and its
+  seconds); `styles/bar.css`, `styles/forms.css`; round 11's count strip removed from `base.css` (the bar's status line
+  replaces it).
+- **A2, the button row (#351):** `Card.tsx` and `card.css`: no fixed slots; the row packs to the left; Facebook, then
+  WhatsApp when there is one; the report button is step 6's and will join on the left.
+- `CLAUDE.md` (status, `web/` paragraph), `jobs/serve.py`'s docstring, `ASSUMPTIONS.md` I23, I24.
+
+**Tests:** `tests/test_web_accounts.py` (new, 40): group 1 (the exact attributes, no `Domain`, the token only in the
+cookie; an unknown, ended, expired and disabled user's cookie each a guest with the cookie cleared, a refusal clearing
+it too; signing in again ends the old session); the write checks (no `Origin`, `null`, another host, a look-alike host:
+403; the scheme not compared; a form body 415); group 2 (sign-out, password, profile: 401; a guest's attempt leaves the
+file byte-identical); the refusals of 3.5 (wrong and unknown alike; the delay's 18 seconds and `Retry-After`; disabled;
+an extra field); sign-up (#268's profile; taken, Hebrew, 2 characters, short password, bad key; a used key; no `filter`
+field); the forced change (only the change and sign-out; then the profile); the password change (wrong current, short
+new, the other sessions end); the profile (read, save, three invalid bodies leave it unchanged); group 6 (`save_profile`
+recorded through sign-in, the session, the profile's read, five card lists, a password change and a sign-out: never
+called; then once by `PUT`); no post table nor the store generation written by any of it; no password, key or token in
+any log record. `tests/test_web.py`: the no-write test replaced by the exact list of writes. `frontend/src/bar.test.ts`
+(13) and `frontend/src/components/Card.test.tsx` (2, the button row rendered to static markup in Node).
+
+### How it looks (Chrome 155, chrome-devtools, the scratch site; `data/ui_checks/r12_*`)
+
+| Size | Checked | Sideways scroll |
+|---|---|---|
+| 2560×1440 | the bar and the grid on one column's edges; the saved preferences glowing a room post green | none |
+| 1440×900 | sign-in (wrong, then right), the bar's popovers, a changed bar and its reset, an invalid bar's words, the area picker, the menu, the preferences page (edit, the question before leaving, save, back to the bar on the new preferences) | none |
+| 1366×768 | every popover inside the screen | none |
+| 1194×834 (iPad sideways, touch) | every popover inside | none |
+| 834×1194 (iPad upright, touch) | every popover inside, after the fix below | none |
+| 390×844 (phone, touch) | the sticky row (149 px), the sheet, the preferences page with its bottom save, sign-in, the delay's countdown, the forced password change | none (`scrollWidth` 390) |
+
+Sign-up with the scratch key in a second, isolated browser context: the user created and signed in; sign-out back to a
+guest. Every request went to 127.0.0.1 only; the built files name no other host (the SVG namespace and React's
+error-message links are strings, never fetched). The console: no error.
+
+**Fixed after looking:** the bar's pills stacked on one another (a class name, `.vchip`, already used by the carousel's
+"וידאו" chip: renamed `.bchip`); the user pill's chevron pointed left (a logical border flipped in RTL); the "עוד"
+popover ran past the left edge on an upright iPad and widened the page to 1169 px (wide popovers now hang from their
+row); the preferences page hugged the right on a wide screen (centred, #347); the slider ran left to right against the
+boxes (now right to left); an empty range showed a full teal track (grey now); the date boxes cut "dd/mm/yyyy"; the
+phone's save bar kept an empty line; Chrome's "a form field should have an id or name" notice (every field named).
+
+**The design critique** (the design plugin): the reading order is right (the switches, the count and the bar's standing,
+the values); the filled pills and the one filled button ("ההעדפות שלי") carry the emphasis; contrast passes (muted text
+6.3:1; "נקה" underlined, not colour alone); touch targets 44 px. Left for Ron: the phone's sticky bar height (point 39).
+
+### Verified
+
+`uv run pytest`: **1780 passed** (1740 + 40). `uv run ruff check .`: all checks passed; `uv run ruff format --check .`:
+196 files formatted. `npm test`: 39 passed (24 + 13 + 2); `npm run build` (`tsc --noEmit` clean).
+
+### Not verified
+
+- Sign-up with a real key: keys come from the admin pages (3.8); tested in pytest and on the scratch copy only.
+- Browsers other than Chrome (the `Secure` cookie on `127.0.0.1`, I24); a real phone and iPad with touch.
+- The live count's cost on a 40-day store (point 38; step 7).
+
+### Deviations
+
+1. **Steps 4 and 5 built together**, as asked; one tests file for both.
+2. **"שינוי סיסמה" is on the preferences page, not in the menu** (point 36), keeping #334's two menu items.
+3. **"מיידי" means "until today"** (point 37), my reading of #270's quick chip.
+4. **No count-only endpoint**: the preferences page's live count reads `POST /api/cards` (point 38).
+5. **Signing in or up while signed in ends the old session** (not in 3.7 (g)), so no open session is left behind.
+6. **A user whose password change is due is a guest for the list** (the page shows them only the password screen); the
+   profile endpoints refuse them with 403.
+7. **The two-thumb slider runs right to left**, and an open end is the track's end: a thumb moved to the end clears that
+   end.
+
+### BACKLOG
+
+Item 6 rewritten (how to run, sign in, what is saved where, sign-up not yet triable, points 36–39, next step 6); rows
+removed: #245–#247 and #317, #248/#249/#261, #268–#274, #303–#315, #332–#339, #340–#343 (built); rows updated:
+#242–#244, #257, #262–#266, #321–#330, #331. "Last updated".
+
+### Next
+
+STOP. For Ron: run the site and sign in (`BACKLOG.md` item 6); filter, save your preferences, look at each screen size;
+answer points 36–39. Then step 6: viewed, the report button on the closed card, the flag and the report.

@@ -1,4 +1,5 @@
-/* The page: the header, the status line, the centred column and the grid (#303, #342, #347). */
+/* The page: the header, the centred column and the grid (#303, #342, #347). The filter bar and its
+   status line are bar.css's. */
 *,
 *::before,
 *::after {
@@ -117,28 +118,6 @@ a {
   letter-spacing: 0.04em;
   font-size: 0.9rem;
   color: var(--teal-2);
-}
-
-/* the status line: a guest's says only the count (3.7 (e)) */
-.statusbar {
-  background: var(--card);
-  border-bottom: 1px solid var(--line);
-}
-
-.status {
-  margin: 0;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-
-.status strong {
-  color: var(--ink);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 /* the grid: as many columns of 296 px or more as the column holds: 2 on a tablet held upright,

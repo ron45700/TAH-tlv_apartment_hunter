@@ -1,0 +1,830 @@
+/* The filter bar (3.7 (e)(ii)), the header's user menu (#334, #343), and the controls they share with
+   the preferences page: the switch, the level, the value pills and their popovers, the area picker.
+   Right to left; on a wide screen nothing but the logo sits on the left (#324, #333). */
+
+/* --- the user menu (#343): one pill, a round avatar, the name and a chevron --- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.usermenu {
+  position: relative;
+}
+
+.userpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 3px 4px 3px 12px;
+  border-radius: 999px;
+  border: 1px solid #c9dde6;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(14 116 144 / 0.12);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: #0f4c5c;
+}
+
+.userpill:hover {
+  border-color: #9ccbd9;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7fd3f0 0%, var(--teal) 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.username {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* a chevron drawn in CSS: a control's affordance, not a state glyph (#323, as the carousel's) */
+.chev {
+  width: 8px;
+  height: 8px;
+  margin-inline-end: 6px;
+  border-right: 2px solid currentColor; /* physical: it points down in either direction */
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  opacity: 0.7;
+}
+
+.userpill[aria-expanded='true'] .chev {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 40;
+  min-width: 190px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgb(29 35 43 / 0.14);
+}
+
+.menu a,
+.menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font-size: 0.95rem;
+  text-align: start;
+  text-decoration: none;
+}
+
+.menu a:hover,
+.menu button:hover {
+  background: var(--grey-bg);
+}
+
+/* --- the bar: white, sticky under the header (#342) --- */
+.filterbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 2px 10px rgb(29 35 43 / 0.04);
+  padding-block: 10px;
+}
+
+.filterbar.is-waiting {
+  height: 60px;
+}
+
+.bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+}
+
+.kinds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+}
+
+.bar-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0;
+  padding-inline-start: 22px;
+  border-inline-start: 1px solid var(--line);
+  min-height: 32px;
+  color: var(--muted);
+  font-size: 0.93rem;
+}
+
+.bar-status strong {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-note {
+  margin: 6px 0 0;
+  color: var(--amber-ink);
+  font-size: 0.88rem;
+}
+
+.bar-error {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--red-bg);
+  color: var(--red-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* one values row per kind that is on, labelled with the kind's name (#245) */
+.values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.values + .values {
+  margin-top: 8px;
+}
+
+.values-name {
+  min-width: 9.6em;
+  font-weight: 600;
+  font-size: 0.93rem;
+  color: var(--ink);
+}
+
+.bchip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.bchip {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #d3dde2;
+  background: #ffffff;
+  font-size: 0.9rem;
+  color: var(--ink);
+  white-space: nowrap;
+  max-width: 22rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bchip:hover {
+  border-color: #9ccbd9;
+}
+
+/* a control holding a value: a filled pill with the value in words (3.7 (e)) */
+.bchip.is-held {
+  background: #e3f3f6;
+  border-color: #7cc0d0;
+  color: #0b4d5e;
+  font-weight: 600;
+}
+
+.bchip[aria-expanded='true'] {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px rgb(14 116 144 / 0.18);
+}
+
+.bchip-clear,
+.linkbtn {
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bchip-clear:hover,
+.linkbtn:hover {
+  color: var(--ink);
+}
+
+.barbtn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #9ccbd9;
+  background: #ffffff;
+  color: #0b4d5e;
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.barbtn:hover {
+  background: #f0f8fa;
+}
+
+.barbtn.is-reset {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #ffffff;
+}
+
+.mainbtn {
+  display: block;
+  width: 100%;
+  height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--teal);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.mainbtn:hover:not(:disabled) {
+  background: #0c6680;
+}
+
+.mainbtn:disabled {
+  background: #a9c7cf;
+  cursor: default;
+}
+
+/* --- the switch: its track and position, its label in words --- */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 32px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  user-select: none;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.switch .track {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: #c3cbd2;
+  transition: background 0.15s;
+}
+
+.switch .track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: inset-inline-start 0.15s;
+}
+
+.switch input:checked + .track {
+  background: var(--teal);
+}
+
+.switch input:checked + .track::after {
+  inset-inline-start: 19px;
+}
+
+.switch input:focus-visible + .track {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.switch.is-disabled {
+  cursor: default;
+  color: #8a929b;
+}
+
+.switch.is-disabled .track {
+  background: #e1e5e8;
+}
+
+/* --- the level: "העדפה" or "חובה" --- */
+.levels {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--grey-bg);
+  border: 1px solid var(--line);
+}
+
+.level {
+  position: relative;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.level input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.level.is-on {
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgb(29 35 43 / 0.15);
+}
+
+.level:has(input:focus-visible) {
+  outline: 3px solid var(--blue);
+  outline-offset: 1px;
+}
+
+/* --- the popovers under the pills --- */
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-start: 0;
+  z-index: 30;
+  width: 320px;
+  max-width: calc(100vw - 2 * var(--gutter));
+  max-height: min(72vh, 620px);
+  overflow: auto;
+  padding: 16px 18px 6px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px rgb(29 35 43 / 0.16);
+}
+
+.popover.is-wide {
+  width: 600px;
+}
+
+/* a wide popover hangs from its values row, which starts at the right edge, not from its pill, so it
+   never runs past the left edge on a narrow screen (an upright iPad) */
+.values {
+  position: relative;
+}
+
+.bchip-wrap:has(> .popover.is-wide) {
+  position: static;
+}
+
+.popover:focus {
+  outline: none;
+}
+
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 22px;
+}
+
+/* --- fields --- */
+.field {
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.field legend {
+  padding: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.field-hint {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.pair {
+  display: flex;
+  gap: 10px;
+}
+
+.numbox {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.numbox-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.numbox input,
+.tfield input {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid #cdd5da;
+  border-radius: 10px;
+  background: #ffffff;
+  font: inherit;
+  color: var(--ink);
+}
+
+.numbox input:focus,
+.tfield input:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgb(14 116 144 / 0.18);
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.qchip {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #cdd5da;
+  background: #ffffff;
+  font-size: 0.86rem;
+}
+
+.qchip.is-on {
+  background: #e3f3f6;
+  border-color: var(--teal);
+  color: #0b4d5e;
+  font-weight: 700;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.features.is-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.feature {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.tile {
+  width: 100%;
+  min-height: 54px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #cdd5da;
+  background: #ffffff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: start;
+}
+
+.tile[aria-pressed='true'] {
+  background: #e3f3f6;
+  border-color: var(--teal);
+  color: #0b4d5e;
+  box-shadow: inset 0 0 0 1px var(--teal);
+}
+
+/* --- the area picker: §6's groups, "select all" each, the non-residential group collapsed --- */
+.areas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.area-head,
+.area-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.area-heading {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0b4d5e;
+}
+
+.area-group.is-collapsed summary {
+  min-height: 36px;
+  cursor: pointer;
+  justify-content: flex-start;
+}
+
+.area-count {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.area-all {
+  padding-top: 6px;
+}
+
+.area-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0 12px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--teal);
+}
+
+.check-all {
+  color: var(--muted);
+  font-size: 0.82rem;
+  min-height: 28px;
+}
+
+/* --- the two-thumb slider (the preferences page), right to left like the number boxes --- */
+.dual {
+  position: relative;
+  height: 30px;
+  margin-top: 8px;
+}
+
+.dual::before,
+.dual-fill {
+  content: '';
+  position: absolute;
+  top: 13px;
+  height: 4px;
+  border-radius: 999px;
+}
+
+.dual::before {
+  left: 0;
+  right: 0;
+  background: #dfe5e8;
+}
+
+.dual-fill {
+  right: var(--lo); /* right to left, as the boxes read: the minimum at the right */
+  left: calc(100% - var(--hi));
+  background: var(--teal);
+}
+
+/* no end set: the track stays grey, nothing reads as chosen */
+.dual.is-open .dual-fill {
+  background: transparent;
+}
+
+.dual input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  appearance: none;
+}
+
+.dual input::-webkit-slider-runnable-track {
+  background: none;
+}
+
+.dual input::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--teal);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.dual input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--teal);
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.dual input:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* --- the phone: the sticky row, the status line with "סינון (N)", the full-screen sheet --- */
+.filterbar.is-phone {
+  padding-block: 8px;
+}
+
+.filterbar.is-phone .kinds {
+  gap: 4px 16px;
+}
+
+.filterbar.is-phone .switch {
+  font-size: 0.9rem;
+}
+
+.bar-statusrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.bar-statusrow .bar-status {
+  padding: 0;
+  border: 0;
+  font-size: 0.86rem;
+  gap: 4px 8px;
+}
+
+.barsheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--page);
+}
+
+.barsheet-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+
+.barsheet-top h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.barsheet-body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 24px;
+}
+
+.sheet-kind {
+  margin-bottom: 16px;
+  padding: 14px 14px 2px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.sheet-kind h3 {
+  margin: 0 0 12px;
+  font-size: 1.02rem;
+  color: #0b4d5e;
+}
+
+.sheet-areas {
+  margin-bottom: 14px;
+}
+
+.sheet-areas summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.barsheet-foot {
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 699.98px) {
+  .username {
+    display: none;
+  }
+
+  .userpill {
+    gap: 6px;
+  }
+
+  .area-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* On a touch screen the small controls get a hit area of about 44 px without growing. */
+@media (pointer: coarse) {
+  .bchip-clear,
+  .linkbtn,
+  .level {
+    position: relative;
+  }
+
+  .bchip-clear::after,
+  .linkbtn::after {
+    content: '';
+    position: absolute;
+    inset: -8px -4px;
+  }
+
+  .switch {
+    min-height: 44px;
+  }
+
+  .check {
+    min-height: 40px;
+  }
+}
+
+/* the browser's own date box: room for "dd/mm/yyyy" and its calendar button in a half-width box */
+.numbox input[type='date'] {
+  padding: 0 6px;
+  font-size: 0.92rem;
+}

@@ -1,6 +1,8 @@
 // The API's payloads as the page reads them (tlv_hunter/web/cards.py). The server decides every
 // rule: the colours, the glow, the tier's words. The page only formats values and lays them out.
 
+import type { Bar } from './bar'
+
 export type MarkedState = 'written' | 'not_written' | 'unclear'
 
 export interface Marked<T> {
@@ -101,4 +103,29 @@ export interface PostData extends ListingFields {
   phones: Phone[]
   last_published_at: string
   publications: Publication[]
+}
+
+export interface AreaGroup {
+  heading: string
+  collapsed: boolean
+  areas: number[]
+}
+
+/** GET /api/reference: the 71 areas and their region groups (§6). */
+export interface Reference {
+  areas: Area[]
+  area_groups: AreaGroup[]
+  reportable_fields: string[]
+}
+
+/** GET /api/session's user (3.7 (g)). */
+export interface SessionUser {
+  username: string
+  is_admin: boolean
+  must_change_password: boolean
+}
+
+/** GET and PUT /api/profile: the saved profile's values (#317). */
+export interface SavedProfile extends Bar {
+  updated_at: string
 }

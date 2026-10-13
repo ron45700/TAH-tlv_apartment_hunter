@@ -1,0 +1,333 @@
+/* The account screens (sign-in, sign-up, the password change) and the preferences page (3.7 (e)(iii),
+   (f)): one narrow card for a form; for the preferences, a sticky aside at the right with the
+   summary, the live count and the save, and the tabs with their section cards beside it. */
+
+.screen {
+  padding-block: 40px 64px;
+}
+
+.formcard {
+  max-width: 440px;
+  margin-inline: auto;
+  padding: 28px 28px 22px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgb(29 35 43 / 0.06);
+}
+
+.formcard h1 {
+  margin: 0 0 6px;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.formcard .lead {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.tfield {
+  margin-bottom: 14px;
+}
+
+.tfield label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  font-size: 0.93rem;
+}
+
+.tfield input {
+  height: 46px;
+  font-size: 1rem;
+}
+
+.tfield-hint {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.formerror {
+  min-height: 1.5em;
+  margin: 4px 0 12px;
+  color: var(--red-ink);
+  font-weight: 600;
+  font-size: 0.93rem;
+}
+
+.formok {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--green-bg);
+  color: var(--green-ink);
+  font-weight: 600;
+}
+
+.formfoot {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+/* --- the preferences page --- */
+.prefs {
+  padding-block: 28px 64px;
+}
+
+.prefs-head,
+.prefs-layout {
+  max-width: 1240px;
+  margin-inline: auto;
+}
+
+.prefs-head {
+  margin-bottom: 20px;
+}
+
+.prefs-head h1 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+}
+
+.prefs-head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.prefs-layout {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.prefs-side {
+  position: sticky;
+  top: 16px;
+}
+
+.pcard {
+  margin-bottom: 14px;
+  padding: 18px 20px 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.prefs-main > .pcard:first-child,
+.tabhead {
+  padding-bottom: 14px;
+}
+
+.pline {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.summary {
+  padding-bottom: 18px;
+}
+
+.summary h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
+.sum-kind {
+  margin-bottom: 12px;
+}
+
+.sum-kind h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  color: #0b4d5e;
+}
+
+.sum-kind ul {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 0.9rem;
+}
+
+.sum-kind li {
+  margin: 2px 0;
+}
+
+.sum-kind .none {
+  color: var(--muted);
+}
+
+.sum-sublet {
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.off-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--grey-bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.saverow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.livecount {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.savestate {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.savestate.is-failed {
+  color: var(--red-ink);
+  font-weight: 600;
+}
+
+.side-link {
+  margin: 4px 4px 0;
+  font-size: 0.9rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 12px 12px 0 0;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.tab.is-on {
+  background: var(--card);
+  border-color: var(--line);
+  border-bottom-color: var(--card);
+  color: #0b4d5e;
+}
+
+.tabhead-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.phone-save {
+  display: none;
+}
+
+/* one column on a tablet held upright and on a phone: the summary on top, the save at the bottom */
+@media (max-width: 959.98px) {
+  .prefs-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prefs-side {
+    position: static;
+  }
+
+  .side-save {
+    display: none;
+  }
+
+  .prefs {
+    padding-bottom: 150px;
+  }
+
+  .phone-save {
+    display: block;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 25;
+    padding: 0 var(--gutter) env(safe-area-inset-bottom, 0px);
+    background: var(--card);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -6px 18px rgb(29 35 43 / 0.08);
+  }
+
+  .phone-save .saverow {
+    max-width: 640px;
+    margin-inline: auto;
+    padding-block: 10px 8px;
+    border-top: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+  }
+
+  .phone-save .mainbtn {
+    width: auto;
+    padding-inline: 18px;
+  }
+
+  .phone-save .savestate {
+    grid-column: 1 / -1;
+    font-size: 0.82rem;
+  }
+
+  .phone-save .savestate:empty {
+    display: none;
+  }
+}
+
+@media (max-width: 699.98px) {
+  .screen {
+    padding-block: 20px 40px;
+  }
+
+  .formcard {
+    padding: 22px 18px 18px;
+  }
+
+  .pcard {
+    padding-inline: 14px;
+  }
+
+  .tab {
+    padding: 10px 12px;
+    font-size: 0.93rem;
+  }
+
+  .livecount {
+    font-size: 0.9rem;
+  }
+}

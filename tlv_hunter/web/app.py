@@ -2,7 +2,8 @@
 
 Build step 2: the read-only API for a guest, over a **dated copy of the store** (#331; the copy is
 `jobs/serve.py`'s). The site opens the copy's Repository read-only; it reads the corrections
-through `UserDataStore` and writes nothing in this step.
+through `UserDataStore`. From build step 5 it writes the copy's user-data tables only (sessions,
+users, profiles; `routes.py`); a cookie that fails the session check is cleared (`auth.py`).
 
 Invariant 15 on the page: no request leaves the site. Every response carries a Content-Security-
 Policy that allows only the site itself and `Referrer-Policy: no-referrer`. FastAPI's own pages
@@ -21,14 +22,17 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
+from argon2 import PasswordHasher
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from tlv_hunter.accounts.passwords import PRODUCTION_HASHER
 from tlv_hunter.areas.reference import load_area_groups, load_areas
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.sqlite import SqliteUserDataStore
+from tlv_hunter.web.auth import ClearFailedCookie
 from tlv_hunter.web.grouping import Grouping
 from tlv_hunter.web.routes import Site, router
 
@@ -76,6 +80,7 @@ def create_app(site: Site) -> FastAPI:
     app.include_router(router)
     if site.pages is not None:
         _serve_pages(app, Path(site.pages))
+    app.add_middleware(ClearFailedCookie)
     app.add_middleware(SecurityHeaders)
     return app
 
@@ -106,10 +111,12 @@ def site_over(
     *,
     pages: Path | None = None,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    hasher: PasswordHasher = PRODUCTION_HASHER,
 ) -> Site:
-    """The site over a copy of the store: its Repository opened read-only; the corrections read
-    through `UserDataStore` (it writes nothing for a read); the photos read from `store_root`; the
-    built pages from `pages`, when given."""
+    """The site over a copy of the store: its Repository opened read-only; its user-data tables
+    through `UserDataStore`, the only records the site writes (sessions, users, profiles, #331),
+    the corrections read through it too; the photos read from `store_root`; the built pages from
+    `pages`, when given."""
     repository = SqliteRepository(store_copy, read_only=True)
     userdata = SqliteUserDataStore(store_copy)
     return Site(
@@ -119,4 +126,6 @@ def site_over(
         store_root=Path(store_root),
         pages=pages,
         clock=clock,
+        userdata=userdata,
+        hasher=hasher,
     )

@@ -1,20 +1,44 @@
 // The header (#333, #334, #342): its own cool tint, the user area at the right, the logo at the left,
 // the one deliberate exception to "nothing on the left" (#324). A guest sees "התחבר" and "הירשם",
-// pills of one height (#343); they lead nowhere until sign-in is built (step 5).
+// pills of one height (#343). A signed-in user sees one pill (#343): a round avatar with the
+// username's first letter on a sky-to-teal gradient, the username and a chevron (on a phone the
+// avatar and the chevron); it opens a menu with "ההעדפות שלי" and under it "התנתק" (#334).
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { navigate } from '../route'
+import type { SessionUser } from '../types'
 
-export function Header() {
+interface Props {
+  /** `undefined` while the session is read: the area stays empty, so nothing jumps. */
+  user: SessionUser | null | undefined
+  onSignOut: () => void
+}
+
+function go(path: string) {
+  return (event: MouseEvent) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+    event.preventDefault()
+    navigate(path)
+  }
+}
+
+export function Header({ user, onSignOut }: Props) {
   return (
     <header className="appbar">
       <div className="shell appbar-row">
         <div className="userarea">
-          <button className="pill pill-primary" type="button" aria-disabled="true" title="ההתחברות תיפתח בקרוב">
-            התחבר
-          </button>
-          <button className="pill" type="button" aria-disabled="true" title="ההרשמה תיפתח בקרוב">
-            הירשם
-          </button>
+          {user === null && (
+            <>
+              <a className="pill pill-primary" href="/sign-in" onClick={go('/sign-in')}>
+                התחבר
+              </a>
+              <a className="pill" href="/sign-up" onClick={go('/sign-up')}>
+                הירשם
+              </a>
+            </>
+          )}
+          {user && <UserMenu user={user} onSignOut={onSignOut} />}
         </div>
-        <a className="logo" href="/" aria-label="TLV Apartment Hunter, לעמוד הראשי" dir="ltr">
+        <a className="logo" href="/" onClick={go('/')} aria-label="TLV Apartment Hunter, לעמוד הראשי" dir="ltr">
           <LogoMark />
           <span className="word">
             <span className="w1">TLV</span>
@@ -23,6 +47,78 @@ export function Header() {
         </a>
       </div>
     </header>
+  )
+}
+
+function UserMenu({ user, onSignOut }: { user: SessionUser; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (event: PointerEvent) => {
+      if (!box.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false)
+        button.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+  const letter = user.username.slice(0, 1).toUpperCase()
+  return (
+    <div className="usermenu" ref={box}>
+      <button
+        ref={button}
+        type="button"
+        className="userpill"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`החשבון של ${user.username}`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="avatar" aria-hidden="true">
+          {letter}
+        </span>
+        <span className="username" dir="ltr">
+          {user.username}
+        </span>
+        <span className="chev" aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="menu" role="menu">
+          {!user.must_change_password && (
+            <a
+              role="menuitem"
+              href="/preferences"
+              onClick={(event) => {
+                setOpen(false)
+                go('/preferences')(event)
+              }}
+            >
+              ההעדפות שלי
+            </a>
+          )}
+          <button
+            role="menuitem"
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              onSignOut()
+            }}
+          >
+            התנתק
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
