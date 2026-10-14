@@ -2075,13 +2075,13 @@ Phase 3's corrections record exists; the regression runner still finds the old r
 version 4 did not break the bar, it costs about half of what the full reclassify costs ($0.023 against $0.044), and a reclassify
 of 194 posts on a prompt that failed the bar would be paid for and then discarded. Nothing is applied by either step on its own.
 
-### Instructions version 5: the studio rule (#354) — WRITTEN 2026-10-14 (round 13); its regression run PLANNED, WAITING for Ron's go
+### Instructions version 5: the studio rule (#354) — WRITTEN 2026-10-14 (round 13); its regression run MADE 2026-10-14 (round 14, Ron's go): both passes `fail`, below
 
 **Nothing paid has been run.** In the round that wrote it: the text, `PROMPT_VERSION` "5" and `PROMPT_FINGERPRINT`
 `1b1e59fb…` (tests green, one test pins the two studio sentences); a read-only reading of the store (no model call; the
 file's SHA-256 the same before and after); the free `regression_run --check` (51 posts, positions 6, 10, 27, 31, 43, 49
 removed, as for version 4). **From now on `classify_pending` classifies new posts at version 5**; the stored `Listing`s stay
-at version 3 (`BACKLOG.md` item 4).
+at version 3, except the four Ron applied at version 4 on 2026-10-14 (`DECISIONS.md` #355; `BACKLOG.md` item 4).
 
 **What changed** (`DECISIONS.md` #354, the assistant's wording of Ron's rule, for Ron to check): a studio ("סטודיו",
 "דירת סטודיו", "studio") is `"whole_apartment"` and gives `rooms` 1, unless the post itself says otherwise; a second exception
@@ -2090,7 +2090,9 @@ to general rules 2 and 3, beside "דירת N שותפים". +182 characters.
 #### The stored posts that mention a studio (read-only, 2026-10-14)
 
 13 posts (`סטודיו` or `studio` in the text, any case); 11 canonical, 2 dedup A duplicates (`8982bf07…` of `f515e83b…`,
-`a5b6ea79…` of `ebe67e8b…`). The 10 classified are **all at version 3**: no stored post was classified at version 4.
+`a5b6ea79…` of `ebe67e8b…`). The 10 classified are **all at version 3**. *Corrected in round 14:* round 13 added "no stored post was classified at
+version 4", which was wrong: four `Listing`s are at version 4 since Ron's apply of 2026-10-14 (#355), none of them a studio
+post; counted again on the production store, read-only, in round 14, the table is unchanged.
 
 | Post | State | Nature | Kind | Rooms | What the post says |
 |---|---|---|---|---|---|
@@ -2165,6 +2167,60 @@ reclassified before retention removes them: `uv run --env-file .env python -m tl
 --allow 62a41d3d,71ada783,96f4ae1a,a7ba462d,aa8ed374,e64a8ded,f515e83b` (#217: id prefixes of 8 characters or more,
 comma-separated); expected 7 × $0.000219 + $0.0005 = **about $0.002**; then `diff.html`, the dry run, and `apply_reclassify
 … --apply` only after Ron reads them (2.9). Not proposed before step 1 passes.
+
+#### The run of 2026-10-14 (round 14): steps 0 and 1 made, Ron's go
+
+**Step 0.** The three posts read again on the production store (read-only): each offers studios for rent and nothing else
+(`a7ba462d…` several 30 m² studio units in one complex, the "several units" case named above). Added to
+`data/labeling/corrections.json` in the export's own shape (`reviewed` true, `fields` `{"rooms": {"state": "written",
+"value": 1}}`, the note naming #354; the version 3 classification each names), the file's one-space indent kept, so the
+diff is the three entries only; `labels.json` untouched (SHA-256 the same). `review_page` (free) joined them to the set
+(#195): **54 posts**. **What else became truth with them** (a reviewed post's other fields are its version 3 answers, #193),
+which I would argue with and did not change (only Ron corrects): `62a41d3d…` parking `"unclear"` ("אפשר לקבל תו חניה", a
+street permit) and furnished `"unclear"` ("הריהוט להמחשה… נשאר ארון ומקרר"); `71ada783…` `entry_date_written` "ב18.10"
+(the text: "כניסה ב18.10"); and, as the run showed, `a7ba462d…` furnished `"not_written"` ("קיים בדירה מקרר וכיריים").
+
+**Step 1.** `uv run --env-file .env python -m tlv_hunter.jobs.regression_run --cap 0.10`: run `09f15e8dac9f`, folder
+`data/labeling/runs/v5-none-1b1e59fb-09f15e8dac9f`, exit 0, not stopped. **108 calls, $0.024295 of the $0.10 cap** by the
+usage metadata (the plan said about $0.024); every post `ok` on its first attempt; tokens: input 590,342 (cached 558,326,
+cache write 5,218), output 30,760, reasoning 0; 349 s of calls. Model `gpt-6-luna`, prompt 5, fingerprint `1b1e59fb…`,
+effort `none`, temperature 0. The production store read-only (SHA-256 the same before and after).
+
+**The verdict: both passes `fail`**, complete (no failed or missing position). Against version 4's run `47e96cac0e8d` (its
+stored record predates #239 and #240, so its review-field counts are 13 where today's are 9: 6 after #239/#240, plus the
+three studio posts):
+
+| Field (bar) | v4 pass 1 | v5 pass 1 | v4 pass 2 | v5 pass 2 |
+|---|---|---|---|---|
+| `post_nature` (no error) | 0/51 | 0/54 | 0/51 | 0/54 |
+| `other_city` (no error) | 0/36 | 0/35 | 0/36 | 0/35 |
+| `apartment_kind` (95%) | 0/36 | 0/32 | 1/36 | 0/32 |
+| `price` (95%) | 0/31 | 0/31 | 0/31 | 0/31 |
+| `gender` (95%) | 0/37 | 0/33 | 0/37 | 0/33 |
+| `entry_date` (90%) | 0/36 | 0/32 | 0/36 | 0/32 |
+| `areas` by reach (90%) | 1/35 | 0/31 | 0/35 | 0/31 |
+| `rooms` (90%) | 0/13 | **0/9** | 0/13 | **0/9** |
+| `furnished` (90%) | 2/13 | **2/9, fail** | 1/13 | **2/9, fail** |
+| `broker` (90%) | 0/13 | 0/9 | 0/13 | **1/9, fail** |
+| `house_committee` (90%) | 0/13 | 0/9 | 0/13 | **1/9, fail** |
+| every other review field | ≤ 1/13 | 0/9 | ≤ 1/13 | 0/9 |
+| filled in where not written (zero) | 0 | 0 | 1 | **1** |
+
+- **Every deciding field is inside its bar in both passes, with no error at all** (version 4 had one each in `areas` and
+  `apartment_kind`).
+- **The studio rule is followed:** `62a41d3d…`, `71ada783…`, `a7ba462d…` (positions 58–60) are `"whole_apartment"` with
+  `rooms` 1 in both passes; `1454d3ee…` (the duplex, position 9) keeps 4 and `ac0b0cd6…` (the house for sale, 57) 5 in both:
+  "unless the post itself says otherwise" holds on both.
+- **What fails, all on fields version 5 did not touch:** `furnished` at position 3 (`0555aa32…`, #241: truth `unclear`,
+  answer `partial`, as in version 4; Ron's ruling `partial` still has no carrier) and at position 60 (`a7ba462d…`: truth
+  `not_written`, the version 3 answer that became truth in step 0, answer `unclear`, both passes); in pass 2 only, `broker`
+  at position 2 (`0213a373…`: truth not written, answer `false`, counted as a value filled in) and `house_committee` at
+  position 39 (`14a59a2e…`: truth 900, answer `unclear`). The two pass-2 misses are flips: pass 1 answered them right.
+- **The two passes differ more than version 4's:** 23 posts changed between passes (version 4: 13), 29 field flips (version 4:
+  15): 8 `price` (most on for-sale and other posts whose price is not compared), 4 `broker`, 4 `areas`, 2 each `entry_date`,
+  `entry_date_written`, `furnished`, `house_committee`, 1 each `apartment_kind`, `rooms`, `parking`, `arnona`, `floor`.
+
+**Step 2** (the seven stored studio posts) is not approved and was not run. Nothing was reclassified.
 
 ---
 

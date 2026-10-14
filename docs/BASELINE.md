@@ -518,7 +518,7 @@ bootstrap mode, Gate A.
 | Item | Tag |
 |---|---|
 | A Telegram Mini App loads from a tailnet-only HTTPS address on a phone with Tailscale on | `ASSUMED` — spike in Phase 4. If it fails, the plain site still works |
-| Tailscale device sharing covers the number of friends on the free plan | `UNKNOWN` |
+| Tailscale device sharing covers the number of friends on the free plan | `VERIFIED` 2026-10-14, Ron's check (`DECISIONS.md` #361): friends come through device sharing, not as users of Ron's tailnet, so the free plan sets no limit on their number and nothing is paid (`ASSUMPTIONS.md` I5) |
 | Public source for Tel Aviv areas, the Old North split, and streets per area | Chosen by Ron 2026-10-05 (`DECISIONS.md` #81, #84). The areas and the Old North split: `VERIFIED`, the municipality's open `שכונות` dataset (71 entries, re-read 2026-10-05). Streets per area: not needed since the model decides the area (#167); a street table is recorded for later (#169) |
 | Image download from the signed Facebook links works at fetch time | `VERIFIED` 2026-10-04 from the laptop: spike 1.1a, 5 of 5; then the task 1.12 check, 632 of 632, all JPEG; then the four real runs, 818 photos held (`ASSUMPTIONS.md` I6, `RESEARCH.md` §11). From the home server itself: still unverified |
 | Apify spike: time window per group, all groups return data, comment flag honoured, real cost | `VERIFIED` 2026-10-04 (`SPIKE_1_1a.md`) |

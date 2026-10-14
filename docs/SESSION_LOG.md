@@ -6007,7 +6007,9 @@ store was not written by this session:** SHA-256 `5df9bc9a636832e9f3f395a1ebeeca
 start, after the read-only studio reading and the free `regression_run --check`, and at the end. **Found at the start, not this
 session's:** that hash is not round 12's end hash (`c69ceb2c…`): the store, a dated backup `tlv_hunter.2026-10-14.backup.sqlite3`
 and `classify_runs/654523c8f8b2.jsonl` (736 bytes) were all written at 16:57:36 today, which looks like a job command Ron ran
-(`classify_pending`) before this session; nothing of it was opened for writing here. **Ron's three site copies in
+(`classify_pending`) before this session; nothing of it was opened for writing here. *Corrected in round 14:* it was Ron's
+`apply_reclassify dcb4c0cb4b24 --apply --allow 31bd9205,b330d3fc,d269d280,e6a8b9bb` (apply run `654523c8f8b2`; the backup;
+the stored `RawPost`s identical; "still selected for reclassify: 190"), not `classify_pending` (`DECISIONS.md` #355). **Ron's three site copies in
 `data/store/site/` are byte-identical before and after** (SHA-256 checked). The browser check ran on a **scratch copy** of the
 newest site copy in the session's scratchpad (SQLite's online backup from a read-only connection), port 8765; on that scratch
 file only the admin's password was set to a test one, two posts were flagged, one post reported, and viewed marks written.
@@ -6096,7 +6098,8 @@ Not run this round: the design plugin's critique and the accessibility review (s
   `PROMPT_VERSION` "5", `PROMPT_FINGERPRINT` `1b1e59fbf51a01125bf16d7b844c4948f796407c4f5a494a3fc432dfe3fe954e`;
   `tests/test_classify_instructions.py` (the pin at "5", one test of the two sentences).
 - **Read-only (store opened `read_only`, no model call, the hash the same before and after):** 13 stored posts mention a
-  studio, 11 canonical; the 10 classified are **all at version 3** (none at version 4: nothing has been applied since, item 4);
+  studio, 11 canonical; the 10 classified are **all at version 3** (*corrected in round 14:* round 13 wrote "none at version 4: nothing has been applied since"; four `Listing`s are at
+  version 4 since Ron's apply at 16:57, #355, none of them a studio post);
   all `"whole_apartment"`; **of the 8 that offer a studio for rent, 7 have `rooms` `"not_written"` and 1 has 1**; a duplex with
   a studio level has 4 and a house for sale with a studio 5, both right. The table is in `PHASE_2.md`, "Instructions version 5".
 - **In the regression set:** `1454d3ee…`, `ac0b0cd6…`, `ebe67e8b…`, none a plain studio for rent; `rooms` is measured only
@@ -6146,3 +6149,82 @@ updated: #254–#256, #257, #276–#280, #321–#330. "Last updated".
 
 STOP. For Ron: `npm run build`, serve the copy, sign in and try viewed, the flag and the report (`BACKLOG.md` item 6); check
 #354's wording and decide item 8. Then step 7: the measured page load, Lighthouse, the critique and the accessibility review.
+
+## 2026-10-14 (continued) — Phase 3, round 14: round 13 corrected; #355–#365 recorded; instructions version 5's regression run (paid, Ron's go)
+
+**Git:** read-only commands only (`git status`, `git diff --stat`, `git diff --no-index` on the corrections file against its
+scratch backup). **One paid run, approved by Ron:** the version 5 regression run, $0.024295. No reclassify, no
+`classify_pending`, no `--apply`. **The production store (`data/store/tlv_hunter.sqlite3`) was opened read-only only**
+(`mode=ro`): SHA-256 `5df9bc9a636832e9f3f395a1ebeecaaa823edbb2ac640d8af68339642c5a77ac` at the start, after the studio count,
+after `review_page` and `--check`, and after the run. **Written:** `data/labeling/corrections.json` (three entries added; a
+copy of the file before them is in the session's scratchpad), the regression set and `data/labeling/review.html` (by
+`review_page`), the run folder `data/labeling/runs/v5-none-1b1e59fb-09f15e8dac9f`, and docs. `labels.json` untouched. No code
+changed. Step 7 not started. Network: OpenAI's API (the run's 108 calls) only.
+
+### A. Round 13 corrected
+
+1. **The 16:57 write** was Ron's `apply_reclassify dcb4c0cb4b24 --apply --allow 31bd9205,b330d3fc,d269d280,e6a8b9bb` (apply
+   run `654523c8f8b2`), not `classify_pending`: corrected in round 13's entry (marked), and recorded as #355.
+2. **Four stored `Listing`s are at version 4** since then (read-only: 190 at version 3, 4 at version 4: `31bd9205…`,
+   `b330d3fc…`, `d269d280…`, `e6a8b9bb…`). Corrected, marked, in `DECISIONS.md` #354, `BACKLOG.md` item 4, `PHASE_2.md`
+   (version 5's section) and round 13's entry. **The studio count, again on the production store, read-only:** unchanged (13
+   posts, 11 canonical, 10 classified, all at version 3; of the 8 that offer a studio for rent, 7 `rooms` not written and 1
+   one room); none of the four applied posts mentions a studio, so #354's numbers stand.
+3. **Ron confirmed #354's reason and wording**: recorded under #354.
+
+### B. Recorded
+
+`DECISIONS.md` **#355–#365**, a new section: #355 the four applied reclassifications, `4c5bbcaf…` left out on purpose
+(#236); #356 the bot @tlv_apartment_hunter_bot, its token in `.env` as `TELEGRAM_BOT_TOKEN`, never read, logged or printed (not
+read this round either); #357 #11's bootstrap summary void; #358 one message on linking Telegram; #359 the digest's three
+colours and the admin's matches (the colours' independence the reviewer's proposal); #360 an unclear or unwritten kind never
+alerts; #361 Tailscale sharing VERIFIED; #362 O2 VERIFIED on the bill; #363 the alert's layout; #364 the alert's report
+button; #365 the bot's menu button. `ASSUMPTIONS.md` O2 and I5 VERIFIED; `BASELINE.md` §14's sharing row VERIFIED; `CLAUDE.md`'s
+`apply_reclassify` line (`--allow` comma-separated, no spaces) and status. `BACKLOG.md`: items 2 and 5 removed; the #11 row
+and the open "unclear kind alerts" row removed; #358–#365 added under "Recorded for a later phase".
+
+### C. Instructions version 5: steps 0 and 1
+
+- **Step 0.** The three posts read on the production store: `62a41d3d…` ("להשכרה סטודיו לופט", 20 m², a sleeping gallery),
+  `71ada783…` ("דירת סטודיו מרווחת", 30 m²), `a7ba462d…` ("דירות סטודיו במתחם חדש", several 30 m² units): each offers
+  studios for rent and nothing else, so I went on. Added to `corrections.json` in the export's shape (the version 3
+  classification each names, `reviewed` true, `{"rooms": {"state": "written", "value": 1}}`, a note naming #354); a first
+  write re-indented the whole file (two spaces where the export uses one): rewritten with one space, the diff against the
+  backup is the three entries only. `review_page --dry-run`: three would join, `rooms` counted; `review_page`: joined;
+  `regression_run --check`: **54 posts**.
+- **Step 1.** `uv run --env-file .env python -m tlv_hunter.jobs.regression_run --cap 0.10`: run `09f15e8dac9f`, exit 0, not
+  stopped, **108 calls, $0.024295 of $0.10**, every post on its first attempt; tokens: input 590,342 (cached 558,326, cache
+  write 5,218), output 30,760, reasoning 0.
+- **The verdict:** both passes `fail`, complete. Every deciding field: no error in either pass. `rooms` 0/9 in both. Fails:
+  `furnished` 2/9 in both (position 3, #241, as in version 4; position 60, `a7ba462d…`, its version 3 `not_written` now truth
+  against `unclear`), and in pass 2 `broker` at 2 (filled in, `false` against not written) and `house_committee` at 39
+  (`unclear` against 900), each right in pass 1. The three studios `"whole_apartment"`, 1 room, in both passes; the duplex
+  `1454d3ee…` 4 and the house `ac0b0cd6…` 5 in both. 23 posts changed between the passes (version 4: 13), 29 flips (15). The
+  table against version 4's run is in `PHASE_2.md`, "The run of 2026-10-14".
+- **Questionable truths the three studio posts brought in** (version 3 answers, not changed by me): `62a41d3d…` parking and
+  furnished `"unclear"`, `71ada783…` `entry_date_written` "ב18.10", `a7ba462d…` furnished `"not_written"`.
+
+### Verified
+
+The store's hash the same throughout; `labels.json`'s hash the same; the corrections diff is the three entries.
+No test was run: no code changed (round 13's 1820 stand).
+
+### Not verified
+
+- That the run's cost matches the bill (the usage metadata only; O2's prices verified on the bill up to 2026-10-08).
+
+### Deviations
+
+1. **`a7ba462d…` counted as a plain studio** though it offers several units: each unit is a plain studio, and the plan Ron
+   approved named it as the "several units" case.
+2. **`corrections.json`'s `exported_at` left as it was** (2026-10-06): the three entries were not exported by the page.
+
+### BACKLOG
+
+"Last updated"; the round's line; item 4 corrected; items 2 and 5 removed; item 8 rewritten (the run's result, Ron's verdict
+due); the #11 row and the open "unclear kind" row removed; #358–#365 under "Recorded for a later phase".
+
+### Next
+
+STOP. For Ron: accept version 5 or not (`BACKLOG.md` item 8), and whether to correct the studio posts' questionable truths;
+then 3.7's step 7, when Ron gives it.

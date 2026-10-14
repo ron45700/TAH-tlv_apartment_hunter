@@ -18,7 +18,9 @@ orange-location cap, "not stated", the UI notes on the mock, the remaining point
 #332–#339 (round 9: points 27–30, Ron's notes on the round-8 mock); 2026-10-13 (#340–#343, Ron's notes on the
 round-9 mock); #344–#348 (round 11: Ron's answers on round 10, the screen sizes, the mock retired); 2026-10-14
 (#349–#351, round 12: 3.7's rebuilt text and points 33–35 accepted; the card's buttons packed to the left); #352–#354
-(round 13: points 36–39, the phone's compact bar, the studio rule and instructions version 5)
+(round 13: points 36–39, the phone's compact bar, the studio rule and instructions version 5); #354 corrected and
+confirmed, #355–#365 (round 14: the four applied reclassifications, the Telegram bot, the alerts, the digest, Tailscale
+sharing, the bill)
 
 > Written in English like every document in `docs/`.
 >
@@ -3364,10 +3366,83 @@ changes to `classify/instructions.txt`, in the assistant's wording of Ron's rule
   otherwise.* (before: *The one exception to rules 2 and 3: …*).
 
 **Read-only, on the store (2026-10-14):** 13 stored posts mention a studio (11 canonical); the 10 classified are all at
-version 3 (no stored `Listing` is at version 4, `BACKLOG.md` item 4), every one `"whole_apartment"`; of the 8 that offer
+version 3, every one `"whole_apartment"`; of the 8 that offer
 a studio for rent, 7 have `rooms` `"not_written"` and 1 has 1 (a 4-room duplex with a studio level has 4, and a house for
 sale with a studio has 5, both right). The regression run on version 5 is planned, not run
 (`PHASE_2.md`, "Instructions version 5"); it waits for Ron's go.
+*Corrected in round 14 (2026-10-14):* round 13 also wrote "no stored `Listing` is at version 4". That was wrong: four have
+been at version 4 since Ron's apply at 16:57 that day (#355). The studio numbers above were counted again on the production
+store, read-only, in round 14, and are unchanged (none of the four mentions a studio). **Ron confirmed the reason and the
+wording above (2026-10-14, round 14).**
+
+## Phase 3: Ron's session with the reviewer, 2026-10-14 (recorded in round 14)
+
+**Recorded on 2026-10-14 (round 14).** #355–#357, #361 and #362 are facts Ron established or decisions about them; #358–#360
+and #363–#365 are Ron's own rules for Phases 4 and 5, except where a line says the reviewer proposed it. No code for any of
+them now (`BACKLOG.md`, "Recorded for a later phase").
+
+### 355 — Reclassify run `dcb4c0cb4b24` applied to four posts; `4c5bbcaf…` left out on purpose
+Ron ran `apply_reclassify dcb4c0cb4b24 --apply --allow 31bd9205,b330d3fc,d269d280,e6a8b9bb` on 2026-10-14 at 16:57 (apply
+run `654523c8f8b2`; backup `tlv_hunter.2026-10-14.backup.sqlite3`; the stored `RawPost`s identical; "still selected for
+reclassify: 190"). Those four `Listing`s are at version 4 since then. **`4c5bbcaf…` was left out on purpose:** its new
+answer (`stated_area_names` `["בלב העיר"]`) goes against #236, and Ron's correction stays on the old `Listing`. `--allow` takes
+comma-separated prefixes. Closes `BACKLOG.md` item 5. *Ron's decision.*
+
+### 356 — The Telegram bot exists: @tlv_apartment_hunter_bot
+Ron created the bot @tlv_apartment_hunter_bot; its token is in `.env` as `TELEGRAM_BOT_TOKEN` (the variable's name is
+proposed, and confirmed in Phase 4's plan); joining groups is disabled for the bot. **The token is never read, logged or
+printed** before Phase 4, and then only by the code Phase 4's plan names. *Ron's action.*
+
+### 357 — #11's "one summary at bootstrap" is void
+A bootstrap run alerts nothing (`BASELINE.md` §4). #11's "the first run sends one summary" no longer applies. Closes the
+`BACKLOG.md` row. *Ron's decision.*
+
+### 358 — On linking Telegram, one message with the current count (Phase 4)
+When a user links Telegram, the bot sends one message: "N posts currently match your preferences", with a link to the
+site. For every user. *Ron's own.*
+
+### 359 — The daily digest adds three colours and the admin's matches (Phase 5)
+The daily digest (`BASELINE.md` §11, admin only, sent to Ron on Telegram) adds: **green**, the active posts whose price,
+location and kind are all clear; **orange**, the active posts with one of those three unclear or missing; **red**, the
+rejected posts; and the count of the day's new posts that match the admin's own profile. The three colours depend on no
+profile. *Ron's own; the colours' independence from any profile was the reviewer's proposal, approved by Ron.*
+
+### 360 — A post whose kind is unclear or not written never alerts
+Such a post does not alert. It stays on the site at the bottom (#273). Closes the open `BACKLOG.md` row (`BASELINE.md` §9
+item 2 did not say). *Ron's own. Ron's reason:* he has hardly seen such a post turn out relevant; alerts would be for storage
+units and the like; he can report it.
+
+### 361 — Tailscale sharing: no limit on the number of friends, nothing paid (VERIFIED)
+Ron checked on 2026-10-14: friends reach the site through device sharing, not as users of his tailnet, so the free plan
+sets no limit on the number of friends and nothing is paid. The plan facts the reviewer read (tailscale.com/pricing/faq,
+tailscale.com/kb/1084/sharing, 2026-10-14): the Personal plan has up to 6 users; sharing is on all plans; the recipient
+accepts with their own Tailscale account. `BASELINE.md` §14 and `ASSUMPTIONS.md` I5 marked VERIFIED. *Ron's check.*
+
+### 362 — The model's cost matches the OpenAI bill (`ASSUMPTIONS.md` O2 VERIFIED)
+Ron read the OpenAI dashboard on 2026-10-14 (the project's usage, 5–14 October): $0.20 in all, $0.14 on 2026-10-06. The runs'
+usage metadata gives $0.1957: the spike $0.0273; 2026-10-06 $0.1440 (four regression runs and the first run over the store);
+2026-10-08 $0.0244 (the version 4 regression run and reclassify `dcb4c0cb4b24`). O2 is VERIFIED; `BACKLOG.md` item 2 is
+closed. **I3 stays open:** it closes with the measured working day (3.10, #225, #228). *Ron's check.*
+
+### 363 — The alert's layout (Phase 4)
+Approved by Ron. The exact template and Telegram's caption limits are verified when Phase 4 is planned, under the
+`external-contract-verification` skill. The alert holds: the post's first photo; lines for the kind (and sublet), the price,
+the neighbourhood, the street (only when written), the rooms ("1/2.5" on a room post), the entry date; then **only the
+categories the user set in their profile**, each marked 🟢 met, 🔴 not met, 🟠 unclear, ⚪ not stated (#321); a "⚠️ חסר: …"
+line for a critical category not written (`BASELINE.md` §9); 🔴 "women only" when that filter is off; the relative
+publication time. Buttons: open on the site (later the Mini App), Facebook, WhatsApp (only with a mobile number) and report
+(#364). No "save" (no favourites, #310), no map link (#310). Reference screenshots in `data/screenshots/telegram/`
+(gitignored; inspiration only: their "city" line and orange "not stated" are not ours). *Ron's approval.*
+
+### 364 — The alert's "report" button offers the site's two actions (Phase 4)
+The button offers "lied" (the flag) and "wrong classification" (the fields picked by buttons, the note optional), written as
+the linked user by the site's rules: compare and set (#260); the flag on every member of the card, the report on the shown
+post (#300). *Ron's own. Ron's reason:* seeing a wrong post in Telegram, reporting it there is much easier than finding it
+again on the site.
+
+### 365 — The bot's menu button opens the site (Phase 4)
+The bot's menu button (left of the attachment icon) opens the site, later the Mini App. It works only with Tailscale on the
+phone. Covered by the Mini App spike (`BASELINE.md` §14, `ASSUMPTIONS.md` T5). *Ron's own.*
 
 ---
 
