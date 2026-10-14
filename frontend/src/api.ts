@@ -5,7 +5,7 @@
 // `Origin: null` on a same-origin write, so each request asks for the "same-origin" policy: the
 // `Origin` is then the site's own, and no referrer ever leaves for another host.
 import type { Bar } from './bar'
-import type { CardsResponse, PostData, Reference, SavedProfile, SessionUser } from './types'
+import type { CardsResponse, FlagAnswer, PostData, Reference, SavedProfile, SessionUser } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -67,4 +67,13 @@ export const api = {
   profile: () => call<SavedProfile>('GET', '/api/profile'),
   /** The preferences page's save: the only place preferences are saved (#335). */
   saveProfile: (bar: Bar) => call<SavedProfile>('PUT', '/api/profile', bar),
+  // Build step 6 (3.7 (i)): a post no longer in a current card answers 409, refusal "gone".
+  /** Opening a post marks its card viewed (#253). */
+  markViewed: (id: string) => call<{ viewed: true }>('POST', `/api/viewed/${encodeURIComponent(id)}`, {}),
+  unmarkViewed: (id: string) => call<{ viewed: false }>('DELETE', `/api/viewed/${encodeURIComponent(id)}`, {}),
+  /** "המודעה משקרת": every publication of the card (#300). */
+  flag: (id: string) => call<FlagAnswer>('POST', `/api/flag/${encodeURIComponent(id)}`, {}),
+  /** "סיווג שגוי": the shown post only (#300); `removed` false when the admin will handle it. */
+  report: (id: string, fields: string[], note: string | null) =>
+    call<{ removed: boolean }>('POST', `/api/report/${encodeURIComponent(id)}`, { fields, note }),
 }

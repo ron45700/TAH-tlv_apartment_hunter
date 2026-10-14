@@ -4,13 +4,16 @@ write checks (`auth.py`); the account actions (`accounts/`).
 
 Build step 2: the read-only API for a guest. Build steps 4 and 5: the session, sign-in, sign-out,
 sign-up with a key (no filter field, #336), the password change, and the saved profile. **The site
-writes only the user-data tables of its copy of the store (#331):** a session, a user's failure
-count and password, a new user with their profile and the key marked used, and a profile.
+writes only its copy of the store (#331):** a session, a user's failure count and password, a new
+user with their profile and the key marked used, and a profile.
 `save_profile` is called by `PUT /api/profile` alone, the preferences page (#335): the bar
-(`/api/cards`) is never saved. Viewed marks, flags and reports are build step 6's, so a user's cards
-carry no `viewed` yet. A user who must change the password reaches only the password change and
-sign-out (Gate C, `Session`); for the posts they are a guest. Every write takes JSON only and checks
-`Origin` (`auth.check_write`); a guest's write is 401.
+(`/api/cards`) is never saved. Build step 6: a viewed mark on the shown post (#276), "mark as not
+viewed" on every post of the card, a "lied" flag on every member and a report on the shown post
+(#300), the last two by compare and set on the post's lifecycle record in the copy (`writes.py`,
+#260). A user's cards carry `viewed`; a guest's do not. A write on a post that is no longer in a
+current card is 409, `gone`. A user who must change the password reaches only the password change
+and sign-out (Gate C, `Session`); for the posts they are a guest. Every write takes JSON only and
+checks `Origin` (`auth.check_write`); a guest's write is 401.
 
 Only the
 posts of the current cards are reachable: the cards come from `dedup/stage_b` (active canonical
@@ -39,9 +42,11 @@ from tlv_hunter.areas.reference import Area, AreaGroup
 from tlv_hunter.contracts.classification_report import ReportableField
 from tlv_hunter.contracts.profile import Profile
 from tlv_hunter.contracts.user import User
+from tlv_hunter.dedup.stage_b import Card
 from tlv_hunter.policy.evaluate import evaluate
-from tlv_hunter.policy.order import ordered
-from tlv_hunter.userdata.base import UserDataStore
+from tlv_hunter.policy.order import card_viewed, ordered
+from tlv_hunter.store.sqlite import SqliteRepository
+from tlv_hunter.userdata.base import OpenReportExists, UserDataStore
 from tlv_hunter.web.auth import (
     Viewer,
     check_write,
@@ -52,6 +57,7 @@ from tlv_hunter.web.auth import (
 from tlv_hunter.web.cards import card_payload, photo_name, post_payload
 from tlv_hunter.web.filters import bar_json, empty_bar, owned_profile, transient_profile
 from tlv_hunter.web.grouping import Grouping
+from tlv_hunter.web.writes import REPORT_LABELS, flag_card, report_post
 
 router = APIRouter(prefix="/api")
 
@@ -59,6 +65,8 @@ router = APIRouter(prefix="/api")
 @dataclass(frozen=True)
 class Site:
     grouping: Grouping
+    posts: SqliteRepository
+    """The copy's Repository, writable: a flag's and a report's lifecycle writes only (#331)."""
     areas: Sequence[Area]
     area_groups: Sequence[AreaGroup]
     store_root: Path
@@ -96,7 +104,9 @@ def reference(request: Request) -> Response:
                 {"heading": g.heading, "collapsed": g.collapsed, "areas": list(g.areas)}
                 for g in site.area_groups
             ],
-            "reportable_fields": list(get_args(ReportableField)),
+            "reportable_fields": [
+                {"field": name, "label": REPORT_LABELS[name]} for name in get_args(ReportableField)
+            ],
         }
     )
 
@@ -110,7 +120,7 @@ async def cards_for_bar(request: Request) -> Response:
         profile = transient_profile(body, site.clock())
     except ValueError as error:
         raise HTTPException(status_code=422, detail=_refusal(error)) from None
-    return _cards(site, profile)
+    return _cards(site, profile, _list_user(request, site))
 
 
 @router.get("/cards")
@@ -118,7 +128,7 @@ def cards_for_a_new_guest(request: Request) -> Response:
     """The cards a guest sees before touching the bar (#315: a guest's bar starts empty), so the
     list can be read in a browser's address bar."""
     site = _site(request)
-    return _cards(site, empty_bar(site.clock()))
+    return _cards(site, empty_bar(site.clock()), _list_user(request, site))
 
 
 @router.get("/posts/{listing_id}")
@@ -278,6 +288,107 @@ async def put_profile(request: Request) -> Response:
     return _json(_profile_json(saved))
 
 
+# --- a user's writes on a card (build step 6, 3.7 (i)) ---
+
+
+class FlagBody(_Body):
+    note: str | None = None
+
+
+class ReportBody(_Body):
+    fields: list[ReportableField]
+    note: str | None = None
+
+
+@router.post("/viewed/{listing_id}")
+async def mark_viewed(listing_id: str, request: Request) -> Response:
+    """Opening a post marks its card viewed: the shown post, the first time kept (#253, #276)."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    check_write(request)
+    card = _current_card(site, listing_id)
+    if card is None:
+        return _gone()
+    site.userdata.mark_viewed(_user(who).user_id, card.shown_id, site.clock())
+    return _json({"viewed": True})
+
+
+@router.delete("/viewed/{listing_id}")
+async def unmark_viewed(listing_id: str, request: Request) -> Response:
+    """Mark as not viewed: the user's marks on every post of the card (SCHEMA.md `ViewedPost`)."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    check_write(request)
+    card = _current_card(site, listing_id)
+    if card is None:
+        return _gone()
+    site.userdata.unmark_viewed(_user(who).user_id, card.post_ids)
+    return _json({"viewed": False})
+
+
+@router.post("/flag/{listing_id}")
+async def flag(listing_id: str, request: Request) -> Response:
+    """The "lied" flag on every member of the card (#300). `flagged` of `of`; `remaining` names
+    the members left as they were, the first of which a retry sends (#330 point 21)."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    body = await _write_body(request, FlagBody)
+    card = _current_card(site, listing_id)
+    if card is None:
+        return _gone()
+    result = flag_card(site.posts, card, _user(who).user_id, site.clock(), body.note)
+    return _json(
+        {
+            "flagged": len(result.written),
+            "of": len(card.canonical_ids),
+            "remaining": list(result.not_written),
+        }
+    )
+
+
+@router.post("/report/{listing_id}")
+async def report(listing_id: str, request: Request) -> Response:
+    """A "wrong classification" report on the card's shown post (#254, #300). A second open report
+    by the same user on it is 409, `already_reported` (#278). `removed` false: the report is stored
+    and the post stays until the admin handles it (3.7 (i))."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    body = await _write_body(request, ReportBody)
+    card = _current_card(site, listing_id)
+    if card is None:
+        return _gone()
+    try:
+        result = report_post(
+            site.posts,
+            site.userdata,
+            card,
+            _user(who).user_id,
+            body.fields,
+            body.note,
+            site.clock(),
+        )
+    except OpenReportExists:
+        return _refused_json("already_reported", 409)
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=_refusal(error)) from None
+    return _json({"removed": result.removed})
+
+
+def _current_card(site: Site, listing_id: str) -> Card | None:
+    """The current card that holds the post (any of its `post_ids`), or None for a stale page."""
+    return site.grouping.current().snapshot.card_of.get(listing_id)
+
+
+def _gone() -> Response:
+    """The post is no longer in a current card: removed meanwhile (3.7 (i))."""
+    return _refused_json("gone", 409)
+
+
+def _refused_json(name: str, status: int) -> Response:
+    body = json.dumps({"refusal": name}, ensure_ascii=False)
+    return Response(body, status_code=status, media_type="application/json")
+
+
 def _signed_in_viewer(request: Request, site: Site, *, allow_password_due: bool = False) -> Viewer:
     """A valid session, else 401; while a password change is due, only what allows it (else
     403)."""
@@ -347,21 +458,38 @@ def _profile_json(profile: Profile) -> dict[str, object]:
     return {**bar_json(profile), "updated_at": profile.updated_at.isoformat()}
 
 
-def _cards(site: Site, profile: Profile) -> Response:
+def _list_user(request: Request, site: Site) -> User | None:
+    """The user whose viewed marks order the list; a guest, or a user whose password change is
+    due, has none."""
+    user = viewer(request, site.userdata, site.clock()).user
+    return None if user is None or user.must_change_password else user
+
+
+def _cards(site: Site, profile: Profile, user: User | None = None) -> Response:
     held = site.grouping.current()
     now = site.clock()
     started = time.perf_counter()
     entries = [(card, evaluate(card.shown.seen, profile, now)) for card in held.snapshot.cards]
     eval_ms = _ms_since(started)
     started = time.perf_counter()
-    shown = ordered(entries, viewed_ids=())  # a guest has no viewed marks
+    viewed_ids = site.userdata.viewed_listing_ids(user.user_id) if user is not None else set()
+    shown = ordered(entries, viewed_ids=viewed_ids)  # unviewed before viewed (#62)
     order_ms = _ms_since(started)
     started = time.perf_counter()
     names = site.area_names
     payload = {
         "generation": held.snapshot.generation,
         "count": len(shown),
-        "cards": [card_payload(card, evaluation, profile, names) for card, evaluation in shown],
+        "cards": [
+            card_payload(
+                card,
+                evaluation,
+                profile,
+                names,
+                viewed=None if user is None else card_viewed(card, viewed_ids),
+            )
+            for card, evaluation in shown
+        ],
     }
     body = json.dumps(payload, ensure_ascii=False)
     json_ms = _ms_since(started)

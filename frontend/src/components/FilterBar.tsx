@@ -3,8 +3,9 @@
 // when both kinds are off; then the status line, the count and where the bar stands, in words, with
 // "ההעדפות שלי" to reset it when it differs from the saved preferences (#335). One values row per
 // kind that is on, labelled with the kind's name: areas, price, rooms and "עוד", each a pill that
-// fills with its value in words. No save in the bar (#335). On a phone: row 1, the status line with
-// "סינון (N)", and a full-screen sheet with the same rows and "הצגת N מודעות".
+// fills with its value in words. No save in the bar (#335). On a phone (point 39, option A): the three
+// switches on one row, one dense row with the status and "סינון (N)", and a full-screen sheet with
+// the same rows and "הצגת N מודעות".
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   OPTIONS,
@@ -115,7 +116,12 @@ function Status({ standing, count, onReset }: Props) {
       <span>
         <strong>{count === null ? 'טוען מודעות…' : `${count} מודעות`}</strong>
         {standing === 'saved' && ' · לפי ההעדפות השמורות'}
-        {standing === 'changed' && ' · סינון זמני, שונה מההעדפות שלך'}
+        {standing === 'changed' && (
+          <>
+            {' · סינון זמני'}
+            <span className="status-long">, שונה מההעדפות שלך</span>
+          </>
+        )}
       </span>
       {standing === 'changed' && (
         <button type="button" className="barbtn is-reset" onClick={onReset}>

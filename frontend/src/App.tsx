@@ -7,17 +7,24 @@
 // (#315, #335); a change is temporary and "ההעדפות שלי" resets it. It lives in the tab's memory and
 // `sessionStorage` (#330 point 14): a reload keeps a changed bar, a new visit starts again. It is sent
 // with each list request and never saved (#335): preferences are saved on the preferences page only.
+//
+// Build step 6 (3.7 (i)), signed-in only: viewed cards are dimmed and listed after the unviewed (the
+// server's order, #62); an opened post marks its card viewed at once, and the order follows on the
+// next load of the list, so nothing jumps under the reader. A "lied" flag asks first; a flag or a
+// report says in words what it did (a partial flag offers a retry, #330 point 21) and the list
+// reloads, so the card leaves it. A write on a post removed meanwhile (409) says so and reloads.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, api } from './api'
 import { barHeldCount, barOf, emptyBar, israelToday, refusalWords, sameBar, type Bar } from './bar'
-import { Card } from './components/Card'
+import { ConfirmFlag, NoticeBar, type Notice } from './components/actions'
+import { Card, type CardActions } from './components/Card'
 import { FilterBar, type BarStanding } from './components/FilterBar'
 import { Header } from './components/Header'
-import { PostView } from './components/PostView'
+import { PostView, type PostActions } from './components/PostView'
 import { navigate, postPath, useRoute } from './route'
 import { PasswordScreen, SignIn, SignUp } from './screens/Account'
 import { Preferences } from './screens/Preferences'
-import type { CardsResponse, Reference, SessionUser } from './types'
+import type { CardsResponse, FlagAnswer, Reference, SessionUser } from './types'
 
 const PHONE = '(max-width: 699.98px)'
 const BAR_KEY = 'tlv.bar'
@@ -59,6 +66,11 @@ export function App() {
   const [list, setList] = useState<CardsResponse | null>(null)
   const [failed, setFailed] = useState(false)
   const [barProblem, setBarProblem] = useState<string | null>(null)
+  const [reloads, setReloads] = useState(0)
+  const [notice, setNotice] = useState<Notice | null>(null)
+  const [flagging, setFlagging] = useState<string | null>(null)
+  const [flagBusy, setFlagBusy] = useState(false)
+  const [reportFor, setReportFor] = useState<string | null>(null)
   const now = useNow()
   const phone = useMedia(PHONE)
   const openedFromList = useRef(false)
@@ -134,7 +146,7 @@ export function App() {
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [bar])
+  }, [bar, reloads])
 
   const names = useMemo(() => new Map((reference?.areas ?? []).map((area) => [area.number, area.name])), [reference])
 
@@ -146,11 +158,105 @@ export function App() {
   // A post opened from the list closes back to it, as the browser's back does; a post opened by its
   // own address goes to the list.
   const close = useCallback(() => {
+    setReportFor(null)
     if (openedFromList.current) {
       openedFromList.current = false
       history.back()
     } else navigate('/')
   }, [])
+
+  // --- build step 6: a signed-in user's writes on a card ---
+  const reload = useCallback(() => setReloads((n) => n + 1), [])
+  const dismissNotice = useCallback(() => setNotice(null), [])
+  const openPostId = route.name === 'post' ? route.id : null
+
+  const flagDone = useCallback(
+    (answer: FlagAnswer, retry: (id: string) => void) => {
+      if (answer.flagged === answer.of) {
+        setNotice({ text: 'המודעה סומנה כמשקרת והוסרה מהרשימה.' })
+      } else {
+        setNotice({
+          text: `סומנו ${answer.flagged} מתוך ${answer.of} הפרסומים של המודעה: היא השתנתה בינתיים.`,
+          retry: answer.remaining.length ? { label: 'נסו שוב', run: () => retry(answer.remaining[0]) } : undefined,
+        })
+      }
+    },
+    [],
+  )
+
+  const runFlag = useCallback(
+    (id: string) => {
+      setFlagBusy(true)
+      setNotice(null)
+      api
+        .flag(id)
+        .then((answer) => {
+          flagDone(answer, runFlag)
+          if (openPostId) close()
+        })
+        .catch((error) => {
+          if (error instanceof ApiError && error.refusal === 'gone') {
+            setNotice({ text: 'המודעה כבר הוסרה מהרשימה בינתיים.' })
+            if (openPostId) close()
+          } else {
+            setNotice({ text: 'הסימון לא נשמר. בדקו את החיבור ונסו שוב.', retry: { label: 'נסו שוב', run: () => runFlag(id) } })
+          }
+        })
+        .finally(() => {
+          setFlagBusy(false)
+          setFlagging(null)
+          reload()
+        })
+    },
+    [close, flagDone, openPostId, reload],
+  )
+
+  const markList = useCallback((postIds: string[], viewed: boolean) => {
+    setList((current) =>
+      current && {
+        ...current,
+        cards: current.cards.map((card) => (card.post_ids.some((id) => postIds.includes(id)) ? { ...card, viewed } : card)),
+      },
+    )
+  }, [])
+
+  const signedInUser = user && !user.must_change_password ? user : null
+  const cardActions: CardActions | undefined = useMemo(
+    () =>
+      signedInUser
+        ? {
+            onFlag: (id) => setFlagging(id),
+            onReport: (id) => {
+              setReportFor(id)
+              open(id)
+            },
+          }
+        : undefined,
+    [signedInUser, open],
+  )
+  const postActions: PostActions | undefined =
+    signedInUser && reference
+      ? {
+          reportFields: reference.reportable_fields,
+          startReport: reportFor !== null && reportFor === openPostId,
+          onViewed: markList,
+          onFlag: (id) => setFlagging(id),
+          onReported: (removed) => {
+            setNotice({
+              text: removed
+                ? 'הדיווח נשלח. המודעה הוסרה מהרשימה עד שהמנהל יבדוק אותה.'
+                : 'הדיווח נשמר. המודעה עדיין ברשימה, והמנהל יטפל בה.',
+            })
+            if (removed) close()
+            reload()
+          },
+          onGone: () => {
+            setNotice({ text: 'המודעה כבר הוסרה מהרשימה בינתיים.' })
+            close()
+            reload()
+          },
+        }
+      : undefined
 
   const signedIn = useCallback((next: SessionUser) => {
     forgetBar() // the bar opens on the saved preferences (#335)
@@ -269,12 +375,16 @@ export function App() {
         ) : (
           <div className="grid">
             {list.cards.map((card) => (
-              <Card key={card.id} card={card} now={now} onOpen={open} />
+              <Card key={card.id} card={card} now={now} onOpen={open} actions={cardActions} />
             ))}
           </div>
         )}
       </main>
-      {openId && <PostView id={openId} card={openCard} now={now} phone={phone} onClose={close} />}
+      {openId && <PostView id={openId} card={openCard} now={now} phone={phone} onClose={close} actions={postActions} />}
+      {flagging && (
+        <ConfirmFlag busy={flagBusy} onConfirm={() => runFlag(flagging)} onCancel={() => setFlagging(null)} />
+      )}
+      <NoticeBar notice={notice} onDismiss={dismissNotice} />
     </>
   )
 }

@@ -19,13 +19,21 @@ import {
 } from '../format'
 import { postPath } from '../route'
 import type { CardData, Colour, Kind } from '../types'
+import { ActionMenu } from './actions'
 import { Carousel } from './Carousel'
 import { InfoButton } from './InfoButton'
+
+/** A signed-in user's actions (build step 6); absent for a guest, who has no report button. */
+export interface CardActions {
+  onFlag: (id: string) => void
+  onReport: (id: string) => void
+}
 
 interface Props {
   card: CardData
   now: Date
   onOpen: (id: string) => void
+  actions?: CardActions
 }
 
 /** How a colour reads to a screen reader: the state in words (#323). */
@@ -38,7 +46,7 @@ export const COLOUR_WORDS: Record<Colour, string> = {
   missing: 'חסר',
 }
 
-export function Card({ card, now, onOpen }: Props) {
+export function Card({ card, now, onOpen, actions }: Props) {
   const kind = card.apartment_kind.value
   const corrected = new Set(card.evaluation.corrected)
   const line = kindLine(kind, card.evaluation.kind_marked, card.evaluation.option, card.post_nature === 'sublet_offer')
@@ -54,12 +62,12 @@ export function Card({ card, now, onOpen }: Props) {
   }
 
   return (
-    <article className={`card ${card.glow ? `glow-${card.glow}` : 'glow-none'}`}>
+    <article className={`card ${card.glow ? `glow-${card.glow}` : 'glow-none'}${card.viewed ? ' is-viewed' : ''}`}>
       <a
         className="open"
         href={postPath(card.id)}
         onClick={open}
-        aria-label={`פתיחת המודעה${card.tier_label ? `. ${card.tier_label}` : ''}`}
+        aria-label={`פתיחת המודעה${card.viewed ? ', נצפתה' : ''}${card.tier_label ? `. ${card.tier_label}` : ''}`}
       />
       <div className="media">
         <Carousel photos={card.photos} videos={card.videos} variant="card" />
@@ -68,6 +76,7 @@ export function Card({ card, now, onOpen }: Props) {
       <div className="body">
         <div className="kindrow">
           <span className={line.unclear ? 'kind kind-unclear' : 'kind'}>{line.text}</span>
+          {card.viewed && <span className="seen">נצפה</span>}
         </div>
         <div className="pricerow">
           {price === null ? (
@@ -135,7 +144,7 @@ export function Card({ card, now, onOpen }: Props) {
           {/* The buttons pack to the left with no reserved place (#351, amending #341 for this row):
               from the left, report, WhatsApp, Facebook; an absent one (a guest's report, a post
               with no mobile number's WhatsApp) leaves no gap. In the right-to-left row the first
-              in order sits furthest right. The report button is build step 6's. */}
+              in order sits furthest right, so the report button comes last (#328, #338). */}
           <div className="acts">
             <a className="btn-o btn-fb" href={card.permalink} target="_blank" rel="noopener noreferrer">
               פייסבוק
@@ -144,6 +153,16 @@ export function Card({ card, now, onOpen }: Props) {
               <a className="btn-o btn-wa" href={card.whatsapp} target="_blank" rel="noopener noreferrer">
                 וואטסאפ
               </a>
+            )}
+            {actions && (
+              <ActionMenu
+                label="דיווח"
+                className="btn-o btn-rep"
+                items={[
+                  { label: 'המודעה משקרת', onSelect: () => actions.onFlag(card.id) },
+                  { label: 'סיווג שגוי', onSelect: () => actions.onReport(card.id) },
+                ]}
+              />
             )}
           </div>
           <span className="reposts">{reposts}</span>

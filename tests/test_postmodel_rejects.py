@@ -1,6 +1,7 @@
 """The rejection derived from the answer and from Facebook's own location, and the record after a
 classification attempt, the record a restore leaves (DECISIONS.md #92, #93, #139, #152, #214,
-#251, #281-#283), and a correction of the city (#296)."""
+#251, #281-#283), a correction of the city (#296), and the records a user's flag and report leave
+(#279, #280, #300)."""
 
 from datetime import UTC, datetime
 
@@ -13,10 +14,12 @@ from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.postmodel.rejects import (
     classified_lifecycle,
     failed_lifecycle,
+    flagged_lifecycle,
     model_reason,
     native_locality,
     other_city_name,
     other_city_ruling,
+    reported_lifecycle,
     restored_lifecycle,
 )
 from tlv_hunter.postmodel.seen import SeenListing, seen_listing
@@ -373,3 +376,107 @@ def test_the_restore_and_a_classification_derive_the_same_reason(
         classified.state,
         classified.rejection_reason,
     )
+
+
+# --- a user's flag and report (3.7 (i); Gate E as amended, #279, #280, #300) ---
+
+FLAGGER = "a" * 32
+FIRST_REPORTER = "b" * 32
+SECOND_REPORTER = "c" * 32
+FLAGGED_AT = datetime(2026, 10, 14, 8, 0, tzinfo=UTC)
+LATER = datetime(2026, 10, 14, 9, 0, tzinfo=UTC)
+
+
+def active_with_history(post: RawPost) -> PostLifecycle:
+    """An active record whose other fields must survive a flag or a report untouched."""
+    return record(
+        post,
+        state="active",
+        classification_failures=1,
+        last_classification_error="timeout",
+        last_published_at=datetime(2026, 10, 12, 7, 30, tzinfo=UTC),
+    )
+
+
+def test_a_flag_rejects_an_active_post_as_flagged_and_keeps_every_other_field(
+    post: RawPost,
+) -> None:
+    existing = active_with_history(post)
+    result = flagged_lifecycle(existing, FLAGGER, FLAGGED_AT, "the photos are of another flat")
+    assert (result.state, result.rejection_reason) == ("rejected", "flagged")
+    assert (result.flagged_by, result.flagged_at) == (FLAGGER, FLAGGED_AT)
+    assert result.flag_note == "the photos are of another flat"
+    kept = ("last_published_at", "images", "classification_failures", "last_classification_error")
+    assert all(getattr(result, name) == getattr(existing, name) for name in kept)
+    assert flagged_lifecycle(existing, FLAGGER, FLAGGED_AT, None).flag_note is None
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"state": "pending"},
+        {"state": "rejected", "rejection_reason": "seeking"},
+        {"state": "archived"},
+        {
+            "state": "rejected",
+            "rejection_reason": "misclassified",
+            "flagged_by": FIRST_REPORTER,
+            "flagged_at": FLAGGED_AT,
+        },
+    ],
+)
+def test_only_an_active_post_is_flagged(post: RawPost, changes: dict) -> None:
+    with pytest.raises(ValueError, match="only an active post is flagged"):
+        flagged_lifecycle(record(post, **changes), FLAGGER, LATER, None)
+
+
+def test_a_report_rejects_an_active_post_as_misclassified_with_the_reporter(
+    post: RawPost,
+) -> None:
+    existing = active_with_history(post)
+    result = reported_lifecycle(existing, FIRST_REPORTER, FLAGGED_AT)
+    assert (result.state, result.rejection_reason) == ("rejected", "misclassified")
+    assert (result.flagged_by, result.flagged_at) == (FIRST_REPORTER, FLAGGED_AT)  # #280
+    assert result.flag_note is None
+    kept = ("last_published_at", "images", "classification_failures", "last_classification_error")
+    assert all(getattr(result, name) == getattr(existing, name) for name in kept)
+
+
+def test_only_the_first_reporter_is_flagged_by(post: RawPost) -> None:
+    """#280: a second reporter changes nothing on the record."""
+    first = reported_lifecycle(active_with_history(post), FIRST_REPORTER, FLAGGED_AT)
+    assert reported_lifecycle(first, SECOND_REPORTER, LATER) == first
+
+
+def test_a_flagged_post_that_is_reported_still_shows_flagged(post: RawPost) -> None:
+    """#279: "flagged" shows when both apply."""
+    flagged_record = flagged_lifecycle(active_with_history(post), FLAGGER, FLAGGED_AT, "fake")
+    assert reported_lifecycle(flagged_record, FIRST_REPORTER, LATER) == flagged_record
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"state": "pending"},
+        {"state": "rejected", "rejection_reason": "other_city"},
+        {"state": "archived"},
+    ],
+)
+def test_a_post_with_no_card_is_not_reported(post: RawPost, changes: dict) -> None:
+    with pytest.raises(ValueError, match="only an active post is reported"):
+        reported_lifecycle(record(post, **changes), FIRST_REPORTER, LATER)
+
+
+def test_a_restore_undoes_a_flag_and_a_report(post: RawPost) -> None:
+    """The records the site writes are the ones 3.6's restore reads (#251, #282)."""
+    seen = seen_of(post)
+    for user_record in (
+        flagged_lifecycle(record(post, state="active"), FLAGGER, FLAGGED_AT, "fake"),
+        reported_lifecycle(record(post, state="active"), FIRST_REPORTER, FLAGGED_AT),
+    ):
+        restored = restored_lifecycle(user_record, post, seen)
+        assert (restored.state, restored.rejection_reason, restored.flagged_by) == (
+            "active",
+            None,
+            None,
+        )

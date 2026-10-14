@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 from fastapi.testclient import TestClient
@@ -34,6 +34,7 @@ from tests.conftest import (
 from tests.test_gate_d import add, add_pending, make_member, make_post
 from tests.test_userdata_store import ADMIN_ID, admin
 from tlv_hunter.config.yaml_config import YamlConfig
+from tlv_hunter.contracts.classification_report import ReportableField
 from tlv_hunter.contracts.post_lifecycle import PostImage
 from tlv_hunter.contracts.profile import RangeCriterion, new_profile
 from tlv_hunter.jobs import serve
@@ -174,7 +175,9 @@ def test_a_guest_reads_the_reference(client: TestClient) -> None:
     assert [area["number"] for area in body["areas"]] == list(range(1, 72))
     assert sorted(n for group in body["area_groups"] for n in group["areas"]) == list(range(1, 72))
     assert body["area_groups"][-1]["collapsed"] is True
-    assert "price" in body["reportable_fields"] and len(body["reportable_fields"]) == 22
+    fields = [entry["field"] for entry in body["reportable_fields"]]
+    assert fields == list(get_args(ReportableField))  # all 22, in Gate C's order
+    assert all(entry["label"] for entry in body["reportable_fields"])  # each in Hebrew words
 
 
 def test_a_guest_lists_opens_and_sees_photos(client: TestClient, store: Store) -> None:
@@ -196,9 +199,10 @@ def test_a_posted_empty_bar_gives_the_same_list_as_a_new_guest(client: TestClien
     assert card_ids(client.post("/api/cards", json=bar())) == card_ids(client.get("/api/cards"))
 
 
-def test_the_api_writes_only_the_account_and_the_profile() -> None:
-    """Build steps 4 and 5 add the account's writes and the profile's save; the bar's POST reads.
-    Viewed, flag and report are step 6's (`tests/test_web_accounts.py` has the writes' tests)."""
+def test_the_api_writes_only_the_account_the_profile_and_the_card_writes() -> None:
+    """Build steps 4 and 5 add the account's writes and the profile's save; step 6 viewed, flag
+    and report; the bar's POST reads (`tests/test_web_accounts.py`, `tests/test_web_writes.py`
+    have the writes' tests)."""
     methods = {(route.path, method) for route in router.routes for method in route.methods}
     writes = {(path, m) for path, m in methods if m not in ("GET", "HEAD")}
     assert writes == {
@@ -208,6 +212,10 @@ def test_the_api_writes_only_the_account_and_the_profile() -> None:
         ("/api/sign-up", "POST"),
         ("/api/password", "POST"),
         ("/api/profile", "PUT"),
+        ("/api/viewed/{listing_id}", "POST"),
+        ("/api/viewed/{listing_id}", "DELETE"),
+        ("/api/flag/{listing_id}", "POST"),
+        ("/api/report/{listing_id}", "POST"),
     }
 
 

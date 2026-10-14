@@ -98,13 +98,21 @@ def video_links(member: KeyPost) -> list[str]:
 
 
 def card_payload(
-    card: Card, evaluation: Evaluation, profile: Profile, area_names: Mapping[int, str]
+    card: Card,
+    evaluation: Evaluation,
+    profile: Profile,
+    area_names: Mapping[int, str],
+    *,
+    viewed: bool | None = None,
 ) -> dict:
-    """A closed card (3.7 (c)): the shown post's summary, its evaluation, its colours and glow."""
+    """A closed card (3.7 (c)): the shown post's summary, its evaluation, its colours and glow.
+    `viewed` for a signed-in user only (#62, #253); a guest's card has no such field."""
     shown = card.shown
     listing = shown.seen.listing
     mobiles = whatsapp_links(shown)
+    seen = {} if viewed is None else {"viewed": viewed}
     return {
+        **seen,
         "id": card.shown_id,
         "post_ids": sorted(card.post_ids),
         "evaluation": _evaluation(evaluation),

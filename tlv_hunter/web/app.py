@@ -2,8 +2,10 @@
 
 Build step 2: the read-only API for a guest, over a **dated copy of the store** (#331; the copy is
 `jobs/serve.py`'s). The site opens the copy's Repository read-only; it reads the corrections
-through `UserDataStore`. From build step 5 it writes the copy's user-data tables only (sessions,
-users, profiles; `routes.py`); a cookie that fails the session check is cleared (`auth.py`).
+through `UserDataStore`. From build step 5 it writes the copy's user-data tables (sessions, users,
+profiles; `routes.py`); a cookie that fails the session check is cleared (`auth.py`). From build
+step 6 it also writes viewed marks and reports, and a post's lifecycle record for a flag or a
+report (`writes.py`, by compare and set, #260); never a `RawPost` or a `Listing`.
 
 Invariant 15 on the page: no request leaves the site. Every response carries a Content-Security-
 Policy that allows only the site itself and `Referrer-Policy: no-referrer`. FastAPI's own pages
@@ -113,14 +115,16 @@ def site_over(
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     hasher: PasswordHasher = PRODUCTION_HASHER,
 ) -> Site:
-    """The site over a copy of the store: its Repository opened read-only; its user-data tables
-    through `UserDataStore`, the only records the site writes (sessions, users, profiles, #331),
-    the corrections read through it too; the photos read from `store_root`; the built pages from
-    `pages`, when given."""
+    """The site over a copy of the store (#331): the grouping reads it through a read-only
+    Repository; the user's writes on a post (a flag, a report, build step 6) go through a second,
+    writable one, `save_lifecycle` only; its user-data tables through `UserDataStore` (sessions,
+    users, profiles, viewed marks, reports), the corrections read through it too; the photos read
+    from `store_root`; the built pages from `pages`, when given."""
     repository = SqliteRepository(store_copy, read_only=True)
     userdata = SqliteUserDataStore(store_copy)
     return Site(
         grouping=Grouping(repository, userdata.find_corrections, store_root),
+        posts=SqliteRepository(store_copy),
         areas=load_areas(),
         area_groups=load_area_groups(),
         store_root=Path(store_root),

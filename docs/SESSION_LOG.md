@@ -5998,3 +5998,151 @@ removed: #245–#247 and #317, #248/#249/#261, #268–#274, #303–#315, #332–
 
 STOP. For Ron: run the site and sign in (`BACKLOG.md` item 6); filter, save your preferences, look at each screen size;
 answer points 36–39. Then step 6: viewed, the report button on the closed card, the flag and the report.
+
+## 2026-10-14 (continued) — Phase 3, round 13: Ron's answers on round 12 (#352–#354); 3.7's build step 6 (viewed, flag, report); the phone's bar compacted; the studio rule as instructions version 5 (text and a plan)
+
+**Git:** read-only commands only (`git status`, `git diff --stat`, `git show HEAD:…` of the instructions to count the
+characters added); nothing changed in the repository's history. No paid call, no Docker, no admin page. **The production
+store was not written by this session:** SHA-256 `5df9bc9a636832e9f3f395a1ebeecaaa823edbb2ac640d8af68339642c5a77ac` at the
+start, after the read-only studio reading and the free `regression_run --check`, and at the end. **Found at the start, not this
+session's:** that hash is not round 12's end hash (`c69ceb2c…`): the store, a dated backup `tlv_hunter.2026-10-14.backup.sqlite3`
+and `classify_runs/654523c8f8b2.jsonl` (736 bytes) were all written at 16:57:36 today, which looks like a job command Ron ran
+(`classify_pending`) before this session; nothing of it was opened for writing here. **Ron's three site copies in
+`data/store/site/` are byte-identical before and after** (SHA-256 checked). The browser check ran on a **scratch copy** of the
+newest site copy in the session's scratchpad (SQLite's online backup from a read-only connection), port 8765; on that scratch
+file only the admin's password was set to a test one, two posts were flagged, one post reported, and viewed marks written.
+Nothing installed. Network: 127.0.0.1 only.
+
+### A. Recorded
+
+`DECISIONS.md` **#352–#354**, a new section: #352, points 36–38 approved as built (the reviewer's); #353, point 39 option A
+(the reviewer's), built this round; **#354, Ron's own rule: "סטודיו" / "דירת סטודיו" / "studio" is a whole apartment of one
+room unless the post itself says otherwise**, with the two sentences of version 5 quoted for Ron to check. A4 (the `Host`
+header behind Tailscale Serve) is a `BACKLOG.md` row under "For phase 3", not a decision. "Last updated".
+
+### B. Built — 3.7's build step 6
+
+- **`tlv_hunter/postmodel/rejects.py`:** `flagged_lifecycle(existing, user_id, now, note)` (an active record → `"rejected"`,
+  `"flagged"`, `flagged_by`, `flagged_at`, the note; anything not active refused) and `reported_lifecycle(existing, user_id,
+  now)` (active → `"misclassified"` with the reporter; a record already rejected by a user, flagged or reported first,
+  returned unchanged: `"flagged"` shows when both apply, #279, and only the first reporter is `flagged_by`, #280; pending,
+  archived or rejected for another reason refused). Pure.
+- **`tlv_hunter/web/writes.py`** (new, wiring): `flag_card` (every one of `Card.canonical_ids`, each read, built, written by
+  `save_lifecycle(…, expected=…)`; on `StaleRecordError` read once more; a member no longer active skipped; returns the
+  written and the not written), `report_post` (`add_report` on `Card.shown_id` first, `OpenReportExists` passed up; then the
+  record the same way; `removed` false when it could not be written, the report staying), `REPORT_LABELS` (the 22 fields in
+  Hebrew, #277).
+- **`tlv_hunter/web/routes.py`:** `POST /api/viewed/{id}` (`mark_viewed(user, shown_id, now)`), `DELETE /api/viewed/{id}`
+  (`unmark_viewed(user, post_ids)`), `POST /api/flag/{id}` `{note?}` → `{flagged, of, remaining}`, `POST /api/report/{id}`
+  `{fields, note?}` → `{removed}` (409 `already_reported`; 422 for no field, a repeat, an unknown field, a note over 500, an
+  extra key); any of the four on a post no longer in a current card → 409 `gone`; a guest 401 first. A signed-in user's
+  cards carry `viewed` and are ordered by the marks (#62); a guest's carry none. `/api/reference` gives `{field, label}`.
+  `Site.posts`: `web/app.py` opens a second, writable `SqliteRepository` on the copy (the grouping keeps its read-only one).
+  `web/cards.py`: `card_payload(…, viewed=)`.
+- **The front end:** `components/actions.tsx` (new: `ActionMenu`, `ConfirmFlag`, `ReportForm` with the 22 tiles and the note
+  with its count, `NoticeBar`); `Card.tsx` (the outlined "דיווח" furthest left for a signed-in user, #328, #338, #351; the
+  viewed card dimmed with "נצפה" and the open link's name saying it); `PostView.tsx` (opening marks the card viewed; on a desktop
+  "סימון כלא נצפה" and "דיווח" at the left of the foot; on a phone "פעולות" in the top bar with the three items; the form);
+  `App.tsx` (the confirmation; the notices "המודעה סומנה כמשקרת והוסרה מהרשימה.", a partial flag "סומנו 1 מתוך 2 … נסו
+  שוב", "הדיווח נשלח…", "הדיווח נשמר. המודעה עדיין ברשימה, והמנהל יטפל בה.", "המודעה כבר הוסרה מהרשימה בינתיים."; the list
+  reloaded after a flag, a report or a 409; the viewed mark set on the list's card at once, the order following on the next
+  load); `api.ts`, `types.ts`; `styles/actions.css` (new), `tokens.css` (the report's soft red, 5.3:1 on white).
+- **#353, the phone's bar:** the three switches on one row (a long label wraps inside its own switch), the status line and
+  "סינון (N)" one dense row under them; a changed bar reads "סינון זמני" on a phone, "ההעדפות שלי" beside it.
+- `CLAUDE.md` (status, `web/`).
+
+**Tests:** `tests/test_web_writes.py` (new, 27): a guest 401 on each of the four writes with the file byte-identical; a guest's
+cards have no `viewed`, a user's do; the viewed mark on the shown post when opened through another member, the first time kept;
+a viewed card listed last; "not viewed" removes the marks on every post of the card and keeps another card's; **a flag on a
+two-post card writes both, each with the record read as `expected`**, and the card leaves the list; another writer once → a
+re-read and both written; **another writer twice on one member → `{"flagged": 1, "of": 2, "remaining": [it]}`, and the retry
+on it finishes**; a member no longer active skipped; **a report writes the shown post only** (sent through the other member),
+`"misclassified"` with the reporter; a report whose record cannot be written stays and **a second open report is refused**;
+six invalid reports 422 with nothing written; a note of exactly 500 accepted; 409 `gone` for each write on a rejected,
+pending, archived or unknown post and on a flagged card; **`raw_posts` and `listings` rows byte-identical after viewed, not
+viewed, a report and a flag, and the user's id in no post table but Gate E's `flagged_by`, once per changed record**.
+`tests/test_postmodel_rejects.py` (+12): the two functions against Gate E (#279, #280) and a restore undoing each.
+`tests/test_web.py`: the routes' write list and the reference's labels. `Card.test.tsx` (+3): the report button furthest
+left, packed beside Facebook with no WhatsApp, the viewed state in words.
+
+### How it looks (Chrome, chrome-devtools, the scratch site; `data/ui_checks/r13_*`)
+
+| Size | Checked | Sideways scroll |
+|---|---|---|
+| 2560×1440 | 6 columns; the report menu inside the screen on the first and last card of a row; the confirmation; the form whole (860 × 657, 4 columns, no scroll) | none |
+| 1440×900 | 4 columns; the same; the form whole | none |
+| 1366×768 | 4 columns; the same; the form whole | none |
+| 1194×834 (iPad sideways, touch) | 3 columns; the same; the form whole | none |
+| 834×1194 (iPad upright, touch) | 2 columns; the same; the form 680 × 902, 2 columns, whole; the opened post's foot | none |
+| 390×844 (phone, touch) | **the bar 91 px** (149 before), the switches on one row at 44 px, the changed state on one row; "פעולות" in the opened post (three items, then two after "סימון כלא נצפה"); the form full screen, its buttons fixed at the bottom | none |
+
+Done on the scratch copy, by the page: the flag on `54ecb1d0…` / `00f17259…` (one of §4's pairs) from the opened post's foot,
+after the confirmation: both records `"rejected"` `"flagged"`, the list 123 → 122, the notice; "סיווג שגוי" from a closed card
+opened the post with the form open, the report sent on `cfe2ab8d…` (`["price"]`, a note): `"misclassified"`, 122 → 121; a
+viewed card dimmed with "נצפה"; a report sent by hand on the removed post: 409 `gone`. Escape cancels the confirmation and
+leaves the post open. The console: only that deliberate 409. Every request to 127.0.0.1.
+
+**Fixed after looking:** the report form scrolled its heading away when the focus went to "ביטול" (now `preventScroll`); on a
+laptop's height the form needed a scroll (4 columns from 1100 px); on a phone "שליחת הדיווח" was below the fold (the buttons
+now stick to the bottom).
+
+**The design pass** (`frontend-design`, the tokens kept): one bold element, the picked report tiles filling soft red so what is
+reported reads as one set; the only filled red button on the site is the confirmation's destructive one; every state in words.
+Not run this round: the design plugin's critique and the accessibility review (step 7, as planned).
+
+### C. The studio rule (#354) — text and a plan only
+
+- `classify/instructions.txt`: the apartment_kind sentence and the rooms paragraph (quoted in #354), +182 characters;
+  `PROMPT_VERSION` "5", `PROMPT_FINGERPRINT` `1b1e59fbf51a01125bf16d7b844c4948f796407c4f5a494a3fc432dfe3fe954e`;
+  `tests/test_classify_instructions.py` (the pin at "5", one test of the two sentences).
+- **Read-only (store opened `read_only`, no model call, the hash the same before and after):** 13 stored posts mention a
+  studio, 11 canonical; the 10 classified are **all at version 3** (none at version 4: nothing has been applied since, item 4);
+  all `"whole_apartment"`; **of the 8 that offer a studio for rent, 7 have `rooms` `"not_written"` and 1 has 1**; a duplex with
+  a studio level has 4 and a house for sale with a studio 5, both right. The table is in `PHASE_2.md`, "Instructions version 5".
+- **In the regression set:** `1454d3ee…`, `ac0b0cd6…`, `ebe67e8b…`, none a plain studio for rent; `rooms` is measured only
+  on posts from Ron's review (#193). Free `regression_run --check`: 51 posts.
+- **The plan (not run):** step 0, Ron decides whether three studio posts join the set through his review (`62a41d3d…`,
+  `71ada783…`, `a7ba462d…`, `rooms` 1; recommended); step 1, `uv run --env-file .env python -m tlv_hunter.jobs.regression_run
+  --cap 0.10`, as version 4's: 102 calls × $0.000223 = $0.0227 as it is, 108 × $0.000223 = $0.0241 with three, under $0.0001
+  for the longer prompt; the cap allows 431 calls, 4 times the 108; step 2, optional, the seven stored studio posts by
+  `reclassify --run --cap 0.02` (about $0.002).
+
+### Verified
+
+`uv run pytest`: **1820 passed** (1780 + 40). `uv run ruff check .`: all checks passed; `uv run ruff format --check .`: 198
+files formatted. `npm test`: 42 passed (39 + 3); `npm run build` (`tsc --noEmit` clean).
+
+### Not verified
+
+- A real phone and iPad with touch (emulated in Chrome); browsers other than Chrome.
+- The partial flag's words in the browser: the conflict is made in pytest only (two writers cannot be timed by hand).
+- That a studio named in English is followed (no such post in the store).
+
+### Deviations
+
+1. **`web/writes.py` is a new module** beside `routes.py`, not named in 3.7 (l); wiring only, the rules stay in
+   `postmodel/rejects.py`.
+2. **`/api/reference`'s `reportable_fields` changed shape**, from names to `{field, label}`: the labels live on the server,
+   one place for them.
+3. **The flag asks no note**: the confirmation offers none (3.7 (c) row 32 names only a confirmation); the API accepts
+   `note`, with no length limit (Gate E sets none).
+4. **An opened post marks its card viewed at once, and the list's order follows on the next load**, so the card does not
+   jump while the post is open.
+5. **The phone's changed-bar words are shorter**, "סינון זמני", the reset button beside them saying the rest (for #353's one
+   row).
+6. **Version 5's two sentences are my wording** of Ron's rule, written in version 4's style; #354 quotes them for Ron to check.
+
+### New points for Ron
+
+None beyond item 8's decisions (the wording, the three studio posts, the go).
+
+### BACKLOG
+
+Item 4 (every stored `Listing` still at version 3; new posts at 5), item 6 rewritten (how to try viewed, the flag and the
+report; next step 7), item 8 new (version 5); the 3.9 `Host` row (A4); rows removed: #62/#253, #300/#301 (built); rows
+updated: #254–#256, #257, #276–#280, #321–#330. "Last updated".
+
+### Next
+
+STOP. For Ron: `npm run build`, serve the copy, sign in and try viewed, the flag and the report (`BACKLOG.md` item 6); check
+#354's wording and decide item 8. Then step 7: the measured page load, Lighthouse, the critique and the accessibility review.

@@ -5,7 +5,11 @@
 // phones with WhatsApp (#311), the videos, the publications, the link to the original post (#330
 // point 10). The tier, the glow and the colours come from the list's card, which follows the bar;
 // a post the list does not hold shows its own colours and no tier.
-import { useEffect, useRef, useState } from 'react'
+//
+// Build step 6, signed-in only: opening the post marks its card viewed (#253, #276); "סימון כלא
+// נצפה", the "lied" flag and the "wrong classification" form sit in the foot on a desktop and in the
+// top bar's menu on a phone (3.7 (c) rows 31–33).
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, ApiError } from '../api'
 import {
   featureChips,
@@ -22,9 +26,23 @@ import {
   NOT_STATED,
   type StatText,
 } from '../format'
-import type { CardData, Colour, Colours, PostData } from '../types'
+import type { CardData, Colour, Colours, PostData, ReportableField } from '../types'
+import { ActionMenu, ReportForm, type MenuItem } from './actions'
 import { Carousel } from './Carousel'
 import { COLOUR_WORDS, Fixed } from './Card'
+
+/** A signed-in user's writes on the opened post (build step 6); absent for a guest. */
+export interface PostActions {
+  reportFields: ReportableField[]
+  /** Open the report form at once: "סיווג שגוי" chosen on the closed card (3.7 (c) row 33). */
+  startReport: boolean
+  onViewed: (postIds: string[], viewed: boolean) => void
+  onFlag: (id: string) => void
+  /** The report was stored; `removed` false: the post stays until the admin handles it. */
+  onReported: (removed: boolean) => void
+  /** A write found the post no longer in a current card (409 "gone"). */
+  onGone: () => void
+}
 
 interface Props {
   id: string
@@ -32,12 +50,17 @@ interface Props {
   now: Date
   phone: boolean
   onClose: () => void
+  actions?: PostActions
 }
 
-export function PostView({ id, card, now, phone, onClose }: Props) {
+export function PostView({ id, card, now, phone, onClose, actions }: Props) {
   const [post, setPost] = useState<PostData | null>(null)
   const [failed, setFailed] = useState<number | null>(null)
+  const [viewed, setViewed] = useState(false)
+  const [reporting, setReporting] = useState(false)
   const sheet = useRef<HTMLDivElement>(null)
+  const latest = useRef(actions)
+  latest.current = actions
 
   useEffect(() => {
     const controller = new AbortController()
@@ -51,6 +74,45 @@ export function PostView({ id, card, now, phone, onClose }: Props) {
       })
     return () => controller.abort()
   }, [id])
+
+  // Opening marks the card viewed for a signed-in user (#253); the first time is kept (#276).
+  const signedIn = actions !== undefined
+  useEffect(() => {
+    if (!post || !signedIn) return
+    let live = true
+    api
+      .markViewed(post.id)
+      .then(() => {
+        if (!live) return
+        setViewed(true)
+        latest.current?.onViewed(post.post_ids, true)
+      })
+      .catch(() => undefined) // the card simply stays unviewed (3.7 (i))
+    if (latest.current?.startReport) setReporting(true)
+    return () => {
+      live = false
+    }
+  }, [post, signedIn])
+
+  const unview = () => {
+    if (!post) return
+    api
+      .unmarkViewed(post.id)
+      .then(() => {
+        setViewed(false)
+        latest.current?.onViewed(post.post_ids, false)
+      })
+      .catch((error) => {
+        if (error instanceof ApiError && error.refusal === 'gone') latest.current?.onGone()
+      })
+  }
+
+  const items: MenuItem[] = post
+    ? [
+        { label: 'המודעה משקרת', onSelect: () => actions?.onFlag(post.id) },
+        { label: 'דיווח על סיווג שגוי', onSelect: () => setReporting(true) },
+      ]
+    : []
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -71,15 +133,42 @@ export function PostView({ id, card, now, phone, onClose }: Props) {
       <div className="sheet" ref={sheet} tabIndex={-1}>
         <div className="topbar">
           {phone ? (
-            <button className="back" type="button" onClick={onClose}>
-              חזרה
-            </button>
+            <>
+              <button className="back" type="button" onClick={onClose}>
+                חזרה
+              </button>
+              {actions && post && (
+                <ActionMenu
+                  label="פעולות"
+                  className="btn-o btn-act"
+                  placement="down"
+                  items={viewed ? [{ label: 'סימון כלא נצפה', onSelect: unview }, ...items] : items}
+                />
+              )}
+            </>
           ) : (
             <button className="close" type="button" onClick={onClose} aria-label="סגירה" />
           )}
         </div>
         {post ? (
-          <Body post={post} card={card?.id === post.id ? card : undefined} now={now} phone={phone} />
+          <Body
+            post={post}
+            card={card?.id === post.id ? card : undefined}
+            now={now}
+            phone={phone}
+            foot={
+              actions && !phone ? (
+                <div className="bottombar-end">
+                  {viewed && (
+                    <button type="button" className="btn quiet" onClick={unview}>
+                      סימון כלא נצפה
+                    </button>
+                  )}
+                  <ActionMenu label="דיווח" className="btn rep" items={items} />
+                </div>
+              ) : null
+            }
+          />
         ) : (
           <p className="sheet-state">
             {failed === 404
@@ -90,11 +179,45 @@ export function PostView({ id, card, now, phone, onClose }: Props) {
           </p>
         )}
       </div>
+      {reporting && post && actions && (
+        <ReportForm
+          fields={actions.reportFields}
+          onCancel={() => setReporting(false)}
+          onSend={(fields, note) =>
+            api
+              .report(post.id, fields, note)
+              .then((answer) => {
+                setReporting(false)
+                latest.current?.onReported(answer.removed)
+              })
+              .catch((error) => {
+                if (error instanceof ApiError && error.refusal === 'gone') {
+                  setReporting(false)
+                  latest.current?.onGone()
+                  return
+                }
+                throw error
+              })
+          }
+        />
+      )}
     </div>
   )
 }
 
-function Body({ post, card, now, phone }: { post: PostData; card: CardData | undefined; now: Date; phone: boolean }) {
+function Body({
+  post,
+  card,
+  now,
+  phone,
+  foot,
+}: {
+  post: PostData
+  card: CardData | undefined
+  now: Date
+  phone: boolean
+  foot: ReactNode
+}) {
   const colours: Colours = card?.colours ?? post.own_colours
   const corrected = new Set(post.corrected)
   const kind = post.apartment_kind.value
@@ -229,6 +352,7 @@ function Body({ post, card, now, phone }: { post: PostData; card: CardData | und
             וואטסאפ
           </a>
         )}
+        {foot}
       </div>
     </>
   )

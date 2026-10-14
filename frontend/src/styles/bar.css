@@ -695,17 +695,39 @@
   outline-offset: 2px;
 }
 
-/* --- the phone: the sticky row, the status line with "סינון (N)", the full-screen sheet --- */
+/* --- the phone: the sticky bar compacted (point 39, option A, round 13): the three switches on one
+   row (a long label wraps inside its own switch, never the row), then one dense row with the count,
+   "ההעדפות שלי" when changed, and "סינון (N)"; about 95 px instead of 149 --- */
 .filterbar.is-phone {
-  padding-block: 8px;
+  padding-block: 4px 6px;
 }
 
 .filterbar.is-phone .kinds {
-  gap: 4px 16px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .filterbar.is-phone .switch {
-  font-size: 0.9rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 6px;
+  font-size: 0.82rem;
+  line-height: 1.15;
+}
+
+.filterbar.is-phone .switch .track {
+  width: 32px;
+  height: 19px;
+}
+
+.filterbar.is-phone .switch .track::after {
+  width: 13px;
+  height: 13px;
+}
+
+.filterbar.is-phone .switch input:checked + .track::after {
+  inset-inline-start: 16px;
 }
 
 .bar-statusrow {
@@ -713,14 +735,34 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 2px;
 }
 
 .bar-statusrow .bar-status {
+  flex-wrap: nowrap;
+  min-width: 0;
+  min-height: 0;
   padding: 0;
   border: 0;
-  font-size: 0.86rem;
-  gap: 4px 8px;
+  font-size: 0.84rem;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.bar-statusrow .bar-status > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-statusrow .barbtn {
+  flex: none;
+  height: 34px;
+}
+
+/* the changed bar's long words: the reset button beside them says the rest on a phone */
+.filterbar.is-phone .status-long {
+  display: none;
 }
 
 .barsheet {

@@ -30,6 +30,10 @@
   --fb-line: #93b4e6;
   --wa: #157a3c;
   --wa-line: #86d1a2;
+  /* the report button: a soft light red (#338), 5.3:1 on white */
+  --rep: #b8405e;
+  --rep-line: #f0b3c2;
+  --rep-bg: #fdf0f3;
 
   /* the header's own cool tint (#342) and the logo's sky and teal (#333) */
   --head-a: #e3f1f8;

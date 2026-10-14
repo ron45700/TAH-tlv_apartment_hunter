@@ -72,6 +72,8 @@ export interface CardData extends ListingFields {
   whatsapp: string | null
   last_published_at: string
   publications: number
+  /** A signed-in user's only (#62, #253); absent for a guest. */
+  viewed?: boolean
 }
 
 export interface CardsResponse {
@@ -115,7 +117,20 @@ export interface AreaGroup {
 export interface Reference {
   areas: Area[]
   area_groups: AreaGroup[]
-  reportable_fields: string[]
+  /** The report form's fields (#277), each with its Hebrew label, in the form's order. */
+  reportable_fields: ReportableField[]
+}
+
+export interface ReportableField {
+  field: string
+  label: string
+}
+
+/** POST /api/flag's answer: `flagged` of `of` members; a retry sends `remaining[0]` (#330 point 21). */
+export interface FlagAnswer {
+  flagged: number
+  of: number
+  remaining: string[]
 }
 
 /** GET /api/session's user (3.7 (g)). */

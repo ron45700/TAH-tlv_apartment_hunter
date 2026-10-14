@@ -26,7 +26,7 @@ from tlv_hunter.classify.instructions import (
 def test_the_version_pins_everything_sent_except_the_post() -> None:
     """A change to the text, to reference/areas.yaml, to ListingExtraction or to the setting
     fails here until PROMPT_VERSION and PROMPT_FINGERPRINT are updated together."""
-    assert PROMPT_VERSION == "4"
+    assert PROMPT_VERSION == "5"  # version 5: the studio rule (round 13)
     assert build_prompt().fingerprint() == PROMPT_FINGERPRINT
 
 
@@ -179,3 +179,13 @@ def test_version_4_holds_its_sentences_and_no_longer_the_one_it_replaced() -> No
     ):
         assert sentence in text
     assert "Feminine wording about the roommates who stay" not in text
+
+
+def test_version_5_says_a_studio_is_a_whole_apartment_of_one_room() -> None:
+    """Ron's rule (round 13): a studio is "whole_apartment" with rooms 1, unless the post itself
+    says otherwise; an exception to rules 2 and 3, as "דירת N שותפים" is."""
+    text = " ".join(build_prompt().instructions.split())
+    words = '("סטודיו", "דירת סטודיו", "studio")'
+    assert f'A studio {words} is "whole_apartment", unless the post itself says otherwise.' in text
+    assert "Two exceptions to rules 2 and 3:" in text
+    assert f"a studio {words} gives 1, unless the post itself says otherwise." in text

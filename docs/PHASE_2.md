@@ -2075,6 +2075,97 @@ Phase 3's corrections record exists; the regression runner still finds the old r
 version 4 did not break the bar, it costs about half of what the full reclassify costs ($0.023 against $0.044), and a reclassify
 of 194 posts on a prompt that failed the bar would be paid for and then discarded. Nothing is applied by either step on its own.
 
+### Instructions version 5: the studio rule (#354) — WRITTEN 2026-10-14 (round 13); its regression run PLANNED, WAITING for Ron's go
+
+**Nothing paid has been run.** In the round that wrote it: the text, `PROMPT_VERSION` "5" and `PROMPT_FINGERPRINT`
+`1b1e59fb…` (tests green, one test pins the two studio sentences); a read-only reading of the store (no model call; the
+file's SHA-256 the same before and after); the free `regression_run --check` (51 posts, positions 6, 10, 27, 31, 43, 49
+removed, as for version 4). **From now on `classify_pending` classifies new posts at version 5**; the stored `Listing`s stay
+at version 3 (`BACKLOG.md` item 4).
+
+**What changed** (`DECISIONS.md` #354, the assistant's wording of Ron's rule, for Ron to check): a studio ("סטודיו",
+"דירת סטודיו", "studio") is `"whole_apartment"` and gives `rooms` 1, unless the post itself says otherwise; a second exception
+to general rules 2 and 3, beside "דירת N שותפים". +182 characters.
+
+#### The stored posts that mention a studio (read-only, 2026-10-14)
+
+13 posts (`סטודיו` or `studio` in the text, any case); 11 canonical, 2 dedup A duplicates (`8982bf07…` of `f515e83b…`,
+`a5b6ea79…` of `ebe67e8b…`). The 10 classified are **all at version 3**: no stored post was classified at version 4.
+
+| Post | State | Nature | Kind | Rooms | What the post says |
+|---|---|---|---|---|---|
+| `62a41d3d…` | active | rental | whole | not written | "להשכרה סטודיו לופט" |
+| `71ada783…` | active | rental | whole | not written | "דירת סטודיו מרווחת, מרוהטת" |
+| `96f4ae1a…` | active | rental | whole | not written | "דירת סטודיו כ-21 מ״ר" |
+| `a7ba462d…` | active | rental | whole | not written | "דירות סטודיו במתחם חדש" (several units) |
+| `aa8ed374…` | active | rental | whole | not written | "דירת סטודיו בבניין בוטיק" |
+| `e64a8ded…` | active | rental | whole | not written | "דירת סטודיו משופצת, מרוהטת" |
+| `f515e83b…` | active | rental | whole | not written | "דירת סטודיו בבניין בוטיק" (its duplicate `8982bf07…` pending, never classified) |
+| `7a896bc9…` | active | rental | whole | **1** | "דירת סטודיו מקסימה" |
+| `1454d3ee…` | active | rental | whole | 4 | a duplex: "כ־35 מ״ר סטודיו במפלס העליון": **the post says otherwise**, 4 is right |
+| `ac0b0cd6…` | rejected `for_sale` | for sale | whole | 5 | a house "with a huge studio or clinic": **says otherwise**, 5 is right |
+| `ebe67e8b…` | rejected `no_images` | — | — | — | "דירת סטודיו - עד 4500 … עם שותף אחד" (never classified; its duplicate `a5b6ea79…` the same) |
+
+**Reading:** the kind was already right (version 3's text named the studio); the rooms are the gap Ron saw: 7 of the 8 posts
+that offer a studio for rent have `rooms` `"not_written"`. None of the 13 is written in English.
+
+**In the regression set today:** `1454d3ee…` (in `labels.json` and `corrections.json`), `ac0b0cd6…` (in
+`label_overrides.json` and `corrections.json`) and `ebe67e8b…` (`labels.json`). None is a plain studio for rent. `rooms`
+is not a deciding field: it is measured only on posts that joined from Ron's review (#193, `labeling/compare.py` `OTHER`,
+bar 90%). So **the set as it is cannot show whether version 5 gives a studio 1 room**; `1454d3ee…` (reviewed) shows only
+that "unless the post itself says otherwise" holds on a duplex.
+
+#### Step 0 (Ron, free): whether studio posts join the set
+
+**Recommended: three, through Ron's review** (`review_page`, #195: a corrected post joins the set, its corrected values
+the truth for the fields measured from the review): `62a41d3d…` ("סטודיו לופט", no word "דירת"), `71ada783…` ("דירת
+סטודיו") and `a7ba462d…` ("דירות סטודיו", several units), each with `rooms` corrected to 1. Three, so `rooms` is measured
+on the wording the rule names without tilting the set (51 posts) towards one kind of post; the other four say "דירת סטודיו"
+as `71ada783…` does. **Or:** none, and the run tells only that version 5 broke nothing on the bar. No file is edited by me:
+`corrections.json` is Ron's.
+
+#### Step 1 (PAID, Ron's go): the regression run on version 5, as version 4's
+
+```bash
+uv run python -m tlv_hunter.jobs.regression_run --check                      # free: the set's size after step 0
+uv run --env-file .env python -m tlv_hunter.jobs.regression_run --cap 0.10   # PAID: two passes, effort none, temperature 0
+```
+
+The same command and setting as version 4's run (`47e96cac0e8d`): two passes, `gpt-6-luna`, effort `none`, temperature 0,
+**cap $0.10** (#194). **The estimate**, from the costs the earlier runs recorded (usage metadata, still estimates against
+the OpenAI bill, `ASSUMPTIONS.md` O2):
+
+| | Calculation | Result |
+|---|---|---|
+| Version 4 regression run | $0.022741 over 102 calls (51 posts × 2 passes, no retry) | $0.000223 a call |
+| Calls, the set as it is | 51 posts × 2 passes | 102, plus retries |
+| Calls with three studio posts | 54 × 2 | 108, plus retries |
+| Cost, as it is | 102 × $0.000223 | $0.0227 |
+| Cost, with three | 108 × $0.000223 | $0.0241 |
+| With 3 retries | + 3 × $0.000223 | + $0.0007 |
+| The longer prompt | +182 characters, under 100 cached tokens × $0.01/M × 108 calls | under $0.0001 |
+| **Expected** | | **about $0.023 (as it is) to $0.025 (with three)** |
+| Worst case of one call (the cap check) | version 4's plan, 2026-10-08 | $0.00335 to $0.00372 |
+| Calls the cap allows at the typical rate | ($0.10 − $0.0037) / $0.000223 | 431, 4 times the 108 |
+
+**What counts as a pass: the bar already approved** (2.6; #142, #177, #198), unchanged by version 5, each pass on its own
+and complete (as in version 4's plan, above). **I report, whatever the verdict**, in each pass: `apartment_kind` and `rooms`
+of `1454d3ee…` (expected `"whole_apartment"`, 4) and of each studio post that joined in step 0 (expected
+`"whole_apartment"`, 1); `ac0b0cd6…`'s `post_nature` (`for_sale`); and position 3's `furnished` (#241), as before.
+
+**What the run cannot tell, said now:** the sentence names the words of the posts it is checked on; a pass shows it is
+followed on them, not on other wording (a studio named only in English has no example in the store).
+
+**If a pass fails:** I report which posts and fields, and stop. I do not edit the instructions or the labels (#207).
+
+#### Step 2 (PAID, Ron's go, after step 1): the seven stored studio posts, only if Ron wants them now
+
+The stored posts stay at version 3 (`BACKLOG.md` item 4), and their cards show "חדרים: לא צוין". If Ron wants the seven
+reclassified before retention removes them: `uv run --env-file .env python -m tlv_hunter.jobs.reclassify --run --cap 0.02
+--allow 62a41d3d,71ada783,96f4ae1a,a7ba462d,aa8ed374,e64a8ded,f515e83b` (#217: id prefixes of 8 characters or more,
+comma-separated); expected 7 × $0.000219 + $0.0005 = **about $0.002**; then `diff.html`, the dry run, and `apply_reclassify
+… --apply` only after Ron reads them (2.9). Not proposed before step 1 passes.
+
 ---
 
 ## 2.10 Gate D and dedup B — approved (#145)

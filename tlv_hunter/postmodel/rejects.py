@@ -1,7 +1,8 @@
 """The rejection derived from the answer and from Facebook's own location, the lifecycle record
-after a classification attempt, and the record a restore leaves (DECISIONS.md #92, #139, #152, #214,
-#251, #281–#283, #296). Plain functions, like `premodel/rejects.py`: no storage, no model call. The
-`Listing` (the model's answer) is never edited and the `RawPost` never written (invariant 14).
+after a classification attempt, the records a user's flag and report leave, and the record a restore
+leaves (DECISIONS.md #92, #139, #152, #214, #251, #254, #279–#283, #296, #300). Plain functions,
+like `premodel/rejects.py`: no storage, no model call. The `Listing` (the model's answer) is never
+edited and the `RawPost` never written (invariant 14).
 
 **The one place that rules on the city.** It takes the model's `Listing`, or a `SeenListing` (the
 post as users see it, `postmodel/seen.py`): with a correction of `other_city` in force, the
@@ -10,10 +11,11 @@ correction decides, before Facebook's location field (#296); otherwise #214's or
 
 import re
 import unicodedata
+from datetime import datetime
 from typing import Literal, NamedTuple
 
 from tlv_hunter.contracts.listing import Listing
-from tlv_hunter.contracts.post_lifecycle import PostLifecycle
+from tlv_hunter.contracts.post_lifecycle import USER_REASONS, PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.postmodel.seen import SeenListing
 
@@ -143,6 +145,49 @@ def restored_lifecycle(existing: PostLifecycle, post: RawPost, seen: SeenListing
             "flagged_by": None,
             "flagged_at": None,
             "flag_note": None,
+        }
+    )
+
+
+def flagged_lifecycle(
+    existing: PostLifecycle, user_id: str, now: datetime, note: str | None
+) -> PostLifecycle:
+    """The record a user's "lied" flag leaves on one member of a card (#300; the write is the
+    site's, by compare and set, #260): `"rejected"` with `"flagged"`, `flagged_by` the user,
+    `flagged_at` now, the note. Only an active post has a card, so only an active record is
+    flagged; every other field is kept."""
+    if existing.state != "active":
+        raise ValueError(f"only an active post is flagged, not {existing.state!r}")
+    return PostLifecycle(
+        **{
+            **dict(existing),
+            "state": "rejected",
+            "rejection_reason": "flagged",
+            "flagged_by": user_id,
+            "flagged_at": now,
+            "flag_note": note,
+        }
+    )
+
+
+def reported_lifecycle(existing: PostLifecycle, user_id: str, now: datetime) -> PostLifecycle:
+    """The record a "wrong classification" report leaves on the shown post (#254, #279, #280; the
+    report itself is a `ClassificationReport`, written first). An active post becomes `"rejected"`
+    with `"misclassified"`, `flagged_by` and `flagged_at` the reporter and now. A post already
+    rejected by a user (flagged, or reported by someone first) is returned unchanged: `"flagged"`
+    shows when both apply (#279), and only the first reporter is `flagged_by` (#280). Anything else
+    is not a post a user can report."""
+    if existing.state == "rejected" and existing.rejection_reason in USER_REASONS:
+        return existing
+    if existing.state != "active":
+        raise ValueError(f"only an active post is reported, not {existing.state!r}")
+    return PostLifecycle(
+        **{
+            **dict(existing),
+            "state": "rejected",
+            "rejection_reason": "misclassified",
+            "flagged_by": user_id,
+            "flagged_at": now,
         }
     )
 

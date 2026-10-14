@@ -4,11 +4,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { CardData, Marked } from '../types'
-import { Card } from './Card'
+import { Card, type CardActions } from './Card'
 
 const none: Marked<never> = { state: 'not_written', value: null }
 
-function card(whatsapp: string | null): CardData {
+function card(whatsapp: string | null, viewed?: boolean): CardData {
   return {
     id: 'a'.repeat(64),
     post_ids: ['a'.repeat(64)],
@@ -54,11 +54,14 @@ function card(whatsapp: string | null): CardData {
     whatsapp,
     last_published_at: '2026-10-14T08:00:00+00:00',
     publications: 1,
+    ...(viewed === undefined ? {} : { viewed }),
   }
 }
 
+const signedIn: CardActions = { onFlag: () => {}, onReport: () => {} }
+
 function acts(markup: string): string {
-  const found = /<div class="acts">(.*?)<\/div>/.exec(markup)
+  const found = /<div class="acts">(.*?)<\/div><span class="reposts"/.exec(markup)
   expect(found).not.toBeNull()
   return found![1]
 }
@@ -79,5 +82,33 @@ describe('the button row (#351)', () => {
     const markup = renderToStaticMarkup(<Card card={card(null)} now={now} onOpen={() => {}} />)
     expect(buttons(markup)).toEqual(['btn-fb'])
     expect(acts(markup)).not.toMatch(/slot|rep/) // no empty place is kept
+  })
+})
+
+describe('build step 6: the report button and the viewed state', () => {
+  const now = new Date('2026-10-14T09:00:00Z')
+
+  it("puts a signed-in user's report button furthest left (#328, #351)", () => {
+    const markup = renderToStaticMarkup(
+      <Card card={card('https://wa.me/972541234567', false)} now={now} onOpen={() => {}} actions={signedIn} />,
+    )
+    expect(buttons(markup)).toEqual(['btn-fb', 'btn-wa', 'btn-rep'])
+    expect(acts(markup)).toContain('>דיווח<')
+    expect(acts(markup)).toContain('aria-haspopup="menu"')
+  })
+
+  it('packs the report button beside Facebook when there is no WhatsApp', () => {
+    const markup = renderToStaticMarkup(<Card card={card(null, false)} now={now} onOpen={() => {}} actions={signedIn} />)
+    expect(buttons(markup)).toEqual(['btn-fb', 'btn-rep'])
+  })
+
+  it('dims a viewed card and says "נצפה" in words; an unviewed one says nothing', () => {
+    const viewed = renderToStaticMarkup(<Card card={card(null, true)} now={now} onOpen={() => {}} actions={signedIn} />)
+    expect(viewed).toMatch(/class="card glow-none is-viewed"/)
+    expect(viewed).toContain('<span class="seen">נצפה</span>')
+    expect(viewed).toMatch(/aria-label="פתיחת המודעה, נצפתה"/)
+    const fresh = renderToStaticMarkup(<Card card={card(null, false)} now={now} onOpen={() => {}} actions={signedIn} />)
+    expect(fresh).not.toContain('נצפה')
+    expect(fresh).not.toContain('is-viewed')
   })
 })

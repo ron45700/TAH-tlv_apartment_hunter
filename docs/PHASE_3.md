@@ -17,7 +17,10 @@ store.** **Round 11 (2026-10-13): this file's lost block restored; Ron's answers
 the screen sizes, the mock retired); 3.7's build step 3 built: the site itself for a guest (`frontend/`, the list and
 the opened post, `policy/colours.py`).** **Round 12 (2026-10-14): Ron's answers on round 11 (#349–#351: 3.7's rebuilt
 text and points 33–35 accepted; the card's buttons packed to the left); 3.7's build steps 4 and 5 built: the filter
-bar, sign-in, sign-up, the forced password change, the preferences page and the session cookie (`web/auth.py`).** No
+bar, sign-in, sign-up, the forced password change, the preferences page and the session cookie (`web/auth.py`).**
+**Round 13 (2026-10-14): Ron's answers on round 12 (#352, #353: points 36–39; the phone's bar compacted, built); Ron's
+studio rule for the model (#354, instructions version 5 written, its regression run planned in `PHASE_2.md`); 3.7's build
+step 6 built: viewed, "mark as not viewed", the "lied" flag and the "wrong classification" report (`web/writes.py`).** No
 code before a task's plan is approved; no paid call before its
 own go.
 **Owner:** Ron
@@ -647,7 +650,7 @@ orange (#275). Computed per user at evaluation, never written (invariant 12).
     `ListingStub` and `DecisionStub` stay for `notify/` until Phase 4; `tests/test_stubs.py` loses its policy tests.
 16. **`restored_lifecycle` is built and tested in 3.6** (pure); 3.8 wires the writes and the reports.
 
-## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 5 built
+## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 6 built
 
 The lists and the cards (`BASELINE.md` §6) with these approved display rules (`BACKLOG.md`, "Recorded for a later
 phase"): the card's main time is the last publication, shown relative (#122); the repost log shows the earliest
@@ -840,7 +843,10 @@ clicked) and two buttons about saving. The new bar removes both. Under the heade
   no "save as my preferences"** (#335, amending #315): preferences change only on the preferences page.
 - **On a phone:** row 1 with the three switches (they wrap to two lines when needed), then the status line with "סינון
   (3)" (the number of controls holding a value) and, when changed, "ההעדפות שלי". "סינון" opens a full-screen sheet
-  with the kind rows, labelled as on a desktop, and "הצגת 87 מודעות" at its foot.
+  with the kind rows, labelled as on a desktop, and "הצגת 87 מודעות" at its foot. *Amended by #353 (round 13): the three
+  switches stay on one row (a long label wraps inside its own switch), and the status line and "סינון (N)" make one dense
+  row under them, about 90–100 px in all (built: 91 px at 390 × 844); a changed bar's words read "סינון זמני" on a phone,
+  the reset button beside them saying the rest.*
 - **How the bar's state is evaluated** (unchanged): it holds the profile's shape, the two `SearchOption`s and
   `include_sublets`; each list request sends it; the server builds a **transient `Profile`**, validated by `Profile`'s
   own rules and never stored, and passes it to `policy.evaluate`. "Changed" is the bar's state compared, field by field,
@@ -1130,6 +1136,22 @@ step 6; the transitive npm packages' licences; whether TypeScript 7's native pac
    11 over a scratch copy (`SESSION_LOG.md`, round 12).
 6. Viewed, not viewed, the report button on the closed card (#328), the flag, the report, the conflict messages;
    WhatsApp's link format read first. **Ron flags and reports** on the copy (they stay in it, #331).
+   **Built 2026-10-14 (round 13):** `postmodel/rejects.py` `flagged_lifecycle` and `reported_lifecycle` (Gate E's flag and
+   report rules, #279, #280; pure); `web/writes.py` (wiring: `flag_card` writes every one of `Card.canonical_ids` by
+   compare and set, a member no longer active skipped, one re-read on `StaleRecordError`, so a result can be partial,
+   #330 point 21; `report_post` writes the report first, then the shown post's record, one re-read, else the report stays
+   and the admin handles it; the reportable fields' Hebrew labels, #277); `routes.py`: `POST` and `DELETE
+   /api/viewed/{id}`, `POST /api/flag/{id}` (`{flagged, of, remaining}`), `POST /api/report/{id}` (`{removed}`; a second
+   open report 409 `already_reported`), a post no longer in a current card 409 `gone`; a user's cards carry `viewed` and
+   are ordered by it (#62), a guest's carry none; `/api/reference` gives each reportable field with its label. `web/app.py`
+   opens a second, writable Repository on the copy for the two lifecycle writes. **The site writes the copy only (#331):**
+   now also `viewed_posts`, `reports` and `post_lifecycle`; never a `RawPost` or a `Listing`. `frontend/`:
+   `components/actions.tsx` (the report menu, the confirmation, the report form, the notice), the card's "דיווח" button
+   furthest left and its viewed state (dimmed, "נצפה"), the opened post's foot ("סימון כלא נצפה", "דיווח") on a desktop and
+   the top bar's "פעולות" on a phone, `App.tsx` (the flag's confirmation, the notices with a retry, the list reloaded
+   after a flag or a report), `styles/actions.css`; the phone's bar compacted (#353). Tests: `tests/test_web_writes.py`
+   (group 7), `tests/test_postmodel_rejects.py` (group 9's two functions), `Card.test.tsx`. Checked in Chrome at the six
+   sizes on a scratch copy (`SESSION_LOG.md`, round 13).
 7. The measured page load (h), on the copy and on a 40-day synthetic store (#330), Lighthouse, the `design` plugin's
    critique and accessibility review, a colour-vision check. **Ron reviews** the numbers and the look.
 
@@ -1255,6 +1277,8 @@ decision after it.
     card's first photo with the page.
 
 **New points from round 12 (for Ron; each is built as described, and changes in a line if Ron prefers the other):**
+**Points 36–38 were approved by Ron on 2026-10-14 as built (#352); point 39, option A (the switches stay in the top row,
+one dense row under them), by #353, built in round 13.**
 
 36. **Where "שינוי סיסמה" lives.** (f) says the password form "serves 'change password' from the menu", and #334 (later,
     Ron's own) names exactly two menu items, "ההעדפות שלי" and "התנתק". **Built:** the menu keeps #334's two items; the
@@ -1455,10 +1479,11 @@ built with 3.7.
 
 ## 7. For Ron's decision
 
-1. **Sign in on the site and use the bar and the preferences page** (build steps 4 and 5, `BACKLOG.md` item 6) at each
-   screen size, and **round 12's points 36–39** (3.7 (n)). The plan, its 35 points and the notes on the mocks are
-   approved (#316–#351).
-2. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
+1. **Try viewed, the flag and the report on the site** (build step 6, `BACKLOG.md` item 6) at each screen size; the
+   phone's compact bar (#353). The plan, its 39 points and the notes on the mocks are approved (#316–#353).
+2. **The studio rule, instructions version 5** (#354): check the wording, then the go (or not) for the regression run and
+   whether three studio posts join the set first (`PHASE_2.md`, "Instructions version 5").
+3. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
    `dcb4c0cb4b24`, the deferred carrier of #241 and the reclassify of the other 189 (`BACKLOG.md`).
 
 Decided and so closed here: the task order and the DoD; the technical choices (#258–#260); the area grouping (#261);
@@ -1467,4 +1492,4 @@ round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and th
 (#294); the plan for 3.6 and its 16 points (#295–#300); how the grouping is held (#301); the missing price at the bottom
 (#302); Ron's direction for the site (#303–#315); the plan for 3.7, its 32 points and the notes on the mocks
 (#316–#346); the screen sizes (#347); the mock retired (#348); 3.7's rebuilt text and points 33–35 (#349, #350); the
-card's button row (#351).
+card's button row (#351); points 36–39 (#352, #353).

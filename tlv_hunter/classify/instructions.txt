@@ -40,7 +40,8 @@ post_nature, exactly one of:
   space, an office, a service, a question.
 
 apartment_kind: "room" for a room in a shared flat; "whole_apartment" for the whole apartment.
-"3 rooms, suits roommates" (מתאימה לשותפים) and a studio are "whole_apartment".
+"3 rooms, suits roommates" (מתאימה לשותפים) is "whole_apartment". A studio ("סטודיו", "דירת
+סטודיו", "studio") is "whole_apartment", unless the post itself says otherwise.
 
 PRICE AND ENTRY
 price: the monthly rent in ILS from the post's text, a list of whole numbers, usually one. Several
@@ -67,9 +68,10 @@ entry_date_parts:
 
 THE APARTMENT
 rooms: the total number of rooms in the apartment, whole or half (2.5; חדר וחצי is 1.5), also when
-a single room is offered: a room in a 4-room flat gives 4. The one exception to rules 2 and 3:
+a single room is offered: a room in a 4-room flat gives 4. Two exceptions to rules 2 and 3:
 "דירת N שותפים" or "דירת N שותפות" gives N, or N+1 when the post says the flat has a living room
-(סלון). A range of rooms ("2-3 חדרים") is "unclear".
+(סלון); a studio ("סטודיו", "דירת סטודיו", "studio") gives 1, unless the post itself says otherwise.
+A range of rooms ("2-3 חדרים") is "unclear".
 
 floor: a whole number; the ground floor (קומת קרקע) is 0, a basement (מרתף) is -1.
 building_floors: the building's number of floors, only when written: "3 מתוך 4" gives floor 3 and

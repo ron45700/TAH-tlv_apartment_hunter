@@ -17,7 +17,8 @@ choices and the area grouping; #173, #251, #254 and #257 corrected; #288–#290,
 orange-location cap, "not stated", the UI notes on the mock, the remaining points); #331's attribution corrected;
 #332–#339 (round 9: points 27–30, Ron's notes on the round-8 mock); 2026-10-13 (#340–#343, Ron's notes on the
 round-9 mock); #344–#348 (round 11: Ron's answers on round 10, the screen sizes, the mock retired); 2026-10-14
-(#349–#351, round 12: 3.7's rebuilt text and points 33–35 accepted; the card's buttons packed to the left)
+(#349–#351, round 12: 3.7's rebuilt text and points 33–35 accepted; the card's buttons packed to the left); #352–#354
+(round 13: points 36–39, the phone's compact bar, the studio rule and instructions version 5)
 
 > Written in English like every document in `docs/`.
 >
@@ -3331,6 +3332,42 @@ guest has no report; a post with no mobile number has no WhatsApp) leaves no gap
 only:** the foot's two rows, its fixed height and every card's uniform height stay. Built in round 12.
 *Ron's note on the site (2026-10-14). Ron's reason:* with the places reserved, one can guess where the hidden report
 button is.
+
+## Phase 3: Ron's answers on round 12, and a rule for the model (2026-10-14)
+
+**Ron answered round 12 on 2026-10-14.** #352 and #353 approve the reviewer's recommendations; #354 is Ron's own rule.
+A note for 3.9 (the `Host` the site receives behind Tailscale Serve) is a `BACKLOG.md` row, not a decision.
+
+### 352 — Points 36, 37 and 38 of 3.7 (n) approved as built
+(36) "שינוי סיסמה" sits on the preferences page, under the summary; the user menu keeps #334's two items. (37) The quick
+chip "מיידי" sets the entry-date range's end to today in Israel. (38) The preferences page's live count reads `POST
+/api/cards`; no count-only endpoint, measured with the rest at step 7.
+*Ron approved the reviewer's recommendations.* No reason of his own.
+
+### 353 — The phone's sticky bar compacted: the three switches stay in the top row (point 39, option A)
+On a phone the three switches (the two kinds, "גם סאבלט") stay in the top row; the sticky bar is compacted into one dense
+row with the "סינון" button under them, about 90–100 px instead of 149. **Built in round 13.**
+*Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 354 — A studio is a whole apartment of one room, unless the post itself says otherwise
+"סטודיו", "דירת סטודיו" or "studio" means a whole apartment (`apartment_kind` `"whole_apartment"`) with **one room**
+(`rooms` 1), unless the post itself says otherwise. *Ron's own rule (2026-10-14). Ron's reason:* he noticed the model
+does not classify studios. **An exception to general rules 2 and 3 of the instructions** (no value filled in, none derived
+from another), as "דירת N שותפים" already is. **No schema, field or filter change.**
+**Written in round 13 as instructions version 5** (`PROMPT_VERSION` "5", `PROMPT_FINGERPRINT` `1b1e59fb…`, #179), two
+changes to `classify/instructions.txt`, in the assistant's wording of Ron's rule, for Ron to check:
+- the apartment_kind paragraph: *"3 rooms, suits roommates" (מתאימה לשותפים) is "whole_apartment". A studio ("סטודיו",
+  "דירת סטודיו", "studio") is "whole_apartment", unless the post itself says otherwise.* (before: *… and a studio are
+  "whole_apartment".*);
+- the rooms paragraph: *Two exceptions to rules 2 and 3: "דירת N שותפים" or "דירת N שותפות" gives N, or N+1 when the post
+  says the flat has a living room (סלון); a studio ("סטודיו", "דירת סטודיו", "studio") gives 1, unless the post itself says
+  otherwise.* (before: *The one exception to rules 2 and 3: …*).
+
+**Read-only, on the store (2026-10-14):** 13 stored posts mention a studio (11 canonical); the 10 classified are all at
+version 3 (no stored `Listing` is at version 4, `BACKLOG.md` item 4), every one `"whole_apartment"`; of the 8 that offer
+a studio for rent, 7 have `rooms` `"not_written"` and 1 has 1 (a 4-room duplex with a studio level has 4, and a house for
+sale with a studio has 5, both right). The regression run on version 5 is planned, not run
+(`PHASE_2.md`, "Instructions version 5"); it waits for Ron's go.
 
 ---
 
