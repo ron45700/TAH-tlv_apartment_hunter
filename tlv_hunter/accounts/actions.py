@@ -264,7 +264,7 @@ def reset_password(
 ) -> None:
     """The admin sets a temporary password (#262): the user must change it at the next sign-in,
     the failure count goes to 0 (#264), and every session of the user ends (#263)."""
-    admin = _require_admin(store, token, now)
+    admin = require_admin(store, token, now)
     new_hash = _hash_or_refuse(temporary_password, hasher)
     _update_user(
         store,
@@ -328,7 +328,7 @@ def disable_user(store: UserDataStore, token: str, user_id: str, now: datetime) 
     """Two calls in a fixed order (#291): the user is disabled first, then their sessions end. A
     failure between them leaves the user locked out, since a disabled user's session is invalid
     already; disabling again ends the sessions left. The admin cannot be disabled (R8)."""
-    admin = _require_admin(store, token, now)
+    admin = require_admin(store, token, now)
 
     def disable(fresh: User) -> User:
         if fresh.is_admin:
@@ -342,7 +342,7 @@ def disable_user(store: UserDataStore, token: str, user_id: str, now: datetime) 
 
 def enable_user(store: UserDataStore, token: str, user_id: str, now: datetime) -> None:
     """The user can sign in again; their ended sessions stay ended."""
-    admin = _require_admin(store, token, now)
+    admin = require_admin(store, token, now)
     _update_user(store, user_id, lambda fresh: _changed(fresh, disabled_at=None))
     logger.info("user enabled: user %s, by %s", user_id, admin.user_id)
 
@@ -352,7 +352,7 @@ def enable_user(store: UserDataStore, token: str, user_id: str, now: datetime) -
 
 def issue_key(store: UserDataStore, token: str, label: str, now: datetime) -> IssuedKey:
     """A new key with its label, shown once: the store keeps only its hash (#266)."""
-    admin = _require_admin(store, token, now)
+    admin = require_admin(store, token, now)
     if not label.strip():
         raise Refused("label_empty")
     key = new_key()
@@ -373,7 +373,7 @@ def issue_key(store: UserDataStore, token: str, label: str, now: datetime) -> Is
 
 def cancel_key(store: UserDataStore, token: str, key_id: str, now: datetime) -> None:
     """Cancels an unused key (#243); a cancelled key stays cancelled, at its first time (#266)."""
-    admin = _require_admin(store, token, now)
+    admin = require_admin(store, token, now)
     for _ in range(STORE_ATTEMPTS):
         current = next((key for key in store.list_keys() if key.key_id == key_id), None)
         if current is None:
@@ -450,7 +450,10 @@ def _signed_in(store: UserDataStore, token: str, now: datetime) -> User:
     return user
 
 
-def _require_admin(store: UserDataStore, token: str, now: datetime) -> User:
+def require_admin(store: UserDataStore, token: str, now: datetime) -> User:
+    """The one admin check (#398): the session is valid, its password change not due, and its user
+    the admin; else `Refused` (`not_signed_in`, `must_change_password`, `not_admin`). Every admin
+    action calls it, and the site's admin pages call it for their reads (3.8)."""
     user = _signed_in(store, token, now)
     if not user.is_admin:
         logger.warning("admin action refused: user %s is not the admin", user.user_id)

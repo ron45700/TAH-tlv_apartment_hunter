@@ -1,6 +1,7 @@
 """The rejection derived from the answer and from Facebook's own location, the lifecycle record
-after a classification attempt, the records a user's flag and report leave, and the record a restore
-leaves (DECISIONS.md #92, #139, #152, #214, #251, #254, #279–#283, #296, #300). Plain functions,
+after a classification attempt, the records a user's flag and report leave, the record a restore
+leaves, and the admin's two marks on a reported post (DECISIONS.md #92, #139, #152, #214, #251,
+#254, #279–#283, #296, #300, #392). Plain functions,
 like `premodel/rejects.py`: no storage, no model call. The `Listing` (the model's answer) is never
 edited and the `RawPost` never written (invariant 14).
 
@@ -11,9 +12,11 @@ correction decides, before Facebook's location field (#296); otherwise #214's or
 
 import re
 import unicodedata
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Literal, NamedTuple
 
+from tlv_hunter.contracts.classification_report import ClassificationReport
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import USER_REASONS, PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
@@ -190,6 +193,30 @@ def reported_lifecycle(existing: PostLifecycle, user_id: str, now: datetime) -> 
             "flagged_at": now,
         }
     )
+
+
+ReportMark = Literal["not_removed", "restore_unfinished"]
+
+
+def report_marks(
+    lifecycle: PostLifecycle, reports: Iterable[ClassificationReport]
+) -> frozenset[ReportMark]:
+    """What the admin's reports page marks on a post (3.8 (c); derived, never stored).
+    `not_removed`: an open report, and the post's record carries no user's flag or report (the
+    report was stored and the lifecycle write failed, 3.4 point 3). `restore_unfinished`: the post
+    is still rejected `"misclassified"` though no report of it is open or left out (the restore
+    wrote the reports and not the record, #392)."""
+    statuses = {report.status for report in reports if report.listing_id == lifecycle.listing_id}
+    marks: set[ReportMark] = set()
+    if "open" in statuses and lifecycle.flagged_by is None:
+        marks.add("not_removed")
+    if (
+        lifecycle.rejection_reason == "misclassified"
+        and lifecycle.flagged_by is not None
+        and not statuses & {"open", "left_out"}
+    ):
+        marks.add("restore_unfinished")
+    return frozenset(marks)
 
 
 def _check(existing: PostLifecycle, listing_id: str) -> None:

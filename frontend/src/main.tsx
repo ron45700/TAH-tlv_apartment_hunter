@@ -17,6 +17,7 @@ import './styles/post.css'
 import './styles/bar.css'
 import './styles/forms.css'
 import './styles/actions.css'
+import './styles/admin.css'
 import { App } from './App'
 
 createRoot(document.getElementById('root')!).render(

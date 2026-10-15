@@ -47,11 +47,28 @@ class KeyPost:
 
 
 @dataclass(frozen=True)
+class OtherPost:
+    """A canonical post the key does not compare (rejected, pending, archived, or active with no
+    `Listing`), read in the same pass for the admin's lists (3.8 (b), #397). `seen` is `None` for a
+    post with no `Listing` (pending, or rejected before the model)."""
+
+    post: RawPost
+    lifecycle: PostLifecycle
+    seen: SeenListing | None
+
+    @property
+    def listing_id(self) -> str:
+        return self.post.listing_id
+
+
+@dataclass(frozen=True)
 class KeyInputs:
     members: tuple[KeyPost, ...]
     """The compared posts, by `listing_id`."""
     duplicates: Mapping[str, tuple[RawPost, ...]]
     """Every stored dedup A duplicate, by its `duplicate_of`."""
+    others: tuple[OtherPost, ...] = ()
+    """Every other canonical post with a lifecycle record, by `listing_id` (#397)."""
 
 
 @dataclass(frozen=True)
@@ -136,22 +153,27 @@ def load_key_posts(
     store_root: Path,
     photos: PhotoHashes,
 ) -> KeyInputs:
-    """Read-only: the compared posts as users see them, and every dedup A duplicate. `corrections`
-    is what `UserDataStore.find_corrections()` returned (removed ones are ignored)."""
+    """Read-only: the compared posts as users see them, and every dedup A duplicate; in the same
+    pass, every other canonical post with a lifecycle record (`others`, the admin's lists, #397).
+    `corrections` is what `UserDataStore.find_corrections()` returned (removed ones are ignored)."""
     by_post: dict[str, list[FieldCorrection]] = defaultdict(list)
     for correction in corrections:
         by_post[correction.listing_id].append(correction)
     members: list[KeyPost] = []
+    others: list[OtherPost] = []
     duplicates: dict[str, list[RawPost]] = defaultdict(list)
     for post in store.query():
         if post.is_canonical is False and post.duplicate_of is not None:
             duplicates[post.duplicate_of].append(post)
             continue
         lifecycle = store.get_lifecycle(post.listing_id)
-        if lifecycle is None or not is_compared(post, lifecycle):
+        if lifecycle is None:
             continue
         listing = store.get_listing(post.listing_id)
-        if listing is None:
+        if listing is None or not is_compared(post, lifecycle):
+            if post.is_canonical is not False:
+                seen = None if listing is None else seen_listing(listing, by_post[post.listing_id])
+                others.append(OtherPost(post=post, lifecycle=lifecycle, seen=seen))
             continue
         members.append(
             KeyPost(
@@ -164,6 +186,7 @@ def load_key_posts(
     return KeyInputs(
         members=tuple(sorted(members, key=lambda member: member.listing_id)),
         duplicates={key: tuple(posts) for key, posts in duplicates.items()},
+        others=tuple(sorted(others, key=lambda other: other.listing_id)),
     )
 
 

@@ -20,8 +20,11 @@ text and points 33–35 accepted; the card's buttons packed to the left); 3.7's 
 bar, sign-in, sign-up, the forced password change, the preferences page and the session cookie (`web/auth.py`).**
 **Round 13 (2026-10-14): Ron's answers on round 12 (#352, #353: points 36–39; the phone's bar compacted, built); Ron's
 studio rule for the model (#354, instructions version 5 written, its regression run planned in `PHASE_2.md`); 3.7's build
-step 6 built: viewed, "mark as not viewed", the "lied" flag and the "wrong classification" report (`web/writes.py`).** No
-code before a task's plan is approved; no paid call before its
+step 6 built: viewed, "mark as not viewed", the "lied" flag and the "wrong classification" report (`web/writes.py`).**
+**Rounds 14–18:** step 7 measured, then A, C, D built and measured again (both targets met). **Round 19 (2026-10-15): points
+57–59 decided (#385–#387, the scratch stores deleted); 3.7 complete (#388); 3.8's plan written.** **Round 20 (2026-10-15):
+3.8's plan and points 60–76 approved (#389–#406); 3.8's build steps 1–3 built (the admin's read API, the read pages, keys
+and users).** No code before a task's plan is approved; no paid call before its
 own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
@@ -650,7 +653,7 @@ orange (#275). Computed per user at evaluation, never written (invariant 12).
     `ListingStub` and `DecisionStub` stay for `notify/` until Phase 4; `tests/test_stubs.py` loses its policy tests.
 16. **`restored_lifecycle` is built and tested in 3.6** (pure); 3.8 wires the writes and the reports.
 
-## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 6 built; step 7 measured (round 16); C, 44–46 built (round 17); A, D and 56 built and step 7 measured again, both targets met (round 18)
+## 3.7 The site — COMPLETE (#388, 2026-10-15). PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 6 built; step 7 measured (round 16); C, 44–46 built (round 17); A, D and 56 built and step 7 measured again, both targets met (round 18); points 57–59 decided (#385–#387)
 
 The lists and the cards (`BASELINE.md` §6) with these approved display rules (`BACKLOG.md`, "Recorded for a later
 phase"): the card's main time is the last publication, shown relative (#122); the repost log shows the earliest
@@ -1573,6 +1576,9 @@ to the photos (#384's note); (3) the foreground mode kept as the default of `sit
 - 59. **The scratch stores** (S1 11 MB, S2 3.2 GB in the scratchpad): **safe to delete once Ron has read these numbers;**
   not deleted (#382).
 
+**Decided by Ron, 2026-10-15 (round 19):** 57 leave, measured again on the working day, 3.10 (#385); 58 leave (#386); 59
+delete: S1 and S2 deleted in round 19 (#387). **3.7 is complete (#388).**
+
 ### (m) What I could not verify
 
 - The times of (h) on a 40-day store; today's store holds 266 posts.
@@ -1713,8 +1719,9 @@ one dense row under them), by #353, built in round 13.**
     touch) and the status line with "סינון (N)" is under them, as (e) describes. **Built so.** Or: the sublet switch moves
     into the sheet on a phone (one line saved), which (e) does not say.
 
-## 3.8 The admin lists — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256), plan to be written
+## 3.8 The admin's pages — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256); PLAN APPROVED 2026-10-15 with points 60–76 (#389–#406); build steps 1–3 BUILT (round 20)
 
+**The approved content:**
 - **Rejected,** every reason, canonicals only (#75 B), the city shown through `other_city_name` (#214).
 - **Pending,** canonicals only (#75 B), with each post's `last_classification_error`; the "retry" that sets
   `classification_failures` back to 0 (Gate E, #139, #152).
@@ -1724,7 +1731,329 @@ one dense row under them), by #353, built in round 13.**
   force, and their removal.
 - **Keys and users** (#243, #265, #266): issue, list, cancel; the password reset (#262); disable and enable a user.
 - **Reports whose post was not rejected** (3.4 point 3), with a retry.
-- **Needs from Ron:** the plan's approval.
+
+**The plan below is round 19's, for Ron's approval. Nothing of it is built.** The production store was opened read-only
+once to size the lists (a `mode=ro` connection; SHA-256 `5df9bc9a…a77ac` before and after): today it holds 87 rejected
+canonicals (`no_images` 23, `other_city` 21, `for_sale` 19, `not_listing` 13, `no_text` 9, `seeking` 2), 1 pending post
+(1 failure: `73aebb24…`), 0 archived, 0 flags, 0 reports, 0 corrections, 0 keys, 1 user.
+
+**Scope.** (a) Who reaches the pages; (b) where each list comes from, reusing 3.7's grouping and paging; (c) each page, what
+it shows and does; (d) the endpoints; (e) every write, its compare and set (#260) and the restore rule (#251, #281–#283);
+(f) what the admin can and cannot undo; (g) the invariants; (h) the modules; (i) the tests; (j) the build in steps.
+**Not in 3.8:** the daily digest and the run interval / "run now" (Phase 5, #61); `max_posts` and schedule hours (Phase 6);
+Telegram (Phase 4); the retention job, which applies the exemptions of #255 (Phase 5); starting a classification from the
+site (the retry only makes a post eligible for the next `classify_pending` Ron runs); deleting anything (invariant 3).
+
+### (a) Who reaches the pages
+
+- **The API:** every route under `/api/admin/` checks the session through the one admin check of `accounts/` (point 68):
+  a guest 401, a signed-in user who is not the admin 403, the admin while a password change is due 403 (as every 3.7 route).
+  Every write is JSON only with its `Origin` checked (`web/auth.check_write`, #330 point 19), as 3.7's.
+- **The pages:** `/admin` and its sub-paths in the same single-page app (3.7's history-based route, no router library);
+  the header's user menu gains "ניהול" for the admin only (`GET /api/session` already carries `is_admin`). A non-admin who
+  types `/admin` gets the page, whose API calls answer 403: the page says "אין הרשאה" and links home.
+- **The admin is also a user:** their own list, preferences, viewed marks, flags and reports work as for anyone (3.7).
+
+### (b) Where each list comes from — 3.7's grouping and paging reused
+
+**Post lists (rejected, pending, archive, flags) ride the grouping's snapshot (point 67).** `dedup/stage_b.load_key_posts`
+already reads every canonical's `PostLifecycle` in its one pass over `query()` (the members are the active ones with a
+`Listing`). Proposed: the same pass also keeps **`KeyInputs.others`**, every canonical that is not a member, each with its
+`RawPost`, its lifecycle, its `Listing` or `None`, and its `SeenListing` when it has one (the corrections are already in
+hand). `web/grouping.Snapshot` gains `others` by `listing_id`. So:
+- one read of the store feeds the users' cards and the admin's lists, at the same store generation, recomputed in the
+  background on the same counter (#301, #316, #379); before the first snapshot every admin post list answers 503
+  "loading" as the users' list does (#380);
+- a list can be seconds behind another process's write (a collection run, `classify_pending`), as the users' list is
+  (#379); **the admin's own writes change the row in place** from the write's answer (as A removes a flagged card, #377), and
+  the counter moves, so the next snapshot agrees;
+- **every action reads fresh from the store**, never from the snapshot: the post's detail page (`GET
+  /api/admin/posts/{id}`) reads the `RawPost`, the lifecycle, the `Listing`, the corrections and the reports at that moment,
+  and a write compares against what the detail page showed (point 61).
+- Canonicals only (#75 B): `others` holds no dedup A duplicate (`KeyInputs.duplicates` already maps each canonical to its
+  duplicates; the detail page lists them as the repost log, earliest `posted_at` first, #75 A).
+- The Gate D key does not group the admin's lists: it ties only active members (#230, #231), and a rejected or pending post
+  is not one. The flags page groups instead by the flag action (point 63).
+
+**The other lists read `UserDataStore` per request:** reports (`find_reports`), corrections (`find_corrections(in_force=…)`),
+keys (`list_keys`), users (`list_users`). They are small, and only corrections move the counter. A report's post is read
+from the snapshot (its row) and fresh on its detail page.
+
+**Paging, as A (#376):** `POST /api/admin/posts` returns the count, the whole ordered id list and the first 48 rows; `POST
+/api/admin/posts/by-id` the next rows as the admin scrolls (an id no longer in that list comes back in `gone`); the order is
+fixed for a load. The front end's `paging.ts` (`firstLoad`, `nextIds`, `withPage`, `withoutCard`) and the sentinel are reused
+as they are. Order: the newest `last_published_at` first, then `listing_id` (point 73).
+
+**The photos:** `/api/photos` serves only a current card's member (3.7 (g)), so a rejected post's photos need **`GET
+/api/admin/photos/{listing_id}/{file}`**, admin only, by the same rule: the file must be a `PostImage.local_path` of that post's
+lifecycle in the snapshot (a member, an `others` entry, or a duplicate of one); no path is built from the request. A
+missing file (an archived post's photos are deleted at archive, Phase 5) is 404 and the page shows no photo.
+
+### (c) The pages
+
+| Page (path) | Shows | Does |
+|---|---|---|
+| **Overview** (`/admin`) | One line per list with its count (`GET /api/admin/summary`): rejected by reason, pending (and how many with failures), archive, flag actions and their posts, open reports, reports whose post was not removed, unfinished restores, corrections in force, unused keys, users | Links to each page |
+| **Rejected** (`/admin/rejected`) | The rejected canonicals as rows (the first photo, the text's first lines, the reason in Hebrew, the city for `other_city` through `other_city_name(post, seen)` (#214, #296) or, with no `Listing`, none; the last publication relative, the number of publications); chips by reason with their counts (point 73) | Opens a post's detail. **No action on a post rejected by the model or before it** (point 66). A `"flagged"` or `"misclassified"` row links to its flag or its reports |
+| **Pending** (`/admin/pending`) | The pending canonicals: the row, `classification_failures`, `last_classification_error` | **"Retry"** on a post with `classification_failures` above 0: the count back to 0 (Gate E, #139, #152); the error is left as it is. The row says "the next `classify_pending` run takes it" |
+| **Flags by user** (`/admin/flags`) | The posts rejected `"flagged"` (active or archived), grouped by the user who flagged (username, never the `user_id`) and inside by **flag action**: the posts with the same `flagged_by` and `flagged_at`, which one "lied" flag on a card of several posts wrote (#300; point 63), with the note | **Restore** the whole action (each post by its own compare and set; a partial result is said, as 3.7's flag) or one post of it. Keeping the flag needs no write |
+| **Reports by field** (`/admin/reports`) | The **open** reports grouped by field: under each `ReportableField` with its count, every post with an open report naming it (a report of three fields is under each of them, point 71). Per post: its reports (the reporter's username, the time, the fields, the note), and for each reported field the model's value, the correction in force if any, and the value users see. Two marks derived, never stored: **"the report is stored, the post is still on the list"** (3.4 point 3: an open report and a post that is not rejected by a user's reason) and **"the restore did not finish"** (point 62). Tabs: left out, restored (history, read-only) | Per post: **correct a field** (point 65), **restore**, **leave out**; for the first mark, **"remove the post from the list"** (point 72); for the second, **"finish the restore"** |
+| **Corrections** (`/admin/corrections`) | In force: per post and field, the model's value → the corrected value, by whom and when, the report it answers. Removed (history): the same with the removal | **Remove** a correction in force (#256, #284) |
+| **Archive** (`/admin/archive`) | The archived canonicals, as the rejected rows, with the reason they keep (Gate E). Empty until Phase 5 | None. An archived post that is flagged or reported is restored from the flags or reports page and stays archived (#283) |
+| **Post detail** (`/admin/post/<id>`) | 3.7's opened post (`PostView`: the text as stored, every photo through the admin route, the publications and the repost log, the phones), and for the admin: the lifecycle (state, reason, who flagged and when, the note, the failures and the last error), the model's `Listing` field by field beside the seen one with the "corrected by hand" marks, every correction (in force and removed), every report, the city's ruling and its source (`correction`, `native_location`, `model`), and **what a restore would leave now** (point 76) | The actions of the page it was opened from |
+| **Keys** (`/admin/keys`) | Every key: its label, created, used by (username) and when, cancelled when; unused first | **Issue** with a label: the key shown once, with a copy button, never again (#266); **cancel** an unused key (#243) |
+| **Users** (`/admin/users`) | Every user: username, created, the key's label, admin, disabled since, must change the password, the failed sign-ins | **Reset the password** (the admin types a temporary password of 8 or more characters, #262; the user changes it at the next sign-in; every session ends, #263); **disable** (#265, #291) and **enable**. The admin's own row offers none of the three (R8; the admin's own password is changed from the preferences page or by `reset_admin_password` on the machine, #294) |
+
+### (d) The endpoints (all admin only; reads are `GET`, writes `POST` with JSON)
+
+| Endpoint | Answer |
+|---|---|
+| `GET /api/admin/summary` | The overview's counts |
+| `POST /api/admin/posts` `{list, reason?, first}` | `list` one of `rejected`, `pending`, `archive`, `flags`; `reason` narrows `rejected`; the count, `order` and the first rows (`first` 0–96, default 48, as A) |
+| `POST /api/admin/posts/by-id` `{list, reason?, ids}` | Those rows, in the order asked; `gone` for an id no longer in the list |
+| `GET /api/admin/posts/{listing_id}` | The detail (c), read fresh, with the post's **`version`** (point 61) |
+| `GET /api/admin/photos/{listing_id}/{file}` | The photo, by the rule of (b); 404 otherwise |
+| `GET /api/admin/reports?status=open\|left_out\|restored` | The reports grouped by field, each with its post's row and `version` |
+| `GET /api/admin/corrections?in_force=true\|false` | The corrections, each with its post's row |
+| `GET /api/admin/keys`, `GET /api/admin/users` | The lists (no hash of any kind in them) |
+| `POST /api/admin/retry/{listing_id}` `{version}` | The new row |
+| `POST /api/admin/restore` `{posts: [{listing_id, version}]}` | Per post: `restored` (with the state it now has), `changed`, `not_restorable`; the flag page's partial result |
+| `POST /api/admin/leave-out/{listing_id}` `{version}` | The reports left out |
+| `POST /api/admin/apply-reports/{listing_id}` `{version}` | The post removed from the list (point 72) |
+| `POST /api/admin/corrections` `{listing_id, field, corrected_value, report_id, version}` | The correction; the detail's new preview |
+| `POST /api/admin/corrections/{correction_id}/remove` `{version}` | The removed correction |
+| `POST /api/admin/keys` `{label}` | `{key_id, key}`, **once**, with `Cache-Control: no-store`; the key is never logged and never returned again (#266) |
+| `POST /api/admin/keys/{key_id}/cancel` | The key |
+| `POST /api/admin/users/{user_id}/password` `{temporary_password}` | The user (no hash) |
+| `POST /api/admin/users/{user_id}/disable`, `…/enable` | The user |
+
+Refusals as 3.7's: 409 `changed` (the post changed since the page read it), 409 `correction_in_force`, 409 `key_used`, 403
+`admin_cannot_be_disabled`, 422 for a value that breaks Gate B or Gate C's rules (named, never echoing a password or a key).
+
+### (e) Every write
+
+**The post's `version` (point 61).** The detail page and every post row carry a `version`: SHA-256 of the canonical JSON of
+what a post write depends on: the post's `PostLifecycle`, its reports (every status) and its corrections (in force and
+removed). A post write sends it back. The server reads those records again; **a different `version` is 409 `changed`** and
+nothing is written (the admin sees the new state and decides again); otherwise each record is written by compare and set
+against the record just read (`expected=`, #260), so a write by anyone between that read and the write is still refused
+(`StaleRecordError` → 409 `changed`). **No automatic retry for the admin's writes** (3.7's user writes retry once): the admin
+decided on what the page showed. Keys and users are written through `accounts.actions` as built in 3.5 (they re-read and
+compare and set inside, `STORE_ATTEMPTS`), since cancel, disable, enable and reset mean the same whatever changed meanwhile.
+
+| Write | Records, in order | How #260 is kept | Undo |
+|---|---|---|---|
+| **Retry** (pending) | The lifecycle: `classification_failures` 0, nothing else (the error kept, Gate E) | Only when `state` is `"pending"` and the count is above 0; `save_lifecycle(…, expected=read)` | None needed: the next run may fail it again (+1) |
+| **Restore** a post (flags or reports page; #251, #281–#283) | 1. Read the lifecycle, the `RawPost`, the `Listing`, the corrections in force (→ `seen_listing`), the reports. 2. **The reports first** (point 62): every `"open"` or `"left_out"` report of the post → `"restored"`, `resolved_by` the admin, `resolved_at` now (#278, #286), each by `save_report(…, expected=read)`. 3. **Then the lifecycle**, when `flagged_by` is set: `restored_lifecycle(read, post, seen)` (built in 3.6, pure: flag fields cleared; the state derived from the post as users see it by `model_reason`, the rule a classification uses; an archived post stays archived, its reason re-derived), by `save_lifecycle(…, expected=read)` | Both seams compare and set against step 1's read; a conflict at step 3 leaves the reports restored and the post rejected: **derived and shown as "the restore did not finish"** (a post rejected `"misclassified"` with no open or left-out report), and "finish the restore" runs it again (step 2 then finds nothing). No user can report the post meanwhile: it is rejected, so it has no card | Not undone by the admin: a restored post that is wrong again is flagged or reported again by a user (R4 allows a new report). A post restored to active joins the users' list at the next background recompute, seconds (#379) |
+| **Leave out** (reports) | Every `"open"` report of the post → `"left_out"` (`resolved_by`, `resolved_at`), each by `save_report(…, expected=read)`; the lifecycle is not written: the post stays rejected `"misclassified"` and exempt from deletion (#255, #286) | `save_report` compare and set | **Restore later** (#286) |
+| **Remove the post from the list** (a report stored, its post not removed; 3.4 point 3) | The lifecycle by `reported_lifecycle(read, first.reported_by, first.reported_at)` (3.7's pure function; `first` the earliest open report, #280, point 72) | Only when the post is still `"active"`; `save_lifecycle(…, expected=read)`. A post no longer active (rejected by a run, pending again, archived) cannot be removed: the admin restores or leaves the reports out | Restore |
+| **Correct a field** (#256, #284; point 65) | `add_correction(FieldCorrection(…))`: `model_value` the stored `Listing`'s value of the field now (a `Marked` field with its state), `corrected_value` from the form, `corrected_by` the admin, `report_id` the report it answers. **Validated before it is written** (point 75): by `FieldCorrection`'s own validator (the Gate B type, #284) and by `seen_listing` over the stored `Listing` with the new correction applied, so the seen post is still a valid `Listing`. **The lifecycle is not written:** the post stays rejected until the admin restores it, and the detail's preview shows what restore would now leave (point 76) | `UserDataStore` refuses a second correction in force on the field (`CorrectionInForce` → 409). **Replacing one** is two writes, the old removed then the new added (point 74); a failure between them is said and leaves the field with no correction | **Remove** it |
+| **Remove a correction** | `save_correction(record with removed_by, removed_at, expected=read)`; the record stays (#284); never back in force | Compare and set | Not undone: a new correction is added instead. **The post's state is not re-derived** (point 64) |
+| **Issue a key** | `accounts.actions.issue_key` (`add_key`): the hash only (#266) | An insert | **Cancel** it while unused |
+| **Cancel a key** | `accounts.actions.cancel_key` | `save_key` compare and set inside the action | Never: a cancelled key stays cancelled (#266) |
+| **Reset a password** | `accounts.actions.reset_password`: the temporary hash, `must_change_password`, the failure count 0, then every session of the user ended (#262, #263) | `save_user` compare and set inside | Not undone (the old hash is gone); the user sets their own at the next sign-in |
+| **Disable / enable** | `accounts.actions.disable_user` (the disable, then the sessions ended, #291) / `enable_user` | `save_user` compare and set inside | Each undoes the other; ended sessions stay ended (the user signs in again) |
+
+**Every write leaves `RawPost` and `Listing` untouched** (invariant 14) and writes nothing per user on a post (invariant 12;
+the flag fields Gate E has are cleared by a restore, never set by the admin). A correction and a removal move the store
+generation counter (the `corrections` trigger, #316), so every user's cards follow at the next background recompute (#379).
+Only a rejected or archived post is ever restored, so no admin write removes a card and the removal overlay (#379) is not
+needed for the admin's writes.
+
+### (f) What the admin can and cannot undo
+
+| The admin can | The admin cannot |
+|---|---|
+| Restore a left-out post later (#286) | Re-open a restored or left-out report (a user reports again, R4) |
+| Remove a correction; add another | Put a removed correction back in force (#284), or edit a stored `Listing` (#256) |
+| Enable a disabled user; disable again | Disable themself (R8), delete a user (#265), change a username (#262) |
+| Cancel an unused key | Un-cancel a key (#266), see a key again, cancel a used key (#243) |
+| Reset any other user's password | Undo a reset |
+| Retry a pending post | Start the classification from the site (the next `classify_pending`) |
+| Restore a flagged or reported post | Flag a post as the admin from the admin's pages (a flag is a user's, on a card: the admin does it from the list like anyone); restore a post rejected by the model or before it (point 66); delete anything (invariant 3) |
+
+### (g) The invariants and the copy
+
+- **Invariant 14:** no admin write touches `raw_posts` or `listings` (a test compares the rows before and after every admin
+  write). **Invariant 12:** nothing per user on a post. **Invariant 15:** the pages make no request off the site (3.7 (j)'s
+  CSP and checks cover `/admin`). **Invariant 3:** nothing is deleted.
+- **No secret leaves the server or a log:** the lists carry no password hash, key hash or session token hash; the issued key
+  is in one answer only; a temporary password is never logged or echoed (`accounts/` already logs ids only).
+- **Until 3.9 the site serves a dated copy (#331), and so do the admin's pages (point 70):** keys issued, accounts made with
+  them, restores and corrections stay in the copy and are gone at the next `serve --copy`. DoD 2 and 5 are shown on the copy
+  in 3.8 and made for real once the site serves the store itself (3.9).
+
+### (h) The modules
+
+- **`web/admin.py`** (new, wiring): the `/api/admin` routes of (d), each through the admin check.
+- **`web/admin_writes.py`** (new, wiring, as `web/writes.py`): retry, restore, leave out, remove from the list, correct,
+  remove a correction; the `version` (`post_version(lifecycle, reports, corrections) -> str`).
+- **`web/admin_rows.py`** (new, pure, as `web/cards.py`): a row's and the detail's JSON; it reuses `cards.py`'s field
+  formatting (`_listing`, `_marked`, the publications) rather than a second copy.
+- **`dedup/stage_b.py`:** `KeyInputs.others` from the same pass (point 67); still reads only, writes nothing.
+- **`web/grouping.py`:** `Snapshot.others`.
+- **`postmodel/rejects.py`:** one pure function, `report_marks(lifecycle, reports) -> {"not_removed", "restore_unfinished"}`
+  (the two derived marks of (c)), beside the Gate E rules it reads.
+- **`accounts/actions.py`:** `require_admin(store, token, now) -> User`, today's private `_require_admin` made public, the one
+  admin check, called by every admin read (point 68); every action keeps calling it.
+- **Front end:** `src/screens/admin/` (`Admin.tsx` the layout and its tabs, `PostRows.tsx`, `AdminPost.tsx`, `Reports.tsx`,
+  `Corrections.tsx`, `Keys.tsx`, `Users.tsx`), `src/admin/api.ts`, `src/admin/values.tsx` (the correction's value form by
+  Gate B type: a `Marked` field's state and value; yes / no; a number or several amounts for the price; "immediate" or a date;
+  a number or "included"; the enums in Hebrew; the area picker of 3.7 for `areas`; lines of text for `streets`; a city or none
+  for `other_city`; a phone of the post with a name for `phone_names`), `src/styles/admin.css`; `route.ts` and `Header.tsx`
+  gain the admin's paths and menu item. 3.7's tokens, `PostView` and `paging.ts` reused, built with `frontend-design` as 3.7
+  (#257).
+- `CLAUDE.md`'s `web/` paragraph names the new modules when built.
+
+### (i) Tests (offline; `TestClient` in process; temporary stores only)
+
+1. **Access:** every `/api/admin` route: a guest 401, a user 403, the admin with a password change due 403, the admin 200;
+   every write without JSON 415, with a foreign `Origin` 403.
+2. **Lists:** canonicals only (a duplicate never a row, #75 B); each state in its list and in no other; the reason filter and
+   its counts; paging equal to the whole list; `gone`; "loading" before the first snapshot; `others` read in the same pass
+   as the members (a counter on `query`).
+3. **The city:** an other-city row by `native_location`, by the model, and by a correction in force (#214, #296).
+4. **Photos:** a rejected post's stored file served to the admin and 404 to anyone else; `..` and another post's file
+   refused.
+5. **Retry:** pending with failures → 0 and the error kept; refused for 0 failures and for a post no longer pending; a stale
+   `version` 409.
+6. **Restore, for each case of #251, #281–#283:** a flagged active post → active; a reported post whose `post_nature` was
+   corrected to `"for_sale"` → rejected `for_sale`; an other-city post by `native_location` → rejected `other_city`; an archived
+   post stays archived, its reason re-derived; every open and left-out report → `"restored"` with the admin and the time; a
+   flag action of two posts restores both, and a conflict on one gives the partial answer; **the unfinished restore** (the
+   lifecycle write made to fail after the reports): the mark derived, "finish" completes it; a stale `version` writes nothing.
+7. **Leave out, then restore later (#286);** the post stays rejected `"misclassified"` while left out.
+8. **Remove from the list:** an open report on an active post → rejected `"misclassified"`, `flagged_by` the first reporter
+   (#280); refused for a post no longer active.
+9. **Corrections:** each Gate B type through the form's JSON; a value that breaks Gate B 422 and nothing written; the
+   `model_value` the stored one; a second in force 409; replace (remove, add); removal keeps the record; the counter moves and
+   the users' cards follow at the recompute (#287: a corrected field that ties or unties two posts).
+10. **Keys and users:** the key in one answer with `no-store`, then only its label in the list; cancel; a used key refused;
+    reset ends the sessions and the user reaches only the password change; disable ends the sessions; enable; the admin's own
+    row refused (R8).
+11. **Invariants:** `raw_posts` and `listings` rows byte-identical after every admin write (14); no per-user field on a post
+    (12); no hash, token, key or password in any answer or log record (a log capture over every admin route); the socket
+    guard (15).
+12. **Front end (Vitest):** the value form's JSON per type; the per-field grouping of the reports; the two derived marks.
+
+### (j) The build in steps, each ending in something Ron can look at
+
+1. **The admin's read API:** `require_admin`, `KeyInputs.others`, `Snapshot.others`, `web/admin_rows.py`, the read routes of
+   (d), the admin photos; tests 1–4. **Ron opens the JSON** on a scratch copy.
+2. **The read pages:** overview, rejected, pending, archive, flags, reports, corrections, keys, users, the post detail; checked
+   in Chrome at 1440 × 900 and 390 × 844 (point 69), Lighthouse accessibility. **Ron looks at the lists** with today's 87
+   rejected posts.
+3. **Keys and users:** issue, cancel, reset, disable, enable; tests 10. **Ron issues a key on the copy and signs a second
+   account up with it** (DoD 2 on the copy).
+4. **The post writes:** retry, restore (flags and reports), leave out, remove from the list, the `version`; tests 5–8, 11.
+   **Ron flags and reports on the copy, then restores and leaves out** (DoD 5 on the copy).
+5. **Corrections:** the value form, correct, replace, remove, the restore's preview; tests 9, 12. **Ron corrects a field and
+   restores.**
+6. **The check:** the whole DoD 5 walk on a fresh scratch copy (a flag → restore; a report → correct → restore; a report →
+   leave out → restore later), the two sizes again, the `design` plugin's critique and accessibility review. **Ron reviews**
+   the pages; 3.8 is complete when he says.
+
+### (k) What I could not verify
+
+- The size and memory of `others` at 40 days: S2 was deleted (#387); from its counts (8,512 posts, 4,448 members) the
+  admin's canonicals would be a few thousand rows, measured at step 1 on today's store only unless Ron wants a 40-day store
+  again.
+- How often an admin write meets another writer: there is one admin and the jobs run by hand (#140); the `version` and
+  compare and set refuse rather than lose a change, whatever the rate.
+- That a correction of `phone_names`, `streets` or `areas` through the form is comfortable on a phone: checked at step 5.
+
+### Points for Ron (3.8)
+
+- 60. **The scope and the six build steps of (j)**, with the keys and users first among the writes so a second account can be
+  made early. Recommended.
+- 61. **The admin's post writes compare against what the page showed:** a `version` over the lifecycle, the reports and the
+  corrections; a difference is 409 "changed" with no automatic retry; each record still by compare and set (#260).
+  Recommended. Or: re-read at the write and retry once, as 3.7's user writes do.
+- 62. **The restore's order across the two seams:** the reports first, then the lifecycle; an unfinished restore is derived
+  (rejected `"misclassified"`, no open or left-out report), shown, and finished by running the restore again. Recommended. Or:
+  the lifecycle first (an active post with open reports, which breaks #279's "rejected while any report is open" until
+  finished).
+- 63. **The flags page groups by flag action** (the posts with the same `flagged_by` and `flagged_at`, one "lied" flag on one
+  card, #300), restored together or one by one. Recommended. Or: one row per post.
+- 64. **Removing a correction changes only what users see; the post's state is not re-derived.** So a post restored to active
+  through a correction of `post_nature` or `other_city` stays active when that correction is removed, though users then see,
+  for example, "seeking"; the page warns before such a removal. Recommended for 3.8, since re-deriving would be a new
+  lifecycle rule (Gate E). Or: a removal re-derives the state of a post that is not flagged or reported (a Gate E amendment,
+  approved first).
+- 65. **A correction is made from a report only** (the reports page and its post's detail), as §11 places it. Recommended. Or:
+  from any post in the admin's lists (which, with 64, changes nothing in a post's state either).
+- 66. **No action on a post rejected by the model or before it** (no "un-reject"): the rejected list shows them; a wrong one
+  waits for a reclassify (`BACKLOG.md` item 4) or a rule. Recommended. Or: a "restore" for any rejected post through a
+  correction and a re-derivation (needs 64's other option).
+- 67. **The admin's post lists ride the grouping** (`KeyInputs.others`, `Snapshot.others`: one read of the store, one counter,
+  the background recompute); seconds behind another process's write, the admin's own writes shown at once, every action read
+  fresh. Recommended. Or: read the store on every list request (about 0.4 s today, about 13 s at 40 days by 3.6's estimate).
+- 68. **`accounts.actions.require_admin` made public**, the one admin check for the admin's reads. Recommended.
+- 69. **The admin's pages checked at 1440 × 900 and 390 × 844** (usable on the phone, not the six sizes), with 3.7's tokens and
+  components. Recommended. Or: the six sizes; or desktop only.
+- 70. **Until 3.9 the admin's writes land in the dated copy (#331)**: keys, accounts, restores and corrections made there are
+  lost at the next `serve --copy`; DoD 2 and 5 are shown on the copy now and made for real after 3.9. Recommended (as #331).
+  Or: plan 3.9 before building 3.8's writes.
+- 71. **Reports grouped by field with a report under each field it names** (a three-field report counted under each), the
+  post's actions the same from every group; left-out and restored reports in history tabs. Recommended.
+- 72. **"Remove the post from the list"** for a report stored while its post stayed (3.4 point 3): `flagged_by` and
+  `flagged_at` from the earliest open report (#280). Recommended.
+- 73. **Rows ordered by the newest last publication;** the rejected list filterable by reason with counts. Recommended.
+- 74. **Replacing a correction in force** is the old removed, then the new added (two writes; a failure between them is said,
+  and leaves the field uncorrected). Recommended. Or: no replace; the admin removes, then adds.
+- 75. **A correction is checked against the whole post before it is written** (`seen_listing` over the stored `Listing` with it
+  applied must be a valid `Listing`), 422 otherwise. Recommended.
+- 76. **The post's detail shows what a restore would leave now** (`restored_lifecycle` over the seen post, no write), so the
+  admin sees the effect of a correction before restoring. Recommended.
+
+**Decided by Ron, 2026-10-15 (round 20): the plan and points 60–76 as recommended (#389–#406); point 66's other option
+recorded under `BACKLOG.md` "Future".**
+
+### Round 20 (2026-10-15): build steps 1, 2 and 3 built
+
+**Built.**
+- **Step 1, the read API.** `accounts.actions.require_admin` (public, #398). `dedup/stage_b.py`: `OtherPost` and
+  `KeyInputs.others`, read in the same pass as the members (#397). `web/grouping.py`: `Snapshot.others` and
+  `Snapshot.duplicates`. `postmodel/rejects.report_marks` (the two derived marks). `web/cards.py`: `listing_json`,
+  `post_videos` and `whatsapp_link` made public for reuse. `web/admin_rows.py` (pure) and `web/admin.py`: `GET summary`,
+  `POST posts`, `POST posts/by-id`, `GET posts/{id}` (fresh, with the restore's preview, #406), `GET photos/{id}/{file}`,
+  `GET reports?status=`, `GET corrections?in_force=`, `GET keys`, `GET users`.
+- **Step 2, the read pages.** `frontend/src/screens/admin/` (`Admin.tsx`: the rail with counts and the overview;
+  `PostRows.tsx`: rejected with the reason chips and counts, pending, archive, flags by flag action; `AdminPost.tsx`: the
+  detail; `Reports.tsx`: reports by field with the marks, corrections; `Accounts.tsx`; `ui.tsx`), `src/admin/` (`types.ts`,
+  `api.ts`, `words.ts`), `src/styles/admin.css`; `route.ts` (`/admin`, `/admin/<page>`, `/admin/post/<id>`), `Header.tsx`
+  ("ניהול" for the admin), `App.tsx` (the admin's route; no card list loaded there), `api.ts` (`call` exported), `paging.ts`
+  (generic, so the rows page as the cards do). Built with `frontend-design`: 3.7's tokens; one accent, the reason's chip
+  coloured by who rejected the post (grey before the model, amber the model, red a user).
+- **Step 3, keys and users.** `POST keys` (the key in that answer only, `Cache-Control: no-store`), `POST keys/{id}/cancel`,
+  `POST users/{username}/password`, `…/disable`, `…/enable`, through 3.5's actions; the pages issue a key with its label and
+  show it once with a copy button, cancel an unused key, reset, disable and enable.
+- **Tests:** `tests/test_web_admin.py` (new, 45: groups 1–4, the detail, the reports and corrections as read, the marks,
+  10, 11); `frontend/src/admin/words.test.ts` (new, 5).
+
+**Checked in Chrome** over a scratch copy of the store (an online backup from a `mode=ro` connection into the scratchpad;
+the store's SHA-256 `5df9bc9a…a77ac` before and after; the copy's admin given a scratch password): at 1440 × 900 the
+overview (87 rejected by reason, 1 pending with its failure), the rejected list (chips, rows, Ramat Gan's city), a post's
+detail (the city "לפי המודל", the 22 fields), a code issued and shown once, a second account (`friend20`) signed up with it
+in a separate browser context and refused the admin's pages, then disabled (its session ended) and enabled; at 390 × 844
+every admin page with no sideways scroll (scroll width 390). **Lighthouse accessibility 100** on the rejected list, the
+detail and the codes page (desktop) and on the rejected list, the detail and the users page (mobile); best practices 100.
+No console message; every request to the site itself.
+
+**Deviations (for Ron):**
+1. **A user is named by username in the addresses** (`/api/admin/users/{username}/…`), not by `user_id`: Gate C says
+   `user_id` is never shown. Usernames are unique and never change (#262).
+2. **The admin's photo route reads the post's record fresh** and serves any stored post's own photo, not only one the
+   snapshot holds (stricter freshness, the same no-path rule).
+3. **The admin's own row is refused a reset by the route** (403 `admin_row`); R8 already refuses its disable.
+4. **The post's detail reuses `Carousel` and the formatters, not `PostView`** (a dialog that fetches `/api/posts`, which
+   answers only for a current card).
+5. **The pages say "קוד הזמנה"**, the sign-up form's own word, not "מפתח" (one name through the flow).
+6. **`corrections?in_force=false` returns the removed ones only** (the history tab); `UserDataStore` returns all.
+7. The `version` of point 61 comes with the post writes, at step 4.
+
+**Not verified:** a real phone; the admin's lists at 40 days (S2 deleted, #387): `others` costs one more `get_listing` per
+non-member canonical in the grouping's read.
 
 ## 3.9 Serving on the tailnet — plan to be written
 
@@ -1897,12 +2226,9 @@ built with 3.7.
 
 ## 7. For Ron's decision
 
-1. **Try viewed, the flag and the report on the site** (build step 6, `BACKLOG.md` item 6) at each screen size; the
-   phone's compact bar (#353). The plan, its 39 points and the notes on the mocks are approved (#316–#353).
-2. **The studio rule, instructions version 5** (#354): check the wording, then the go (or not) for the regression run and
-   whether three studio posts join the set first (`PHASE_2.md`, "Instructions version 5").
-3. Unchanged from Phase 2 and not in this phase: the bill (Ron), the five reclassify proposals waiting in
-   `dcb4c0cb4b24`, the deferred carrier of #241 and the reclassify of the other 189 (`BACKLOG.md`).
+1. **3.8's plan, the admin's pages** (round 19): its points 60–76 (3.8, "Points for Ron"), then the go for build step 1.
+2. Unchanged from Phase 2 and not in this phase: the bill (Ron), the deferred carrier of #241 and the reclassify of the
+   190 `Listing`s still at version 3 (`BACKLOG.md` items 3, 4).
 
 Decided and so closed here: the task order and the DoD; the technical choices (#258–#260); the area grouping (#261);
 round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and the Gate E amendments (#288); the plans for
@@ -1910,4 +2236,5 @@ round 1's 31 open points (#262–#287); Gate C's names and types, R1–R9 and th
 (#294); the plan for 3.6 and its 16 points (#295–#300); how the grouping is held (#301); the missing price at the bottom
 (#302); Ron's direction for the site (#303–#315); the plan for 3.7, its 32 points and the notes on the mocks
 (#316–#346); the screen sizes (#347); the mock retired (#348); 3.7's rebuilt text and points 33–35 (#349, #350); the
-card's button row (#351); points 36–39 (#352, #353).
+card's button row (#351); points 36–39 (#352, #353); the studio rule (#354, #366, #367); step 7's plan, results, A, C and D
+(#368–#384); points 57–59 and 3.7 complete (#385–#388).

@@ -2,7 +2,8 @@
 // the one deliberate exception to "nothing on the left" (#324). A guest sees "התחבר" and "הירשם",
 // pills of one height (#343). A signed-in user sees one pill (#343): a round avatar with the
 // username's first letter on a sky-to-teal gradient, the username and a chevron (on a phone the
-// avatar and the chevron); it opens a menu with "ההעדפות שלי" and under it "התנתק" (#334).
+// avatar and the chevron); it opens a menu with "ההעדפות שלי" and under it "התנתק" (#334); the admin
+// also has "ניהול" at the top, the admin's pages (3.8 (a)).
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { navigate } from '../route'
 import type { SessionUser } from '../types'
@@ -93,6 +94,18 @@ function UserMenu({ user, onSignOut }: { user: SessionUser; onSignOut: () => voi
       </button>
       {open && (
         <div className="menu" role="menu">
+          {user.is_admin && !user.must_change_password && (
+            <a
+              role="menuitem"
+              href="/admin"
+              onClick={(event) => {
+                setOpen(false)
+                go('/admin')(event)
+              }}
+            >
+              ניהול
+            </a>
+          )}
           {!user.must_change_password && (
             <a
               role="menuitem"

@@ -6548,3 +6548,118 @@ the #345/#346 and #257 rows.
 
 STOP. For Ron: read the numbers and the look (step 7's review); points 57–59; say when the scratch stores can go. Then 3.8
 (the admin's pages), whose plan is still to be written.
+
+## 2026-10-15 (continued) — Phase 3, round 19: #385–#388 (3.7 complete); the scratch stores deleted; 3.8's plan written (docs only)
+
+**Git:** none run (the tree was clean at the start; round 18 committed by Ron). No paid call, no model call, nothing
+installed, no code changed. **The production store was opened read-only once** (a `mode=ro` connection, to size the admin's
+lists); SHA-256 `5df9bc9a…a77ac` before and after, the same as round 18's.
+
+### A. Recorded
+
+`DECISIONS.md` **#385** (57: the background recompute left as built, measured again on the working day, 3.10), **#386** (58:
+the signed-in list at 289 ms left as built), **#387** (59: S1 and S2 deleted), **#388** (task 3.7 complete, Ron).
+
+### B. Deleted (#387)
+
+From round 18's scratchpad (`…\a2432735-…\scratchpad\`): `s1/` (14,745,600 bytes, the copy of the production store) and
+`s2/` (3,335,147,502 bytes, the 40-day synthetic store with its 19,840 photo files). Checked gone. Kept, as in round 17: the
+scripts, the server JSON files, the Lighthouse folders and screenshots (4.1 MB in all).
+
+### C. Planned: 3.8, the admin's pages (`PHASE_3.md` 3.8)
+
+- **The lists today** (read-only): 87 rejected canonicals (`no_images` 23, `other_city` 21, `for_sale` 19, `not_listing` 13,
+  `no_text` 9, `seeking` 2), 1 pending (`73aebb24…`, 1 failure), nothing archived, no flag, report, correction or key, 1 user.
+- **Shape:** the admin's post lists (rejected, pending, archive, flags) ride 3.7's grouping: `load_key_posts` already reads
+  every canonical's lifecycle, so the same pass keeps the non-members (`KeyInputs.others`, `Snapshot.others`); A's paging
+  and `paging.ts` reused; an admin-only photo route; reports, corrections, keys and users read from `UserDataStore` per
+  request; every action reads fresh.
+- **Writes:** each post write compares against a `version` of what the page showed, then each record by compare and set
+  (#260), 409 "changed" with no automatic retry; the restore writes the reports first, then `restored_lifecycle` (3.6's), an
+  unfinished restore derived and finished by running it again; leave out writes the reports only; a correction is validated
+  as the whole seen post and moves no state; keys and users through 3.5's actions.
+- **What the admin can and cannot undo**, the invariants, the modules (`web/admin.py`, `web/admin_writes.py`,
+  `web/admin_rows.py`, `report_marks` in `postmodel/rejects.py`, `require_admin` public), 12 groups of tests, six build steps.
+- **Points 60–76** for Ron; the largest: 61 (the `version`), 62 (the restore's order), 64 (removing a correction does not
+  re-derive the state), 66 (no "un-reject" of a model rejection), 67 (the lists ride the grouping), 70 (until 3.9 the admin's
+  writes stay in the copy, #331).
+
+### Verified
+
+The store's hash unchanged; S1 and S2 gone (`Test-Path` false). No test run: no code changed.
+
+### Not verified
+
+- The size and memory of `KeyInputs.others` at 40 days (S2 deleted as Ron said; measured at 3.8's step 1 on today's store).
+- That the correction's value form is comfortable on a phone (3.8's step 5).
+
+### BACKLOG
+
+"Last updated"; the round's line; item 6 (3.8's plan and its points; 3.7 complete; 57–59 decided); the #321–#330 and
+#345/#346 rows removed (done); the #257 and #251 rows; a "For phase 3" row for #385 (the recompute on the working day).
+
+### Next
+
+STOP. For Ron: points 60–76 of `PHASE_3.md` 3.8. Then the go for 3.8's build step 1 (the admin's read API).
+
+## 2026-10-15 (continued) — Phase 3, round 20: #389–#406 (3.8's plan approved); 3.8's build steps 1–3 (the admin's read API, the read pages, keys and users)
+
+**Git:** read-only only (`git status`). No paid call, no model call, nothing installed. **The production store was opened
+read-only only** (one online backup from a `mode=ro` connection into this session's scratchpad, `r20.sqlite3`, kept there);
+SHA-256 `5df9bc9a…a77ac` at the start, after the backup and at the end. Network: 127.0.0.1 only; the scratch server is stopped.
+Every write of the Chrome check (a code, the account `friend20`, its disable and enable, a scratch admin password) went to
+the scratch copy only.
+
+### A. Recorded
+
+`DECISIONS.md` **#389** (3.8's plan approved), **#390–#406** (points 60–76, each as recommended; #396 notes point 66's other
+option). `BACKLOG.md` "Future": the restore of a model-rejected post through a correction and a re-derivation (needs a Gate E
+amendment first; Ron decides after using the admin's pages). `CLAUDE.md`: the status paragraph (57–59 decided, the scratch
+stores deleted, 3.7 complete, 3.8 approved and steps 1–3 built), the `web/` paragraph (`admin.py`, `admin_rows.py`), the
+`stage_b` and `accounts` notes.
+
+### B. Built (`PHASE_3.md` 3.8, "Round 20")
+
+- **Step 1:** `accounts.actions.require_admin` public; `dedup/stage_b.OtherPost` and `KeyInputs.others`;
+  `web/grouping.Snapshot.others` and `.duplicates`; `postmodel/rejects.report_marks`; `web/cards.py`'s `listing_json`,
+  `post_videos`, `whatsapp_link` public; `web/admin_rows.py`, `web/admin.py` (summary, the four post lists paged, the detail
+  read fresh with the restore's preview, the admin's photos, reports by field, corrections, keys, users); `web/app.py`
+  includes the admin's router.
+- **Step 2:** `frontend/src/screens/admin/` (the rail and overview, the lists, the detail, reports and corrections, keys
+  and users), `src/admin/` (types, API, words), `src/styles/admin.css`; `route.ts`, `Header.tsx` ("ניהול"), `App.tsx`,
+  `api.ts` (`call` exported), `paging.ts` (generic).
+- **Step 3:** issue a code (shown once, `no-store`), cancel, reset a password, disable, enable.
+- **Tests:** `tests/test_web_admin.py` (new, 45); `frontend/src/admin/words.test.ts` (new, 5).
+
+### Verified
+
+`uv run pytest`: **1891 passed** (1846 + 45). `ruff check`: all checks passed; `ruff format`: 202 files unchanged. `npm test`:
+**55 passed** (50 + 5); `npm run build` (`tsc`, Vite) clean. **Chrome** (1440 × 900 and 390 × 844 touch) over the scratch copy:
+the overview, the rejected list (87, by reason), a detail, a code issued and used by a second account in a separate browser
+context, that account refused `/admin`, disabled (its session ended) and enabled; no sideways scroll on any admin page at
+390; **Lighthouse accessibility 100** on six page and device pairs, best practices 100; no console message; no request off
+the site. Fixed during the check: numeric cells aligned left (now right), the rail's counts refreshed after a write, "קוד
+הזמנה" as the sign-up form says, buttons named with their user, `aria-current` on the rail, no card list on admin pages.
+
+### Not verified
+
+A real phone; the admin's lists on a 40-day store (S2 deleted): `others` adds one `get_listing` per non-member canonical to
+the grouping's read; the flags, reports and corrections pages with real data (none exists today: they were checked by the
+tests only, and empty in Chrome).
+
+### Deviations
+
+Seven, in `PHASE_3.md` 3.8 "Round 20": users named by username in the addresses (Gate C: `user_id` never shown); the admin's
+photo route reads the record fresh; the admin's own reset refused by the route (`admin_row`); the detail reuses `Carousel`
+and the formatters, not `PostView`; "קוד הזמנה" on the pages; `corrections?in_force=false` returns the removed only; the
+`version` comes with step 4.
+
+### BACKLOG
+
+"Last updated"; the round's line; item 6 (steps 1–3 built, how to try them, steps 4–6 waiting); the two account rows; the
+"Future" row for #396.
+
+### Next
+
+STOP. For Ron: try the admin's pages on a fresh `serve --copy` (BACKLOG item 6) and read round 20's seven deviations. Then
+the go for 3.8's step 4 (the post writes: retry, restore, leave out, the `version`).

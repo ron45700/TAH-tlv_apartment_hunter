@@ -13,6 +13,8 @@
 // next load of the list, so nothing jumps under the reader. A "lied" flag asks first; a flag or a
 // report says in words what it did (a partial flag offers a retry, #330 point 21) and the list
 // reloads, so the card leaves it. A write on a post removed meanwhile (409) says so and reloads.
+//
+// 3.8: the admin's pages under /admin (screens/admin/), behind the same header.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, api } from './api'
 import { barHeldCount, barOf, emptyBar, israelToday, refusalWords, sameBar, type Bar } from './bar'
@@ -24,6 +26,7 @@ import { PostView, type PostActions } from './components/PostView'
 import { PAGE, firstLoad, nextIds, withPage, withoutCard, type Loaded } from './paging'
 import { navigate, postPath, useRoute } from './route'
 import { PasswordScreen, SignIn, SignUp } from './screens/Account'
+import { Admin } from './screens/admin/Admin'
 import { Preferences } from './screens/Preferences'
 import type { FlagAnswer, Reference, SessionUser } from './types'
 
@@ -126,8 +129,9 @@ export function App() {
   // brings its whole order and its first cards (#376). Before the site's first grouping the API
   // answers "loading": the page keeps waiting and asks again (#380).
   const first = useRef(true)
+  const onAdmin = route.name === 'admin' // the admin's pages show no card list
   useEffect(() => {
-    if (!bar) return
+    if (!bar || onAdmin) return
     const controller = new AbortController()
     let retry = 0
     const timer = window.setTimeout(
@@ -155,7 +159,7 @@ export function App() {
       window.clearTimeout(retry)
       controller.abort()
     }
-  }, [bar, reloads])
+  }, [bar, reloads, onAdmin])
 
   // The next page of the load as its last cards come near the view (#376): the ids come from the
   // load's own order, so nothing is skipped or drawn twice. A page that fails is asked again.
@@ -372,6 +376,14 @@ export function App() {
       <>
         {header}
         <SignUp onSignedIn={signedIn} />
+      </>
+    )
+  }
+  if (route.name === 'admin') {
+    return (
+      <>
+        {header}
+        <Admin user={user} page={route.page} id={route.id} names={names} now={now} />
       </>
     )
   }

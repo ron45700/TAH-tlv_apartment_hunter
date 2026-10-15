@@ -27,10 +27,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from tlv_hunter.contracts.field_correction import FieldCorrection
+from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.dedup.stage_b import (
     Card,
     KeyInputs,
     KeyPost,
+    OtherPost,
     PhotoHashes,
     derive_cards,
     load_key_posts,
@@ -54,6 +56,11 @@ class Snapshot:
     """Every compared post (the cards' members), by `listing_id`: whose photos are served."""
     card_of: Mapping[str, Card]
     """Every post of every card, its dedup A duplicates included, to the card that holds it."""
+    others: Mapping[str, OtherPost]
+    """Every other canonical post, by `listing_id`: the admin's lists (3.8 (b), #397). Never
+    reaches a non-admin: only the admin's routes read it."""
+    duplicates: Mapping[str, tuple[RawPost, ...]]
+    """Every dedup A duplicate, by its canonical: the admin's repost log."""
 
 
 @dataclass(frozen=True)
@@ -153,6 +160,8 @@ class Grouping:
                 cards=cards,
                 members={member.listing_id: member for member in inputs.members},
                 card_of={listing_id: card for card in cards for listing_id in card.post_ids},
+                others={other.listing_id: other for other in inputs.others},
+                duplicates=inputs.duplicates,
             )
             with self._state:
                 self._snapshot = snapshot
@@ -204,6 +213,8 @@ class Grouping:
             cards=cards,
             members={i: m for i, m in snapshot.members.items() if id(snapshot.card_of[i]) in kept},
             card_of={i: c for i, c in snapshot.card_of.items() if id(c) in kept},
+            others=snapshot.others,
+            duplicates=snapshot.duplicates,
         )
         with self._state:
             self._seen = (id(snapshot), version, view)

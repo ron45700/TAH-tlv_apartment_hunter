@@ -1,6 +1,6 @@
 // The page's addresses (PHASE_3.md 3.7 (f), (k): no router library): the list, /post/<id> (its own
-// address, so the browser's back closes it), and the screens of build step 5: /sign-in, /sign-up,
-// /password and /preferences.
+// address, so the browser's back closes it), the screens of build step 5: /sign-in, /sign-up,
+// /password and /preferences, and the admin's pages under /admin (3.8).
 //
 // A screen with unsaved changes (the preferences page) sets a guard: a link inside the site, the
 // browser's back and forward, a reload and closing the tab all ask first (3.7 (e)(iii)).
@@ -13,12 +13,39 @@ export type Route =
   | { name: 'sign-up' }
   | { name: 'password' }
   | { name: 'preferences' }
+  | { name: 'admin'; page: AdminPage; id?: string }
+
+/** The admin's pages (3.8 (c)): /admin, /admin/<page>, /admin/post/<id>. */
+export const ADMIN_PAGES = [
+  'overview',
+  'rejected',
+  'pending',
+  'flags',
+  'reports',
+  'corrections',
+  'archive',
+  'keys',
+  'users',
+] as const
+export type AdminPage = (typeof ADMIN_PAGES)[number] | 'post'
 
 const SCREENS = ['sign-in', 'sign-up', 'password', 'preferences'] as const
+
+export function adminPath(page: AdminPage, id?: string): string {
+  if (page === 'post') return `/admin/post/${encodeURIComponent(id ?? '')}`
+  return page === 'overview' ? '/admin' : `/admin/${page}`
+}
 
 export function parseRoute(pathname: string): Route {
   const match = /^\/post\/([^/]+)\/?$/.exec(pathname)
   if (match) return { name: 'post', id: decodeURIComponent(match[1]) }
+  const adminPost = /^\/admin\/post\/([^/]+)\/?$/.exec(pathname)
+  if (adminPost) return { name: 'admin', page: 'post', id: decodeURIComponent(adminPost[1]) }
+  const admin = /^\/admin(?:\/([a-z]+))?\/?$/.exec(pathname)
+  if (admin) {
+    const page = ADMIN_PAGES.find((name) => name === (admin[1] ?? 'overview'))
+    if (page) return { name: 'admin', page }
+  }
   const screen = SCREENS.find((name) => pathname.replace(/\/$/, '') === `/${name}`)
   return screen ? { name: screen } : { name: 'list' }
 }

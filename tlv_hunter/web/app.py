@@ -5,7 +5,8 @@ Build step 2: the read-only API for a guest, over a **dated copy of the store** 
 through `UserDataStore`. From build step 5 it writes the copy's user-data tables (sessions, users,
 profiles; `routes.py`); a cookie that fails the session check is cleared (`auth.py`). From build
 step 6 it also writes viewed marks and reports, and a post's lifecycle record for a flag or a
-report (`writes.py`, by compare and set, #260); never a `RawPost` or a `Listing`.
+report (`writes.py`, by compare and set, #260); never a `RawPost` or a `Listing`. From 3.8 the
+admin's API is beside it (`admin.py`): its lists, and from 3.8's step 3 keys and users.
 
 Invariant 15 on the page: no request leaves the site. Every response carries a Content-Security-
 Policy that allows only the site itself and `Referrer-Policy: no-referrer`. FastAPI's own pages
@@ -36,6 +37,7 @@ from tlv_hunter.accounts.passwords import PRODUCTION_HASHER
 from tlv_hunter.areas.reference import load_area_groups, load_areas
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.sqlite import SqliteUserDataStore
+from tlv_hunter.web.admin import router as admin_router
 from tlv_hunter.web.auth import ClearFailedCookie
 from tlv_hunter.web.grouping import Grouping, NotReady
 from tlv_hunter.web.routes import Site, router
@@ -91,6 +93,7 @@ def create_app(site: Site) -> FastAPI:
     )
     app.state.site = site
     app.include_router(router)
+    app.include_router(admin_router)  # the admin's pages (3.8)
     app.add_exception_handler(NotReady, _loading)
     if site.pages is not None:
         _serve_pages(app, Path(site.pages))

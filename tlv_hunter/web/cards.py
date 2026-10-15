@@ -19,6 +19,7 @@ from typing import Any
 
 from tlv_hunter.contracts.listing import Listing, Marked
 from tlv_hunter.contracts.profile import Profile
+from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.dedup.stage_b import Card, KeyPost
 from tlv_hunter.policy.base import Evaluation
 from tlv_hunter.policy.colours import field_colours, glow, tier_reasons
@@ -94,7 +95,12 @@ def photo_urls(member: KeyPost) -> list[str]:
 def video_links(member: KeyPost) -> list[str]:
     """Facebook's page of each video or reel (only photos are downloaded); a post with no photo
     shows the first in the photo's place (round 9)."""
-    return [media.page_url for media in member.post.media if media.type not in PHOTO_TYPES]
+    return post_videos(member.post)
+
+
+def post_videos(post: RawPost) -> list[str]:
+    """`video_links` of any stored post (the admin's pages read posts that are on no card)."""
+    return [media.page_url for media in post.media if media.type not in PHOTO_TYPES]
 
 
 def card_payload(
@@ -119,7 +125,7 @@ def card_payload(
         "glow": glow(evaluation, profile),
         "tier_label": tier_label(listing, evaluation, profile),
         "colours": dict(field_colours(listing, evaluation)),
-        **_listing(listing, area_names),
+        **listing_json(listing, area_names),
         "text": shown.post.text,
         "permalink": shown.post.permalink,
         "photos": photo_urls(shown),
@@ -158,7 +164,7 @@ def _reason_words(name: str, listing: Listing, evaluation: Evaluation) -> str:
 
 def whatsapp_links(member: KeyPost) -> list[str]:
     """A click-to-chat link for each mobile number of the post, in the post's order."""
-    links = (_whatsapp(phone) for phone in (member.post.phones or []))
+    links = (whatsapp_link(phone) for phone in (member.post.phones or []))
     return [link for link in links if link is not None]
 
 
@@ -173,7 +179,7 @@ def post_payload(card: Card, area_names: Mapping[int, str]) -> dict:
     return {
         "id": card.shown_id,
         "post_ids": sorted(card.post_ids),
-        **_listing(listing, area_names),
+        **listing_json(listing, area_names),
         "corrected": sorted(shown.seen.corrected),
         "own_colours": dict(field_colours(listing, None)),
         "text": shown.post.text,
@@ -181,7 +187,7 @@ def post_payload(card: Card, area_names: Mapping[int, str]) -> dict:
         "photos": photo_urls(shown),
         "videos": video_links(shown),
         "phones": [
-            {"phone": phone, "name": names.get(phone), "whatsapp": _whatsapp(phone)}
+            {"phone": phone, "name": names.get(phone), "whatsapp": whatsapp_link(phone)}
             for phone in (shown.post.phones or [])
         ],
         "last_published_at": card.last_published_at.isoformat(),
@@ -192,12 +198,14 @@ def post_payload(card: Card, area_names: Mapping[int, str]) -> dict:
     }
 
 
-def _whatsapp(phone: str) -> str | None:
+def whatsapp_link(phone: str) -> str | None:
+    """The click-to-chat link of a mobile number (#311), or None for another number."""
     number = whatsapp_number(phone)
     return None if number is None else WHATSAPP.format(number=number)
 
 
-def _listing(listing: Listing, area_names: Mapping[int, str]) -> dict:
+def listing_json(listing: Listing, area_names: Mapping[int, str]) -> dict:
+    """The fields of a post as users see it, for a card, an opened post and the admin's rows."""
     return {
         "post_nature": listing.post_nature,
         **{name: _marked(getattr(listing, name)) for name in MARKED_FIELDS},

@@ -3553,6 +3553,99 @@ On today's store and a rebuilt 40-day synthetic store (round 16's recipe), kept 
 its whole carousel, the counter with it, which no pill can make pass; it now dims the photos only, so the counter, the dots
 and the arrows stay as on any card.
 
+## Phase 3: Ron's answers on round 18; 3.7 complete (2026-10-15, round 19)
+
+**Ron answered points 57–59 of `PHASE_3.md` 3.7 (l), "Round 18", on 2026-10-15, and closed task 3.7.**
+
+### 385 — The background recompute under traffic stays as built; measured again on the working day (point 57)
+The recompute shares the interpreter with the requests (188 s on the 40-day store under 10 requests a second, 2.6 s on
+today's). Left as built: real traffic is a few people. It is measured again on the working day (3.10); no separate process
+and no kept evaluation now. *Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 386 — The signed-in list at 289 ms on the 40-day store stays as built (point 58)
+The target (300 ms) is met and the 40-day store is an upper bound. *Ron approved the reviewer's recommendation.* No reason
+of his own.
+
+### 387 — The scratch stores S1 and S2 are deleted (point 59)
+Ron read round 18's numbers. **Deleted in round 19:** `s1/` (14.7 MB) and `s2/` (3.34 GB, the 40-day store and its 19,840
+photo files) from round 18's scratchpad; its scripts and small result files (4.1 MB) are kept, as in round 17. *Ron's
+decision.*
+
+### 388 — Task 3.7 (the site) is complete
+Build steps 1–7 built and measured; both targets of #330 point 20 met on today's store and the 40-day one (round 18). What 3.7
+leaves open is named elsewhere: the recompute on the working day (#385, 3.10), the `Host`/`Origin` check behind Tailscale
+Serve (3.9). *Ron's decision (2026-10-15).*
+
+## Phase 3: the plan for 3.8 approved, with points 60–76 (2026-10-15, round 20)
+
+**Ron approved `PHASE_3.md` 3.8 (a)–(k) and its points 60–76 on 2026-10-15, each exactly as the reviewer recommended.**
+Steps 1–3 of (j) are built in round 20.
+
+### 389 — The plan for task 3.8 (the admin's pages) is approved
+`PHASE_3.md` 3.8 (a)–(k) as written: who reaches the pages, where each list comes from, the pages, the endpoints, every
+write with its compare and set and the restore rule, what the admin can and cannot undo, the invariants, the modules, the
+tests and the six build steps. *Ron approved the reviewer's recommendation.*
+
+### 390 — The scope and the six build steps, keys and users first among the writes (point 60)
+*Ron approved the reviewer's recommendation.*
+
+### 391 — The admin's post writes compare against a `version` of what the page showed (point 61)
+A `version` over the post's lifecycle, its reports and its corrections; a difference is 409 "changed" with no automatic
+retry; each record still written by compare and set (#260). *Ron approved the reviewer's recommendation.*
+
+### 392 — The restore writes the reports first, then the lifecycle (point 62)
+An unfinished restore (rejected `"misclassified"`, no open or left-out report) is derived, shown, and finished by running
+the restore again. *Ron approved the reviewer's recommendation.*
+
+### 393 — The flags page groups by flag action (point 63)
+The posts with the same `flagged_by` and `flagged_at` (one "lied" flag on one card, #300), restored together or one by
+one. *Ron approved the reviewer's recommendation.*
+
+### 394 — Removing a correction changes only what users see; the post's state is not re-derived (point 64)
+The page warns before removing a correction of `post_nature` or `other_city` on an active post. *Ron approved the
+reviewer's recommendation.*
+
+### 395 — A correction is made from a report only (point 65)
+*Ron approved the reviewer's recommendation.*
+
+### 396 — No action on a post rejected by the model or before it (point 66)
+The rejected list shows them; a wrong one waits for a reclassify or a rule. **The other option, a restore of a
+model-rejected post through a correction and a re-derivation, needs a Gate E amendment first and is recorded under
+`BACKLOG.md` "Future"; Ron decides after using the admin's pages.** *Ron approved the reviewer's recommendation.*
+
+### 397 — The admin's post lists ride the grouping (point 67)
+`KeyInputs.others` and `Snapshot.others`: one read of the store, one counter, the background recompute; the admin's own
+writes shown at once; every action read fresh. *Ron approved the reviewer's recommendation.*
+
+### 398 — `accounts.actions.require_admin` is public, the one admin check for the admin's reads (point 68)
+*Ron approved the reviewer's recommendation.*
+
+### 399 — The admin's pages checked at 1440 × 900 and 390 × 844, with 3.7's tokens and components (point 69)
+*Ron approved the reviewer's recommendation.*
+
+### 400 — Until 3.9 the admin's writes land in the dated copy (point 70)
+As #331: keys, accounts, restores and corrections made there are lost at the next `serve --copy`; DoD 2 and 5 are shown on
+the copy now and made for real after 3.9. *Ron approved the reviewer's recommendation.*
+
+### 401 — Reports grouped by field, a report under each field it names; history tabs (point 71)
+*Ron approved the reviewer's recommendation.*
+
+### 402 — "Remove the post from the list" takes the earliest open report's reporter and time (point 72)
+For a report stored while its post stayed (3.4 point 3; #280). *Ron approved the reviewer's recommendation.*
+
+### 403 — Admin rows ordered by the newest last publication; the rejected list filterable by reason (point 73)
+*Ron approved the reviewer's recommendation.*
+
+### 404 — Replacing a correction in force is the old removed, then the new added (point 74)
+*Ron approved the reviewer's recommendation.*
+
+### 405 — A correction is checked against the whole post before it is written (point 75)
+`seen_listing` over the stored `Listing` with it applied must be a valid `Listing`; 422 otherwise. *Ron approved the
+reviewer's recommendation.*
+
+### 406 — The post's detail shows what a restore would leave now (point 76)
+`restored_lifecycle` over the seen post, no write. *Ron approved the reviewer's recommendation.*
+
 ---
 
 ## Corrections to recorded facts

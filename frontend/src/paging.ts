@@ -1,34 +1,42 @@
-// A, the list in pages (#376–#377): the page holds the whole order of its load, the cards drawn so
+// A, the list in pages (#376–#377): the page holds the whole order of its load, the items drawn so
 // far, and where the next page starts. The order is fixed for the load: a page asked later never
-// skips or repeats a card, whatever changed meanwhile; it changes only on the next load. A card the
+// skips or repeats an item, whatever changed meanwhile; it changes only on the next load. A card the
 // user flags or reports leaves in place, the count one less, with no reload (#377). Pure: no fetch.
-import type { CardData, CardsPage, CardsResponse } from './types'
+// The admin's lists page their rows the same way (3.8 (b), #397): an item is anything with an id.
+import type { CardData } from './types'
 
-/** The cards of a list's first answer, and of each later page: whole rows at 2, 3, 4 and 6
+/** The items of a list's first answer, and of each later page: whole rows at 2, 3, 4 and 6
  * columns (#376). */
 export const PAGE = 48
 
-export interface Loaded {
+interface Item {
+  id: string
+  /** A card's posts: any of them finds the card. */
+  post_ids?: string[]
+}
+
+export interface Loaded<T extends Item = CardData> {
   count: number
-  /** Every card id of this load, in its order. */
+  /** Every item id of this load, in its order. */
   order: string[]
-  cards: CardData[]
+  cards: T[]
   /** Where in `order` the next page starts. */
   next: number
 }
 
-export function firstLoad(answer: CardsResponse): Loaded {
+/** A list's first answer (whatever else it carries is not read). */
+export function firstLoad<A extends { count: number; order: string[]; cards: Item[] }>(answer: A): Loaded<A['cards'][number]> {
   return { count: answer.count, order: answer.order, cards: answer.cards, next: answer.cards.length }
 }
 
 /** The ids of the next page, or none when the load is all drawn. */
-export function nextIds(list: Loaded): string[] {
+export function nextIds<T extends Item>(list: Loaded<T>): string[] {
   return list.order.slice(list.next, list.next + PAGE)
 }
 
-/** A page appended: a card already drawn (regrouped meanwhile) is not drawn twice; an id that is
+/** A page appended: an item already drawn (regrouped meanwhile) is not drawn twice; an id that is
  * `gone` leaves the count. */
-export function withPage(list: Loaded, asked: string[], page: CardsPage): Loaded {
+export function withPage<T extends Item, P extends { cards: T[]; gone: string[] }>(list: Loaded<T>, asked: string[], page: P): Loaded<T> {
   const drawn = new Set(list.cards.map((card) => card.id))
   const added = page.cards.filter((card) => !drawn.has(card.id))
   return {
@@ -39,10 +47,10 @@ export function withPage(list: Loaded, asked: string[], page: CardsPage): Loaded
   }
 }
 
-/** The card holding this post leaves the list in place (#377); a card not drawn yet leaves the
+/** The item holding this post leaves the list in place (#377); an item not drawn yet leaves the
  * order. Nothing changes for an id the load does not hold. */
-export function withoutCard(list: Loaded, postId: string): Loaded {
-  const card = list.cards.find((each) => each.id === postId || each.post_ids.includes(postId))
+export function withoutCard<T extends Item>(list: Loaded<T>, postId: string): Loaded<T> {
+  const card = list.cards.find((each) => each.id === postId || (each.post_ids ?? []).includes(postId))
   const id = card ? card.id : postId
   const at = list.order.indexOf(id)
   if (!card && at < 0) return list

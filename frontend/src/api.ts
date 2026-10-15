@@ -25,7 +25,8 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+/** The one request every page makes (the admin's pages too, admin/api.ts). */
+export async function call<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   let response: Response
   try {
     response = await fetch(path, {
