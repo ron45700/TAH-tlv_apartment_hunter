@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { firstLoad, nextIds, withPage } from '../paging'
 import type { Row } from './types'
-import { REASON_FAMILY, REASON_ORDER, flagActions, valueWords } from './words'
+import { REASON_FAMILY, REASON_ORDER, flagActions, restoreLabel, valueWords } from './words'
 
 function row(id: string, by: string | null, at: string | null): Row {
   return {
@@ -66,5 +66,19 @@ describe('rows page as cards do (#376)', () => {
     const next = withPage(list, ids, { cards: [row('b', null, null), row('a', null, null)], gone: ['c'] })
     expect(next.cards.map((r) => r.id)).toEqual(['a', 'b'])
     expect(next.count).toBe(2)
+  })
+})
+
+describe('the flags page restore button (#412)', () => {
+  it('is named by its post, its name starting with the visible words', () => {
+    const one = { ...row('a', 'dana', 't1'), text: 'דירת 3 חדרים   בפלורנטין, קומה שנייה עם מרפסת שמש גדולה ומטבח חדש' }
+    expect(restoreLabel([one])).toEqual({
+      text: 'שחזור',
+      label: 'שחזור: דירת 3 חדרים בפלורנטין, קומה שנייה עם…', // a whole word last
+    })
+    const two = restoreLabel([one, row('b', 'dana', 't1')])
+    expect(two.text).toBe('שחזור 2 הפרסומים')
+    expect(two.label.startsWith(`${two.text}: דירת 3 חדרים`)).toBe(true)
+    expect(restoreLabel([{ ...one, text: null }]).label).toBe('שחזור: מודעה בלי טקסט')
   })
 })

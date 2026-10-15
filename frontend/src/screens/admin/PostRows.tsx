@@ -4,10 +4,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminApi } from '../../admin/api'
 import type { ListName, Reason, Row } from '../../admin/types'
-import { REASON_FAMILY, REASON_NAMES, REASON_ORDER, flagActions } from '../../admin/words'
+import { REASON_FAMILY, REASON_NAMES, REASON_ORDER, flagActions, restoreLabel } from '../../admin/words'
 import { ApiError } from '../../api'
 import { PAGE, firstLoad, nextIds, withPage, withoutCard, type Loaded } from '../../paging'
-import { PostRow, useLoad, Waiting, when } from './ui'
+import { Announce, PostRow, useLoad, Waiting, when, type Message } from './ui'
 
 const RETRY_MS = 2000
 
@@ -29,7 +29,8 @@ export function PostRows({ list, now, onChanged }: { list: ListName; now: Date; 
   const [reason, setReason] = useState<Reason | null>(null)
   const [loaded, setLoaded] = useState<Loaded<Row> | null>(null)
   const [reasons, setReasons] = useState<Partial<Record<Reason, number>>>({})
-  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
+  const [notice, setNotice] = useState<Message | null>(null)
+  const announce = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
   const [load] = useLoad((signal) => adminApi.rows(list, reason, PAGE, signal), `${list}:${reason ?? ''}`)
 
@@ -89,6 +90,7 @@ export function PostRows({ list, now, onChanged }: { list: ListName; now: Date; 
             : { ok: false, text: `שוחזרו ${restored.length} מתוך ${results.length}: השאר השתנו בינתיים. רעננו את הדף ונסו שוב.` },
         )
         onChanged()
+        requestAnimationFrame(() => announce.current?.focus()) // the button pressed is gone (#411)
       })
       .catch((error) =>
         setNotice({ ok: false, text: error instanceof ApiError ? 'השחזור נדחה.' : 'השחזור לא נשמר. בדקו את החיבור ונסו שוב.' }),
@@ -118,11 +120,7 @@ export function PostRows({ list, now, onChanged }: { list: ListName; now: Date; 
           ))}
         </div>
       )}
-      {notice && (
-        <p className={notice.ok ? 'formok' : 'formerror'} role={notice.ok ? 'status' : 'alert'}>
-          {notice.text}
-        </p>
-      )}
+      <Announce ref={announce} message={notice} />
       <Waiting load={load}>
         {() =>
           !loaded ? (
@@ -171,18 +169,19 @@ function Flags({
     <>
       {flagActions(rows).map((action) => (
         <section key={action.key} className="flagaction">
-          <h3>
+          <h2>
             סימון של <bdi dir="ltr">{action.flag.by}</bdi>:{' '}
             {action.rows.length === 1 ? 'מודעה אחת' : `${action.rows.length} פרסומים של אותה מודעה`}
             <span className="flagaction-time">{when(action.flag.at, now)}</span>
-          </h3>
+          </h2>
           <button
             type="button"
             className="barbtn flagaction-restore"
             disabled={busy}
+            aria-label={restoreLabel(action.rows).label}
             onClick={() => onRestore(action.rows)}
           >
-            {action.rows.length === 1 ? 'שחזור' : `שחזור ${action.rows.length} הפרסומים`}
+            {restoreLabel(action.rows).text}
           </button>
           {action.flag.note && (
             <p className="flagaction-note" dir="auto">

@@ -25,7 +25,8 @@ step 6 built: viewed, "mark as not viewed", the "lied" flag and the "wrong class
 57–59 decided (#385–#387, the scratch stores deleted); 3.7 complete (#388); 3.8's plan written.** **Round 20 (2026-10-15):
 3.8's plan and points 60–76 approved (#389–#406); 3.8's build steps 1–3 built (the admin's read API, the read pages, keys
 and users).** **Round 21 (2026-10-15): 3.8's steps 4–6 built and checked (the post writes, corrections, the DoD 5 walk);
-points 77–83 wait for Ron.** No code before a task's plan is approved; no paid call before its
+points 77–83 wait for Ron.** **Round 22 (2026-10-15): points 77–83 decided (#407–#413) and 78–83
+built; round 21's deviation 1 accepted (#414); Ron tries the pages, then 3.8 closes.** No code before a task's plan is approved; no paid call before its
 own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
@@ -1720,7 +1721,7 @@ one dense row under them), by #353, built in round 13.**
     touch) and the status line with "סינון (N)" is under them, as (e) describes. **Built so.** Or: the sublet switch moves
     into the sheet on a phone (one line saved), which (e) does not say.
 
-## 3.8 The admin's pages — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256); PLAN APPROVED 2026-10-15 with points 60–76 (#389–#406); build steps 1–3 BUILT (round 20), 4–6 BUILT AND CHECKED (round 21); points 77–83 wait for Ron
+## 3.8 The admin's pages — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256); PLAN APPROVED 2026-10-15 with points 60–76 (#389–#406); build steps 1–3 BUILT (round 20), 4–6 BUILT AND CHECKED (round 21); points 77–83 decided and built (round 22, #407–#414)
 
 **The approved content:**
 - **Rejected,** every reason, canonicals only (#75 B), the city shown through `other_city_name` (#214).
@@ -2134,6 +2135,38 @@ test run (1941 passed in 3 h 34 min of wall time; the scratch server died with i
 - 82. **The flags page's "שחזור" buttons all share one name** when several flag actions are listed. Recommended: name each
   by its user and count ("שחזור הסימון של friend21, 2 פרסומים").
 - 83. **"המודעה בפייסבוק" on the detail is 21 px tall** (WCAG 2.5.8 asks 24, met here only by its spacing). Recommended: 24 px.
+
+**Decided by Ron, 2026-10-15 (round 22):** 77, no design critique for 3.8 (#407); 78–83 as recommended (#408–#413; 82 in
+Ron's words, "named by its post"); round 21's deviation 1 accepted (#414).
+
+### Round 22 (2026-10-15): points 78–83 built
+
+- **78 (#408):** `ValueForm.tsx` scrolls itself into view and focuses its heading when it opens; cancel and save return the
+  focus to the row's "תיקון" button (`AdminPost.tsx`, `focusAfter`).
+- **79 (#409):** `screens/admin/ui.tsx` `Announce`: a `role="status"` and a `role="alert"` always in the page, empty until a
+  message fills one; used by the detail, the flags page and the users page; the value form's error region is always present
+  too. (The codes page's error region already was.)
+- **80 (#410):** `web/admin_writes.py` `Invalid` and `invalid_words`: each Gate B rule a correction can break
+  (`contracts/listing.py`'s messages) named in plain Hebrew; any other refusal "הערך לא מתאים לשדה …"; no "bar:", no English.
+  The page shows the sentence as it comes.
+- **81 (#411):** after any write on the detail page except a correction (restore, leave out, remove from the list, retry, a
+  correction's removal) and after a restore on the flags page, the focus moves to the message.
+- **82 (#412):** `admin/words.ts` `restoreLabel`: the visible "שחזור" (or "שחזור N הפרסומים") and an accessible name that
+  starts with it and adds the post's first words, cut at a whole word ("שחזור: להשכרה דירת פנטהאוז 4 חדרים בשכונת נווה…").
+- **83 (#413):** `.apost-fb` at least 24 px tall (measured 25).
+- **Found while measuring, fixed (a bug, not design):** the flags page went from h1 to h3 (Lighthouse "heading order", 98):
+  each flag action's heading is an h2. Round 20 and 21 audited the flags page empty.
+- **Tests:** `tests/test_web_admin_writes.py`: the invalid-value test now pins the Hebrew sentence for each rule (8 cases, was
+  5) and that no "bar", "Value error" or field name in English appears; `frontend/src/admin/words.test.ts` +1 (the restore
+  label).
+
+**Checked in Chrome** on a fresh scratch copy (an online backup from a `mode=ro` connection; the store's SHA-256 `5df9bc9a…a77ac`
+before and after), with a friend's report and flags made through the site's own endpoints: the two live regions present and
+empty on load; the form opened from the lowest row with the focus on its heading, in view; cancel and save back on the row's
+button; "3.3" rooms answered "מספר החדרים הוא מספר חיובי בקפיצות של חצי, למשל 2 או 2.5."; restore, leave out and the flags
+page's restore each left the focus on the message with its text; the Facebook link 25 px. **Lighthouse accessibility 100**:
+the detail with the form open (desktop, mobile), the flags page with a flag action (desktop, mobile; 98 before the heading
+fix), the users and reports pages (mobile). **At 390 × 844** no admin page scrolls sideways, the form open included.
 
 ## 3.9 Serving on the tailnet — plan to be written
 

@@ -3646,6 +3646,37 @@ reviewer's recommendation.*
 ### 406 — The post's detail shows what a restore would leave now (point 76)
 `restored_lifecycle` over the seen post, no write. *Ron approved the reviewer's recommendation.*
 
+## Phase 3: Ron's answers on 3.8's round 21 (2026-10-15, round 22)
+
+**Ron answered points 77–83 of `PHASE_3.md` 3.8, "Round 21", on 2026-10-15, and accepted one of its deviations.** Built in
+round 22.
+
+### 407 — No design critique for 3.8 (point 77)
+The admin's pages are for Ron only; Lighthouse accessibility is 100; Ron judges the look himself. The design plugin's
+critique and accessibility review are not run for 3.8. *Ron's decision.* His reason as given.
+
+### 408 — Focus moves into the correction form, kept on screen; back to the row's "תיקון" on cancel or save (point 78)
+WCAG 2.4.3. *Ron approved the reviewer's recommendation.*
+
+### 409 — The admin's messages are announced: a live region present before it is filled (point 79)
+WCAG 4.1.3. *Ron approved the reviewer's recommendation.*
+
+### 410 — An invalid correction's error in plain Hebrew, with no "bar:" (point 80)
+The server names Gate B's known rules in Hebrew (WCAG 3.3.3). *Ron approved the reviewer's recommendation.*
+
+### 411 — Focus moves to the message after a restore or a leave-out (point 81)
+WCAG 2.4.3. *Ron approved the reviewer's recommendation.*
+
+### 412 — Each "שחזור" on the flags page is named by its post (point 82)
+*Ron's wording: "named by its post".*
+
+### 413 — The Facebook link's target is at least 24 px (point 83)
+WCAG 2.5.8. *Ron approved the reviewer's recommendation.*
+
+### 414 — A correction may be made on any field of a reported post (round 21's deviation 1, accepted)
+Not only on the fields the report named; the correction answers the post's earliest open or left-out report. **Refines
+#395.** *Ron's decision.*
+
 ---
 
 ## Corrections to recorded facts

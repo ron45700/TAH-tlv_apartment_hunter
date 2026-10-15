@@ -659,8 +659,8 @@ def _post_write(site: Site, listing_id: str, run: Callable[[], object]) -> Respo
         return _refused_json("changed", 409)
     except admin_writes.Refused as refusal:
         return _refused_json(refusal.reason, 409)
-    except ValueError as error:  # pydantic's ValidationError included
-        payload = {"refusal": "invalid_value", "detail": _refusal(error)}
+    except admin_writes.Invalid as invalid:  # the rule in plain Hebrew (#410)
+        payload = {"refusal": "invalid_value", "detail": invalid.words}
         body = json.dumps(payload, ensure_ascii=False)
         return Response(body, status_code=422, media_type="application/json")
     return _json(_detail(site, listing_id))

@@ -7,7 +7,7 @@ import { ApiError } from '../../api'
 import { adminApi } from '../../admin/api'
 import type { AdminUser, Key } from '../../admin/types'
 import { israelTime } from '../../format'
-import { useLoad, Waiting } from './ui'
+import { Announce, useLoad, Waiting } from './ui'
 
 const REFUSALS: Record<string, string> = {
   label_empty: 'כתבו למי הקוד, כדי לזהות אותו ברשימה.',
@@ -190,16 +190,7 @@ export function Users({ onChanged }: { onChanged: () => void }) {
         משתמשים לא נמחקים. השבתה מנתקת את החשבון מכל המכשירים ושומרת את ההעדפות. איפוס נותן סיסמה זמנית, שתוחלף בכניסה
         הבאה.
       </p>
-      {notice && (
-        <p className="formok" role="status">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p className="formerror" role="alert">
-          {error}
-        </p>
-      )}
+      <Announce message={error ? { ok: false, text: error } : notice ? { ok: true, text: notice } : null} />
       <Waiting load={load}>
         {({ users }) => (
           <ul className="ulist">

@@ -114,3 +114,14 @@ export function flagActions(rows: Row[]): FlagAction[] {
   }
   return actions
 }
+
+/** A flag action's "שחזור", named by its post (#412): the visible words, and the accessible name
+ * that starts with them and adds the post's first words (WCAG 2.5.3). */
+export function restoreLabel(rows: Row[]): { text: string; label: string } {
+  const text = rows.length === 1 ? 'שחזור' : `שחזור ${rows.length} הפרסומים`
+  const words = (rows[0]?.text ?? '').trim().replace(/\s+/g, ' ')
+  const cut = words.slice(0, 40)
+  const whole = cut.lastIndexOf(' ') > 20 ? cut.slice(0, cut.lastIndexOf(' ')) : cut // a whole word last
+  const excerpt = !words ? 'מודעה בלי טקסט' : words.length > 40 ? `${whole.replace(/[,\s]+$/, '')}…` : words
+  return { text, label: `${text}: ${excerpt}` }
+}

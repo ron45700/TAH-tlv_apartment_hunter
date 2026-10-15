@@ -329,7 +329,7 @@
   margin-bottom: 22px;
 }
 
-.flagaction h3,
+.flagaction h2,
 .fieldgroup h2 {
   display: flex;
   flex-wrap: wrap;
@@ -961,4 +961,27 @@
 .valueform-actions .mainbtn {
   width: auto;
   padding-inline: 20px;
+}
+
+/* the admin's messages (#409): both regions always in the page, empty ones take no room */
+.announce {
+  outline-offset: 4px;
+}
+
+.announce p:empty {
+  margin: 0;
+  padding: 0;
+}
+
+.apost-state .announce .formok,
+.apost-state .announce .formerror {
+  margin: 14px 0 0;
+}
+
+/* the link to the post on Facebook: a target of at least 24 px (#413, WCAG 2.5.8) */
+.apost-fb {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding-block: 2px;
 }

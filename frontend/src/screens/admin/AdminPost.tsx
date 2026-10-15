@@ -7,7 +7,7 @@
 // reports first, then the record, #392), leave out (#286), remove from the list (#402), retry
 // (#139), correct a field from a report (#395) and remove a correction (#394). A write answers the
 // post's fresh detail; "changed" reloads it and says so: nothing is retried behind the admin's back.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../api'
 import { adminApi } from '../../admin/api'
 import type { Correction, Detail } from '../../admin/types'
@@ -15,7 +15,7 @@ import { MARK_WORDS, SOURCE_WORDS, valueWords } from '../../admin/words'
 import { Carousel } from '../../components/Carousel'
 import { israelTime, phoneLabel } from '../../format'
 import type { AreaGroup } from '../../types'
-import { ReasonChip, useLoad, Waiting, when } from './ui'
+import { Announce, ReasonChip, useLoad, Waiting, when } from './ui'
 import { ValueForm } from './ValueForm'
 
 const STATUS_WORDS = { open: 'פתוח', left_out: 'הושאר בחוץ', restored: 'שוחזר' } as const
@@ -70,7 +70,19 @@ function PostDetail({
   const [notice, setNotice] = useState<Notice>(null)
   const [correcting, setCorrecting] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const announce = useRef<HTMLDivElement>(null)
   useEffect(() => setPost(loaded), [loaded])
+
+  /** Where the focus goes after a write (#408, #411): the message, or the field's "תיקון" button
+   * the correction form was opened from. */
+  const focusAfter = (target: 'message' | string) =>
+    requestAnimationFrame(() => {
+      const element =
+        target === 'message'
+          ? announce.current
+          : document.querySelector<HTMLButtonElement>(`button[aria-label="תיקון ${target}"]`)
+      element?.focus()
+    })
 
   const life = post.lifecycle
   const resolvable = post.reports.filter((r) => r.status === 'open' || r.status === 'left_out')
@@ -88,7 +100,12 @@ function PostDetail({
 
   /** A write: the answer is the post's fresh detail (or none: then it is read again); "changed"
    * reads it again and says so. */
-  const run = (write: () => Promise<Detail | null>, done: string, onError?: (text: string) => void) => {
+  const run = (
+    write: () => Promise<Detail | null>,
+    done: string,
+    onError?: (text: string) => void,
+    focus: 'message' | string = 'message',
+  ) => {
     setBusy(true)
     setNotice(null)
     write()
@@ -97,6 +114,7 @@ function PostDetail({
         else void refresh()
         setNotice({ kind: 'ok', text: done })
         setCorrecting(null)
+        focusAfter(focus)
       })
       .catch((error) => {
         const text = problem(error)
@@ -135,13 +153,14 @@ function PostDetail({
     run(() => adminApi.removeCorrection(correction.correction_id, post.version), 'התיקון הוסר.')
   }
 
-  const correct = (field: string, value: unknown) => {
+  const correct = (field: string, label: string, value: unknown) => {
     if (!reportFor) return
     setFormError(null)
     run(
       () => adminApi.correct(post.id, field, value, reportFor.report_id, post.version),
       'התיקון נשמר. המודעה נשארת כפי שהיא עד שתשחזרו אותה.',
       setFormError,
+      label,
     )
   }
 
@@ -250,11 +269,7 @@ function PostDetail({
               </button>
             )}
           </div>
-          {notice && (
-            <p className={notice.kind === 'ok' ? 'formok' : 'formerror'} role={notice.kind === 'ok' ? 'status' : 'alert'}>
-              {notice.text}
-            </p>
-          )}
+          <Announce ref={announce} message={notice && { ok: notice.kind === 'ok', text: notice.text }} />
         </section>
 
         {post.reports.length > 0 && (
@@ -298,10 +313,11 @@ function PostDetail({
                 names={names}
                 busy={busy}
                 error={formError}
-                onSubmit={(value) => correct(editing.field, value)}
+                onSubmit={(value) => correct(editing.field, editing.label, value)}
                 onCancel={() => {
                   setCorrecting(null)
                   setFormError(null)
+                  focusAfter(editing.label)
                 }}
               />
             )}
@@ -438,8 +454,8 @@ function PostDetail({
 
 function problem(error: unknown): string {
   if (error instanceof ApiError && error.refusal === 'invalid_value') {
-    const detail = typeof error.detail === 'string' ? error.detail : ''
-    return `הערך לא תקין${detail ? `: ${detail}` : '.'}`
+    // the server names the rule in plain Hebrew (#410)
+    return typeof error.detail === 'string' && error.detail ? error.detail : 'הערך לא תקין.'
   }
   if (error instanceof ApiError && error.refusal) return REFUSALS[error.refusal] ?? 'הפעולה נדחתה.'
   return 'הפעולה לא נשמרה. בדקו את החיבור ונסו שוב.'

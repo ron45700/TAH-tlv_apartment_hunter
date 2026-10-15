@@ -6757,3 +6757,81 @@ Everything below lands in a dated copy of the store; a new `--copy` starts again
 
 STOP. For Ron: the walkthrough above; points 77–83; rounds 20–21's deviations. Then 3.8 closes, and 3.9 (serving on the
 tailnet) is planned.
+
+## 2026-10-15 (continued) — Phase 3, round 22: #407–#414; 3.8's points 78–83 built
+
+**Git:** read-only only (`git status`). No paid call, no model call, nothing installed. **The production store was opened
+read-only only** (one online backup from a `mode=ro` connection into the scratchpad, `r22.sqlite3`, kept; round 21's deleted);
+SHA-256 `5df9bc9a…a77ac` at the start, after the backup and at the end. Network: 127.0.0.1 only; the scratch server is stopped.
+
+### A. Recorded
+
+`DECISIONS.md` **#407** (77: no design critique for 3.8), **#408–#413** (78–83 as recommended; 82 "named by its post"), **#414**
+(round 21's deviation 1 accepted: a correction on any field of a reported post).
+
+### B. Built (`PHASE_3.md` 3.8, "Round 22")
+
+- `tlv_hunter/web/admin_writes.py`: `Invalid`, `RULE_WORDS`, `invalid_words` (80); `web/admin.py` answers `Invalid` 422 with the
+  Hebrew sentence.
+- `frontend/src/screens/admin/ui.tsx` `Announce` (79, 81); `AdminPost.tsx` (focus after a write, the form's return, the error
+  shown as sent); `ValueForm.tsx` (into view, focus on its heading, the error region always present); `PostRows.tsx` (the
+  announcer, focus after a restore, the restore button's name, the flag action's heading an h2); `Accounts.tsx` (the users
+  page's announcer); `admin/words.ts` `restoreLabel` (82); `styles/admin.css` (`.announce`, `.apost-fb` 24 px).
+- **Tests:** `tests/test_web_admin_writes.py` (the invalid-value test: 8 rules in Hebrew, was 5 cases); `words.test.ts` +1.
+
+### Verified
+
+`uv run pytest`: **1944 passed** (1941 + 3). `ruff check`: all checks passed; `ruff format --check`: 204 files formatted. `npm
+test`: **84 passed**; `npm run build` clean. **Chrome** on the fresh copy: each of 78–83 measured (`PHASE_3.md`, "Round 22");
+Lighthouse accessibility 100 on the detail with the form open, the flags page with a flag action, the users and reports pages,
+desktop and mobile (the flags page was 98 for its heading order before the fix); no sideways scroll at 390 on any admin page.
+
+### Not verified
+
+A real phone; a screen reader's actual announcements (the live regions are in the accessibility tree; no screen reader run).
+
+### Deviations
+
+None beyond the heading-order fix, a bug found while measuring.
+
+### BACKLOG and CLAUDE.md
+
+BACKLOG: "Last updated"; the round's line; item 6 (points decided and built; Ron tries the pages). `CLAUDE.md`: the status
+paragraph.
+
+### Ron's walkthrough (steps 1–11), unchanged from round 21
+
+Everything below lands in a dated copy of the store; a new `--copy` starts again from the store (#331).
+
+1. **Start the site.** In a terminal: `cd frontend`, `npm run build`, `cd ..`, then `uv run python -m
+   tlv_hunter.jobs.serve --copy`. Open `http://127.0.0.1:8000/` in Chrome.
+2. **Sign in as the admin.** "התחבר" (top right), your username and password, "התחברות".
+3. **Open the admin's pages.** Click your name (top right) → "ניהול". The overview lists the counts.
+4. **The rejected list.** In the rail on the right, "נדחו": 87 posts, a chip per reason above them; click "עיר אחרת" to
+   filter, "הכל" to clear. Click a row: the post's detail (photos, the text, every field, the model's value beside what
+   users see). "חזרה" (top of the detail) returns.
+5. **Issue a code.** Rail → "קודי הזמנה". Type a label (for example "בדיקה"), "יצירת קוד הזמנה", then "העתקה". The code
+   is shown only now.
+6. **Sign a second account up.** Open a second Chrome profile, or a private window (Ctrl+Shift+N), at
+   `http://127.0.0.1:8000/sign-up`. Paste the code into "קוד הזמנה", a username (for example `friend1`), a password of 8+
+   characters twice, "הרשמה". You land on the list, signed in as the friend. Keep this window open.
+7. **Flag and restore.** In the friend's window, on any card: "דיווח" (the card's bottom) → "המודעה משקרת" → "כן, המודעה
+   משקרת". The card leaves the list. In your window: rail → "סומנו כמשקרות": the friend's flag. Click "שחזור", confirm
+   ("OK"). In the friend's window, reload: the card is back (a few seconds).
+8. **Report → correct → restore.** In the friend's window, on another card: "דיווח" → "סיווג שגוי"; tick a field (for
+   example "מספר חדרים"), a note if you like, "שליחת הדיווח". In your window: rail → "דיווחים": the report under its
+   field; click the row. In the table "הסיווג, שדה אחרי שדה", click "תיקון" on that field's row; the form opens at the top of
+   the table: pick "כתוב במודעה", type the right value, "שמירת התיקון". The row now shows "תוקן ביד", and the blue line
+   above says what a restore would leave. Click "שחזור" (top), confirm. In the friend's window, open that card: the
+   corrected value.
+9. **Leave out → restore later.** In the friend's window, report a third card ("סיווג שגוי", any field). In your window:
+   "דיווחים" → the row → "השארה בחוץ", confirm: the post stays off the list. Rail → "דיווחים" → tab "הושארו בחוץ": it
+   is there. Click the row → "שחזור", confirm: the post returns.
+10. **Disable and enable.** Rail → "משתמשים": the friend's row → "השבתה", confirm. In the friend's window, reload: signed
+    out, and signing in answers that the account is disabled. Back in your window: "הפעלה". The friend can sign in again.
+11. **What's kept.** Rail → "דיווחים" → tab "שוחזרו": the two reports; rail → "תיקונים": the correction in force (its
+    "הסרה" is on the post's detail).
+
+### Next
+
+STOP. For Ron: the walkthrough above. Then 3.8 closes, and 3.9 (serving on the tailnet) is planned.

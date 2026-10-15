@@ -2,7 +2,7 @@
 // field first asks its state (written, not stated, unclear), then the value; a closed list is a set
 // of radio buttons; the areas are 3.7's area picker; the phones' names one box per phone of the
 // post. The server checks the value by its Gate B type and as the whole post (#284, #405).
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { CHOICES, KINDS, draftOf, isMarked, valueOf, type Draft, type MarkedState } from '../../admin/values'
 import { AreaPicker } from '../../components/fields'
 import type { AreaGroup } from '../../types'
@@ -37,10 +37,19 @@ export function ValueForm({ field, label, value, phones, groups, names, busy, er
     if (result !== null) onSubmit(result)
   }
   const id = `vf-${field}`
+  const form = useRef<HTMLFormElement>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
+  // Opened from a row far below, the form comes into view and takes the focus (#408).
+  useEffect(() => {
+    form.current?.scrollIntoView({ block: 'start' })
+    heading.current?.focus({ preventScroll: true })
+  }, [])
 
   return (
-    <form className="valueform" onSubmit={submit} aria-labelledby={`${id}-title`}>
-      <h3 id={`${id}-title`}>תיקון: {label}</h3>
+    <form ref={form} className="valueform" onSubmit={submit} aria-labelledby={`${id}-title`}>
+      <h3 id={`${id}-title`} ref={heading} tabIndex={-1}>
+        תיקון: {label}
+      </h3>
       {kind === 'enum' && (
         <Radios
           name={`${id}-choice`}
@@ -89,11 +98,9 @@ export function ValueForm({ field, label, value, phones, groups, names, busy, er
             </Labelled>
           ))
         ))}
-      {error && (
-        <p className="formerror" role="alert">
-          {error}
-        </p>
-      )}
+      <p className={error ? 'formerror' : undefined} role="alert">
+        {error}
+      </p>
       <div className="valueform-actions">
         <button type="submit" className="mainbtn" disabled={busy || result === null}>
           שמירת התיקון

@@ -1,6 +1,6 @@
 // The admin's shared pieces (3.8 (c)): the reason chip, a post's row, a load that waits out the
 // site's first grouping (#380), and a link inside the site.
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
+import { forwardRef, useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { ApiError } from '../../api'
 import type { Row } from '../../admin/types'
 import { REASON_FAMILY } from '../../admin/words'
@@ -120,3 +120,26 @@ export function PostRow({ row, now, children }: { row: Row; now: Date; children?
     </li>
   )
 }
+
+export interface Message {
+  ok: boolean
+  text: string
+}
+
+/** Where the admin's pages say what a write did (#409, #411): a polite status and an alert, both in
+ * the page before anything fills them, so a screen reader announces each message. The box takes
+ * the focus after a write that removed the button pressed (a restore, a leave-out). */
+export const Announce = forwardRef<HTMLDivElement, { message: Message | null }>(function Announce({ message }, ref) {
+  const ok = message?.ok ? message.text : ''
+  const error = message && !message.ok ? message.text : ''
+  return (
+    <div ref={ref} className="announce" tabIndex={-1}>
+      <p role="status" className={ok ? 'formok' : undefined}>
+        {ok}
+      </p>
+      <p role="alert" className={error ? 'formerror' : undefined}>
+        {error}
+      </p>
+    </div>
+  )
+})

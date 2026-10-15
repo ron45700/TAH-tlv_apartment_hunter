@@ -300,22 +300,28 @@ def test_every_field_can_be_corrected_by_its_gate_b_type(
 
 
 @pytest.mark.parametrize(
-    ("field", "value"),
+    ("field", "value", "words"),
     [
-        ("rooms", {"state": "written", "value": None}),
-        ("rooms", {"state": "written", "value": 3.3}),
-        ("areas", [99]),
-        ("price", {"state": "written", "value": []}),
-        ("gender", "men_only"),
+        ("rooms", {"state": "written", "value": None}, "כשהערך כתוב במודעה צריך למלא אותו"),
+        ("rooms", {"state": "written", "value": 3.3}, "מספר החדרים הוא מספר חיובי בקפיצות של חצי"),
+        ("areas", [99], "אזור: רק מתוך 71 האזורים"),
+        ("areas", [31, 30], "אזור: כל אזור פעם אחת"),
+        ("price", {"state": "written", "value": []}, "מחיר שכתוב במודעה צריך לפחות סכום אחד"),
+        ("price", {"state": "written", "value": [0]}, "כל סכום במחיר גדול מ-0"),
+        ("phone_names", [{"phone": "054-123", "name": "דנה"}], "טלפון: רק מספר מהטלפונים"),
+        ("gender", "men_only", 'הערך לא מתאים לשדה "נשים בלבד או עדיפות לבנות"'),
     ],
 )
-def test_a_value_that_breaks_gate_b_is_422_and_nothing_is_written(
-    ron: TestClient, store: AdminStore, field: str, value: Any
+def test_a_value_that_breaks_gate_b_is_422_in_plain_hebrew_and_nothing_is_written(
+    ron: TestClient, store: AdminStore, field: str, value: Any, words: str
 ) -> None:
     made = report(store, store.active, [field])
     before = store.db.read_bytes()
     answer = correct(ron, store.active, field, value, made.report_id)
     assert answer.status_code == 422 and answer.json()["refusal"] == "invalid_value"
+    detail = answer.json()["detail"]
+    assert detail.startswith(words), detail  # the rule in Hebrew (#410)
+    assert "bar" not in detail and "Value error" not in detail and "rooms" not in detail
     assert store.db.read_bytes() == before
 
 

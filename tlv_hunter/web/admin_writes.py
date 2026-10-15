@@ -38,12 +38,51 @@ from tlv_hunter.postmodel.seen import seen_listing
 from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.base import CorrectionInForce, UserDataStore
+from tlv_hunter.web.writes import REPORT_LABELS
 
 RESOLVABLE = ("open", "left_out")
 
 
 class Changed(Exception):
     """The post changed since the page read it (another `version`, or another writer)."""
+
+
+class Invalid(Exception):
+    """A corrected value that breaks Gate B; `words` says which rule, in plain Hebrew (#410)."""
+
+    def __init__(self, words: str) -> None:
+        super().__init__(words)
+        self.words = words
+
+
+# Gate B's rules as the admin reads them (#410): each validator's own message
+# (`contracts/listing.py`) and the words shown for it. A value that breaks no rule named here is
+# "not of the field's type".
+RULE_WORDS: tuple[tuple[str, str], ...] = (
+    (
+        "value is set exactly when state is 'written'",
+        "כשהערך כתוב במודעה צריך למלא אותו; כשלא צוין או לא ברור, בלי ערך.",
+    ),
+    (
+        "rooms is a positive multiple of 0.5",
+        "מספר החדרים הוא מספר חיובי בקפיצות של חצי, למשל 2 או 2.5.",
+    ),
+    ("areas are municipal numbers 1-71", "אזור: רק מתוך 71 האזורים שברשימה."),
+    ("areas are sorted with no repeats", "אזור: כל אזור פעם אחת."),
+    ("a written price holds at least one amount", "מחיר שכתוב במודעה צריך לפחות סכום אחד."),
+    ("prices are greater than 0", "כל סכום במחיר גדול מ-0."),
+    ("phone must be in the stored format", "טלפון: רק מספר מהטלפונים של המודעה."),
+)
+
+
+def invalid_words(field: ReportableField, error: Exception) -> str:
+    """The words for a value Gate B refuses: the rule it breaks, else that it does not fit the
+    field. Never the validator's own text, which is English and technical (#410)."""
+    text = str(error)
+    for rule, words in RULE_WORDS:
+        if rule in text:
+            return words
+    return f'הערך לא מתאים לשדה "{REPORT_LABELS[field]}".'
 
 
 class Refused(Exception):
@@ -257,22 +296,25 @@ def correct(
     report = next((r for r in state.reports if r.report_id == report_id), None)
     if report is None or report.status not in RESOLVABLE:
         raise Refused("no_report")
-    correction = FieldCorrection(
-        schema_version=FIELD_CORRECTION_SCHEMA_VERSION,
-        correction_id=new_opaque_id(),
-        listing_id=listing_id,
-        field=field,
-        model_value=_plain(getattr(state.listing, field)),
-        corrected_value=corrected_value,
-        corrected_by=admin_id,
-        corrected_at=now,
-        report_id=report_id,
-        removed_by=None,
-        removed_at=None,
-    )
     old = next((c for c in state.in_force if c.field == field), None)
     others = [c for c in state.in_force if c.field != field]
-    seen_listing(state.listing, [*others, correction])  # the whole post still a valid `Listing`
+    try:
+        correction = FieldCorrection(
+            schema_version=FIELD_CORRECTION_SCHEMA_VERSION,
+            correction_id=new_opaque_id(),
+            listing_id=listing_id,
+            field=field,
+            model_value=_plain(getattr(state.listing, field)),
+            corrected_value=corrected_value,
+            corrected_by=admin_id,
+            corrected_at=now,
+            report_id=report_id,
+            removed_by=None,
+            removed_at=None,
+        )
+        seen_listing(state.listing, [*others, correction])  # the whole post still a valid `Listing`
+    except ValueError as error:  # pydantic's ValidationError included
+        raise Invalid(invalid_words(field, error)) from None
     if old is not None:
         removed = _changed(old, removed_by=admin_id, removed_at=now)
         try:
