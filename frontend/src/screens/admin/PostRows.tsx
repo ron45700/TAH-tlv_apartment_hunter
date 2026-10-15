@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminApi } from '../../admin/api'
 import type { ListName, Reason, Row } from '../../admin/types'
 import { REASON_FAMILY, REASON_NAMES, REASON_ORDER, flagActions } from '../../admin/words'
-import { PAGE, firstLoad, nextIds, withPage, type Loaded } from '../../paging'
+import { ApiError } from '../../api'
+import { PAGE, firstLoad, nextIds, withPage, withoutCard, type Loaded } from '../../paging'
 import { PostRow, useLoad, Waiting, when } from './ui'
 
 const RETRY_MS = 2000
@@ -24,10 +25,12 @@ const LEADS: Record<ListName, string> = {
   flags: 'מודעות שמשתמשים סימנו כמשקרות, לפי המשתמש ולפי הסימון. סימון אחד על מודעה שפורסמה כמה פעמים חל על כל הפרסומים.',
 }
 
-export function PostRows({ list, now }: { list: ListName; now: Date }) {
+export function PostRows({ list, now, onChanged }: { list: ListName; now: Date; onChanged: () => void }) {
   const [reason, setReason] = useState<Reason | null>(null)
   const [loaded, setLoaded] = useState<Loaded<Row> | null>(null)
   const [reasons, setReasons] = useState<Partial<Record<Reason, number>>>({})
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
   const [load] = useLoad((signal) => adminApi.rows(list, reason, PAGE, signal), `${list}:${reason ?? ''}`)
 
   useEffect(() => {
@@ -67,6 +70,32 @@ export function PostRows({ list, now }: { list: ListName; now: Date }) {
     return () => observer.disconnect()
   }, [loaded, more, retries])
 
+  /** A flag action's posts restored together (#393), each by its own compare and set: the
+   * restored rows leave the list in place; a post that changed meanwhile stays, and the page says so. */
+  const restoreRows = (rows: Row[]) => {
+    const words = rows.length === 1 ? 'את המודעה' : `את ${rows.length} הפרסומים`
+    if (!window.confirm(`לשחזר ${words}? הסימון יוסר, והמצב יחושב מחדש מהסיווג.`)) return
+    setBusy(true)
+    setNotice(null)
+    adminApi
+      .restore(rows.map((row) => ({ listing_id: row.id, version: row.version })))
+      .then(({ results }) => {
+        const restored = results.filter((r) => r.outcome === 'restored').map((r) => r.listing_id)
+        setLoaded((current) => restored.reduce((acc, id) => (acc ? withoutCard(acc, id) : acc), current))
+        const left = results.length - restored.length
+        setNotice(
+          left === 0
+            ? { ok: true, text: restored.length === 1 ? 'המודעה שוחזרה.' : `${restored.length} פרסומים שוחזרו.` }
+            : { ok: false, text: `שוחזרו ${restored.length} מתוך ${results.length}: השאר השתנו בינתיים. רעננו את הדף ונסו שוב.` },
+        )
+        onChanged()
+      })
+      .catch((error) =>
+        setNotice({ ok: false, text: error instanceof ApiError ? 'השחזור נדחה.' : 'השחזור לא נשמר. בדקו את החיבור ונסו שוב.' }),
+      )
+      .finally(() => setBusy(false))
+  }
+
   const total = Object.values(reasons).reduce((sum, n) => sum + (n ?? 0), 0)
   return (
     <>
@@ -89,6 +118,11 @@ export function PostRows({ list, now }: { list: ListName; now: Date }) {
           ))}
         </div>
       )}
+      {notice && (
+        <p className={notice.ok ? 'formok' : 'formerror'} role={notice.ok ? 'status' : 'alert'}>
+          {notice.text}
+        </p>
+      )}
       <Waiting load={load}>
         {() =>
           !loaded ? (
@@ -98,7 +132,11 @@ export function PostRows({ list, now }: { list: ListName; now: Date }) {
           ) : (
             <>
               <p className="adm-count">{loaded.count === 1 ? 'מודעה אחת' : `${loaded.count} מודעות`}</p>
-              {list === 'flags' ? <Flags rows={loaded.cards} now={now} /> : <Rows rows={loaded.cards} now={now} />}
+              {list === 'flags' ? (
+                <Flags rows={loaded.cards} now={now} busy={busy} onRestore={restoreRows} />
+              ) : (
+                <Rows rows={loaded.cards} now={now} />
+              )}
               {loaded.next < loaded.order.length && <div ref={sentinel} className="sentinel" aria-hidden="true" />}
             </>
           )
@@ -118,7 +156,17 @@ function Rows({ rows, now }: { rows: Row[]; now: Date }) {
   )
 }
 
-function Flags({ rows, now }: { rows: Row[]; now: Date }) {
+function Flags({
+  rows,
+  now,
+  busy,
+  onRestore,
+}: {
+  rows: Row[]
+  now: Date
+  busy: boolean
+  onRestore: (rows: Row[]) => void
+}) {
   return (
     <>
       {flagActions(rows).map((action) => (
@@ -128,6 +176,14 @@ function Flags({ rows, now }: { rows: Row[]; now: Date }) {
             {action.rows.length === 1 ? 'מודעה אחת' : `${action.rows.length} פרסומים של אותה מודעה`}
             <span className="flagaction-time">{when(action.flag.at, now)}</span>
           </h3>
+          <button
+            type="button"
+            className="barbtn flagaction-restore"
+            disabled={busy}
+            onClick={() => onRestore(action.rows)}
+          >
+            {action.rows.length === 1 ? 'שחזור' : `שחזור ${action.rows.length} הפרסומים`}
+          </button>
           {action.flag.note && (
             <p className="flagaction-note" dir="auto">
               {action.flag.note}

@@ -12,6 +12,7 @@ import type {
   ReportStatus,
   ReportsAnswer,
   RowsAnswer,
+  RestoreResult,
   RowsPage,
   Summary,
 } from './types'
@@ -33,6 +34,24 @@ export const adminApi = {
     call<ReportsAnswer>('GET', `/api/admin/reports?status=${status}`, undefined, signal),
   corrections: (inForce: boolean, signal?: AbortSignal) =>
     call<{ in_force: boolean; corrections: Correction[] }>('GET', `/api/admin/corrections?in_force=${inForce}`, undefined, signal),
+  // Build steps 4 and 5: each write sends the `version` the page showed (#391) and answers the
+  // post's fresh detail; 409 "changed" when the post changed meanwhile.
+  retry: (id: string, version: string) => call<Detail>('POST', `/api/admin/retry/${enc(id)}`, { version }),
+  restore: (posts: { listing_id: string; version: string }[]) =>
+    call<{ results: RestoreResult[] }>('POST', '/api/admin/restore', { posts }),
+  leaveOut: (id: string, version: string) => call<Detail>('POST', `/api/admin/leave-out/${enc(id)}`, { version }),
+  applyReports: (id: string, version: string) =>
+    call<Detail>('POST', `/api/admin/apply-reports/${enc(id)}`, { version }),
+  correct: (id: string, field: string, correctedValue: unknown, reportId: string, version: string) =>
+    call<Detail>('POST', '/api/admin/corrections', {
+      listing_id: id,
+      field,
+      corrected_value: correctedValue,
+      report_id: reportId,
+      version,
+    }),
+  removeCorrection: (correctionId: string, version: string) =>
+    call<Detail>('POST', `/api/admin/corrections/${enc(correctionId)}/remove`, { version }),
   keys: () => call<{ keys: Key[] }>('GET', '/api/admin/keys'),
   /** The key is in this answer only (#266). */
   issueKey: (label: string) => call<Key & { key: string }>('POST', '/api/admin/keys', { label }),

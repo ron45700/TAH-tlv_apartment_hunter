@@ -24,6 +24,7 @@ function row(id: string, by: string | null, at: string | null): Row {
     flag: by === null ? null : { by, at, note: null },
     listing: null,
     corrected: [],
+    version: `v-${id}`,
   }
 }
 

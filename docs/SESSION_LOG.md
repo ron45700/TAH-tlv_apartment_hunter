@@ -6663,3 +6663,97 @@ and the formatters, not `PostView`; "קוד הזמנה" on the pages; `correctio
 
 STOP. For Ron: try the admin's pages on a fresh `serve --copy` (BACKLOG item 6) and read round 20's seven deviations. Then
 the go for 3.8's step 4 (the post writes: retry, restore, leave out, the `version`).
+
+## 2026-10-15 (continued) — Phase 3, round 21: 3.8's build steps 4–6 (the post writes, corrections, the DoD 5 walk)
+
+**Git:** read-only only (`git status`; round 20 committed by Ron). No paid call, no model call, nothing installed. **The
+production store was opened read-only only** (one online backup from a `mode=ro` connection into this session's scratchpad,
+`r21.sqlite3`, kept there; round 20's `r20.sqlite3` deleted); SHA-256 `5df9bc9a…a77ac` at the start, after the backup and at
+the end. Network: 127.0.0.1 only; the scratch server is stopped. Every write of the walk went to the scratch copy only.
+
+### A. Built (`PHASE_3.md` 3.8, "Round 21")
+
+- **Step 4:** `tlv_hunter/web/admin_writes.py` (new: `post_version`, `read_state`, `retry`, `restore`, `restore_many`,
+  `leave_out`, `apply_reports`, `correct`, `remove_correction`); `web/admin.py` (`version` on rows and the detail; `POST
+  retry/{id}`, `restore`, `leave-out/{id}`, `apply-reports/{id}`; the detail moved into `_detail`, a write answering it).
+- **Step 5:** `POST corrections`, `POST corrections/{id}/remove`; `frontend/src/admin/values.ts`,
+  `screens/admin/ValueForm.tsx` (new); `AdminPost.tsx` (the actions, the field table's "תיקון", the corrections' "הסרה"),
+  `PostRows.tsx` (restore per flag action), `admin/api.ts`, `admin/types.ts`, `Admin.tsx` and `App.tsx` (the area groups
+  passed in), `styles/admin.css`.
+- **Tests:** `tests/test_web_admin_writes.py` (new, 50); `frontend/src/admin/values.test.ts` (new, 28).
+
+### B. Step 6, the check
+
+The DoD 5 walk through the pages, an admin and a friend (`friend21`, signed up with a code from the codes page) in two
+browser contexts: **a flag → restore** (the flags page's flag action); **a report → correct → restore** (rooms "לא צוין" →
+2.5; the friend then saw 2.5, marked corrected); **a report → leave out → restore later** (from the left-out tab). At the end
+two reports restored and kept, the correction in force, all three posts back on the friend's list. Lighthouse accessibility
+100 on every page measured (the detail with the value form open included), desktop and mobile; no sideways scroll at 390 on
+any admin page after the fix below. **Fixed during the check:** a long unbroken text widened the phone's page (699 px), and a
+restore's notice was lost when the detail re-mounted. **The design plugin's critique and accessibility review could not be
+invoked** (no `design:` skills in this session); the accessibility review was made with `ecc:accessibility` (WCAG 2.2) and
+measurements: points 78–83. Nothing the review raised was changed.
+
+### Verified
+
+`uv run pytest`: **1941 passed** (1891 + 50; 3 h 34 min of wall time: the laptop slept, and the scratch server died with it
+and was started again on the same copy). `ruff check`: all checks passed; `ruff format --check`: 204 files formatted. `npm
+test`: **83 passed** (55 + 28); `npm run build` clean.
+
+### Not verified
+
+A real phone; screen readers; the admin's lists on a 40-day store.
+
+### Deviations
+
+Four, in `PHASE_3.md` 3.8 "Round 21": a correction on any field of a reported post (the report the earliest open or left-out
+one); a restore of a post whose report never removed it marks the reports only; "השארה בחוץ" only while the post is off the
+list; a row's `version` from the snapshot's record.
+
+### New points for Ron
+
+77 (the design critique not run), 78 (focus when the value form opens), 79 (the notices' live region), 80 (the correction
+error in Hebrew), 81 (focus after a write), 82 (the flags page's button names), 83 (the Facebook link's height).
+
+### BACKLOG and CLAUDE.md
+
+BACKLOG: "Last updated"; the round's line; item 6 (all six steps built; Ron tries the pages; points 77–83); the restore, report
+and corrections rows. `CLAUDE.md`: the status paragraph (round 21) and the `web/` paragraph (`admin_writes.py`).
+
+### Ron's walkthrough (steps 1–6), in order
+
+Everything below lands in a dated copy of the store; a new `--copy` starts again from the store (#331).
+
+1. **Start the site.** In a terminal: `cd frontend`, `npm run build`, `cd ..`, then `uv run python -m
+   tlv_hunter.jobs.serve --copy`. Open `http://127.0.0.1:8000/` in Chrome.
+2. **Sign in as the admin.** "התחבר" (top right), your username and password, "התחברות".
+3. **Open the admin's pages.** Click your name (top right) → "ניהול". The overview lists the counts.
+4. **The rejected list.** In the rail on the right, "נדחו": 87 posts, a chip per reason above them; click "עיר אחרת" to
+   filter, "הכל" to clear. Click a row: the post's detail (photos, the text, every field, the model's value beside what
+   users see). "חזרה" (top of the detail) returns.
+5. **Issue a code.** Rail → "קודי הזמנה". Type a label (for example "בדיקה"), "יצירת קוד הזמנה", then "העתקה". The code
+   is shown only now.
+6. **Sign a second account up.** Open a second Chrome profile, or a private window (Ctrl+Shift+N), at
+   `http://127.0.0.1:8000/sign-up`. Paste the code into "קוד הזמנה", a username (for example `friend1`), a password of 8+
+   characters twice, "הרשמה". You land on the list, signed in as the friend. Keep this window open.
+7. **Flag and restore.** In the friend's window, on any card: "דיווח" (the card's bottom) → "המודעה משקרת" → "כן, המודעה
+   משקרת". The card leaves the list. In your window: rail → "סומנו כמשקרות": the friend's flag. Click "שחזור", confirm
+   ("OK"). In the friend's window, reload: the card is back (a few seconds).
+8. **Report → correct → restore.** In the friend's window, on another card: "דיווח" → "סיווג שגוי"; tick a field (for
+   example "מספר חדרים"), a note if you like, "שליחת הדיווח". In your window: rail → "דיווחים": the report under its
+   field; click the row. In the table "הסיווג, שדה אחרי שדה", click "תיקון" on that field's row; the form opens at the top of
+   the table: pick "כתוב במודעה", type the right value, "שמירת התיקון". The row now shows "תוקן ביד", and the blue line
+   above says what a restore would leave. Click "שחזור" (top), confirm. In the friend's window, open that card: the
+   corrected value.
+9. **Leave out → restore later.** In the friend's window, report a third card ("סיווג שגוי", any field). In your window:
+   "דיווחים" → the row → "השארה בחוץ", confirm: the post stays off the list. Rail → "דיווחים" → tab "הושארו בחוץ": it
+   is there. Click the row → "שחזור", confirm: the post returns.
+10. **Disable and enable.** Rail → "משתמשים": the friend's row → "השבתה", confirm. In the friend's window, reload: signed
+    out, and signing in answers that the account is disabled. Back in your window: "הפעלה". The friend can sign in again.
+11. **What's kept.** Rail → "דיווחים" → tab "שוחזרו": the two reports; rail → "תיקונים": the correction in force (its
+    "הסרה" is on the post's detail).
+
+### Next
+
+STOP. For Ron: the walkthrough above; points 77–83; rounds 20–21's deviations. Then 3.8 closes, and 3.9 (serving on the
+tailnet) is planned.

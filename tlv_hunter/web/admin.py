@@ -18,13 +18,20 @@ cancelled (#243); a user's password is reset to a temporary one (#262, #263), a 
 enabled (#265, #291). A user is named by username in the address: `user_id` is never shown (Gate
 C). The admin's own row takes no reset and no disable (R8).
 
-**Until 3.9 every write lands in the site's dated copy (#331, #400).** No admin route writes a
-`RawPost`, a `Listing` or a `PostLifecycle` in these steps (the post writes are step 4's).
+**Build steps 4 and 5, the post writes** (`admin_writes.py`): retry, restore, leave out, remove
+from the list, correct and remove a correction, each against the `version` the page showed (#391)
+and by compare and set (#260). Every row and the detail carry that `version`; a write answers the
+post's fresh detail. A post the site itself removes from the list (a report applied) leaves every
+answer at once by the grouping's overlay (#379); a restored or corrected post follows at the next
+background recompute. Never a `RawPost` or a `Listing`.
+
+**Until 3.9 every write lands in the site's dated copy (#331, #400).**
 """
 
+import json
 from collections import Counter, defaultdict
 from collections.abc import Callable, Mapping
-from typing import Annotated, Literal, get_args
+from typing import Annotated, Any, Literal, get_args
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
@@ -37,6 +44,7 @@ from tlv_hunter.dedup.stage_b import OtherPost
 from tlv_hunter.postmodel.rejects import ReportMark, report_marks, restored_lifecycle
 from tlv_hunter.postmodel.seen import seen_listing
 from tlv_hunter.store.base import StaleRecordError
+from tlv_hunter.web import admin_writes
 from tlv_hunter.web.admin_rows import (
     ListItem,
     correction_json,
@@ -100,6 +108,27 @@ class KeyBody(_Body):
 
 class TemporaryPasswordBody(_Body):
     temporary_password: str
+
+
+class VersionBody(_Body):
+    version: str
+
+
+class RestoreItem(_Body):
+    listing_id: str
+    version: str
+
+
+class RestoreBody(_Body):
+    posts: Annotated[list[RestoreItem], Field(min_length=1, max_length=MOST_BY_ID)]
+
+
+class CorrectionBody(_Body):
+    listing_id: str
+    field: ReportableField
+    corrected_value: Any
+    report_id: str
+    version: str
 
 
 def _admin(request: Request, site: Site) -> tuple[User, str]:
@@ -195,40 +224,10 @@ async def posts_by_id(request: Request) -> Response:
 
 @router.get("/posts/{listing_id}")
 def post(listing_id: str, request: Request) -> Response:
-    """The post's detail, read fresh from the store (3.8 (b)), never the snapshot's copy; the
-    repost log's duplicates from the snapshot."""
+    """The post's detail, read fresh from the store (3.8 (b)), never the snapshot's copy."""
     site = _site(request)
     _admin(request, site)
-    stored = site.posts.get(listing_id)
-    lifecycle = None if stored is None else site.posts.get_lifecycle(listing_id)
-    if stored is None or lifecycle is None:
-        raise HTTPException(status_code=404)
-    model = site.posts.get_listing(listing_id)
-    corrections = site.userdata.find_corrections(listing_id=listing_id, in_force=False)
-    in_force = [c for c in corrections if c.removed_at is None]
-    seen = None if model is None else seen_listing(model, in_force)
-    reports = site.userdata.find_reports(listing_id=listing_id)
-    preview = (
-        restored_lifecycle(lifecycle, stored, seen)
-        if seen is not None and lifecycle.flagged_by is not None
-        else None
-    )
-    snapshot = site.grouping.current().snapshot
-    return _json(
-        post_detail(
-            stored,
-            lifecycle,
-            model,
-            seen,
-            corrections=sorted(corrections, key=lambda c: c.corrected_at, reverse=True),
-            reports=sorted(reports, key=lambda r: r.reported_at),
-            duplicates=snapshot.duplicates.get(listing_id, ()),
-            marks=report_marks(lifecycle, reports),
-            preview=preview,
-            area_names=site.area_names,
-            usernames=_usernames(site),
-        )
-    )
+    return _json(_detail(site, listing_id))
 
 
 @router.get("/photos/{listing_id}/{file}")
@@ -311,6 +310,131 @@ def corrections(request: Request, in_force: bool = True) -> Response:
         row = None if item is None else _row(site, snapshot, item, usernames)
         entries.append({**correction_json(correction, usernames), "post": row})
     return _json({"in_force": in_force, "corrections": entries})
+
+
+# --- the post writes (build steps 4 and 5) ---
+
+
+@router.post("/retry/{listing_id}")
+async def retry(listing_id: str, request: Request) -> Response:
+    """A pending post's failure count back to 0 (Gate E, #139): the next `classify_pending` run
+    takes it."""
+    site = _site(request)
+    _admin(request, site)
+    body = await _body(request, VersionBody)
+    return _post_write(
+        site,
+        listing_id,
+        lambda: admin_writes.retry(site.posts, site.userdata, listing_id, body.version),
+    )
+
+
+@router.post("/restore")
+async def restore(request: Request) -> Response:
+    """One post, or a flag action's posts (#393), each by its own compare and set: a result per
+    post, `restored`, `changed` or `not_restorable` (#392)."""
+    site = _site(request)
+    admin, _ = _admin(request, site)
+    body = await _body(request, RestoreBody)
+    asked = [(item.listing_id, item.version) for item in body.posts]
+    now = site.clock()
+    results = admin_writes.restore_many(site.posts, site.userdata, asked, admin.user_id, now)
+    return _json(
+        {
+            "results": [
+                {
+                    "listing_id": result.listing_id,
+                    "outcome": result.outcome,
+                    "state": None if result.lifecycle is None else result.lifecycle.state,
+                }
+                for result in results
+            ]
+        }
+    )
+
+
+@router.post("/leave-out/{listing_id}")
+async def leave_out(listing_id: str, request: Request) -> Response:
+    """Every open report of the post left out (#286): the post stays rejected, kept."""
+    site = _site(request)
+    admin, _ = _admin(request, site)
+    body = await _body(request, VersionBody)
+    now = site.clock()
+    return _post_write(
+        site,
+        listing_id,
+        lambda: admin_writes.leave_out(
+            site.posts, site.userdata, listing_id, body.version, admin.user_id, now
+        ),
+    )
+
+
+@router.post("/apply-reports/{listing_id}")
+async def apply_reports(listing_id: str, request: Request) -> Response:
+    """A report stored while its post stayed on the list: the post leaves it now (#402), and every
+    answer at once by the overlay (#379)."""
+    site = _site(request)
+    _admin(request, site)
+    body = await _body(request, VersionBody)
+    response = _post_write(
+        site,
+        listing_id,
+        lambda: admin_writes.apply_reports(site.posts, site.userdata, listing_id, body.version),
+    )
+    if response.status_code == 200:
+        site.grouping.remove([listing_id])
+    return response
+
+
+@router.post("/corrections")
+async def add_correction(request: Request) -> Response:
+    """A correction made from a report (#395), checked as the whole post (#405); one in force on
+    the field is replaced (#404). 422 for a value that breaks Gate B, named."""
+    site = _site(request)
+    admin, _ = _admin(request, site)
+    body = await _body(request, CorrectionBody)
+    now = site.clock()
+    return _post_write(
+        site,
+        body.listing_id,
+        lambda: admin_writes.correct(
+            site.posts,
+            site.userdata,
+            body.listing_id,
+            body.version,
+            body.field,
+            body.corrected_value,
+            body.report_id,
+            admin.user_id,
+            now,
+        ),
+    )
+
+
+@router.post("/corrections/{correction_id}/remove")
+async def remove_correction(correction_id: str, request: Request) -> Response:
+    """A correction in force removed (#284); the post's state is not re-derived (#394)."""
+    site = _site(request)
+    admin, _ = _admin(request, site)
+    body = await _body(request, VersionBody)
+    every = site.userdata.find_corrections(in_force=False)
+    found = next((c for c in every if c.correction_id == correction_id), None)
+    if found is None:
+        raise HTTPException(status_code=404, detail="unknown_correction")
+    now = site.clock()
+    return _post_write(
+        site,
+        found.listing_id,
+        lambda: admin_writes.remove_correction(
+            site.posts,
+            site.userdata,
+            found.listing_id,
+            body.version,
+            correction_id,
+            admin.user_id,
+            now,
+        ),
+    )
 
 
 # --- keys and users (build step 3) ---
@@ -477,12 +601,69 @@ def _item(site: Site, snapshot: Snapshot, listing_id: str) -> ListItem | None:
 
 
 def _row(site: Site, snapshot: Snapshot, item: ListItem, usernames: Mapping[str, str]) -> dict:
-    return post_row(
+    """A row, with the `version` a write from it sends back (#391): its record as the snapshot
+    holds it, its reports and corrections read now."""
+    listing_id = item.listing_id
+    version = admin_writes.post_version(
+        item.lifecycle,
+        site.userdata.find_reports(listing_id=listing_id),
+        site.userdata.find_corrections(listing_id=listing_id, in_force=False),
+    )
+    row = post_row(
         item,
-        duplicates=len(snapshot.duplicates.get(item.listing_id, ())),
+        duplicates=len(snapshot.duplicates.get(listing_id, ())),
         area_names=site.area_names,
         usernames=usernames,
     )
+    return {**row, "version": version}
+
+
+def _detail(site: Site, listing_id: str) -> dict:
+    """The post's detail read fresh (3.8 (c)), with its `version` (#391) and what a restore would
+    leave now (#406)."""
+    try:
+        state = admin_writes.read_state(site.posts, site.userdata, listing_id)
+    except admin_writes.Refused:
+        raise HTTPException(status_code=404) from None
+    seen = None if state.listing is None else seen_listing(state.listing, state.in_force)
+    life = state.lifecycle
+    preview = (
+        restored_lifecycle(life, state.post, seen)
+        if seen is not None and life.flagged_by is not None
+        else None
+    )
+    snapshot = site.grouping.current().snapshot
+    detail = post_detail(
+        state.post,
+        life,
+        state.listing,
+        seen,
+        corrections=sorted(state.corrections, key=lambda c: c.corrected_at, reverse=True),
+        reports=sorted(state.reports, key=lambda r: r.reported_at),
+        duplicates=snapshot.duplicates.get(listing_id, ()),
+        marks=report_marks(life, state.reports),
+        preview=preview,
+        area_names=site.area_names,
+        usernames=_usernames(site),
+    )
+    return {**detail, "version": state.version}
+
+
+def _post_write(site: Site, listing_id: str, run: Callable[[], object]) -> Response:
+    """A post write's answer: the post's fresh detail; 409 `changed` when the post changed since
+    the page read it (#391), 409 with the reason when the write does not apply, 422 for a value
+    that breaks Gate B."""
+    try:
+        run()
+    except admin_writes.Changed:
+        return _refused_json("changed", 409)
+    except admin_writes.Refused as refusal:
+        return _refused_json(refusal.reason, 409)
+    except ValueError as error:  # pydantic's ValidationError included
+        payload = {"refusal": "invalid_value", "detail": _refusal(error)}
+        body = json.dumps(payload, ensure_ascii=False)
+        return Response(body, status_code=422, media_type="application/json")
+    return _json(_detail(site, listing_id))
 
 
 def _marks_by_post(

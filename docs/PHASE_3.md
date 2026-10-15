@@ -24,7 +24,8 @@ step 6 built: viewed, "mark as not viewed", the "lied" flag and the "wrong class
 **Rounds 14–18:** step 7 measured, then A, C, D built and measured again (both targets met). **Round 19 (2026-10-15): points
 57–59 decided (#385–#387, the scratch stores deleted); 3.7 complete (#388); 3.8's plan written.** **Round 20 (2026-10-15):
 3.8's plan and points 60–76 approved (#389–#406); 3.8's build steps 1–3 built (the admin's read API, the read pages, keys
-and users).** No code before a task's plan is approved; no paid call before its
+and users).** **Round 21 (2026-10-15): 3.8's steps 4–6 built and checked (the post writes, corrections, the DoD 5 walk);
+points 77–83 wait for Ron.** No code before a task's plan is approved; no paid call before its
 own go.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
@@ -1719,7 +1720,7 @@ one dense row under them), by #353, built in round 13.**
     touch) and the status line with "סינון (N)" is under them, as (e) describes. **Built so.** Or: the sublet switch moves
     into the sheet on a phone (one line saved), which (e) does not say.
 
-## 3.8 The admin's pages — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256); PLAN APPROVED 2026-10-15 with points 60–76 (#389–#406); build steps 1–3 BUILT (round 20)
+## 3.8 The admin's pages — content approved (`BASELINE.md` §11; #75 B, #173, #243, #251, #254–#256); PLAN APPROVED 2026-10-15 with points 60–76 (#389–#406); build steps 1–3 BUILT (round 20), 4–6 BUILT AND CHECKED (round 21); points 77–83 wait for Ron
 
 **The approved content:**
 - **Rejected,** every reason, canonicals only (#75 B), the city shown through `other_city_name` (#214).
@@ -2054,6 +2055,85 @@ No console message; every request to the site itself.
 
 **Not verified:** a real phone; the admin's lists at 40 days (S2 deleted, #387): `others` costs one more `get_listing` per
 non-member canonical in the grouping's read.
+
+### Round 21 (2026-10-15): build steps 4, 5 and 6
+
+**Built.**
+- **Step 4, the post writes.** `web/admin_writes.py` (wiring, as `writes.py`): `post_version` (SHA-256 of the post's
+  lifecycle, reports and corrections, #391), `read_state`, `retry`, `restore` and `restore_many` (the reports first, then
+  `restored_lifecycle`, #392), `leave_out`, `apply_reports` (#402); `Changed` and `Refused`. `web/admin.py`: every row and the
+  detail carry `version`; `POST retry/{id}`, `POST restore` (a result per post), `POST leave-out/{id}`, `POST
+  apply-reports/{id}` (and the overlay, #379); each write answers the post's fresh detail, 409 `changed` or the reason, 422
+  for a value. The pages: the detail's actions ("שחזור", "השלמת השחזור", "השארה בחוץ", "הסרה מהרשימה", "ניסיון סיווג
+  חוזר", each with a `confirm` where it cannot be undone) and the flags page's "שחזור" per flag action (#393).
+- **Step 5, corrections.** `admin_writes.correct` (from a report, #395; `model_value` the stored value; checked by its Gate
+  B type and as the whole post, #405; one in force replaced, the old removed first, #404) and `remove_correction` (#394);
+  `POST corrections`, `POST corrections/{id}/remove`. The value form: `frontend/src/admin/values.ts` (each field's Gate B
+  shape, both directions) and `screens/admin/ValueForm.tsx` (the state of a Marked field, then the value: radios, a number,
+  amounts, a date or "immediate", a fee or "included", 3.7's area picker, streets one per line, a city, a name per phone);
+  "תיקון" on every row of the detail's field table, "הסרה" on a correction in force (with #394's warning on `post_nature`
+  or `other_city` of an active post); the restore's preview updates after a correction (#406).
+- **Tests:** `tests/test_web_admin_writes.py` (new, 50: retry, the stale `version`, the flag action whole and partial, the
+  corrected nature, other city, archived, nothing to restore, the unfinished restore finished, leave out then restore
+  later, a report applied with the first reporter, every field corrected by its type (24 values), five values refused 422
+  with nothing written, no report, replace and remove, the users' cards follow, invariants 12 and 14, every write the
+  admin's only); `frontend/src/admin/values.test.ts` (new, 28).
+
+**Step 6, checked on a fresh scratch copy** (an online backup from a `mode=ro` connection; the store's SHA-256
+`5df9bc9a…a77ac` before and after; the copy's admin given a scratch password; every write in the copy only), through the pages
+in two browser contexts, the admin's and a friend's (`friend21`, signed up with a code issued on the codes page):
+1. **A flag → restore:** the friend flagged a card from its "דיווח" menu (it left the list at once); the admin's flags page
+   showed `friend21`'s flag action; "שחזור" restored it; the post was on the friend's list again at the next request.
+2. **A report → correct → restore:** the friend reported "מספר חדרים" with a note; the reports page grouped it under the
+   field; on the detail the admin corrected rooms from "לא צוין" to 2.5 ("תוקן ביד", the model's value kept beside), the
+   preview read "פעילה", "שחזור" made it active with its report "שוחזר"; the friend's opened post showed rooms 2.5 and the
+   field corrected.
+3. **A report → leave out → restore later:** the friend reported the price; "השארה בחוץ" left the report out and the post
+   rejected; the reports page's left-out tab held it; "שחזור" from there made it active.
+At the end: two reports restored and kept, the correction in force, nothing open, all three posts back (#255).
+**Lighthouse accessibility 100** on the detail page (desktop, and with the 79-box area form open), the detail with the price
+form open, the reports and corrections pages (mobile), the reports and corrections pages (desktop); best practices 100.
+**At 390 × 844** every admin page, four post details included, has no sideways scroll.
+
+**Fixed during the check (bugs, not design):** (1) a post's text with a long unbroken run (a link) widened the phone's page to
+699 px: the text panel wraps it (`overflow-wrap: anywhere`); round 20's check had a post with no such text; (2) after a
+restore the detail re-mounted and the notice was lost: the detail is read again in place, so "המודעה שוחזרה…" stays.
+
+**The design plugin's critique and accessibility review were not run:** their skills are not installed in this session (the
+skill list has no `design:` skills); not judged by eye instead. **The accessibility review was made with `ecc:accessibility`**
+(WCAG 2.2 AA), with measurements in Chrome; its findings are points 78–83, nothing changed.
+
+**Deviations (for Ron):**
+1. **A correction may be made on any field of a post that has an open or left-out report**, the report being the earliest
+   such one, not only on the fields the report named (#395 read as "made from a report").
+2. **A restore of a post whose report never removed it** (no flag on its record) marks the reports restored and leaves the
+   record as it is.
+3. **"השארה בחוץ" is offered only while the post is off the list**; for a report whose post stayed, "הסרה מהרשימה" comes
+   first.
+4. **A row's `version` uses the snapshot's record** (seconds behind another process's write): a stale row answers 409
+   "changed" and the page says so.
+
+**Not verified:** a real phone; screen readers (only the accessibility tree and Lighthouse); the laptop slept during the
+test run (1941 passed in 3 h 34 min of wall time; the scratch server died with it and was started again on the same copy).
+
+**New points for Ron (3.8):**
+- 77. **The design critique was not run** (the `design` plugin's skills are absent here). Options: enable the plugin and run
+  the critique and its accessibility review at a later round (recommended before 3.8 is closed); or take `ecc:accessibility`'s
+  review below as enough.
+- 78. **Focus when the value form opens** (WCAG 2.4.3): "תיקון" on a low row opens the form up to 1,164 px above, off screen,
+  focus left on the row's button. Recommended: move the focus to the form's heading (scrolled into view) and back to the row's
+  button on cancel or save.
+- 79. **The notices are inserted already filled** (`role="status"`/`"alert"` appear with their text, WCAG 4.1.3): some screen
+  readers announce only changes inside a region already present. Recommended: keep one empty live region on the page and set
+  its text. 3.7's own notice bar is not changed by this point.
+- 80. **The error of an invalid correction is English and technical**, with a stray "bar:" (WCAG 3.3.3): "הערך לא תקין: bar:
+  Value error, rooms is a positive multiple of 0.5". Recommended: the server names the rule in Hebrew for Gate B's known
+  rules (half rooms, areas 1–71, a written price needs an amount above 0, and so on), and drops the "bar:" prefix.
+- 81. **Focus after a write that removes the focused button** (restore, leave out): the focus falls to the page. Recommended:
+  move it to the notice that says what happened.
+- 82. **The flags page's "שחזור" buttons all share one name** when several flag actions are listed. Recommended: name each
+  by its user and count ("שחזור הסימון של friend21, 2 פרסומים").
+- 83. **"המודעה בפייסבוק" on the detail is 21 px tall** (WCAG 2.5.8 asks 24, met here only by its spacing). Recommended: 24 px.
 
 ## 3.9 Serving on the tailnet — plan to be written
 

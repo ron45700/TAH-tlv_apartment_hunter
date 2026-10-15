@@ -7,7 +7,7 @@ import { adminApi } from '../../admin/api'
 import type { Summary } from '../../admin/types'
 import { REASON_FAMILY, REASON_NAMES, REASON_ORDER } from '../../admin/words'
 import { ADMIN_PAGES, adminPath, type AdminPage } from '../../route'
-import type { SessionUser } from '../../types'
+import type { AreaGroup, SessionUser } from '../../types'
 import { Keys, Users } from './Accounts'
 import { AdminPost } from './AdminPost'
 import { PostRows } from './PostRows'
@@ -48,10 +48,11 @@ interface Props {
   page: AdminPage
   id?: string
   names: ReadonlyMap<number, string>
+  groups: AreaGroup[]
   now: Date
 }
 
-export function Admin({ user, page, id, names, now }: Props) {
+export function Admin({ user, page, id, names, groups, now }: Props) {
   if (user === undefined) {
     return (
       <main className="shell adm-solo">
@@ -68,10 +69,10 @@ export function Admin({ user, page, id, names, now }: Props) {
       </main>
     )
   }
-  return <Desk page={page} id={id} names={names} now={now} />
+  return <Desk page={page} id={id} names={names} groups={groups} now={now} />
 }
 
-function Desk({ page, id, names, now }: Omit<Props, 'user'>) {
+function Desk({ page, id, names, groups, now }: Omit<Props, 'user'>) {
   const [summary, recount] = useLoad((signal) => adminApi.summary(signal), `${page}:${id ?? ''}`)
   const counts = summary.state === 'ready' ? summary.data : null
   const current: ListedPage = page === 'post' ? 'overview' : page
@@ -101,14 +102,14 @@ function Desk({ page, id, names, now }: Omit<Props, 'user'>) {
                 חזרה
               </button>
             </Head>
-            <AdminPost id={id} names={names} now={now} />
+            <AdminPost id={id} names={names} groups={groups} now={now} />
           </>
         ) : (
           <>
             <Head title={TITLES[current]} />
             {current === 'overview' && <Overview summary={counts} />}
             {(current === 'rejected' || current === 'pending' || current === 'archive' || current === 'flags') && (
-              <PostRows key={current} list={current} now={now} />
+              <PostRows key={current} list={current} now={now} onChanged={recount} />
             )}
             {current === 'reports' && <Reports now={now} />}
             {current === 'corrections' && <Corrections names={names} now={now} />}

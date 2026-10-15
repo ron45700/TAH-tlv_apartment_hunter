@@ -44,6 +44,8 @@ export interface Row extends StateWords {
   flag: Flag | null
   listing: ListingFields | null
   corrected: string[]
+  /** What a write from this row sends back (#391). */
+  version: string
 }
 
 export interface RowsAnswer {
@@ -136,6 +138,14 @@ export interface Detail {
   reports: Report[]
   marks: Mark[]
   restore_preview: StateWords | null
+  /** What a write from the detail sends back (#391). */
+  version: string
+}
+
+export interface RestoreResult {
+  listing_id: string
+  outcome: 'restored' | 'changed' | 'not_restorable'
+  state: StateWords['state'] | null
 }
 
 export interface ReportEntry {

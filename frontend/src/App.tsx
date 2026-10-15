@@ -383,7 +383,7 @@ export function App() {
     return (
       <>
         {header}
-        <Admin user={user} page={route.page} id={route.id} names={names} now={now} />
+        <Admin user={user} page={route.page} id={route.id} names={names} groups={reference?.area_groups ?? []} now={now} />
       </>
     )
   }
