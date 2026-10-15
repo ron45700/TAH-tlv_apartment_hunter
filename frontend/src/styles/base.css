@@ -176,3 +176,8 @@ a {
     animation: none !important;
   }
 }
+
+/* where the next page of the list is asked, as it comes near the view (#376) */
+.sentinel {
+  height: 1px;
+}

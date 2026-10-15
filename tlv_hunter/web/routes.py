@@ -55,7 +55,14 @@ from tlv_hunter.web.auth import (
     viewer,
 )
 from tlv_hunter.web.cards import card_payload, photo_name, post_payload
-from tlv_hunter.web.filters import bar_json, empty_bar, owned_profile, transient_profile
+from tlv_hunter.web.filters import (
+    FIRST_CARDS,
+    bar_json,
+    by_id_request,
+    cards_request,
+    empty_bar,
+    owned_profile,
+)
 from tlv_hunter.web.grouping import Grouping
 from tlv_hunter.web.writes import REPORT_LABELS, flag_card, report_post
 
@@ -117,10 +124,10 @@ async def cards_for_bar(request: Request) -> Response:
     site = _site(request)
     body = await request.body()
     try:
-        profile = transient_profile(body, site.clock())
+        profile, first = cards_request(body, site.clock())
     except ValueError as error:
         raise HTTPException(status_code=422, detail=_refusal(error)) from None
-    return _cards(site, profile, _list_user(request, site))
+    return _cards(site, profile, _list_user(request, site), first)
 
 
 @router.get("/cards")
@@ -128,7 +135,37 @@ def cards_for_a_new_guest(request: Request) -> Response:
     """The cards a guest sees before touching the bar (#315: a guest's bar starts empty), so the
     list can be read in a browser's address bar."""
     site = _site(request)
-    return _cards(site, empty_bar(site.clock()), _list_user(request, site))
+    return _cards(site, empty_bar(site.clock()), _list_user(request, site), FIRST_CARDS)
+
+
+@router.post("/cards/by-id")
+async def cards_by_id(request: Request) -> Response:
+    """A later page of a load (#376): the cards holding the ids asked, in the order asked, each
+    evaluated against the same bar; an id no longer in a shown card is in `gone`. Any post of a
+    card finds it (as `/api/posts`), and a card asked twice comes once."""
+    site = _site(request)
+    body = await request.body()
+    try:
+        profile, ids = by_id_request(body, site.clock())
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=_refusal(error)) from None
+    user = _list_user(request, site)
+    snapshot = site.grouping.current().snapshot
+    now = site.clock()
+    viewed_ids = site.userdata.viewed_listing_ids(user.user_id) if user is not None else set()
+    cards, gone, given = [], [], set()
+    for listing_id in ids:
+        card = snapshot.card_of.get(listing_id)
+        evaluation = None if card is None else evaluate(card.shown.seen, profile, now)
+        if card is None or evaluation is None or not evaluation.shown:
+            gone.append(listing_id)
+            continue
+        if card.shown_id in given:
+            continue
+        given.add(card.shown_id)
+        viewed = None if user is None else card_viewed(card, viewed_ids)
+        cards.append(card_payload(card, evaluation, profile, site.area_names, viewed=viewed))
+    return _json({"generation": snapshot.generation, "cards": cards, "gone": gone})
 
 
 @router.get("/posts/{listing_id}")
@@ -337,6 +374,8 @@ async def flag(listing_id: str, request: Request) -> Response:
     if card is None:
         return _gone()
     result = flag_card(site.posts, card, _user(who).user_id, site.clock(), body.note)
+    if result.written:
+        site.grouping.remove(result.written)  # out of every answer at once (#379)
     return _json(
         {
             "flagged": len(result.written),
@@ -371,6 +410,8 @@ async def report(listing_id: str, request: Request) -> Response:
         return _refused_json("already_reported", 409)
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=_refusal(error)) from None
+    if result.removed:
+        site.grouping.remove([card.shown_id])  # out of every answer at once (#379)
     return _json({"removed": result.removed})
 
 
@@ -465,7 +506,10 @@ def _list_user(request: Request, site: Site) -> User | None:
     return None if user is None or user.must_change_password else user
 
 
-def _cards(site: Site, profile: Profile, user: User | None = None) -> Response:
+def _cards(site: Site, profile: Profile, user: User | None, first: int) -> Response:
+    """Every card is evaluated and ordered; `order` holds the whole order of this load (each
+    card's shown id), and `cards` the first `first` of it whole (#376). `first` 0: the count alone,
+    no order (#378)."""
     held = site.grouping.current()
     now = site.clock()
     started = time.perf_counter()
@@ -480,6 +524,7 @@ def _cards(site: Site, profile: Profile, user: User | None = None) -> Response:
     payload = {
         "generation": held.snapshot.generation,
         "count": len(shown),
+        "order": [card.shown_id for card, _ in shown] if first else [],
         "cards": [
             card_payload(
                 card,
@@ -488,7 +533,7 @@ def _cards(site: Site, profile: Profile, user: User | None = None) -> Response:
                 names,
                 viewed=None if user is None else card_viewed(card, viewed_ids),
             )
-            for card, evaluation in shown
+            for card, evaluation in shown[:first]
         ],
     }
     body = json.dumps(payload, ensure_ascii=False)

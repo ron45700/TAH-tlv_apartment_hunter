@@ -56,7 +56,7 @@ export function Preferences({ saved, onSaved, groups, names, today }: Props) {
     const controller = new AbortController()
     const timer = window.setTimeout(() => {
       api
-        .cards(draft, controller.signal)
+        .cards(draft, 0, controller.signal) // the count alone (#378)
         .then((list) => {
           setCount(list.count)
           setCountProblem(null)

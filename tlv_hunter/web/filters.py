@@ -12,7 +12,7 @@ it the user's own `Profile`, which only that endpoint saves (#335).
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from tlv_hunter.contracts.profile import (
     PROFILE_SCHEMA_VERSION,
@@ -34,6 +34,28 @@ class Bar(BaseModel):
     include_sublets: bool
 
 
+FIRST_CARDS = 48
+"""The cards of a list's first answer (#376): whole rows at 2, 3, 4 and 6 columns."""
+MOST_BY_ID = 96
+"""The most cards one request carries, the first answer's or a later page's (#376)."""
+
+
+class CardsRequest(Bar):
+    """`POST /api/cards`: the bar, and how many cards come whole with the order (#376); 0 asks
+    the count alone (#378)."""
+
+    first: int = Field(default=FIRST_CARDS, ge=0, le=MOST_BY_ID)
+
+
+class ByIdRequest(BaseModel):
+    """`POST /api/cards/by-id`: the next cards of a load, by id, against the same bar (#376)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    bar: Bar
+    ids: list[str] = Field(min_length=1, max_length=MOST_BY_ID)
+
+
 def transient_profile(body: bytes, now: datetime) -> Profile:
     """The bar's JSON as a `Profile` for `policy.evaluate`. Raises `ValueError` (pydantic's
     `ValidationError` included) on a bar that breaks a rule: an unknown field, `min` above `max`, a
@@ -41,9 +63,24 @@ def transient_profile(body: bytes, now: datetime) -> Profile:
     return owned_profile(body, GUEST_USER_ID, now)
 
 
+def cards_request(body: bytes, now: datetime) -> tuple[Profile, int]:
+    """A list request: the transient profile and `first`; the same refusals as the bar."""
+    request = CardsRequest.model_validate_json(body)
+    return _profile(request, GUEST_USER_ID, now), request.first
+
+
+def by_id_request(body: bytes, now: datetime) -> tuple[Profile, list[str]]:
+    """A later page's request: the transient profile and the ids asked."""
+    request = ByIdRequest.model_validate_json(body)
+    return _profile(request.bar, GUEST_USER_ID, now), request.ids
+
+
 def owned_profile(body: bytes, user_id: str, now: datetime) -> Profile:
     """The same JSON as the user's own profile, for `PUT /api/profile`; the same refusals."""
-    bar = Bar.model_validate_json(body)
+    return _profile(Bar.model_validate_json(body), user_id, now)
+
+
+def _profile(bar: Bar, user_id: str, now: datetime) -> Profile:
     return Profile(
         schema_version=PROFILE_SCHEMA_VERSION,
         user_id=user_id,

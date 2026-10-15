@@ -650,7 +650,7 @@ orange (#275). Computed per user at evaluation, never written (invariant 12).
     `ListingStub` and `DecisionStub` stay for `notify/` until Phase 4; `tests/test_stubs.py` loses its policy tests.
 16. **`restored_lifecycle` is built and tested in 3.6** (pure); 3.8 wires the writes and the reports.
 
-## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 6 built; step 7 measured (round 16); C, 44–46 built, A and D planned (round 17), waiting for Ron
+## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 6 built; step 7 measured (round 16); C, 44–46 built (round 17); A, D and 56 built and step 7 measured again, both targets met (round 18)
 
 The lists and the cards (`BASELINE.md` §6) with these approved display rules (`BACKLOG.md`, "Recorded for a later
 phase"): the card's main time is the last publication, shown relative (#122); the repost log shows the earliest
@@ -1391,7 +1391,7 @@ everywhere; the grey chip passes; the opened post is 100 on mobile and 97 on des
 failures are the photo counter "1/5" (white on a translucent dark pill over a photo, measured 1.74:1, aria-hidden), a
 round-16 finding outside #373 (point 56). The look is unchanged at every size.
 
-#### Plan for A (the first cards, the rest as the user scrolls) — WAITING for Ron
+#### Plan for A (the first cards, the rest as the user scrolls) — APPROVED (#376–#378); BUILT round 18
 
 **The shape (point 48).** `POST /api/cards` keeps its body (the bar) and adds `first` (default 48). Per request the server
 still evaluates and orders **every** card (on the 40-day store `eval` 36 ms and `order` 13 ms, measured), and returns:
@@ -1426,7 +1426,7 @@ nothing to draw); and `cards`, the full payload of the first `first` cards only.
   written on a post). Vitest: the page's merge of pages (no duplicate, order kept, a removed card skipped). Chrome at the six
   sizes and step 7's measurement again on S1 and a rebuilt S2.
 
-#### Plan for D (the grouping computed in the background) — WAITING for Ron
+#### Plan for D (the grouping computed in the background) — APPROVED (#379, #380); BUILT round 18
 
 **Today (#301, #316):** a request reads the store generation (about 1 ms); when it moved, the request computes the grouping
 while holding the lock, and every request waits for it (15 s at 40 days, 10 s after a flag).
@@ -1475,7 +1475,103 @@ while holding the lock, and every request waits for it (15 s at 40 days, 10 s af
 - 55. **#372 as built:** a 44 px touch area that does not grow the controls (above). Or: the controls drawn at 44 px on a
   touch screen, the foot's rows growing (#341's slots taller on touch). Recommended: as built.
 - 56. **The photo counter "1/5"** (1.74:1 as Lighthouse measures it over a photo): a darker pill (for example 90% opacity,
-  white text) to pass 4.5:1. Recommended: do it with A.
+  white text) to pass 4.5:1. Recommended: do it with A. **Decided (#376–#384): 48–56 as recommended; built in round 18.**
+
+#### Round 18 (2026-10-15): A, D and 56 built (#376–#384); step 7 measured again — both targets met on both stores
+
+**Built.**
+- **A (#376–#378).** `web/filters.py`: `CardsRequest` (the bar and `first`, 0–96, default 48) and `ByIdRequest` (the bar and
+  1–96 ids), both strict. `web/routes.py`: `POST /api/cards` and `GET /api/cards` evaluate and order every card as before and
+  return `count`, `order` (every card's shown id) and the first `first` cards; `first: 0` the count alone; `POST
+  /api/cards/by-id` the cards holding the ids asked, in that order, evaluated against the same bar, a card asked twice
+  once, an id in no shown card in `gone`. `frontend/src/paging.ts` (pure: `firstLoad`, `nextIds`, `withPage`,
+  `withoutCard`); `App.tsx`: the load keeps the order, the next 48 asked by an `IntersectionObserver` on a sentinel 1.5
+  screens ahead, a failed page asked again; a flag, a report that removed or a 409 `gone` takes the card out in place, the
+  count one less, no reload; `Preferences.tsx` asks `first: 0`.
+- **D (#379, #380).** `web/grouping.py`: `Grouping(…, background=True)`, which `serve` runs: `start()` begins the first
+  grouping at once; a request never computes, it starts a recompute in a daemon thread when the counter moved (one at a
+  time; it runs again if the counter moved meanwhile) and answers from the snapshot it holds; before the first snapshot
+  `NotReady`, which `web/app.py` answers 503 `{"refusal": "loading"}` with `Retry-After: 2` on every route, and the page
+  asks again every 2 s with its "טוען מודעות…". **The overlay:** `Grouping.remove(ids)` after a flag (the members written)
+  and after a report that removed the post (the shown one), with the store generation after the write; every answer leaves
+  out a card holding one, until a snapshot at or after that generation is held. The foreground mode (the request computes)
+  stays the default for the tests and for any caller that does not ask. `Grouping.wait(timeout)` waits for a background
+  recompute to end (the tests use it).
+- **56 (#384).** The counter's pill 90% opaque (was 72%); a viewed card dims its photos (`.track`), no longer the whole
+  carousel with the counter, the dots and the arrows on it.
+- **Tests:** `tests/test_web_paging.py` (new, 23: the first answer, the order equal to the whole list's, `first: 0`, `first`
+  bounds, a later page equal to the whole list's cards, the same bar hiding a card, any post of a card found once, invalid
+  page requests, viewed on a user's page, a flagged card gone by id; before the first grouping every answer "loading" and one
+  recompute however many ask, `start()`, a request during a recompute answered from the old snapshot without waiting, one
+  recompute for many requests, a user's flag and a removing report leaving every answer at once while the recompute is held
+  shut, the overlay dropped at the new snapshot, the foreground mode unchanged); `tests/test_web.py` (the serve test waits for
+  the background grouping; the POST list includes `by-id`); `frontend/src/paging.test.ts` (5).
+
+**The stores:** S1, a fresh online backup of the production store (266 posts, 123 cards); S2 rebuilt with round 16's recipe:
+8,512 posts, 6,208 `Listing`s, 4,448 active members, 3,967 cards for an unfiltered bar, 19,840 photo files (2.9 GB). Both in
+the scratchpad, kept until Ron says (#382).
+
+**On the server** (a scratch client on 127.0.0.1, `Server-Timing`; the site in background mode as `serve` runs it):
+
+| | Round 16, S1 | Round 18, S1 | Round 16, S2 | Round 18, S2 | Target |
+|---|---|---|---|---|---|
+| Warm list, a guest's empty bar, median (max) | 34 ms (44) | **10 ms** (19) | **554 ms** (627) | **83 ms** (349); rested re-sample 74–90 ms | 300 ms |
+| Warm list, signed in with the admin's profile, median (max) | 37 ms (60) | 48 ms (67) | 462 ms (619) | **289 ms** (718): `eval` 168 | 300 ms |
+| The list's answer: bytes (gzipped) | 457,674 (69,525 in round 17) | 194,484 (36,138) | 14,768,550 | **455,881 (183,655)** | — |
+| A later page of 48 by id, median | — | 28 ms (175 KB) | — | 51 ms (175 KB) | — |
+| The count alone (`first: 0`), median | — | 23 ms | — | 239 ms | — |
+| The first list after a start | 0.4–0.5 s, the request waiting | 1.8–2.2 s after the process starts (1.55 s of it uvicorn's start); 1–3 "loading" answers | 15–16 s, the request waiting; 120–128 s on a cold disk | **23–27 s** (polled 5 times a second; 39 s polled every 3 s); **336 s on a cold disk** (the first start after the build); "loading" answers meanwhile, each at most 0.4 s | none |
+| After a store change (a flag) | the next request 266 ms (recompute), then 27 ms | no request waits: answers median 50 ms (max 287) while the recompute runs; the new grouping held after 2.6 s | the next request 10.6 s | no request waits: answers median 302 ms (max 1.27 s); **the new grouping held after 188 s** with the client asking 10 times a second | — |
+| The flagged card in any answer after the flag | — | never | — | never | — |
+| Memory after the first grouping (at the end) | 75 MB | — | 354 MB (519) | 348 MB (561) | — |
+
+**In Chrome** (1440 × 900 and 390 × 844 touch, no throttling; the first card drawn read from the DOM):
+
+| | Round 16 | Round 18 | Target |
+|---|---|---|---|
+| S1 desktop, first cards (warm) | 0.21 s | 0.35 s (the list's answer ended at 0.26 s, 36 KB) | 1.5 s |
+| S1 phone, first cards (warm) | 0.22 s | 0.52 s (a first, disturbed load 1.33 s) | 1.5 s |
+| **S2 desktop, first cards (warm)** | **3.0 s** | **1.10 s** (the answer 0.62 s, 184 KB) | 1.5 s |
+| **S2 phone, first cards (warm)** | **3.3 s** | **0.61 s** | 1.5 s |
+| S2 longest frame at the load; DOM nodes | 4.8 s; 221,453 | **0.27 s; 2,734** | — |
+| S2 phone, scrolling per frame (median / p95) | 137 / 185 ms | **17 / 94 ms** | — |
+| S2 desktop, eight pages scrolled in (432 cards) | — | 48 more cards per page, no duplicate; pages answered in 70–240 ms; each append a frame of 220–420 ms; DOM 23,927 nodes, heap 25 MB; the forced scroll test 64 ms per frame at that size | — |
+| S2, the page opened right after a restart | — | "טוען מודעות…", asked again every 2 s (15 times), the cards drawn at 32.7 s, no reload by hand | — |
+
+**Reading.** **Both targets are met on both stores**: a guest's warm list is 83 ms on the 40-day store (was 554), a
+signed-in list 289 ms (at the edge: its `eval` is 168 ms, the admin's preferences costing three times an empty bar's), and
+the first cards are drawn in 1.10 s on a desktop and 0.61 s on a phone (were 3.0 s and 3.3 s). No visitor waits for the
+grouping any more, and a user's own flag leaves every answer at once. **Two things got slower and are named for Ron
+(points 57, 58):** the background recompute shares the one Python interpreter with the requests, so while requests keep
+coming it is much slower than a request's own (188 s against 10.6 s on S2 under 10 requests a second; 2.6 s against 0.27 s
+on S1); and the laptop's own speed varied threefold during the run (`eval` 45 ms rested, up to 160 ms after minutes of
+hashing), so every S2 number is from a laptop at work, the rested re-samples given where taken. On today's store the first
+cards came later than in round 16 (0.35 s against 0.21 s on a desktop), well inside the target; not investigated.
+
+**Lighthouse after 56** (S1, three viewed cards on the list): accessibility **100** on the list (desktop and mobile) and on
+the opened post (desktop), where round 17 had 96 and 97; best practices 100.
+
+**Checked in Chrome at the six sizes** (S1, signed in): no sideways scroll; one card height per size (2560: 619 px, 6
+columns; 1440: 606, 4; 1366: 592, 4; 1194 touch: 639, 3; 834 touch: 650, 2; 390 touch: 318, 1); 48 cards and the sentinel at
+each; the phone's bar 91 px. **The flag from the page:** on the second page (scrolled to 9,531 px) the card left in place,
+the count 123 → 122, the scroll kept, no list request, the notice shown.
+
+**Not verified:** a real phone or iPad; the background recompute's time with real (sparse) traffic, only with a client asking
+continuously or every 3 s; the loading state over Tailscale; the S1 cold load in the browser.
+
+**Deviations:** (1) `Grouping.wait()` added for the tests (the suite forbids a real sleep); (2) the viewed card's dimming moved
+to the photos (#384's note); (3) the foreground mode kept as the default of `site_over`, `serve` asking for the background.
+
+**New points for Ron (3.7):**
+- 57. **The background recompute under traffic** (188 s on S2 while requests come 10 times a second; 2.6 s on S1). Options:
+  leave it (real traffic is a few people; recommended, measured again on the working day, 3.10); or run the recompute in a
+  separate process, so it does not share the interpreter with the requests (a larger change); or keep the evaluation of a
+  bar between requests, which is now the main per-request cost.
+- 58. **The signed-in list on S2 at 289 ms** (the target 300 ms, max 718): its `eval` (168 ms) is the cost. Options: leave
+  it (recommended: the target is met, and the 40-day store is an upper bound); or keep each bar's evaluation for the
+  snapshot (the same as 57's third option).
+- 59. **The scratch stores** (S1 11 MB, S2 3.2 GB in the scratchpad): **safe to delete once Ron has read these numbers;**
+  not deleted (#382).
 
 ### (m) What I could not verify
 

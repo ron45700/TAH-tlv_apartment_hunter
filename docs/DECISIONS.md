@@ -3516,6 +3516,43 @@ opened post returns the focus to the card that opened it. *Ron approved the revi
 ### 375 — The opened post's grey chips and the gap above a chipless card's foot stay (point 47)
 *Ron's decision (2026-10-15).* No reason recorded.
 
+## Phase 3: Ron's answers on the plans for A and D (2026-10-15, round 18)
+
+**Ron approved points 48–56 of `PHASE_3.md` 3.7 (l) on 2026-10-15, each as the reviewer recommended.** Built in round 18.
+
+### 376 — The list in pages: the first 48 cards with the whole order, the rest by id (point 48)
+`POST /api/cards` returns the count, the whole ordered list of card ids and the first 48 cards; `POST /api/cards/by-id`
+gives the next cards from that order as the user scrolls. The order is fixed for a load. *Ron approved the reviewer's
+recommendation.*
+
+### 377 — A flagged or reported card leaves the list in place, with no reload (point 49)
+*Ron approved the reviewer's recommendation.*
+
+### 378 — The preferences page's live count asks `first: 0` (point 50)
+No separate endpoint. *Ron approved the reviewer's recommendation.*
+
+### 379 — The grouping in the background; the site's own flags and reports leave at once by an overlay (point 51)
+Other processes' writes and an admin's correction show after the background recompute (seconds), instead of making the next
+visitor wait. *Ron approved the reviewer's recommendation.*
+
+### 380 — Before the first grouping after a start, the API answers "loading" and the page retries (point 52)
+*Ron approved the reviewer's recommendation.*
+
+### 381 — No virtual list now (point 53)
+Cards stay drawn as the user scrolls; measured after A. *Ron approved the reviewer's recommendation.*
+
+### 382 — A and D built in one round, then step 7's measurements again (point 54)
+On today's store and a rebuilt 40-day synthetic store (round 16's recipe), kept in the scratchpad until Ron says they can go.
+*Ron approved the reviewer's recommendation.*
+
+### 383 — #372 stays as built: a 44 px touch area that does not grow the controls (point 55)
+*Ron approved the reviewer's recommendation.*
+
+### 384 — The photo counter's pill made darker, built with A (point 56)
+*Ron approved the reviewer's recommendation.* **Built in round 18 with one more change, named for Ron:** a viewed card dimmed
+its whole carousel, the counter with it, which no pill can make pass; it now dims the photos only, so the counter, the dots
+and the arrows stay as on any card.
+
 ---
 
 ## Corrections to recorded facts

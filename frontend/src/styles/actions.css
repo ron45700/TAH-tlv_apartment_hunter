@@ -7,7 +7,8 @@
   background: #f8f7f4;
 }
 
-.card.is-viewed .car {
+/* the photos dimmed, not the counter, the dots or the arrows over them (#384) */
+.card.is-viewed .car .track {
   opacity: 0.55;
   filter: saturate(0.6);
 }

@@ -19,14 +19,15 @@ and every other path that is not under `/api` gets `index.html`, so `/post/<id>`
 A path under `/api` that no route answers stays a 404. Without a build only the API is served.
 """
 
+import json
 import os
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
 from argon2 import PasswordHasher
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -36,7 +37,7 @@ from tlv_hunter.areas.reference import load_area_groups, load_areas
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.sqlite import SqliteUserDataStore
 from tlv_hunter.web.auth import ClearFailedCookie
-from tlv_hunter.web.grouping import Grouping
+from tlv_hunter.web.grouping import Grouping, NotReady
 from tlv_hunter.web.routes import Site, router
 
 CONTENT_SECURITY_POLICY = (
@@ -56,6 +57,7 @@ TELEMETRY_OFF = {"auto_configure": False, "tracing": False, "metrics": False, "l
 # (`font/woff2`) as they are, and they are passed explicitly.
 GZIP_MINIMUM_SIZE = 500
 GZIP_LEVEL = 6
+LOADING_RETRY_SECONDS = 2
 
 
 class SecurityHeaders:
@@ -89,6 +91,7 @@ def create_app(site: Site) -> FastAPI:
     )
     app.state.site = site
     app.include_router(router)
+    app.add_exception_handler(NotReady, _loading)
     if site.pages is not None:
         _serve_pages(app, Path(site.pages))
     app.add_middleware(ClearFailedCookie)
@@ -100,6 +103,17 @@ def create_app(site: Site) -> FastAPI:
         exclude_content_types=DEFAULT_EXCLUDED_CONTENT_TYPES,
     )
     return app
+
+
+def _loading(request: Request, error: Exception) -> Response:
+    """Before the first grouping after a start (background mode): "loading", and when to ask again
+    (#380); the page keeps its "טוען מודעות…" and retries."""
+    return Response(
+        json.dumps({"refusal": "loading"}),
+        status_code=503,
+        media_type="application/json",
+        headers={"Retry-After": str(LOADING_RETRY_SECONDS)},
+    )
 
 
 def _serve_pages(app: FastAPI, pages: Path) -> None:
@@ -129,6 +143,7 @@ def site_over(
     pages: Path | None = None,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     hasher: PasswordHasher = PRODUCTION_HASHER,
+    background: bool = False,
 ) -> Site:
     """The site over a copy of the store (#331): the grouping reads it through a read-only
     Repository; the user's writes on a post (a flag, a report, build step 6) go through a second,
@@ -138,7 +153,7 @@ def site_over(
     repository = SqliteRepository(store_copy, read_only=True)
     userdata = SqliteUserDataStore(store_copy)
     return Site(
-        grouping=Grouping(repository, userdata.find_corrections, store_root),
+        grouping=Grouping(repository, userdata.find_corrections, store_root, background=background),
         posts=SqliteRepository(store_copy),
         areas=load_areas(),
         area_groups=load_area_groups(),

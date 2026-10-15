@@ -74,7 +74,10 @@ def main(
         else:
             print(f"the pages are not built ({pages}): the API only", file=out)
             print(f"open: http://{HOST}:{args.port}/api/cards", file=out)
-        site = site_over(copy, store_root, pages=pages if built else None, clock=clock)
+        site = site_over(
+            copy, store_root, pages=pages if built else None, clock=clock, background=True
+        )
+        site.grouping.start()  # the first grouping begins now, before any visitor (#380)
         app = create_app(site)
         run(app, host=HOST, port=args.port)
         return EXIT_DONE

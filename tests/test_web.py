@@ -207,11 +207,12 @@ def test_a_posted_empty_bar_gives_the_same_list_as_a_new_guest(client: TestClien
 def test_the_api_writes_only_the_account_the_profile_and_the_card_writes() -> None:
     """Build steps 4 and 5 add the account's writes and the profile's save; step 6 viewed, flag
     and report; the bar's POST reads (`tests/test_web_accounts.py`, `tests/test_web_writes.py`
-    have the writes' tests)."""
+    have the writes' tests). A's later page (#376) is a POST that reads, as the list's."""
     methods = {(route.path, method) for route in router.routes for method in route.methods}
     writes = {(path, m) for path, m in methods if m not in ("GET", "HEAD")}
     assert writes == {
         ("/api/cards", "POST"),
+        ("/api/cards/by-id", "POST"),
         ("/api/sign-in", "POST"),
         ("/api/sign-out", "POST"),
         ("/api/sign-up", "POST"),
@@ -519,6 +520,8 @@ def test_serve_copies_the_store_and_serves_the_copy(tmp_path: Path, store: Store
 
     def run(app: Any, **kwargs: Any) -> None:
         served.append(kwargs)
+        # D (#380): `serve` began the first grouping in the background before this point.
+        assert app.state.site.grouping.wait(10)
         assert TestClient(app).get("/api/cards").status_code == 200
 
     out = io.StringIO()

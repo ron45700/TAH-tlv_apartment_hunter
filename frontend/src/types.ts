@@ -76,10 +76,20 @@ export interface CardData extends ListingFields {
   viewed?: boolean
 }
 
+/** A list's first answer (#376): the count, the whole order of this load (each card's id) and its
+ * first cards whole; `first: 0` gives the count alone (#378). */
 export interface CardsResponse {
   generation: number
   count: number
+  order: string[]
   cards: CardData[]
+}
+
+/** A later page of a load, by id (#376); an id no longer in a shown card is in `gone`. */
+export interface CardsPage {
+  generation: number
+  cards: CardData[]
+  gone: string[]
 }
 
 export interface Phone {

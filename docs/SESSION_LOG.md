@@ -6477,3 +6477,74 @@ and D.
 
 STOP. For Ron: points 48–56 (A and D's shape; 55, #372 as built; 56, the photo counter). Then A and D's build, measured with
 step 7's method on S1 and a rebuilt S2.
+
+## 2026-10-15 (continued) — Phase 3, round 18: #376–#384; A, D and the counter's pill built; step 7 measured again
+
+**Git:** read-only only (`git status`; round 17's changes had been committed by Ron before this round). No paid call, no
+model call, nothing installed. **The production store was opened read-only only** (two online backups from a `mode=ro`
+connection into the scratchpad); SHA-256 `5df9bc9a…a77ac` at the start, after the builds and at the end. `labels.json` the
+same. Network: 127.0.0.1 only. Every scratch server is stopped. **The scratch stores are kept** (S1 and S2, about 3.2 GB, in
+the scratchpad): safe to delete once Ron has read the numbers, not before he says (#382).
+
+### A. Recorded
+
+`DECISIONS.md` **#376–#384** (points 48–56, each as recommended), a new section; #384 carries the note that a viewed card now
+dims its photos only (the counter could not pass inside the dimmed carousel).
+
+### B. Built
+
+- **A:** `tlv_hunter/web/filters.py` (`CardsRequest`, `ByIdRequest`, `cards_request`, `by_id_request`, `FIRST_CARDS` 48,
+  `MOST_BY_ID` 96); `tlv_hunter/web/routes.py` (`order` and `first` in the list's answer; `POST /api/cards/by-id`);
+  `frontend/src/paging.ts` (new), `App.tsx` (the paged load, the sentinel, the in-place removal, the loading retry),
+  `api.ts`, `types.ts`, `screens/Preferences.tsx` (`first: 0`), `styles/base.css` (the sentinel).
+- **D:** `tlv_hunter/web/grouping.py` (background mode, `start`, `remove`, `wait`, `NotReady`, the overlay);
+  `tlv_hunter/web/app.py` (503 "loading" with `Retry-After: 2`; `site_over(…, background=)`); `tlv_hunter/jobs/serve.py`
+  (background mode, the first grouping started at once); `routes.py` (the overlay after a flag and a removing report).
+- **56:** `styles/card.css` (the pill 90%), `styles/actions.css` (a viewed card dims `.track`).
+- **Tests:** `tests/test_web_paging.py` (new, 23); `tests/test_web.py` (the serve test waits for the background grouping; the
+  POST routes include `by-id`); `frontend/src/paging.test.ts` (new, 5).
+
+### C. Measured (`PHASE_3.md` 3.7 (l), "Round 18")
+
+Against round 16: S2's warm guest list **554 → 83 ms** (rested re-sample 74–90 ms), signed in 462 → 289 ms; the answer
+14.8 MB → 456 KB (184 KB gzipped); the first cards on S2 **3.0 → 1.10 s** (desktop) and **3.3 → 0.61 s** (phone); the longest
+frame 4.8 → 0.27 s; the DOM 221,453 → 2,734 nodes; phone scrolling 137 → 17 ms per frame. S1: warm 34 → 10 ms; the first cards
+0.35 s (desktop) and 0.52 s (phone; a disturbed first load 1.33 s). **Both targets met on both stores.** No request waits for
+the grouping; the flagged card never appeared in an answer after the flag. The background recompute under continuous
+requests: 188 s on S2 (10 requests a second), 2.6 s on S1; the first start on a cold disk 336 s, "loading" answered meanwhile;
+the page shown right after a restart drew its cards at 32.7 s with no reload by hand. Lighthouse accessibility 100 on the list
+(desktop, mobile) and the opened post (desktop). The laptop's speed varied threefold during the run (`eval` 45 → 160 ms after
+minutes of hashing): the rested re-samples are given beside the numbers taken under load.
+
+### Verified
+
+`uv run pytest`: **1846 passed** (1823 + 23). `ruff check`: all checks passed; `ruff format --check`: 199 files formatted.
+`npm test`: **50 passed** (45 + 5); `npm run build` (`tsc` then Vite) clean. Chrome at the six sizes on S1: no sideways scroll,
+one card height per size, 48 cards and the sentinel, the phone's bar 91 px; a flag from the page on the second page left the
+card in place (123 → 122), kept the scroll, made no list request.
+
+### Not verified
+
+- Real phones and iPads; the recompute's time under real, sparse traffic; the loading state over Tailscale; the S1 cold
+  load in the browser.
+
+### Deviations
+
+1. `Grouping.wait()` added for the tests (the suite forbids a real sleep).
+2. The viewed card's dimming moved to the photos (#384).
+3. The foreground mode stays `site_over`'s default; `serve` asks for the background.
+
+### New points for Ron
+
+57 (the background recompute under traffic), 58 (the signed-in list at 289 ms on S2), 59 (the scratch stores: safe to
+delete once he has read the numbers): `PHASE_3.md`, "Round 18".
+
+### BACKLOG
+
+"Last updated"; the round's line; item 6 (built, measured, points 57–59, the scratch stores kept); the #371 row removed (built);
+the #345/#346 and #257 rows.
+
+### Next
+
+STOP. For Ron: read the numbers and the look (step 7's review); points 57–59; say when the scratch stores can go. Then 3.8
+(the admin's pages), whose plan is still to be written.

@@ -5,7 +5,7 @@
 // `Origin: null` on a same-origin write, so each request asks for the "same-origin" policy: the
 // `Origin` is then the site's own, and no referrer ever leaves for another host.
 import type { Bar } from './bar'
-import type { CardsResponse, FlagAnswer, PostData, Reference, SavedProfile, SessionUser } from './types'
+import type { CardsPage, CardsResponse, FlagAnswer, PostData, Reference, SavedProfile, SessionUser } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -52,8 +52,13 @@ async function call<T>(method: string, path: string, body?: unknown, signal?: Ab
 
 export const api = {
   reference: (signal?: AbortSignal) => call<Reference>('GET', '/api/reference', undefined, signal),
-  /** The cards for what the bar holds (#314, #315): a read; the bar is never saved. */
-  cards: (bar: Bar, signal?: AbortSignal) => call<CardsResponse>('POST', '/api/cards', bar, signal),
+  /** The cards for what the bar holds (#314, #315): a read; the bar is never saved. `first`: how
+   * many come whole with the order (#376); 0, the count alone (#378). */
+  cards: (bar: Bar, first: number, signal?: AbortSignal) =>
+    call<CardsResponse>('POST', '/api/cards', { ...bar, first }, signal),
+  /** A later page of a load: the cards of these ids, against the same bar (#376). */
+  cardsById: (bar: Bar, ids: string[], signal?: AbortSignal) =>
+    call<CardsPage>('POST', '/api/cards/by-id', { bar, ids }, signal),
   post: (id: string, signal?: AbortSignal) =>
     call<PostData>('GET', `/api/posts/${encodeURIComponent(id)}`, undefined, signal),
   session: () => call<{ user: SessionUser | null }>('GET', '/api/session'),

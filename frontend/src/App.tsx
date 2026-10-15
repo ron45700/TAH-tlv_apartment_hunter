@@ -21,11 +21,13 @@ import { Card, type CardActions } from './components/Card'
 import { FilterBar, type BarStanding } from './components/FilterBar'
 import { Header } from './components/Header'
 import { PostView, type PostActions } from './components/PostView'
+import { PAGE, firstLoad, nextIds, withPage, withoutCard, type Loaded } from './paging'
 import { navigate, postPath, useRoute } from './route'
 import { PasswordScreen, SignIn, SignUp } from './screens/Account'
 import { Preferences } from './screens/Preferences'
-import type { CardsResponse, FlagAnswer, Reference, SessionUser } from './types'
+import type { FlagAnswer, Reference, SessionUser } from './types'
 
+const LOADING_RETRY_MS = 2000
 const PHONE = '(max-width: 699.98px)'
 const BAR_KEY = 'tlv.bar'
 
@@ -63,7 +65,7 @@ export function App() {
   const [reference, setReference] = useState<Reference | null>(null)
   const [saved, setSaved] = useState<Bar | null>(null)
   const [bar, setBar] = useState<Bar | null>(null)
-  const [list, setList] = useState<CardsResponse | null>(null)
+  const [list, setList] = useState<Loaded | null>(null)
   const [failed, setFailed] = useState(false)
   const [barProblem, setBarProblem] = useState<string | null>(null)
   const [reloads, setReloads] = useState(0)
@@ -120,23 +122,28 @@ export function App() {
     if (bar && user !== undefined) keepBar(owner, bar)
   }, [bar, owner, user])
 
-  // The list follows the bar, a moment after the last change; an older request is dropped.
+  // The list follows the bar, a moment after the last change; an older request is dropped. A load
+  // brings its whole order and its first cards (#376). Before the site's first grouping the API
+  // answers "loading": the page keeps waiting and asks again (#380).
   const first = useRef(true)
   useEffect(() => {
     if (!bar) return
     const controller = new AbortController()
+    let retry = 0
     const timer = window.setTimeout(
       () => {
         api
-          .cards(bar, controller.signal)
-          .then((cards) => {
-            setList(cards)
+          .cards(bar, PAGE, controller.signal)
+          .then((answer) => {
+            setList(firstLoad(answer))
             setFailed(false)
             setBarProblem(null)
           })
           .catch((error) => {
             if (error instanceof DOMException) return
-            if (error instanceof ApiError && error.status === 422) setBarProblem(refusalWords(error.detail))
+            if (error instanceof ApiError && error.refusal === 'loading') {
+              retry = window.setTimeout(() => setReloads((n) => n + 1), LOADING_RETRY_MS)
+            } else if (error instanceof ApiError && error.status === 422) setBarProblem(refusalWords(error.detail))
             else setFailed(true)
           })
       },
@@ -145,9 +152,39 @@ export function App() {
     first.current = false
     return () => {
       window.clearTimeout(timer)
+      window.clearTimeout(retry)
       controller.abort()
     }
   }, [bar, reloads])
+
+  // The next page of the load as its last cards come near the view (#376): the ids come from the
+  // load's own order, so nothing is skipped or drawn twice. A page that fails is asked again.
+  const paging = useRef(false)
+  const [pageRetries, setPageRetries] = useState(0)
+  const sentinel = useRef<HTMLDivElement>(null)
+  const loadMore = useCallback(() => {
+    if (!list || !bar || paging.current) return
+    const ids = nextIds(list)
+    if (ids.length === 0) return
+    paging.current = true
+    const from = list.order
+    api
+      .cardsById(bar, ids)
+      .then((page) => setList((current) => (current && current.order === from ? withPage(current, ids, page) : current)))
+      .catch(() => window.setTimeout(() => setPageRetries((n) => n + 1), LOADING_RETRY_MS))
+      .finally(() => {
+        paging.current = false
+      })
+  }, [list, bar])
+  useEffect(() => {
+    const target = sentinel.current
+    if (!target || !list || list.next >= list.order.length) return
+    const observer = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && loadMore(), {
+      rootMargin: '0px 0px 150% 0px',
+    })
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [list, loadMore, pageRetries])
 
   const names = useMemo(() => new Map((reference?.areas ?? []).map((area) => [area.number, area.name])), [reference])
 
@@ -181,7 +218,8 @@ export function App() {
   }, [onPost])
 
   // --- build step 6: a signed-in user's writes on a card ---
-  const reload = useCallback(() => setReloads((n) => n + 1), [])
+  // A card the user flags or reports, or one found gone, leaves the list in place (#377).
+  const removeCard = useCallback((id: string) => setList((current) => current && withoutCard(current, id)), [])
   const dismissNotice = useCallback(() => setNotice(null), [])
   const openPostId = route.name === 'post' ? route.id : null
 
@@ -207,11 +245,13 @@ export function App() {
         .flag(id)
         .then((answer) => {
           flagDone(answer, runFlag)
+          if (answer.flagged > 0) removeCard(id)
           if (openPostId) close()
         })
         .catch((error) => {
           if (error instanceof ApiError && error.refusal === 'gone') {
             setNotice({ text: 'המודעה כבר הוסרה מהרשימה בינתיים.' })
+            removeCard(id)
             if (openPostId) close()
           } else {
             setNotice({ text: 'הסימון לא נשמר. בדקו את החיבור ונסו שוב.', retry: { label: 'נסו שוב', run: () => runFlag(id) } })
@@ -220,10 +260,9 @@ export function App() {
         .finally(() => {
           setFlagBusy(false)
           setFlagging(null)
-          reload()
         })
     },
-    [close, flagDone, openPostId, reload],
+    [close, flagDone, openPostId, removeCard],
   )
 
   const markList = useCallback((postIds: string[], viewed: boolean) => {
@@ -262,13 +301,13 @@ export function App() {
                 ? 'הדיווח נשלח. המודעה הוסרה מהרשימה עד שהמנהל יבדוק אותה.'
                 : 'הדיווח נשמר. המודעה עדיין ברשימה, והמנהל יטפל בה.',
             })
+            if (removed && openPostId) removeCard(openPostId)
             if (removed) close()
-            reload()
           },
           onGone: () => {
             setNotice({ text: 'המודעה כבר הוסרה מהרשימה בינתיים.' })
+            if (openPostId) removeCard(openPostId)
             close()
-            reload()
           },
         }
       : undefined
@@ -388,11 +427,14 @@ export function App() {
                 : 'אין כרגע מודעות להצגה.'}
           </p>
         ) : (
-          <div className="grid">
-            {list.cards.map((card) => (
-              <Card key={card.id} card={card} now={now} onOpen={open} actions={cardActions} />
-            ))}
-          </div>
+          <>
+            <div className="grid">
+              {list.cards.map((card) => (
+                <Card key={card.id} card={card} now={now} onOpen={open} actions={cardActions} />
+              ))}
+            </div>
+            {list.next < list.order.length && <div ref={sentinel} className="sentinel" aria-hidden="true" />}
+          </>
         )}
       </main>
       {openId && <PostView id={openId} card={openCard} now={now} phone={phone} onClose={close} actions={postActions} />}
