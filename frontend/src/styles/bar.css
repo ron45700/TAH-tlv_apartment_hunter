@@ -32,6 +32,10 @@
   border-color: #9ccbd9;
 }
 
+.avatar::before {
+  content: attr(data-letter);
+}
+
 .avatar {
   display: grid;
   place-items: center;
@@ -854,6 +858,41 @@
     content: '';
     position: absolute;
     inset: -8px -4px;
+  }
+
+  /* the bar's chips and "סינון" (34 px), the user pill (40 px), the logo (36 px on a phone): 44 px to
+     touch without growing (#372) */
+  .bchip,
+  .barbtn,
+  .userpill,
+  .logo {
+    position: relative;
+  }
+
+  .bchip::after,
+  .barbtn::after {
+    content: '';
+    position: absolute;
+    inset: -6px 0;
+  }
+
+  /* the chip cuts a long value with an ellipsis; a clip with a margin keeps the ellipsis and lets
+     the hit area above out of the box */
+  .bchip {
+    overflow: clip;
+    overflow-clip-margin: 8px;
+  }
+
+  .userpill::after {
+    content: '';
+    position: absolute;
+    inset: -3px 0;
+  }
+
+  .logo::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
   }
 
   .switch {

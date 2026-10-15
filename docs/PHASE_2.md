@@ -2075,7 +2075,7 @@ Phase 3's corrections record exists; the regression runner still finds the old r
 version 4 did not break the bar, it costs about half of what the full reclassify costs ($0.023 against $0.044), and a reclassify
 of 194 posts on a prompt that failed the bar would be paid for and then discarded. Nothing is applied by either step on its own.
 
-### Instructions version 5: the studio rule (#354) — WRITTEN 2026-10-14 (round 13); its regression run MADE 2026-10-14 (round 14, Ron's go): both passes `fail`, below
+### Instructions version 5: the studio rule (#354) — WRITTEN 2026-10-14 (round 13); its regression run MADE 2026-10-14 (round 14, Ron's go): both passes `fail`, below; ACCEPTED by Ron (#366, round 15)
 
 **Nothing paid has been run.** In the round that wrote it: the text, `PROMPT_VERSION` "5" and `PROMPT_FINGERPRINT`
 `1b1e59fb…` (tests green, one test pins the two studio sentences); a read-only reading of the store (no model call; the
@@ -2221,6 +2221,37 @@ three studio posts):
   `entry_date_written`, `furnished`, `house_committee`, 1 each `apartment_kind`, `rooms`, `parking`, `arnona`, `floor`.
 
 **Step 2** (the seven stored studio posts) is not approved and was not run. Nothing was reclassified.
+
+#### Round 15 (2026-10-14): version 5 accepted (#366); four truths corrected (#367); the verdict recomputed
+
+**Ron accepted version 5 on this run (#366).** **Step 2 is deferred** (Ron, round 15): the seven stored studio posts leave by
+retention (`BACKLOG.md` item 8).
+
+**#367, written in `data/labeling/corrections.json`** (the export's shape, the one-space indent kept; the diff against a
+scratch copy of the file before it is the four fields and the three notes only; `labels.json`'s SHA-256 the same):
+`62a41d3d…` parking `{"state": "written", "value": false}` and furnished `{"state": "written", "value": "partial"}`;
+`71ada783…` `entry_date_written` "כניסה ב18.10"; `a7ba462d…` furnished `{"state": "written", "value": "partial"}`. Each
+value read again against the post's text on the production store (read-only) before it was written; the file validates.
+
+**The recomputed verdict of run `09f15e8dac9f`** (a scratch script: `labeling.regression.prepare` on the production store
+opened read-only, then `labeling.compare.judge` over the run's stored answers; no model call; the store's SHA-256 the same
+before and after). **The control**, with the file as it was before #367, reproduces the recorded result exactly (both
+`fail`, the same four mismatches). With #367's truths:
+
+| Field (bar 90%) | Pass 1 | Pass 2 |
+|---|---|---|
+| Deciding fields, `rooms`, filled in | unchanged: no error; `rooms` 0/9; nothing filled in | unchanged: no error; `rooms` 0/9; `broker` at 2 filled in |
+| `furnished` | **3/9, fail** (3, as before; 58: truth `partial`, answer `unclear`; 60: truth `partial`, answer `unclear`) | **3/9, fail** (the same) |
+| `parking` | **1/9, fail** (58: truth no, answer `unclear`) | **1/9, fail** (the same) |
+| `entry_date_written` | **1/9, fail** (59: truth "כניסה ב18.10", answer "ב18.10") | **1/9, fail** (the same) |
+| `broker`, `house_committee` | 0/9 | 1/9 each, fail (as before) |
+| **Verdict** | **`fail`** | **`fail`** |
+
+**Reading:** version 5 gave the same answers version 3 had given on these three posts, so the old truths matched them and
+the corrected ones do not: the corrections add three misses in each pass, and position 60's `furnished` miss changes its
+truth (`not_written` → `partial`) but stays a miss. At 9 counted posts one miss is 88.9%, under the 90% bar, so any miss on
+a review field fails that field. For information (not a change to any file): with #241's `partial` at position 3 as well,
+`furnished` would be 2/9 and still fail. Nothing was changed to alter this.
 
 ---
 

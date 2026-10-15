@@ -650,7 +650,7 @@ orange (#275). Computed per user at evaluation, never written (invariant 12).
     `ListingStub` and `DecisionStub` stay for `notify/` until Phase 4; `tests/test_stubs.py` loses its policy tests.
 16. **`restored_lifecycle` is built and tested in 3.6** (pure); 3.8 wires the writes and the reports.
 
-## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 6 built
+## 3.7 The site — PLAN APPROVED 2026-10-12 (round 8, #316–#331; round 9, #332–#339); build steps 1 to 6 built; step 7 measured (round 16); C, 44–46 built, A and D planned (round 17), waiting for Ron
 
 The lists and the cards (`BASELINE.md` §6) with these approved display rules (`BACKLOG.md`, "Recorded for a later
 phase"): the card's main time is the last publication, shown relative (#122); the repost log shows the earliest
@@ -1154,6 +1154,328 @@ step 6; the transitive npm packages' licences; whether TypeScript 7's native pac
    sizes on a scratch copy (`SESSION_LOG.md`, round 13).
 7. The measured page load (h), on the copy and on a 40-day synthetic store (#330), Lighthouse, the `design` plugin's
    critique and accessibility review, a colour-vision check. **Ron reviews** the numbers and the look.
+   **The plan for step 7's measurements: APPROVED by Ron with points 40–42 as recommended (#368–#370, round 16); MEASURED 2026-10-14/15 (round 16): the results follow the plan, below. Two targets are missed on the 40-day store; nothing was changed.**
+
+#### Step 7's measurements — the plan (round 15, for Ron's approval)
+
+Free throughout: no model call, no Apify call, nothing installed. **The production store is only ever read** (`mode=ro`,
+its SHA-256 checked before and after); every store measured is a scratch file in the session's scratchpad, outside the
+repository, served by a scratch launcher (`web.app.site_over` and uvicorn on 127.0.0.1, as in round 13). No repository
+code changes for the measurements: `Server-Timing` (h) is already on `POST /api/cards`.
+
+**The two stores.**
+
+| | S1, today | S2, 40 days (synthetic) |
+|---|---|---|
+| Made how | SQLite's online backup of the production store from a read-only connection (as `serve --copy`), into the scratchpad; photos read in place from `data/store/images/` | S1, then 31 more copies of every post added (below), with their own photo files in a scratch `images/` |
+| Posts | 266 (139 active with a `Listing`, 89 rejected, 38 pending) | about 8,512 (32 × 266; 40 days × run A's 212 a day is 8,480, 3.6's figure) |
+| Members (active canonicals with a `Listing`) | 139 | about 4,448 |
+| Cards for a guest's empty bar | 123 | about 3,936 |
+| Members' photo files | 620, 94 MB | about 19,840, about 3.0 GB (155 GB free on the disk) |
+| The list's JSON for that bar | about 400 KB | about 13 MB, estimated linearly: what #346 asks |
+
+**How S2 is built** (a scratch script, the method of 3.6 (c)'s synthetic scale, but written to a real file so the site
+reads it). Today's 266 posts span 27 hours (2026-10-03 13:41 to 10-04 16:43 UTC), so 32 copies 1.25 days apart cover 40
+days. Copy *k* (1 to 31) of every post, in every state, so the mix stays today's:
+- `RawPost`: a new `source_post_id` and its `listing_id` (`compute_listing_id`, the one implementation); `posted_at` and
+  the lifecycle's `last_published_at` moved back *k* × 1.25 days, the whole set shifted so the newest copy is today; the
+  text with a short copy marker appended (so its `text_hash` differs; the hash by `textnorm`, the one implementation);
+  every phone (`RawPost.phones`, the `Listing`'s `phone_names`) mapped to a synthetic number, **the same map inside a
+  copy and a different one per copy**. So the four real pairs still tie inside each copy (about 128 two-post cards) and
+  no copy ties another (the key needs a shared non-agent phone or a shared photo, 3.6 (c)).
+- Photos: for a member, each file copied to a new path with a few bytes appended (a JPEG reads to its end marker), so each
+  copy has distinct bytes and a distinct hash, and the cold hashing reads 3 GB as it would. Hard links would cost no disk
+  but would read the same cached bytes, which hides the cold cost. A non-member's image entries keep the original paths
+  (the site never reads them).
+- Written through the Repository (`upsert_with_lifecycle`, `save_classification` on the scratch file), so every record
+  passes its contract; the `Listing` copied with the new `listing_id` and phones, nothing else changed. The pending posts
+  stay pending (no `Listing` is invented).
+- **No post is archived**, though at 40 days Phase 5's job would have archived the posts older than 25 days. Until Phase 5
+  nothing archives, so this is the store the site will actually face, and an upper bound on the steady state (point 40).
+
+**What is measured, on S1 and on S2.**
+1. **On the server** (a scratch client on 127.0.0.1, reading `Server-Timing` and the wall time; each step's `gen`,
+   `group`, `eval`, `order`, `json`): `POST /api/cards` for a guest's empty bar **cold** (the first request after a start:
+   the whole grouping and every photo hashed), three starts; **warm**, ten requests (median and maximum); **after a store
+   change** (a test write on the scratch file, a flag through the API, then the next request recomputes). The same warm for
+   a signed-in user's saved preferences (the admin, a test password set on the scratch copy only, as round 13); `GET
+   /api/posts/{id}`; the preferences page's live count (the same endpoint, #352 point 38). The response's size in bytes and
+   the site process's memory after the grouping. The disk cache is not controlled (Windows): cold means the site's own
+   memory, not the disk's.
+2. **In Chrome** (chrome-devtools, Ron's laptop, no throttling: the targets are on his laptop): a performance trace with a
+   reload at 1440 × 900 and at 390 × 844 (phone, touch): the time to the first cards drawn (the first card element in the
+   DOM, read by a script in the page, and the trace's LCP), the whole load, long tasks; cold, warm, after a store change.
+   On S2 also the DOM's size and the page's memory with about 3,900 cards, and whether scrolling stays smooth (the trace
+   while scrolling). One phone trace with 4× CPU and "Fast 4G" for information only.
+3. **Lighthouse** (chrome-devtools' `lighthouse_audit`: accessibility, best practices, SEO; this version of the tool
+   leaves performance to the trace of 2) on the list, an opened post, sign-in and the preferences page, desktop and
+   mobile, on S1.
+4. **The `design` plugin's critique and accessibility review** (`design:design-critique`, `design:accessibility-review`)
+   on screenshots at the six sizes of round 11 (#347), a guest and signed in, on S1; keyboard and screen-reader names
+   checked in the page (the accessibility tree).
+5. **Colour vision** (#323): chrome-devtools' `emulate` in this version has no vision-deficiency setting, so the page is
+   filtered in place by a script that adds an SVG colour matrix (protanopia, deuteranopia, tritanopia, achromatopsia;
+   Machado et al. 2009 matrices) to the scratch page only, with screenshots of the glow, the chips and the badges; and the
+   tokens' contrast ratios computed. An approximation of what Chrome's own emulation does (point 41).
+
+**Reported** in `SESSION_LOG.md` with each store's size, against the targets (#330 point 20): warm `POST /api/cards` under
+300 ms on the server; first cards under 1.5 s; on S1 and S2. **If a target is missed, nothing is changed in step 7:** the
+options already recorded (#345 the grouping computed at start and after a change in the background; #346 the first lines in
+the list; a bulk read, 3.6 point 13) are proposed to Ron with the numbers, and anything new (for example paging the list,
+or compressing the response) as a new point. The design and accessibility findings are fixed in step 7 only where they
+break an approved rule; the rest are listed for Ron.
+
+**Kept and removed:** S2 (about 3 GB) and the scratch copies stay in the scratchpad until Ron has read the numbers, then
+are deleted; nothing of them enters the repository or `data/`.
+
+**New points (for Ron):**
+- 40. **S2 without archiving** (recommended: the store the site meets until Phase 5, an upper bound). Or: the posts older
+  than 25 days archived (their photos removed), the steady state after Phase 5, about 5,300 active posts instead of 8,512.
+- 41. **The colour-vision check by an injected filter** (recommended; no install). Or: Chrome's own rendering emulation by
+  hand in DevTools' Rendering panel, which Ron would do himself, since the tool does not reach it.
+- 42. **The copies' photo bytes on disk** (recommended: distinct files, about 3 GB in the scratchpad, deleted after). Or:
+  hard links (no disk), with the cold hashing under-measured.
+
+#### Step 7's results (round 16, 2026-10-14/15) — nothing changed in the repository
+
+**What was made.** S1: SQLite's online backup of the production store (read-only connection): 266 posts, 139 members, 123
+cards, photos in place. S2: S1 plus 31 synthetic copies, built through `SqliteRepository` on a scratch file with every
+record validated: **8,512 posts, 4,448 members, 3,967 cards for an unfiltered bar, 19,840 member photo files, 2.9 GB of
+photos, 108 MB of database**, no archiving (#368), each photo with its own bytes (#370), built in 140 s. Copy *k* is
+shifted back *k* × 1.25 days (the newest copy is the real data, 10 days old), phones mapped per copy, `text_hash` derived
+from the original's and the copy number (so the dedup A classes stay), the texts **not** marked (the stored hash is what the
+key reads: deviation 1). The four real pairs still tie in each copy. The site ran from a scratch launcher (`web.app.site_over`,
+uvicorn on 127.0.0.1); the production store's SHA-256 `5df9bc9a…` the same before and after; no model, no network beyond
+127.0.0.1; nothing installed.
+
+**On the server** (a scratch client; `Server-Timing`; Ron's laptop, SQLite 3.45.3):
+
+| | S1 (123 cards) | S2 (3,967 cards) | Target |
+|---|---|---|---|
+| Cold, first request after a start, OS cache warm (3 starts) | 402–502 ms (`group` 384–485) | 15.4 s and 16.1 s (`group` 15.1, 15.8) | none (#345 decides) |
+| Cold, files not in the OS cache | — | **127.8 s** (`group` 127.4) in the first run; **120.0 s** (`group` 118.3) in Chrome's run | none |
+| Warm, a guest's empty bar, median (max) of 10 | **34 ms** (44) | **554 ms** (627): `eval` 36, `order` 13, **`json` 372** | **300 ms** |
+| Warm, signed in with the saved profile, median (max) | 37 ms (60) | 462 ms (619): `json` 264 | 300 ms |
+| After a store change (a flag), the next request | 266 ms (`group` 245), then 27 ms | **10.6 s** (`group` 10.1), then 346–532 ms | — |
+| The response | 457,674 B | **14,768,550 B** | — |
+| The opened post / one photo | 16 ms / 16 ms | 12 ms / 2.5 ms | — |
+| The site's memory after the first grouping (at the end) | 75 MB (76) | 354 MB (519) | — |
+
+**In Chrome** (chrome-devtools, 1440 × 900 and 390 × 844 touch, no throttling, the first card drawn read from the DOM):
+
+| | S1 desktop | S1 phone | S2 desktop | S2 phone | Target |
+|---|---|---|---|---|---|
+| First cards drawn, warm server (reload) | **0.21 s** | **0.22 s** | **3.0 s** | **3.3 s** | **1.5 s** |
+| First cards drawn, cold server, OS cache warm | about 0.7 s (derived: 0.5 s server + 0.2 s) | same | about 18 s (derived) | same | 1.5 s |
+| First cards drawn, cold server, cold disk | — | — | **121 s** (measured; the page shows "טוען מודעות…" throughout) | — | 1.5 s |
+| `/api/cards` response end | 0.13 s | 0.16 s | 1.6 s | 1.7 s | — |
+| Longest frame | 0.23 s | 0.18 s | **4.8 s** | **5.4 s** | — |
+| DOM nodes, JS heap | 6,933, 9 MB | 6,914, 5 MB | **221,453, 84–136 MB** | similar, 80 MB | — |
+| Scrolling the whole list, per frame (median / p95) | — | — | — | **137 ms / 185 ms** (about 7 fps) | — |
+
+The S1 cold browser load was not measured cleanly (the page had already asked for the cards before the restart took
+effect); the cold figures marked "derived" add the server's cold request to the warm browser figure.
+
+**Reading against the targets (#330 point 20).** On today's store both are met by a wide margin (warm 34 ms, first cards
+0.2 s). **On the 40-day store without archiving both are missed:** the warm request is 554 ms (the JSON build of 14.8 MB is
+two thirds of it), and the first cards take 3.0 s warm, of which about 1.4 s is the request and most of the rest the draw of
+3,967 cards (a 4.8 s long frame, 221,000 DOM nodes). The cold request is 15 s warm-cache and 2 minutes on a cold disk
+(hashing 19,840 files, 2.9 GB), and a store change makes the next request wait 10 s. S2 is an upper bound: with the posts
+older than 25 days archived after Phase 5 (point 40's alternative, about 62% of S2) a linear estimate is about 345 ms warm.
+**The unfiltered bar is the worst case: a user with a price or area range sees far fewer cards; that was not measured.**
+
+**What Ron would have to choose, with the numbers (none built):**
+
+| Option | Recorded as | Moves | Does not move |
+|---|---|---|---|
+| **A. Send the first N cards and the count; the rest on scroll** (paging or a window) | new point | `json` (372 ms) and the response (14.8 MB) scale with N: N = 100 is about 370 KB, S1's size, about 35 ms warm; the DOM falls from 221,000 nodes to about 6,000 and the 4.8 s frame with it; scrolling stays at S1's smoothness | the grouping's cold 15 s and the 10 s after a change |
+| **B. The first lines of the text only** | #346 | 23% of the JSON is the text (105 of 458 KB on S1): about 3.4 MB of 14.8; `json` about 285 ms | the DOM, the grouping; alone it still misses 300 ms |
+| **C. Compress the response** (gzip) | new point | 15% of the size (69.5 KB of 458 KB): 14.8 MB to about 2.2 MB, which matters over Tailscale to a phone; no library to install (Starlette's `GZipMiddleware`) | the server's `json` time (the middleware adds some) and the render |
+| **D. Compute the grouping at start and after a change, in the background** | #345 | no visitor waits the 15 s (or 10 s after a flag); the 2 minutes of a cold disk is paid at the start, not at the first visit | the warm request and the render |
+| **E. Keep the photo hashes between runs** (on disk) | needs a decision: #231 says the memo is never written | the 118 s of a cold disk becomes seconds after a restart | the list |
+| **F. Archive at 25 days (Phase 5)** | `BACKLOG.md` | the store the site meets is about 62% of S2 | the same shape, a smaller number |
+
+The reviewer's reading, for Ron to confirm or reject: **A plus D** answer both missed targets and the 15 s cold request;
+B and C are smaller and independent; E only if a restart on a cold disk matters (the site restarts rarely). The N = 100 and
+35 ms figures are estimates from S1's measured size, not measured.
+
+**Lighthouse** (chrome-devtools; accessibility, best practices, SEO; desktop and mobile; S1; the list, an opened post, the
+preferences page and sign-in; the reports are in the session's scratchpad): **accessibility 100 on the list, preferences and
+sign-in, 97 on the opened post; best practices 100 everywhere; SEO 82–83.** What failed:
+- `color-contrast` (opened post): the grey "לא צוין" chips, #69717b on #f2f1ee, **4.37:1** (4.5:1 needed; the token's
+  comment says 4.8:1 on white); on the desktop dialog the photo counter "1/5" (aria-hidden, over a photo) 1.74:1.
+- `label-content-name-mismatch` (WCAG 2.5.3, Label in Name): the logo (`aria-label` "TLV Apartment Hunter, לעמוד
+  הראשי"), the card's "i" button (visible "i", name the tier's reason), the user pill (name "החשבון של …").
+- `cumulative-layout-shift`: 0.059 on the list, **0.42 on the opened post at its own address (desktop)**.
+- `meta-description`, `robots.txt` (the site answers `/robots.txt` with the page, "16 errors"), `llms.txt`: search-engine
+  items that do not apply to a site only the tailnet reaches (#307); listed, not recommended.
+
+**The `design` plugin's accessibility review** (its WCAG 2.1 AA list, on the scratch copy, by script and by eye; not a
+screen reader):
+- *Perceivable:* as above (contrast). Colours never carry meaning alone: every chip, the kind, the tier ("i") and the
+  buttons carry words.
+- *Operable:* **the closed card's controls are small for touch** — the "i" 28 × 28, the three foot buttons 26 px high
+  (Facebook 62, report 46, WhatsApp 69 wide; 123 of each on the list), the carousel's arrows 34, the bar's chips 34, the
+  user pill 40, "סינון" 34; the 44 px of 2.5.5 is met by none of them, the 24 px of WCAG 2.2's 2.5.8 by all. **The dialog is
+  `role="dialog"` `aria-modal`, focus moves into it and Escape closes it; the focus is not returned to the card that
+  opened it (it lands on the page).** No `h1` or `h2` on the list or the opened post (the preferences page, the forms and
+  the report dialogs have them); landmarks: one `header`, one `main`.
+- *Not done:* a pass of the keyboard order over every control; a screen reader (NVDA, VoiceOver); 200% zoom as such (at 390
+  px and 1440 px nothing scrolls sideways); the preferences page's and the forms' touch targets.
+
+**Colour vision** (point 41, an SVG colour matrix on the page of the scratch copy; Machado et al. 2009, severity 1.0; the
+tokens computed too): the tier colours as seen, CIE76 ΔE between green / amber / red: normal 85 / 100 / 65 (green-amber,
+green-red, amber-red); **protanopia 49 / 22 / 62; deuteranopia 63 / 18 / 45**; tritanopia 83 / 111 / 31; **achromatopsia 6 /
+8 / 14** (all three at lightness 45–59). Green and red are close under protanopia and deuteranopia, and the three are
+indistinguishable in grayscale; as #323 accepts, the "i" and the words carry the tier. In the grayscale screenshot the green
+chips, the grey chips and the plain text read as three weights of grey, and the three foot buttons differ only by their
+words. (The admin's profile on S1 shows no green card, so the green ring itself was judged from the tokens.)
+
+**The design critique** (the phone list and the opened post, S1, signed in): the hierarchy is clear (kind, price, place,
+text, stats, foot), the viewed card is dimmed and worded, the photo carries the "i" and the dots. Two things to look at:
+**the opened post on a phone shows a wall of six grey "לא צוין" chips** before the first useful row when little is written
+(one line saying "not written: parking, balcony, …" would carry the same facts), and **the closed card's reserved slots
+(#341) leave a gap above the foot** on a card with no chips. Neither breaks an approved rule; both are Ron's calls.
+
+**Deviations:** (1) the copies' texts were not marked with a copy tag (the key reads `text_hash`, which was derived);
+(2) S2's newest copy is the real data (10 days old), not today; (3) the S1 cold browser load was not measured cleanly;
+(4) the "after a store change" case was measured on the server, not in the browser; (5) traces were taken for S1 phone and S2
+desktop (saved in the scratchpad); the time to the first card was read from the DOM on all four combinations.
+
+**New points for Ron (3.7):**
+- 43. **The two missed targets on S2:** which of A–F (above), if any. Recommended: A and D. **Decided: A, C and D (#371).**
+- 44. **The small touch targets of the closed card** (the "i" 28 px, the foot's 26 px buttons): enlarge to 44 px on a
+  touch screen (the foot rows #341 grow), or keep (above 24 px). Recommended: enlarge on touch. **Decided: yes (#372); built as a touch area, point 55.**
+- 45. **The grey chip's contrast** (4.37:1): darken the grey text one step on the chip's background. Recommended: do it. **Decided: yes (#373), built.**
+- 46. **Label in Name and the focus return:** the logo, the "i" and the user pill's names to start with their visible text;
+  the focus returned to the card on closing the post. Recommended: do it. **Decided: yes (#374), built.**
+- 47. **The six grey chips on a phone's opened post**, and **the gap above a chipless card's foot:** as listed. Recommended:
+  leave. **Decided: leave (#375).**
+
+#### Round 17 (2026-10-15): C, 44, 45 and 46 built (#371–#374); A and D planned, waiting for Ron
+
+**Built.**
+- **C, gzip (#371).** `web/app.py`: Starlette 1.7.0's `GZipMiddleware` (read in the installed source, `starlette/middleware/
+  gzip.py`), `minimum_size` 500, `compresslevel` 6 (its default is 9), its default exclusions passed explicitly, so a JPEG,
+  PNG or woff2 is never compressed. It covers every response the site sends, the built JS and CSS too, not only `/api`
+  (deviation 1). Measured on today's store: the list **457,674 → 69,525 bytes**, `Vary: Accept-Encoding`; the compression
+  **adds about 15 ms** to a warm request (median 34 ms against 19 ms, 10 each, curl on 127.0.0.1), which at the 40-day
+  list's 14.8 MB would be about 0.5 s: one more reason A comes with it.
+- **44, touch areas (#372).** On a touch screen (`pointer: coarse`) every closed-card and header control has an invisible
+  `::after` touch area of at least 44 px: the foot's buttons and the "i" (already there since round 11, widened by 1 px),
+  the photo's arrows, the bar's chips and "סינון", the user pill, the logo; the chip's ellipsis kept by `overflow: clip`
+  with a margin. Nothing grows, so #341's slots and every card's height are unchanged (point 55).
+- **45, the grey (#373).** The `--grey` token, one place: `#69717b` → `#646b75`: 4.77:1 on the chip's `--grey-bg`, 5.4:1 on
+  white; every "לא צוין" uses it.
+- **46, Label in Name and the focus (#374).** The logo's two words separated (`TLV Apartment Hunter`, as its name starts);
+  the "i" and the avatar's letter drawn by CSS (`::before`), icons, so the "i"'s name is the tier's words and the user
+  pill's name starts with the username (`<username>, תפריט החשבון`); closing a post opened from the list (Escape, the close
+  button or the browser's back) returns the focus to the card's link, which scrolls a half-visible card into view.
+- Tests: `tests/test_web.py` +3 (the list gzipped only when asked, the same JSON, `Server-Timing` and the two headers kept; a
+  photo never gzipped; a small answer sent as it is); `frontend/src/components/names.test.tsx` (3: the "i" holds no text, the
+  logo's words, the pill's name and the avatar's letter).
+
+**Checked in Chrome** (a fresh online backup of the store in the scratchpad, signed in, port 8801):
+
+| Size | Columns, card height, sideways scroll | Touch areas (box → touch area) |
+|---|---|---|
+| 2560 × 1440 | 6, one height, none | mouse: compact sizes kept |
+| 1440 × 900 | 4, 606 px, none | mouse |
+| 1366 × 768 | 4, 592 px, none | mouse |
+| 1194 × 834 touch | 3, 639 px, none | "i" 28 → 45; foot 26 → 45; arrows 34 → 46; bar chip 34 → 44.7; pill 40 → 45; logo 44 → 52 |
+| 834 × 1194 touch | 2, 650 px, none | the same |
+| 390 × 844 touch | 1, 318 px, none; the bar still 91 px | "i" 45; foot 45; "סינון" 34 → 45; pill 45; logo 36 → 44 |
+
+The focus returned to the card on Escape and on the browser's back. **Lighthouse after the change:** Label in Name passes
+everywhere; the grey chip passes; the opened post is 100 on mobile and 97 on desktop, the list 96 on desktop. Both remaining
+failures are the photo counter "1/5" (white on a translucent dark pill over a photo, measured 1.74:1, aria-hidden), a
+round-16 finding outside #373 (point 56). The look is unchanged at every size.
+
+#### Plan for A (the first cards, the rest as the user scrolls) — WAITING for Ron
+
+**The shape (point 48).** `POST /api/cards` keeps its body (the bar) and adds `first` (default 48). Per request the server
+still evaluates and orders **every** card (on the 40-day store `eval` 36 ms and `order` 13 ms, measured), and returns:
+`count`; `order`, **the whole ordered list of card ids** (3,967 × 64 hex characters, about 270 KB on the 40-day store, but
+nothing to draw); and `cards`, the full payload of the first `first` cards only. A new `POST /api/cards/by-id` `{bar, ids}`
+(at most 96 ids) returns those cards' payloads, evaluated against the same bar; an id is any post of a card (as
+`/api/posts`), so a card regrouped meanwhile is still found; an id no longer in any card comes back in `gone`.
+- **N = 48**: whole rows at 2, 3, 4 and 6 columns; about 180 KB of JSON, about 25 KB gzipped; the page asks the next 48
+  when its last card comes within about one and a half screens of the view (an `IntersectionObserver` on a sentinel, no
+  library).
+- **The order stays right because it is fixed for the load.** The page holds the ordered ids of its load and asks pages
+  from it, so nothing is skipped or shown twice whatever happens meanwhile; the order changes only on the next load (a
+  bar change, a reload, "ההעדפות שלי"), as the viewed order already does (round 13, deviation 4).
+- **The glow and the tier** come with each card's payload, from the same `evaluate` against the same bar, so a page asked
+  later glows as the first; **the count** is the first answer's, less the cards the user removed (below).
+- **Viewed:** the mark is set on the list's card at once and the order follows on the next load, as today; "mark as not
+  viewed" the same. Viewed cards stay where they are in a load.
+- **A flag or a report (point 49):** the card leaves the list in place and the count drops by one, **with no reload**, so the
+  user keeps their place; today the list reloads, which with paging would send the user back to the top. A 409 `gone`
+  does the same.
+- **The bar:** any change starts a new load from the top, as today. **The preferences page's live count (point 50)**
+  asks `first: 0` and reads `count` (no order, no cards).
+- **Estimated on the 40-day store** (from the measured parts, to be measured at the build): a warm list request about
+  60–70 ms (evaluation and order 50, the ids and 48 cards' JSON about 10, gzip a few); a page of 48 by id a few
+  milliseconds; the first 48 cards drawn well under the 1.5 s target, since the draw is about 2,600 DOM nodes instead of
+  221,000.
+- **Not in A (point 53):** cards already drawn stay in the page; a user who scrolls through all 3,967 cards of an
+  unfiltered 40-day list ends with today's DOM size, reached a page at a time (each append short). Removing far-off cards
+  (a virtual list) is a further step, measured first.
+- **Tests:** `order` equals today's `ordered`; `first` slices it; `by-id` gives the same payload as the first page for the
+  same card; `gone` for a flagged card; the count with `first: 0`; a guest and a user alike; invariant 12 (nothing per user
+  written on a post). Vitest: the page's merge of pages (no duplicate, order kept, a removed card skipped). Chrome at the six
+  sizes and step 7's measurement again on S1 and a rebuilt S2.
+
+#### Plan for D (the grouping computed in the background) — WAITING for Ron
+
+**Today (#301, #316):** a request reads the store generation (about 1 ms); when it moved, the request computes the grouping
+while holding the lock, and every request waits for it (15 s at 40 days, 10 s after a flag).
+
+**Proposed:**
+1. **At start**, `serve` begins the first grouping in a background thread at once, before any visitor.
+2. **A request never computes.** It reads the generation as today; when the generation moved and no recompute is running,
+   it starts one in the background (one at a time, the lock as today) and answers at once **from the snapshot it holds**.
+   When a recompute ends and the generation moved again meanwhile, one more runs. #301 holds: the grouping is computed once
+   for all users, only when the store changed; #316's counter is still how the site knows.
+3. **The first grouping after a start (point 52):** there is no snapshot yet. Today a request waits for it (the page shows
+   "טוען מודעות…"): at 40 days 15 s, or about 2 minutes on a cold disk. Proposed: the API answers "loading" and the page
+   retries every few seconds with the same words, so no request holds a connection for minutes.
+4. **A user's own flag or report leaves the list at once (point 51)**, though the snapshot is older than the write: the site
+   keeps a small **removal overlay**, the ids of the posts it has itself just made inactive, with the store generation after
+   the write. Every list, `by-id`, `/api/posts` and `/api/photos` answer leaves those posts out, and a write on one is
+   409 `gone`, exactly as if the grouping were current; an entry is dropped once a snapshot at or after its generation is
+   held. It only ever removes, never adds: a post the site made inactive is inactive in the store.
+5. **What waits for the background recompute (point 51):** what other processes write (a collection run's new posts, a
+   classification run, a run's rejection) and what changes a card without removing it (an admin's correction, 3.8): the
+   first visitor after such a write sees the previous list, and the next request after the recompute ends (seconds; about
+   10–15 s at 40 days) sees the new one. Today that first visitor waits instead.
+6. **Memory:** two snapshots exist while a recompute swaps in; at 40 days about 350 MB each (measured), so about 0.7 GB at the
+   peak. To be measured at the build.
+7. **Threads:** one daemon thread for the recompute; the Repository opens its own read-only connection per call, as the
+   request threads already do; the swap is one assignment under the lock.
+- **Tests:** a request during a recompute is answered from the old snapshot without waiting (a `derive` that blocks on an
+  event); one recompute at a time, coalesced; the start's background grouping; the overlay: a flag removes the card from
+  the next answer before the recompute ends, `/api/posts` 404 and a write 409 `gone` for it, the overlay dropped at the new
+  snapshot; the "loading" answer before the first snapshot (if point 52 is taken); `Server-Timing` keeps `group` only where
+  a request waited.
+
+**New points for Ron (A and D):**
+- 48. **The paging shape:** the first 48 cards with the whole ordered id list, the rest by id from that list; the order
+  fixed for a load. Recommended.
+- 49. **After a flag or a report the card leaves in place, with no reload** (today the list reloads). Recommended.
+- 50. **The preferences page's count asks `first: 0`** (still no separate endpoint). Recommended.
+- 51. **With D, other processes' writes and an admin's correction show after the background recompute** (seconds; 10–15 s at
+  40 days) rather than making the next visitor wait; the site's own flags and reports leave at once by the overlay.
+  Recommended.
+- 52. **Before the first grouping after a start:** the API answers "loading" and the page retries (recommended), or the
+  request waits as today.
+- 53. **No virtual list in A:** cards stay drawn as the user scrolls; measured after A. Recommended.
+- 54. **A and D built in one round**, A first (it moves both missed targets), measured with step 7's method on S1 and a
+  rebuilt S2 (about 3 GB in the scratchpad again, deleted when Ron says). Recommended.
+- 55. **#372 as built:** a 44 px touch area that does not grow the controls (above). Or: the controls drawn at 44 px on a
+  touch screen, the foot's rows growing (#341's slots taller on touch). Recommended: as built.
+- 56. **The photo counter "1/5"** (1.74:1 as Lighthouse measures it over a photo): a darker pill (for example 90% opacity,
+  white text) to pass 4.5:1. Recommended: do it with A.
 
 ### (m) What I could not verify
 

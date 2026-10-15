@@ -3444,6 +3444,78 @@ again on the site.
 The bot's menu button (left of the attachment icon) opens the site, later the Mini App. It works only with Tailscale on the
 phone. Covered by the Mini App spike (`BASELINE.md` §14, `ASSUMPTIONS.md` T5). *Ron's own.*
 
+## Phase 3: Ron's answers on round 14, instructions version 5 (2026-10-14)
+
+**Ron answered round 14 on 2026-10-14 (recorded in round 15).** #366 is Ron's acceptance; #367 approves the reviewer's
+proposal.
+
+### 366 — Instructions version 5 accepted on regression run `09f15e8dac9f`
+Ron accepted version 5 (#354) on run `09f15e8dac9f` (`PHASE_2.md`, "The run of 2026-10-14"): every deciding field with no
+error in both passes; the three studio posts `"whole_apartment"` with 1 room in both. Both passes are marked `fail`, on
+review fields only: `furnished` at position 3 (#241, no carrier, `BACKLOG.md` item 3) and at position 60 (a version 3
+answer that had become truth, corrected by #367), and in pass 2 only `broker` at 2 and `house_committee` at 39, run-to-run
+variation (pass 1 answered both right). **A note for the next run:** the passes disagreed on 23 posts and 29 field flips,
+against version 4's 13 and 15, mostly prices that are not compared; to watch, nothing to change now. **Step 2 of the version 5
+plan** (reclassifying the seven stored studio posts) **is not scheduled**: they leave by retention.
+*Ron's decision (round 15).* No reason recorded.
+
+### 367 — Four truths the studio posts brought into the set, corrected
+The three studio posts joined the set in round 14 with their version 3 answers as truth (#193). Four of those are corrected
+in `data/labeling/corrections.json`, in the export's shape, nothing else touched:
+- `62a41d3d…` **parking: no** (`written`, `false`): the post offers only a street parking permit ("אפשר לקבל תוו חניה"), and
+  street parking is not parking;
+- `62a41d3d…` **furnished: `partial`**: the furniture is "for illustration" ("הריהוט להמחשה"), a wardrobe and a fridge stay;
+  as #241;
+- `71ada783…` **`entry_date_written`: "כניסה ב18.10"**, as the text says;
+- `a7ba462d…` **furnished: `partial`**: a fridge and hot plates.
+
+The run's verdict recomputed with them (free, no model call; `PHASE_2.md`, "Round 15"): both passes still `fail`, now also on
+`parking` and `entry_date_written` (version 5 answered as version 3 had), `furnished` 3 of 9.
+**Ron's note (round 16):** the recomputed fails on `furnished` and `parking` are real model misses on card-only fields, exposed by the corrected truths, not a version 5 regression; nothing to change now.
+*Ron approved the reviewer's proposal (round 15).* No reason of his own.
+
+## Phase 3: Ron's answers on the step 7 measurement plan (2026-10-14, round 16)
+
+**Ron approved the plan of `PHASE_3.md` 3.7 (l), "Step 7's measurements", on 2026-10-14.** #368–#370 are points 40–42, the reviewer's recommendations, approved.
+
+### 368 — The 40-day synthetic store is built with nothing archived (point 40)
+Until Phase 5's job nothing archives, so the store the site will meet is the unarchived one; it is also an upper bound on the steady state. *Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 369 — The colour-vision check is a CSS filter added to the page in the scratch copy only (point 41)
+An SVG colour matrix applied by a filter on the page of a scratch copy; nothing is installed and no repository file changes. *Ron approved the reviewer's recommendation.* No reason of his own.
+
+### 370 — Each copied photo of the synthetic store has its own bytes; deleted after Ron has read the numbers (point 42)
+About 3 GB in the scratchpad, so the cold hashing reads real bytes. The scratch stores are deleted only once Ron has read the numbers and says so (the assistant tells him when it is safe). *Ron approved the reviewer's recommendation.* No reason of his own.
+
+## Phase 3: Ron's answers on step 7's results (2026-10-15, round 17)
+
+**Ron answered round 16 on 2026-10-15.** #371 is Ron's choice among the options of `PHASE_3.md` 3.7 (l), "Step 7's
+results", C added on the reviewer's advice; #372–#374 approve the reviewer's recommendations; #375 keeps the layout.
+
+### 371 — The 40-day list: A, C and D (point 43); E and F not now
+**A**, the list sends the first cards and the count, the rest as the user scrolls; **C**, the API's responses are
+compressed (gzip); **D**, the grouping is computed at start and after a store change in the background. **C is built in
+round 17; A and D are planned first and wait for Ron.** E (the photo hashes kept on disk, which #231 forbids) and F
+(archiving, Phase 5) are not taken now.
+*Ron's decision. His reason for C, on the reviewer's advice:* the response's size matters to a phone over Tailscale (14.8 MB
+to about 2.2 MB on the 40-day store).
+
+### 372 — The closed card's controls are 44 px on a touch screen (point 44)
+On a touch screen (a coarse pointer) the "i", the three foot buttons and the other closed-card controls measured under 44 px
+are at least 44 × 44 px; a mouse keeps the compact sizes. The card's fixed slots (#341) grow with them, so every card keeps
+one height. *Ron approved the reviewer's recommendation.*
+**Built differently in round 17, for Ron to confirm (`PHASE_3.md` point 55):** the round-16 finding measured the controls' boxes, not their touch areas. The foot's buttons and the "i" already had a 44 px touch area on a touch screen (an invisible `::after`, built in round 11); the bar's chips, "סינון", the user pill, the logo and the photo's arrows did not. Round 17 gives every one of them a touch area of at least 44 px the same way, so nothing grows and #341's slots are unchanged; the controls are not drawn larger.
+
+### 373 — The grey "לא צוין" chip's text darkened to pass 4.5:1 on its background (point 45)
+*Ron approved the reviewer's recommendation.* Measured 4.37:1 at step 7.
+
+### 374 — Label in Name, and the focus returned on closing a post (point 46)
+The accessible names of the logo, the card's "i" and the user pill start with their visible text (WCAG 2.5.3); closing the
+opened post returns the focus to the card that opened it. *Ron approved the reviewer's recommendation.*
+
+### 375 — The opened post's grey chips and the gap above a chipless card's foot stay (point 47)
+*Ron's decision (2026-10-15).* No reason recorded.
+
 ---
 
 ## Corrections to recorded facts

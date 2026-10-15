@@ -74,6 +74,7 @@ export function App() {
   const now = useNow()
   const phone = useMedia(PHONE)
   const openedFromList = useRef(false)
+  const returnFocusTo = useRef<string | null>(null)
   const today = israelToday(now)
 
   useEffect(() => {
@@ -152,6 +153,7 @@ export function App() {
 
   const open = useCallback((id: string) => {
     openedFromList.current = true
+    returnFocusTo.current = id
     navigate(postPath(id))
   }, [])
 
@@ -164,6 +166,19 @@ export function App() {
       history.back()
     } else navigate('/')
   }, [])
+
+  // Closing a post opened from the list returns the focus to the card that opened it (#374); a card
+  // that left the list meanwhile (a flag, a report) leaves the focus where the page puts it.
+  const onPost = route.name === 'post'
+  useEffect(() => {
+    if (onPost || returnFocusTo.current === null) return
+    const id = returnFocusTo.current
+    returnFocusTo.current = null
+    const frame = requestAnimationFrame(() => {
+      document.querySelector<HTMLAnchorElement>(`a.open[href="${postPath(id)}"]`)?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [onPost])
 
   // --- build step 6: a signed-in user's writes on a card ---
   const reload = useCallback(() => setReloads((n) => n + 1), [])

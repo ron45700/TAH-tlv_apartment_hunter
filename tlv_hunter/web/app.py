@@ -28,6 +28,7 @@ from argon2 import PasswordHasher
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from tlv_hunter.accounts.passwords import PRODUCTION_HASHER
@@ -47,6 +48,14 @@ SECURITY_HEADERS = (
     (b"referrer-policy", b"no-referrer"),
 )
 TELEMETRY_OFF = {"auto_configure": False, "tracing": False, "metrics": False, "logs": False}
+# Responses compressed for a browser that accepts gzip (#371 C: the list is about 15 MB at 40 days,
+# about 15% of it compressed, which matters to a phone over Tailscale). Starlette 1.7.0's
+# `GZipMiddleware`, read in the installed source: a body under `minimum_size` is sent as it is;
+# `compresslevel` defaults to 9, and 6 (zlib's own default) is passed for a cheaper compression of a
+# large list; its default exclusions keep the photos (`image/jpeg`, `image/png`) and the fonts
+# (`font/woff2`) as they are, and they are passed explicitly.
+GZIP_MINIMUM_SIZE = 500
+GZIP_LEVEL = 6
 
 
 class SecurityHeaders:
@@ -84,6 +93,12 @@ def create_app(site: Site) -> FastAPI:
         _serve_pages(app, Path(site.pages))
     app.add_middleware(ClearFailedCookie)
     app.add_middleware(SecurityHeaders)
+    app.add_middleware(
+        GZipMiddleware,
+        minimum_size=GZIP_MINIMUM_SIZE,
+        compresslevel=GZIP_LEVEL,
+        exclude_content_types=DEFAULT_EXCLUDED_CONTENT_TYPES,
+    )
     return app
 
 

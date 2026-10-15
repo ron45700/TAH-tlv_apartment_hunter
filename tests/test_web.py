@@ -41,7 +41,12 @@ from tlv_hunter.jobs import serve
 from tlv_hunter.jobs.common import CONFIG_ROOT
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.sqlite import SqliteUserDataStore
-from tlv_hunter.web.app import CONTENT_SECURITY_POLICY, create_app, site_over
+from tlv_hunter.web.app import (
+    CONTENT_SECURITY_POLICY,
+    GZIP_MINIMUM_SIZE,
+    create_app,
+    site_over,
+)
 from tlv_hunter.web.routes import router
 
 NOW = datetime(2026, 10, 13, 9, 0, tzinfo=UTC)
@@ -444,6 +449,37 @@ def test_every_response_carries_the_two_headers(client: TestClient, store: Store
     for response in responses:
         assert response.headers["content-security-policy"] == CONTENT_SECURITY_POLICY
         assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_the_list_is_gzipped_for_a_browser_that_accepts_it(client: TestClient) -> None:
+    """#371 C: the same JSON either way, compressed only when asked; `Server-Timing` and the two
+    headers stay."""
+    plain = client.post("/api/cards", json=bar(), headers={"Accept-Encoding": "identity"})
+    packed = client.post("/api/cards", json=bar(), headers={"Accept-Encoding": "gzip"})
+    assert "content-encoding" not in plain.headers
+    assert packed.headers["content-encoding"] == "gzip"
+    assert "accept-encoding" in packed.headers["vary"].lower()
+    assert packed.json() == plain.json()  # the client decodes the body
+    assert int(packed.headers["content-length"]) < len(plain.content)
+    assert packed.headers["server-timing"].startswith("gen;dur=")
+    assert packed.headers["content-security-policy"] == CONTENT_SECURITY_POLICY
+    assert packed.headers["referrer-policy"] == "no-referrer"
+
+
+def test_a_photo_is_never_gzipped(client: TestClient, store: Store) -> None:
+    """A JPEG is compressed already: Starlette's default exclusions, passed explicitly, keep it."""
+    (store.root / "images" / store.active / "a1.jpg").write_bytes(b"\xff\xd8" + b"\0" * 4000)
+    response = client.get(f"/api/photos/{store.active}/a1.jpg", headers={"Accept-Encoding": "gzip"})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    assert "content-encoding" not in response.headers
+    assert len(response.content) == 4002
+
+
+def test_a_small_response_is_sent_as_it_is(client: TestClient) -> None:
+    response = client.get("/api/session", headers={"Accept-Encoding": "gzip"})
+    assert len(response.content) < GZIP_MINIMUM_SIZE
+    assert "content-encoding" not in response.headers
 
 
 def test_fastapis_own_pages_are_off(client: TestClient) -> None:

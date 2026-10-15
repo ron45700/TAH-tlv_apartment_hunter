@@ -14,7 +14,7 @@
   --green: #0d8f73;
   --amber: #c97d00;
   --red: #c42e55;
-  --grey: #69717b; /* "לא צוין": grey, still 4.8:1 on white */
+  --grey: #646b75; /* "לא צוין": grey, 4.77:1 on --grey-bg (a chip), 5.4:1 on white (#373) */
   --missing: #2e3846; /* the important-missing badge: dark slate, words only (#330 point 6) */
 
   --green-bg: #e2f4ee;

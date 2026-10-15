@@ -6228,3 +6228,252 @@ due); the #11 row and the open "unclear kind" row removed; #358–#365 under "Re
 
 STOP. For Ron: accept version 5 or not (`BACKLOG.md` item 8), and whether to correct the studio posts' questionable truths;
 then 3.7's step 7, when Ron gives it.
+
+## 2026-10-14 (continued) — Phase 3, round 15: #366–#367 recorded; four truths corrected and run `09f15e8dac9f` recomputed; the plan for 3.7's step 7 measurements
+
+**Git:** read-only only (`git status`, `git diff --no-index` of the corrections file against its scratch copy). No paid call,
+no model call, nothing installed. **The production store was opened read-only only** (`mode=ro`, and `SqliteRepository(…,
+read_only=True)` in the recompute): SHA-256 `5df9bc9a…a77ac` at the start, after the recompute and at the end, the same.
+`labels.json` the same (`b0718144…`). Ron's three site copies untouched. **Written:** `data/labeling/corrections.json` (#367;
+a copy of the file before it in the session's scratchpad, `corrections.before_r15.json`) and docs. No code changed, so no test
+was run (round 13's 1820 stand). No step 7 measurement.
+
+### A. Recorded
+
+- `DECISIONS.md` **#366** (version 5 accepted on run `09f15e8dac9f`; the note to watch the passes' disagreement, 23 posts / 29
+  flips against version 4's 13 / 15; step 2, the seven stored studio posts, not scheduled) and **#367** (four truths), a new
+  section before "Corrections to recorded facts".
+- **#367 written in `corrections.json`:** the file round-trips exactly through `json.dumps(indent=1, ensure_ascii=False)`
+  plus a final newline, so it was loaded, the four fields set, and dumped; each entry's note extended with the reason and
+  "(#367)". The diff against the scratch copy is the four fields and the three notes only. `read_corrections` validates every
+  field against `Listing`'s types. Each value was read against the post's text on the store (read-only) first: `62a41d3d…`
+  "אפשר לקבל תוו חניה", "הריהוט להמחשה / נשאר ארון ומקרר"; `71ada783…` "כניסה ב18.10"; `a7ba462d…` "קיים בדירה מקרר וכיריים
+  חשמליים".
+- **The recomputed verdict** (a scratch script, `recompute_r15.py` in the scratchpad: `labeling.regression.prepare` then
+  `labeling.compare.judge` over `results.json`'s stored answers). **Control** with the file before #367 (`read_corrections`
+  pointed at the scratch copy): both passes `fail` with exactly the recorded four mismatches. **With #367: both passes `fail`**:
+  `furnished` 3/9 (3; 58 and 60, truth `partial`, answer `unclear`), `parking` 1/9 (58, truth no, answer `unclear`),
+  `entry_date_written` 1/9 (59, answer "ב18.10"), in each pass; pass 2 also `broker` (2, filled in) and `house_committee` (39),
+  1/9 each. Deciding fields and `rooms` unchanged, no error. **Version 5 answered these three posts as version 3 had**, so the
+  corrected truths add misses; at 9 counted posts one miss is 88.9%, under the 90% bar. With #241 as well, `furnished` would be
+  2/9, still `fail`. The table is in `PHASE_2.md`, "Round 15".
+- `PHASE_2.md` (version 5's heading, "Round 15"), `CLAUDE.md` (status).
+
+### B. 3.7's step 7: the plan for the measurements, for Ron's approval
+
+Written in `PHASE_3.md` 3.7 (l), "Step 7's measurements — the plan". In short: two stores, both scratch files outside the
+repository: **S1** an online backup of today's store (266 posts, 139 members, 123 cards, 620 member photos, 94 MB); **S2**
+synthetic, 40 days: today's 266 posts (they span 27 hours) copied 31 more times 1.25 days apart, every state kept, phones mapped
+per copy (the four real pairs still tie inside each copy, no copy ties another), texts marked so their hashes differ, member
+photos copied with appended bytes so each hash differs, written through the Repository; about 8,512 posts, 4,448 members,
+3,936 cards, 19,840 photos (3 GB of 155 GB free), the list's JSON about 13 MB; no archiving. Measured: `Server-Timing` cold
+(three starts), warm (ten), after a store change, signed in, the opened post, the live count, the size and the process
+memory; Chrome traces at 1440 × 900 and 390 × 844, first cards, the whole load, long tasks, on S2 the DOM size, memory and
+scrolling; Lighthouse (this tool version has no performance category: the trace covers it); the design critique and the
+accessibility review at the six sizes; colour vision by an injected SVG filter (the tool's `emulate` has no vision
+setting). A missed target changes nothing in step 7: the options are proposed to Ron with the numbers.
+
+**Facts read for the plan (read-only):** the store's lifecycle mix (139 active, 89 rejected, 38 pending; 194 `Listing`s); 818
+image files, 117 MB in all; `posted_at` from 2026-10-03 13:41 to 10-04 16:43 UTC; the key's phones are `RawPost.phones`
+(`dedup/stage_b.py`); chrome-devtools' tools: `lighthouse_audit` (no performance), `emulate` (viewport, CPU, network, no
+vision deficiency), `performance_start_trace`.
+
+### Verified
+
+The store's and `labels.json`'s hashes the same throughout; the corrections diff is the four fields and three notes; the
+file validates; the control reproduces the recorded verdict. `BACKLOG.md`'s line endings: three bare LFs from my edit
+restored to CRLF.
+
+### Not verified
+
+- That the S2 numbers (13 MB, 3 GB) hold: linear estimates from S1, to be measured.
+
+### Deviations
+
+1. **Each of the three entries' `note` was extended** to name #367 and the reason, besides the four fields ("nothing else
+   touched" read as no other field or post).
+
+### New points for Ron
+
+Points 40–42 of 3.7 (`PHASE_3.md`): S2 without archiving (recommended); the colour-vision check by an injected filter
+(recommended); distinct photo files for S2, about 3 GB, deleted after (recommended).
+
+### BACKLOG
+
+"Last updated"; the round's line; item 8 rewritten (accepted, #367, the recomputed verdict, the note to watch, step 2
+deferred); item 6 (step 7's plan written, points 40–42); the #345/#346 row.
+
+### Next
+
+STOP. For Ron: approve step 7's measurement plan and points 40–42; then the measurements (free).
+
+## 2026-10-15 — Phase 3, round 16: #368–#370 recorded; 3.7's step 7 measurements made (today's store and a 40-day synthetic one)
+
+**Git:** read-only only (`git status`). No paid call, no model call, nothing installed. **The production store was opened
+read-only only** (`mode=ro`; SHA-256 `5df9bc9a…a77ac` at the start, after the builds, after the measurements and at the
+end). `labels.json` the same (`b0718144…`); Ron's three site copies untouched. **Written outside the repository:** the
+scratchpad's `s1/`, `s2/` (about 3 GB), the scripts, the Lighthouse reports and traces. **Written in the repository:** docs
+and `CLAUDE.md` only; no code. The scratch servers (ports 8801, 8802) are stopped. Network: 127.0.0.1 only.
+
+### A. Recorded
+
+`DECISIONS.md` **#368** (S2 with nothing archived), **#369** (colour vision by a filter on the scratch page), **#370** (each
+photo with its own bytes; deleted when Ron has read the numbers), a new section; and under #367 Ron's note that the
+recomputed fails on `furnished` and `parking` are real model misses on card-only fields exposed by the corrected truths,
+not a version 5 regression, nothing to change now.
+
+### B. The stores
+
+- **S1:** SQLite's online backup of the production store: 266 posts (139 active with a `Listing`, 89 rejected, 38 pending),
+  123 cards, photos read in place from `data/store/images/`.
+- **S2:** a backup of S1, then 31 copies of every post written through `SqliteRepository` (`upsert_with_lifecycle`,
+  `save_classification`; every record validated): **8,512 posts, 4,448 members, 3,967 cards for an unfiltered bar, 19,840
+  member photo files (2.9 GB), a 108 MB database**, built in 140 s. Copy *k*: a new `source_post_id` and `listing_id`,
+  `posted_at`, `fetched_at` and `last_published_at` back *k* × 1.25 days, `text_hash` derived from the original's and *k*
+  (the dedup A classes preserved), `duplicate_of` mapped, phones mapped per copy (the same inside a copy), each photo copied
+  with 8 bytes appended (distinct bytes and hashes per copy, the same inside a copy).
+- **The scratch launcher** (`web.app.site_over` + uvicorn on 127.0.0.1, the admin's password set on the scratch copy only)
+  and **the client** (`http.client`, `Server-Timing`, the cookie sent by hand).
+
+### C. The numbers (all in `PHASE_3.md` 3.7 (l), "Step 7's results")
+
+| | S1 | S2 | Target |
+|---|---|---|---|
+| Warm `POST /api/cards`, guest, median (max) | 34 ms (44) | **554 ms** (627) | 300 ms |
+| Warm, signed in | 37 ms | 462 ms | 300 ms |
+| First cards drawn, warm server, Chrome desktop / phone | 0.21 s / 0.22 s | **3.0 s / 3.3 s** | 1.5 s |
+| Cold request, OS cache warm | 0.4–0.5 s | 15–16 s | — |
+| Cold, cold disk | — | 120–128 s | — |
+| After a store change, the next request | 0.27 s | 10.6 s | — |
+| Response | 458 KB | 14.8 MB | — |
+| DOM nodes / longest frame | 6.9k / 0.2 s | 221k / 4.8–5.4 s | — |
+| Phone scrolling per frame (median) | — | 137 ms | — |
+
+**Both targets are met on today's store and missed on the 40-day store.** Nothing was changed, as instructed. The options
+with their numbers are in `PHASE_3.md` (A first N cards, B first lines of the text, C gzip, D the grouping in the
+background, E the photo hashes kept, F archiving at 25 days); the reviewer's reading is A and D.
+
+**Lighthouse** (S1; list, opened post, preferences, sign-in; desktop and mobile): accessibility 100, 100, 100, 97; best
+practices 100; SEO 82–83. Failed: the grey chip's contrast 4.37:1 and a photo counter at 1.74:1 on the opened post;
+Label-in-Name on the logo, the "i" and the user pill; CLS 0.06 (list) and 0.42 (opened post at its own address); SEO items
+that do not apply to a tailnet site.
+
+**The accessibility review** (script and eye): the closed card's touch targets are below 44 px (the "i" 28, the foot
+buttons 26 high) but above 24; the dialog is modal, takes focus and closes on Escape, but the focus does not return to the
+card; no headings on the list or the opened post. **Colour vision:** green and red ΔE 18–22 under deuteranopia and
+protanopia, 6–14 between all three in grayscale; the words carry the tier (#323). **The critique:** two notes (six grey
+chips on a phone's opened post; the gap above a chipless card's foot).
+
+### Verified
+
+The store's hash the same throughout; S2's counts (8,512 posts, 6,208 listings, 4,448 active, the generation counter at
+28,528 after the writes); both servers stopped.
+
+### Not verified
+
+- **Real touch devices** (emulated viewport); browsers other than Chrome.
+- **A filtered bar on S2** (a user with a price or area range): only the unfiltered bar was measured.
+- **The S1 cold browser load** (the restart did not take effect before the page asked), and the browser after a store change.
+- **N = 100 and 35 ms** for option A: an estimate from S1's size.
+- **A screen reader, the full keyboard order, 200% zoom as such.**
+
+### Deviations
+
+1. The copies' texts were not marked with a copy tag (the key reads the stored `text_hash`, which was derived).
+2. S2's newest copy is the real data (10 days old), not today.
+3. The `design` plugin's critique skill was not invoked; the accessibility review's skill was, and the critique was made
+   by eye on two screenshots (the phone list, the opened post).
+4. A first cold measurement loop killed only `uv`, not the site, so cold runs 2 and 3 hit a warm process; found, fixed and
+   rerun (the numbers above are from the rerun).
+
+### New points for Ron
+
+43 (which of A–F), 44 (touch targets), 45 (the grey chip), 46 (Label in Name, the focus return), 47 (two layout notes):
+`PHASE_3.md`, "New points for Ron (3.7)".
+
+### When it is safe to delete the scratch stores
+
+The scratchpad's `s1/`, `s2/` (about 3 GB), `trace_*.json.gz`, `lh_*` and `cv_*.jpg` are not needed once Ron has read the
+numbers; **it is safe to delete them when Ron says he has**. Until then they let a number be re-checked.
+
+### BACKLOG
+
+"Last updated"; the round's line; item 6 (step 7 made, points 43–47, the scratch stores); the #345/#346 row; the #257 row.
+
+### Next
+
+STOP. For Ron: read the numbers; decide points 43–47 (recommended: A and D, then enlarge the touch targets, darken the grey
+chip, fix the three names and the focus return); say when the scratch stores can go.
+
+## 2026-10-15 (continued) — Phase 3, round 17: #371–#375; round 16's scratch stores deleted; C (gzip), 44–46 built; A and D planned
+
+**Git:** read-only only (`git status`). No paid call, no model call, nothing installed. **The production store was opened
+read-only only** (one online backup from a `mode=ro` connection into the scratchpad); SHA-256 `5df9bc9a…a77ac` at the start
+and the end. `labels.json` the same. Network: 127.0.0.1 only. The scratch server is stopped.
+
+### A. Recorded and deleted
+
+- `DECISIONS.md` **#371** (43: A, C and D; C on the reviewer's advice; E and F not now), **#372** (44), **#373** (45), **#374**
+  (46), **#375** (47: leave). **#372 carries a build note:** round 16's finding measured the controls' boxes, not their
+  touch areas; the foot's buttons and the "i" already had a 44 px touch area (round 11's `::after`); what was built is a
+  touch area for the rest, nothing grown (point 55).
+- **Deleted from the scratchpad, as Ron said:** `s1/`, `s2/` (3.2 GB), `trace_s1_phone.json.gz`, `trace_s2_desktop.json.gz`,
+  the eight `lh_*` report folders, the three `cv_*` screenshots. Kept (small): the scripts, `server_s1.json`,
+  `server_s2.json`, the critique's screenshots.
+
+### B. Built
+
+- **C:** `tlv_hunter/web/app.py` adds Starlette's `GZipMiddleware` (1.7.0, read in the installed source): `minimum_size` 500,
+  `compresslevel` 6, its default exclusions (JPEG, PNG, woff2, …) passed explicitly. Every response, not only `/api`
+  (deviation 1).
+- **44:** `frontend/src/styles/bar.css` and `card.css`, under `pointer: coarse`: a 44 px or larger invisible touch area on the
+  bar's chips and "סינון", the user pill, the logo, the photo's arrows; the foot's buttons and the "i" widened by 1 px; the
+  bar chip's `overflow: hidden` becomes `overflow: clip` with an 8 px margin on touch so its touch area is not clipped.
+- **45:** `tokens.css` `--grey` `#69717b` → `#646b75`.
+- **46:** `Header.tsx` (a space between the logo's two words; the avatar's letter as `data-letter`, drawn by CSS; the pill's
+  name `<username>, תפריט החשבון`); `InfoButton.tsx` and `card.css` (the "i" drawn by CSS); `App.tsx` (the card's link
+  focused again when the post opened from it closes).
+- **Tests:** `tests/test_web.py` +3; `frontend/src/components/names.test.tsx` (new, 3).
+
+### C. Planned (`PHASE_3.md` 3.7 (l), "Plan for A" and "Plan for D")
+
+A: `POST /api/cards` with `first` (48) returns the count, the whole ordered id list and the first 48 cards; `POST
+/api/cards/by-id` for the rest as the user scrolls; the order fixed for a load; a flag or report removes the card in place.
+D: the first grouping at start in the background; a request never computes, it starts a background recompute and answers
+from the snapshot it holds; the site's own flags and reports leave at once by a removal overlay; "loading" before the first
+snapshot. Points 48–56.
+
+### Verified
+
+`uv run pytest`: **1823 passed** (1820 + 3). `ruff check`: all checks passed; `ruff format --check`: 198 files formatted.
+`npm test`: **45 passed** (42 + 3); `npm run build` clean. **Chrome** at the six sizes over a fresh scratch copy: no
+sideways scroll; one card height per size (606, 592, 639, 650, 318 px); the phone's bar still 91 px; every touch area at least
+44 px on the three touch sizes (computed `::after` sizes; the bar chip 44.7); the mouse sizes unchanged; the focus returned to
+the card on Escape and on back; the list gzipped (69.5 KB for 457.7 KB; Chrome 69.9 KB for 459.8 KB signed in). Lighthouse
+afterwards: Label in Name and the grey chip pass; the opened post 100 (mobile) and 97 (desktop), the list 96 (desktop): the
+photo counter's contrast only (point 56). The gzip cost: about +15 ms per warm list request on today's store.
+
+### Not verified
+
+- Real touch devices (emulated); browsers other than Chrome.
+- That a 44 px touch area beside a neighbour never takes the neighbour's tap (the foot's buttons are 6 px apart and their
+  areas grow only 2 px sideways; the bar chips' areas grow only up and down).
+- The gzip cost on the 40-day list (estimated about 0.5 s; S2 was deleted as Ron said).
+
+### Deviations
+
+1. **gzip covers every response** (the built JS and CSS too), not only the API's: one middleware, and the JS is 286 KB, 87 KB
+   compressed, which helps a phone the same way.
+2. **#372 built as touch areas, not larger drawn controls** (point 55), because round 16 overstated what was short.
+3. **The avatar's letter** is drawn by CSS as well as the "i": Lighthouse counted its `aria-hidden` letter as the pill's
+   visible text.
+
+### BACKLOG
+
+"Last updated"; the round's line; item 6 (built, planned, points 48–56); the #345/#346 and #257 rows; a new row for #371 A
+and D.
+
+### Next
+
+STOP. For Ron: points 48–56 (A and D's shape; 55, #372 as built; 56, the photo counter). Then A and D's build, measured with
+step 7's method on S1 and a rebuilt S2.

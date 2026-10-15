@@ -41,7 +41,7 @@ export function Header({ user, onSignOut }: Props) {
         <a className="logo" href="/" onClick={go('/')} aria-label="TLV Apartment Hunter, לעמוד הראשי" dir="ltr">
           <LogoMark />
           <span className="word">
-            <span className="w1">TLV</span>
+            <span className="w1">TLV</span>{' '}
             <span className="w2">Apartment Hunter</span>
           </span>
         </a>
@@ -81,12 +81,11 @@ function UserMenu({ user, onSignOut }: { user: SessionUser; onSignOut: () => voi
         className="userpill"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`החשבון של ${user.username}`}
+        aria-label={`${user.username}, תפריט החשבון`}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="avatar" aria-hidden="true">
-          {letter}
-        </span>
+        {/* the letter is drawn by CSS, so the name starts with the username shown (#374) */}
+        <span className="avatar" aria-hidden="true" data-letter={letter} />
         <span className="username" dir="ltr">
           {user.username}
         </span>
