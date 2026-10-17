@@ -38,6 +38,7 @@ def failure(handler) -> TransportError:
     return caught.value
 
 
+@pytest.mark.raw_fixtures
 def test_a_completed_response_comes_back_as_a_dict() -> None:
     body = load_openai_spike("none_t0_p1_01")["response"]
     sent: list[httpx2.Request] = []
@@ -64,12 +65,14 @@ def test_the_sdk_does_not_retry() -> None:
     assert len(calls) == 1
 
 
+@pytest.mark.raw_fixtures
 def test_a_wrong_key_is_auth() -> None:
     body = load_openai_spike("probe_wrong_key")["error"]["body"]
     error = failure(answering(401, body))
     assert (error.kind, error.status, error.code) == ("auth", 401, "invalid_api_key")
 
 
+@pytest.mark.raw_fixtures
 def test_a_refused_schema_is_bad_request() -> None:
     body = load_openai_spike("probe_schema")["error"]["body"]
     error = failure(answering(400, body))

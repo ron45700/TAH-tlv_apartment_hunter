@@ -40,8 +40,8 @@ Resolved by task 1.2, run 2026-09-14 against the raw 20-post thedoor response
 | D4 | The three colliding pairs are the three known duplicate pairs | ✅ VERIFIED | Count verified by script; identity confirmed by Ron on inspection, 2026-09-14. The script was not given the expected `post_id` list and could only verify the count. |
 | D5 | Phone numbers are present in only about half of posts | ✅ VERIFIED | 10 of 20 posts contained a phone number. **The real runs, 2026-10-04:** a phone in 161 of 266 posts (61%) (`RESEARCH.md` §11). |
 | D6 | Phone number cannot serve as a primary dedup key | ✅ VERIFIED | Follows from D5, and from pair 3 below: both posts in that pair have no phone at all. Relying on phone as the key would have missed one of three duplicate pairs. |
-| D7 | A shared phone number is strong positive evidence of the same listing | ⚠️ ASSUMED | Pairs 1 and 2 each shared a phone (`0548008244`, `050-9184537`). Two cases is suggestive, not conclusive. Treated as a one-directional signal: a match is evidence, a non-match carries no information. |
-| D8 | The phone regex covers the formats that appear in real posts | ✅ VERIFIED | Recall cross-check against any 7–13 digit run found zero candidates missed. Dot-separated formats (`054.800.8244`) are covered by neither the regex nor the cross-check, but were judged out of scope: Israelis do not write phone numbers that way in Facebook posts. |
+| D7 | A shared phone number is strong positive evidence of the same listing | ⚠️ ASSUMED | Pairs 1 and 2 each shared a phone (`05XXXXXXXX`, `05X-XXXXXXX`). Two cases is suggestive, not conclusive. Treated as a one-directional signal: a match is evidence, a non-match carries no information. |
+| D8 | The phone regex covers the formats that appear in real posts | ✅ VERIFIED | Recall cross-check against any 7–13 digit run found zero candidates missed. Dot-separated formats (`05X.XXX.XXXX`) are covered by neither the regex nor the cross-check, but were judged out of scope: Israelis do not write phone numbers that way in Facebook posts. |
 | D9 | `+972` international format appears in these groups | ⚠️ ASSUMED | Zero occurrences in the sample. The regex branch exists and is kept — it costs nothing — but is unexercised. Expected to stay rare: these are Israeli groups for Israeli apartments. |
 
 ---
@@ -80,8 +80,8 @@ so these are contract details, not implementation trivia.
 ### The three duplicate pairs, for the record
 | Pair | post_ids | group_id | Shared phone |
 |---|---|---|---|
-| 1 | `10163683432542695` / `10163683412257695` | `35819517694` | `0548008244` |
-| 2 | `2178554076041449` / `2178430789387111` | `333022240594651` | `050-9184537` |
+| 1 | `10163683432542695` / `10163683412257695` | `35819517694` | `05XXXXXXXX` |
+| 2 | `2178554076041449` / `2178430789387111` | `333022240594651` | `05X-XXXXXXX` |
 | 3 | `2178092279420962` / `2177447349485455` | `333022240594651` | neither post has a phone |
 
 Pair 3 is the load-bearing case: hash was the only layer that caught it.

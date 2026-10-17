@@ -65,7 +65,7 @@ Not yet recorded in `ASSUMPTIONS.md` (skill step 5).
 - Text that is not blank but normalizes to nothing, such as an emoji-only post, raises
   `UnhashableTextError`. Hashing it would collide with other such posts; `None` would contradict
   `no_text=False`. It has not been seen in real data, but a real case would fail the run.
-- `phones` are stored as written (`050-9184537`), including repeats within a post, as in the 1.2
+- `phones` are stored as written (`05X-XXXXXXX`), including repeats within a post, as in the 1.2
   script. `find_by_phone` compares through `canonical_phone`. A Firestore `array-contains` query in
   Phase 2 would need a canonical stored form.
 - Posts with `no_text=True` are stored but not classified (#29). Because `decide` needs a listing,
@@ -7055,3 +7055,52 @@ an unknown user. **Left running.**
 **Not verified:** a sign-in as the admin (Ron's password); the full test suite after this round's small change (Ron runs it).
 
 **Next:** Ron opens `http://127.0.0.1:8000/` (DoD 1); Phase 3 closes; the server deployment step is planned.
+
+## 2026-10-17 (continued) — Round 27: Phase 3 closed (#430); the server deployment planned (`docs/DEPLOY.md`)
+
+**Docs only.** No code, no Docker or Tailscale command, no SSH, no paid call; the production store not opened. Git
+read-only (`log`, `grep` over all revisions). Network: documentation pages only (GitHub's ghcr and Actions pages,
+Tailscale's container parameters and key expiry pages, Docker Hub's tag list for `tailscale/tailscale`).
+
+**Recorded:** #430 (Phase 3 complete: DoD 1 met; 2 and 5 accepted on the copy; 3, 4, 7 met; 6 moved; 8 met except one §3
+row still "For Ron", the phone as a dedup B signal). #429's wording: "Claude Code decides", with its new attribution.
+`PHASE_3.md`: status COMPLETE and the DoD's state.
+
+**Planned:** `docs/DEPLOY.md`: what is decided, "decided by me" (the sidecar as in `dashboard`, `serve.json` → `site:8000`,
+127.0.0.1:8000 kept, the keys in a separate `jobs.env`, the Action as event-seeker's), what was read with tags, points 1–8
+for Ron, the server's stack, steps 1–11, the working day (recommended 4 runs, at most $2.40).
+
+**Found (point 7):** nothing under `data/`, no `.env`, key or email ever committed; **8 real phone numbers from real posts
+are in `tests/test_textnorm.py` since the first commit**, two of them also in other tests and in the docs; the image holds
+none. Not changed; history not rewritten.
+
+**Next:** Ron answers DEPLOY.md's points 1–8 and DoD 8's row; then step 1.
+
+## 2026-10-17 (continued) — Round 28: Ron's answers on DEPLOY.md (#431–#440); steps 1 and 2 built
+
+No paid call, nothing on the server, no Docker command, no git write. Network: GitHub's API and raw files (the actions'
+releases, `action.yml`, metadata-action's README and source).
+
+**Recorded:** #431 (DoD 8 met: the phone row settled by #230/#232), #432 (`./appdata/store/`, amends #416 for the server),
+#433 (homelab's stack; `BASELINE.md` §3 "the same image"), #434 (the marker), #435 (restic; `export_backup` before each
+update), #436 (no move: a fresh store on the server; Windows `data/store/` is the development and regression store; amends
+#428), #437 (the bootstrap at 30 a group by `run_once --max-posts 30`; 24 hours back), #438 (the sharing rule approved,
+applied with the first friend), #439 (the real phones out of HEAD), #440 ("Adding the first friend" as a procedure; the
+step's done means: the site reached, the probe, Ron's sign-in; amends #427 point 102). `BASELINE.md` §3, §12 and header;
+`PHASE_3.md` DoD 2, 5, 8 and §3's phone row; `DEPLOY.md` rewritten; stale lines fixed (BACKLOG item 7 and the #331 row,
+CLAUDE.md's store notes).
+
+**Check B (read-only, a scratch file):** a store made by the bootstrap's constructors is at `store` 2, `store.listings` 2,
+`state` 1 with the generation counter and its nine triggers; `create_admin` adds `userdata` 2 and works. No
+`add_store_generation` in the server's sequence.
+
+**Built (step 1, the TLV repo):** the expected phones in `data/raw/thedoor_20posts_2026-09-13_phones.json` (gitignored),
+`load_thedoor_phones()`; made-up numbers in the format tests; placeholders in four docs; the `raw_fixtures` marker
+(`pyproject.toml`; conftest marks by fixture; 4 files whole, 48 tests one by one); `run_once --max-posts` and 3 tests;
+`.github/workflows/docker.yml` (7 actions pinned by SHA). **(Step 2, homelab):** `stacks/tlv-hunter/` (`compose.yaml`,
+`.env.example`, `jobs.env.example`, `.gitignore`, `tailscale/serve.json`) and the README's row and section.
+
+**Verified:** `uv run pytest` **1983 passed**; ruff clean, 211 files formatted; `npm test` 84 passed; the unmarked set in a
+copy of the git-visible files with no `data/`: 1108 passed, 873 left out, none failed; no real number in a tracked file.
+
+**Next:** Ron commits and pushes both repos (step 3, the first publish), then the server's steps 4–8.

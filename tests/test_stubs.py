@@ -76,6 +76,7 @@ def test_recording_notifier_captures_calls() -> None:
     assert notifier.sent == [(listing, decision)]
 
 
+@pytest.mark.raw_fixtures
 def test_fixture_provider_filters_by_group_and_since() -> None:
     provider = FixtureProvider(THEDOOR_20, lambda: FETCHED_AT)
     early = datetime(2026, 9, 1, tzinfo=UTC)

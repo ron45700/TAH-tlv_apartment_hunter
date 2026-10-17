@@ -28,6 +28,9 @@ from tlv_hunter.providers.fixture import FixtureProvider
 from tlv_hunter.state.sqlite import SqliteWatermarkStore
 from tlv_hunter.store.base import Repository
 
+# Every test here reads data/raw/ (gitignored): left out by the GitHub Action.
+pytestmark = pytest.mark.raw_fixtures
+
 SINCE = datetime(2026, 9, 1, tzinfo=UTC)
 JPEG = ImageResponse(200, "image/jpeg", b"\xff\xd8\xff\xe0" + b"jpeg body")
 

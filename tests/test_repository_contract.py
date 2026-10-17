@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from tests.conftest import FETCHED_AT, make_listing
+from tests.conftest import FETCHED_AT, load_thedoor_phones, make_listing
 from tlv_hunter.contracts.post_lifecycle import (
     POST_LIFECYCLE_SCHEMA_VERSION,
     PostImage,
@@ -105,11 +105,15 @@ def test_find_by_phone_matches_across_formats(make_repository: MakeRepository, p
     repo = make_repository()
     for post in posts:
         repo.upsert(post)
-    assert {p.source_post_id for p in repo.find_by_phone("054-800-8244")} == {
+    # The two pairs' shared numbers come from the fixture (real, out of git), asked in other forms.
+    first = load_thedoor_phones()["10163683432542695"][0]
+    second = load_thedoor_phones()["2178554076041449"][0]
+    dashed = f"{first[:3]}-{first[3:6]}-{first[6:]}"
+    assert {p.source_post_id for p in repo.find_by_phone(dashed)} == {
         "10163683432542695",
         "10163683412257695",
     }
-    assert {p.source_post_id for p in repo.find_by_phone("+972509184537")} == {
+    assert {p.source_post_id for p in repo.find_by_phone(f"+972{second[1:]}")} == {
         "2178554076041449",
         "2178430789387111",
     }

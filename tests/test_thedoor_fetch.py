@@ -114,6 +114,7 @@ def test_input_takes_max_posts_from_the_repo_config() -> None:
     assert built["maxPosts"] == repo_config.max_posts
 
 
+@pytest.mark.raw_fixtures
 def test_input_is_the_spike_input(config) -> None:
     built = build_actor_input(config, config.group_ids, SINCE, RUN_START)
     assert built == load_spike_1_1a("_input")
@@ -143,11 +144,13 @@ def test_naive_since_raises(config, apify, clock) -> None:
 
 
 @pytest.mark.parametrize("group_ids", [[], ["35819517694", "35819517694"]])
+@pytest.mark.raw_fixtures
 def test_empty_or_duplicate_group_ids_raise(config, group_ids: list[str]) -> None:
     with pytest.raises(ValueError):
         build_actor_input(config, group_ids, SINCE, RUN_START)
 
 
+@pytest.mark.raw_fixtures
 def test_empty_token_is_refused(config) -> None:
     with pytest.raises(ValueError):
         ThedoorProvider(config, "")
@@ -394,6 +397,7 @@ def test_transport_http_error_names_no_token(monkeypatch) -> None:
     assert TOKEN not in str(raised.value)
 
 
+@pytest.mark.raw_fixtures
 def test_default_transport_is_stopped_by_the_network_guard(config) -> None:
     provider = ThedoorProvider(config, TOKEN, clock=Clock())
     with pytest.raises(NetworkBlockedError):

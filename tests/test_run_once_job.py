@@ -59,6 +59,7 @@ def test_the_bootstrap_window_is_24_hours() -> None:
     assert BOOTSTRAP_WINDOW == timedelta(hours=24)  # #79 D1
 
 
+@pytest.mark.raw_fixtures
 def test_bootstrap_creates_the_store_under_the_repo_root_and_stores_the_run(
     tmp_path: Path, apify: FakeApify, clock: Clock
 ) -> None:
@@ -75,6 +76,34 @@ def test_bootstrap_creates_the_store_under_the_repo_root_and_stores_the_run(
     assert lines[-1]["msg"].startswith("run done: 105 rows fetched")
 
 
+@pytest.mark.raw_fixtures
+def test_max_posts_lowers_the_actor_s_cap_for_this_run_only(
+    tmp_path: Path, apify: FakeApify, clock: Clock
+) -> None:
+    code, lines, _ = _main(tmp_path, apify, clock, "--bootstrap", "--max-posts", "30")
+
+    assert code == 0
+    run_input = apify.calls[0][2]
+    assert run_input is not None and run_input["maxPosts"] == 30
+    assert run_input["postsNewerThan"] == "1440 minutes"
+    assert any(line["msg"] == "max_posts 30 for this run (configured 50)" for line in lines)
+    assert YamlConfig(CONFIG_ROOT).collection().max_posts == 50  # the configured cap unchanged
+
+
+@pytest.mark.raw_fixtures
+@pytest.mark.parametrize("value", ["0", "51"])
+def test_max_posts_outside_1_to_the_configured_cap_is_refused_before_anything(
+    tmp_path: Path, apify: FakeApify, clock: Clock, value: str
+) -> None:
+    code, lines, _ = _main(tmp_path, apify, clock, "--bootstrap", "--max-posts", value)
+
+    assert code == 1
+    assert apify.calls == []
+    assert not (tmp_path / STORE_ROOT).exists()
+    assert lines[-1]["msg"] == f"--max-posts must be from 1 to 50, got {value}"
+
+
+@pytest.mark.raw_fixtures
 def test_every_log_line_is_json_with_this_run_id(
     tmp_path: Path, apify: FakeApify, clock: Clock
 ) -> None:
@@ -92,6 +121,7 @@ def test_every_log_line_is_json_with_this_run_id(
     assert any(line["msg"].startswith("apify_run ") for line in second)
 
 
+@pytest.mark.raw_fixtures
 def test_a_normal_run_without_a_store_is_refused_and_creates_nothing(
     tmp_path: Path, apify: FakeApify, clock: Clock
 ) -> None:
@@ -103,6 +133,7 @@ def test_a_normal_run_without_a_store_is_refused_and_creates_nothing(
 
 
 @pytest.mark.parametrize("environ", [{}, {"APIFY_TOKEN": "  "}])
+@pytest.mark.raw_fixtures
 def test_a_missing_token_is_refused_before_anything(
     tmp_path: Path, apify: FakeApify, clock: Clock, environ: dict[str, str]
 ) -> None:
@@ -113,6 +144,7 @@ def test_a_missing_token_is_refused_before_anything(
     assert apify.calls == []
 
 
+@pytest.mark.raw_fixtures
 def test_a_failed_run_exits_1_and_logs_no_token(
     tmp_path: Path, apify: FakeApify, clock: Clock
 ) -> None:
@@ -128,11 +160,13 @@ def test_a_failed_run_exits_1_and_logs_no_token(
     assert SqliteWatermarkStore(tmp_path / STORE_ROOT / SQLITE_FILENAME).get_all() == []
 
 
+@pytest.mark.raw_fixtures
 def test_the_token_never_reaches_the_log(tmp_path: Path, apify: FakeApify, clock: Clock) -> None:
     _, _, text = _main(tmp_path, apify, clock, "--bootstrap")
     assert text and TOKEN not in text
 
 
+@pytest.mark.raw_fixtures
 def test_the_log_carries_no_post_text_or_phone_numbers(
     tmp_path: Path, apify: FakeApify, clock: Clock
 ) -> None:

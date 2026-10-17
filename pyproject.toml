@@ -27,6 +27,9 @@ package = false
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = ["-ra", "--strict-markers"]
+markers = [
+    "raw_fixtures: reads data/raw/ (gitignored); left out by the GitHub Action, run locally",
+]
 
 [tool.ruff]
 line-length = 100

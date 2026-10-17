@@ -72,6 +72,7 @@ def test_a_quiet_groups_old_watermark_does_not_widen_the_window() -> None:
     assert run_since(records, GROUPS) == LAST_SUCCESS - BUFFER
 
 
+@pytest.mark.raw_fixtures
 def test_a_failed_run_writes_nothing_so_the_next_window_covers_it() -> None:
     records = _marks()
     since = run_since(records, GROUPS)
@@ -92,6 +93,7 @@ def test_the_buffer_is_fifteen_minutes() -> None:
 # --- W3: max_posts 50, and a group at max_posts --------------------------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_max_posts_for_every_group_stays_below_the_caps_max_items() -> None:
     config = YamlConfig(CONFIG_ROOT).collection()
     run = load_spike_1_1a("_run")
@@ -101,6 +103,7 @@ def test_max_posts_for_every_group_stays_below_the_caps_max_items() -> None:
     assert len(config.group_ids) * config.max_posts < run["options"]["maxItems"]
 
 
+@pytest.mark.raw_fixtures
 def test_a_group_at_max_posts_short_of_its_window_is_reported_and_still_advances() -> None:
     control = _posts("_control")
     oldest = _oldest(control, MAX_POSTS_GROUP)
@@ -117,6 +120,7 @@ def test_a_group_at_max_posts_short_of_its_window_is_reported_and_still_advances
     assert record.last_success_at == RUN_START
 
 
+@pytest.mark.raw_fixtures
 def test_a_group_at_max_posts_that_reached_its_window_is_not_reported() -> None:
     control = _posts("_control")
     oldest = _oldest(control, MAX_POSTS_GROUP)
@@ -126,6 +130,7 @@ def test_a_group_at_max_posts_that_reached_its_window_is_not_reported() -> None:
     assert MAX_POSTS_GROUP not in {gap.group_id for gap in result.cut_off}
 
 
+@pytest.mark.raw_fixtures
 def test_the_window_start_is_never_before_the_runs_since() -> None:
     control = _posts("_control")
     oldest = _oldest(control, MAX_POSTS_GROUP)
@@ -136,6 +141,7 @@ def test_the_window_start_is_never_before_the_runs_since() -> None:
     assert gaps[MAX_POSTS_GROUP].window_start == since
 
 
+@pytest.mark.raw_fixtures
 def test_below_max_posts_no_group_is_reported() -> None:
     assert _advance(_marks(), _posts("_control"), max_posts=50).cut_off == ()
 
@@ -143,11 +149,13 @@ def test_below_max_posts_no_group_is_reported() -> None:
 # --- W5a: last_success_at -----------------------------------------------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_last_success_at_is_the_run_start_for_every_group() -> None:
     result = _advance(_marks(), _posts())
     assert {record.last_success_at for record in result.records} == {RUN_START}
 
 
+@pytest.mark.raw_fixtures
 def test_a_run_that_started_before_the_last_success_is_refused() -> None:
     records = _marks(**{GROUPS[0]: {"last_success_at": RUN_START + timedelta(minutes=1)}})
     with pytest.raises(ValueError, match=GROUPS[0]):
@@ -157,6 +165,7 @@ def test_a_run_that_started_before_the_last_success_is_refused() -> None:
 # --- W5b: consecutive_failures counts zero-row successful runs ---------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_a_zero_row_group_counts_up_and_a_group_with_rows_resets() -> None:
     posts = _posts()
     assert ZERO_ROW_GROUP not in {post.group_id for post in posts}
@@ -172,6 +181,7 @@ def test_a_zero_row_group_counts_up_and_a_group_with_rows_resets() -> None:
 # --- the watermark: the highest posted_at seen ---------------------------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_the_watermark_is_the_newest_posted_at_of_the_group() -> None:
     posts = _posts()
     records = _marks(**{group_id: {"watermark": SPIKE_SINCE} for group_id in GROUPS})
@@ -181,6 +191,7 @@ def test_the_watermark_is_the_newest_posted_at_of_the_group() -> None:
             assert result[group_id].watermark == _newest(posts, group_id)
 
 
+@pytest.mark.raw_fixtures
 def test_the_watermark_never_moves_backwards() -> None:
     later = RUN_START + timedelta(days=1)
     records = _marks(**{group_id: {"watermark": later} for group_id in GROUPS})
@@ -191,6 +202,7 @@ def test_the_watermark_never_moves_backwards() -> None:
 # --- W6: no per-group filter; every fetched post counts ------------------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_posts_older_than_a_groups_own_window_still_count() -> None:
     posts = _posts()
     group_id = GROUPS[0]
@@ -218,12 +230,14 @@ def test_a_record_with_no_success_yet_counts_as_missing() -> None:
         run_since(records, GROUPS)
 
 
+@pytest.mark.raw_fixtures
 def test_a_group_no_longer_configured_does_not_count_and_is_not_returned() -> None:
     records = [*_marks(), _mark("999", last_success_at=RUN_START - timedelta(days=30))]
     assert run_since(records, GROUPS) == LAST_SUCCESS - BUFFER
     assert [record.group_id for record in _advance(records, _posts()).records] == list(GROUPS)
 
 
+@pytest.mark.raw_fixtures
 def test_save_all_leaves_a_group_no_longer_configured_untouched(tmp_path: Path) -> None:
     store = SqliteWatermarkStore(tmp_path / SQLITE_FILENAME)
     old = _mark("999", last_success_at=RUN_START - timedelta(days=30))
@@ -236,6 +250,7 @@ def test_save_all_leaves_a_group_no_longer_configured_untouched(tmp_path: Path) 
 # --- bootstrap: the records are created ----------------------------------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_a_bootstrap_run_creates_a_record_for_every_group() -> None:
     posts = _posts()
     result = _by_group(_advance([], posts).records)
@@ -247,6 +262,7 @@ def test_a_bootstrap_run_creates_a_record_for_every_group() -> None:
     assert result[MAX_POSTS_GROUP].consecutive_failures == 0
 
 
+@pytest.mark.raw_fixtures
 def test_a_bootstrap_run_reports_the_spikes_capped_group() -> None:
     # Spike run 1: 101875683484689 hit maxPosts 30 about ten hours into a 24-hour window.
     result = _advance([], _posts())
@@ -257,6 +273,7 @@ def test_a_bootstrap_run_reports_the_spikes_capped_group() -> None:
 # --- a row skipped under #71 D: no change --------------------------------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_the_watermark_advances_past_a_row_that_was_never_mapped() -> None:
     posts = _posts()
     in_group = sorted(
@@ -272,6 +289,7 @@ def test_the_watermark_advances_past_a_row_that_was_never_mapped() -> None:
 # --- round trip and guards -----------------------------------------------------------------------
 
 
+@pytest.mark.raw_fixtures
 def test_round_trip_through_the_sqlite_watermark_store(tmp_path: Path) -> None:
     store = SqliteWatermarkStore(tmp_path / SQLITE_FILENAME)
     result = _advance([], _posts())
@@ -293,6 +311,7 @@ def test_advance_refuses_a_datetime_that_is_not_utc(field: str) -> None:
         _advance([], [], **{field: times[field].astimezone(israel)})
 
 
+@pytest.mark.raw_fixtures
 def test_advance_refuses_a_post_from_a_group_not_configured() -> None:
     posts = _posts()
     with pytest.raises(ValueError, match="not configured"):

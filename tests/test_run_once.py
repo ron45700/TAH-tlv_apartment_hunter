@@ -39,6 +39,9 @@ from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.textnorm.annotate import annotate
 from tlv_hunter.watermark.window import BUFFER, MissingWatermarkError
 
+# Every test here reads data/raw/ (gitignored): left out by the GitHub Action.
+pytestmark = pytest.mark.raw_fixtures
+
 GROUP_IDS = YamlConfig(CONFIG_ROOT).collection().group_ids
 # Spike 1.1a run 1 started at this instant with a 24-hour window.
 T0 = datetime(2026, 10, 3, 21, 32, 6, tzinfo=UTC)

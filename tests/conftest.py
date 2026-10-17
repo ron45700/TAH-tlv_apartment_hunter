@@ -24,6 +24,9 @@ from tlv_hunter.textnorm.annotate import annotate
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_ROOT = REPO_ROOT / "config"
 THEDOOR_20 = REPO_ROOT / "data" / "raw" / "thedoor_20posts_2026-09-13.json"
+# Task 1.2's phones of those 20 posts, by `source_post_id`: real numbers, so kept in `data/` and
+# out of git (DEPLOY.md, point 7).
+THEDOOR_20_PHONES = REPO_ROOT / "data" / "raw" / "thedoor_20posts_2026-09-13_phones.json"
 SPIKE_1_1A_PREFIX = REPO_ROOT / "data" / "raw" / "thedoor_spike_1_1a_2026-10-04"
 # Spike 2.1's raw OpenAI responses and its 20 posts (DECISIONS.md #156). The answers predate #167
 # and carry no `areas`: a test that needs a version-1 answer adds it in memory, never in the file.
@@ -37,6 +40,20 @@ KNOWN_DUPLICATE_PAIRS = {
     frozenset({"2178554076041449", "2178430789387111"}),
     frozenset({"2178092279420962", "2177447349485455"}),
 }
+
+
+# The tests that read `data/raw/` (gitignored) carry this marker, so the GitHub Action can run the
+# rest with `-m "not raw_fixtures"` (DEPLOY.md, point 3). Locally every test runs, and a missing
+# fixture still fails. A test is marked here when it uses one of these fixtures, directly or through
+# another fixture; a test that reads a fixture another way carries the marker itself.
+RAW_FIXTURES = "raw_fixtures"
+_RAW_FIXTURE_NAMES = frozenset({"thedoor_items", "spike_items", "posts"})
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        if _RAW_FIXTURE_NAMES.intersection(getattr(item, "fixturenames", ())):
+            item.add_marker(RAW_FIXTURES)
 
 
 class NetworkBlockedError(RuntimeError):
@@ -77,6 +94,10 @@ def _load_fixture(path: Path) -> Any:
 
 def load_thedoor_items() -> list[dict[str, Any]]:
     return _load_fixture(THEDOOR_20)
+
+
+def load_thedoor_phones() -> dict[str, list[str]]:
+    return _load_fixture(THEDOOR_20_PHONES)["phones"]
 
 
 def load_openai_spike(name: str) -> Any:

@@ -28,6 +28,9 @@ from tlv_hunter.store.base import Repository
 from tlv_hunter.store.local_json import LocalJsonRepository
 from tlv_hunter.textnorm.annotate import annotate
 
+# Every test here reads data/raw/ (gitignored): left out by the GitHub Action.
+pytestmark = pytest.mark.raw_fixtures
+
 MakeRepository = Callable[[], Repository]
 FLAG = {"flagged_by": "ron", "flagged_at": datetime(2026, 10, 4, 9, 0, tzinfo=UTC)}
 VIDEO = Media(

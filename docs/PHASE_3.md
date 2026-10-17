@@ -1,8 +1,8 @@
 # Phase 3 — The dashboard (semi-macro)
 
-**Status (2026-10-17):** 3.1–3.8 built and closed; 3.9 (Docker on the laptop) built, its step 2 run in round 26: the
-image and the site over the laptop's development copy of the store (#428). Ron opens the site (DoD 1), then Phase 3
-closes. 3.10 (DoD 6) moves to the server deployment step (#428). The history is in `SESSION_LOG.md` and `DECISIONS.md`.
+**Status: COMPLETE (Ron, 2026-10-17, #430).** 3.1–3.9 built and closed; Ron opened the site in Docker on the laptop's
+development copy (DoD 1). 3.10 (DoD 6) and the rest of the server's work are in `DEPLOY.md` (#426, #428); DoD 2
+and 5 for real with the first friend (#440). The history is in `SESSION_LOG.md` and `DECISIONS.md`.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
 (the key, #230, #232) · **Research:** `RESEARCH.md` §16 (the area grouping check)
@@ -36,6 +36,18 @@ archive lists, the flags, the reports and the corrections."*
 7. Tests pin: no user action writes a `RawPost` or a `Listing` (invariant 14); no per-user value is written on a post
    (invariant 12); no outgoing request carries a personal identifier (invariant 15).
 8. The per-user YAML is gone (#47), and the items of §3 are resolved or explicitly re-planned.
+
+**Phase 3 closed (Ron, 2026-10-17, #430) — the DoD's state:**
+1. Met, 2026-10-17: Ron opened `http://127.0.0.1:8000/` in Docker over the development copy and signed in as the admin.
+2. Accepted as shown on the copy (#423); made for real the day the first friend is added (`DEPLOY.md`, #440).
+3. Met: 3.6's tests 5–7 and the site of 3.7.
+4. Met: the four pairs tie and nothing else (3.6, round 6); one flagged as one card on the site (3.7 step 6).
+5. Accepted as shown on the copy (#423); made for real the day the first friend is added (`DEPLOY.md`, #440).
+6. Moved to the server deployment, on the server (#428; `DEPLOY.md`).
+7. Met: `test_web_writes.py`, `test_web_admin_writes.py`, `test_policy.py` (invariants 14, 12); the socket guard and
+   `test_web.py` (15).
+8. Met: the YAML is gone (3.4) and every §3 row is resolved or re-planned; the phone as a dedup B signal (#75 C) closed
+   as settled by #230/#232 (#431, round 28).
 
 ---
 
@@ -2555,7 +2567,7 @@ the bill.
 | The dashboard framework; the journal mode; concurrent writes to `PostLifecycle` | `BACKLOG.md`, "Open technical choices"; #65 | Decided (#258–#260); built in 3.4, 3.7, 3.9 |
 | **Notes from the dedup B plan worth keeping:** **alerts (Phase 4) must not fire for a post the key ties to an earlier one**; the key reads only active canonical posts that have a `Listing`, so a post waiting for its classification is not tied; the agent-number threshold of 4 is re-measured on a week of data | #230–#232; `PHASE_2.md` 2.10 | Recorded; 3.6 builds the derivation that Phase 4 reads |
 | `gate_d_pairs` runs again on a larger store, to record the rate with its window | #226, point 5 | Free; after a week of runs. Not a DoD item |
-| The phone as a candidate signal for dedup B: dedup A's layer 3 still produces nothing, and nothing writes a phone match onto a post (#75 C; the key settles the rest, #230–#232) | #75 C | **For Ron:** nothing is proposed; left as it is unless Ron wants it |
+| The phone as a candidate signal for dedup B: dedup A's layer 3 still produces nothing, and nothing writes a phone match onto a post (#75 C; the key settles the rest, #230–#232) | #75 C | **Closed (#431, round 28):** settled by #230/#232; a phone is never decisive alone |
 
 Settled on 2026-10-10 and so not open: #70 under dedup B (#252); which size a room search filters on (#247); the area
 grouping (#248, #249, #261); the orange on the area (#250, #275); restore after a reclassify (#251, as amended by #281

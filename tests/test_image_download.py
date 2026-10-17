@@ -593,6 +593,7 @@ def test_a_post_that_lost_a_photo_keeps_its_entry(repo, base, tmp_path) -> None:
 # --- the spike data ---
 
 
+@pytest.mark.raw_fixtures
 def test_spike_main_downloads_every_canonical_photo(repo, tmp_path) -> None:
     batch = [annotate(to_raw_post(item, FETCHED_AT)) for item in load_spike_1_1a()]
     transport = FakeTransport()

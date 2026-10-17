@@ -193,10 +193,12 @@ def _meters(lon: float, lat: float, ring: list[list[float]]) -> float:
     return best
 
 
+@pytest.mark.raw_fixtures
 def test_the_polygons_fixture_is_the_71_areas() -> None:
     assert sorted(_polygons()) == list(range(1, 72))
 
 
+@pytest.mark.raw_fixtures
 def test_every_place_lies_in_its_first_area_and_every_listed_area_is_within_reach() -> None:
     polygons = _polygons()
     for place in load_known_places():
@@ -212,6 +214,7 @@ def test_every_place_lies_in_its_first_area_and_every_listed_area_is_within_reac
             assert number in containing or distance <= TOUCH_METERS, (place.name, number, distance)
 
 
+@pytest.mark.raw_fixtures
 def test_no_area_within_reach_is_left_out() -> None:
     polygons = _polygons()
     for place in load_known_places():
@@ -223,6 +226,7 @@ def test_no_area_within_reach_is_left_out() -> None:
         assert near <= set(place.areas), (place.name, near - set(place.areas))
 
 
+@pytest.mark.raw_fixtures
 def test_the_layer_service_gave_the_same_containing_area_for_every_place() -> None:
     """The point queries of 2026-10-06, one per place, saved as they came back."""
     queries = _fixture(POINT_QUERIES)

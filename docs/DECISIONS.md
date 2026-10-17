@@ -323,8 +323,8 @@ from: `"text"` with `no_text=True` means it arrived and was unusable.
 ### 38 — Phone numbers are stored normalized
 **Status: active, extended by #57.**
 
-Digits only, `+972` converted to a leading `0`. `050-9184537` and `+972509184537` both become
-`0509184537`. `find_by_phone` normalizes its input before comparing.
+Digits only, `+972` converted to a leading `0`. `05X-XXXXXXX` and `+9725XXXXXXXX` both become
+`05XXXXXXXX`. `find_by_phone` normalizes its input before comparing.
 
 *Why:* a store lookup by phone is an equality query and cannot match across formats. Nothing is
 lost — the card always shows the full original text, and `raw` keeps everything.
@@ -3767,7 +3767,7 @@ are new since the last export: it never overwrites and never deletes. (100) Roun
 backup compared by its dump, not its hash; `move_store`'s journal refusal and the copy left on a failed check; a neutral
 tailnet name in the tests; `jobs` never pulls); a failed move is retried by removing the volume only while it holds nothing
 but that failed copy and no site has run on it. (101) The bind mounts' owner on the server is handled at the server
-deployment step. (102) "First friend connected" moves from Phase 5's "Done means" to the server deployment step's. *Ron
+deployment step. (102) "First friend connected" moves from Phase 5's "Done means" to the server deployment step's *(amended by #440: no friend now; the step ends with Ron's sign-in on the server)*. *Ron
 approved the reviewer's recommendations.*
 
 ### 428 — Production runs from the server; the laptop's volume holds a development copy
@@ -3780,14 +3780,90 @@ reworded: "Ron filters and sees real apartments in a browser, from the site in D
 store in its volume." DoD 6 (3.10, the measured working day) moves to the deployment step, on the server. Until the
 deployment, the Windows folder is the production store; no paid run and no store write without Ron's explicit go.
 **Amends #416 and #418** (and #424 point 88: on the laptop, what is saved through the site is a copy). *Ron's decision:
-"the run will be from the server"; he develops on the laptop and updates the image on the server.*
+"the run will be from the server"; he develops on the laptop and updates the image on the server.* **Amended by #436 (round 28): the Windows store is not moved; the server starts with a fresh store.**
 
 ### 429 — How the work is run (Ron's request: less process)
-Inside an approved plan, the reviewer decides technical details (names, small structure, test shape, library calls) and
+Inside an approved plan, Claude Code decides technical details (names, small structure, test shape, library calls) and
 lists them in the report as "decided by me". Brought to Ron only: a schema, field or filter change; a cost; a write to the
 production store; a change of scope; a contradiction between docs; anything irreversible. `CLAUDE.md`'s status is at most
 five lines of current state; `PHASE_3.md`'s opening status is short; the history lives in `SESSION_LOG.md` and here. Reports
-are short: what was built, what was verified, "decided by me", what needs Ron. *Ron's request.*
+are short: what was built, what was verified, "decided by me", what needs Ron. *Ron asked for less process; he approved the
+reviewer's four-step proposal.* (Wording corrected in round 27: "the reviewer decides" became "Claude Code decides".)
+
+## Phase 3: closed (2026-10-17, round 27)
+
+### 430 — Phase 3 is complete
+Ron opened the site at `http://127.0.0.1:8000/`, in Docker on the laptop over the development copy (`tlv-hunter-store`,
+#428), and signed in as the admin. The DoD, item by item (`PHASE_3.md`):
+1. Met, 2026-10-17 (#428's wording).
+2. Accepted as shown on the copy (#415, #423); made for real at the server deployment step (#422, #426).
+3. Met: `policy/` (3.6, its tests 5–7) and the site (3.7) filter and order by the two options, the per-user orange area,
+   viewed after unviewed.
+4. Met: the four known pairs tie and nothing else does (3.6, round 6: 4 cards of two posts); one pair flagged as one card
+   on the site (3.7 step 6, round 13).
+5. Accepted as shown on the copy (#415, #423); made for real at the server deployment step (#422, #426).
+6. Moved to the server deployment step, on the server (#428).
+7. Met: tests pin invariants 14 and 12 for a user's writes (`test_web_writes.py`), the admin's writes
+   (`test_web_admin_writes.py`) and the derivation (`test_policy.py`); invariant 15 by the socket guard and `test_web.py`.
+8. Met: the per-user YAML is gone (3.4) and every §3 item is resolved or re-planned; the last row, the phone as a dedup B
+   signal (#75 C), was closed in round 28 (#431). *(Round 27 had listed that row for Ron.)*
+
+The next step is the server deployment (#426, #428), planned in `docs/DEPLOY.md`. *Ron's decision.*
+
+## The server deployment: Ron's answers on `DEPLOY.md`'s points (2026-10-17, round 28)
+
+### 431 — The phone as a dedup B signal: closed, settled by #230 and #232 (Phase 3's DoD 8 met)
+The §3 row of #75 C is closed: the Gate D key already decides it (a phone is a signal, never alone, never an agent
+number). Phase 3's DoD 8 is met (#430 item 8 updated). *Ron: "a phone is never decisive alone; an agent may post several
+different apartments with one number."*
+
+### 432 — On the server the store is `./appdata/store/`, a bind mount (point 1, option A)
+In the stack's folder, with `appdata/labeling`, `appdata/gate_d` and `appdata/store_exports`, each `chown`ed once to
+uid 10001 (the image's user) before the first start. **Amends #416 for the server**; the laptop keeps the named volume
+for its development copy. *Ron approved the recommendation.*
+
+### 433 — The server's compose file is homelab's `stacks/tlv-hunter/`, pulling the ghcr image (point 2, option A)
+The repo's `compose.yaml` stays the laptop's (it builds the image). **Amends `BASELINE.md` §3:** "the same image runs on the
+laptop and the server" instead of "the same compose file". *Ron approved the recommendation.*
+
+### 434 — The GitHub Action runs the tests that need no `data/raw/` (point 3, option A)
+A pytest marker, `raw_fixtures`, on every test that reads `data/` (gitignored); the Action runs `pytest -m "not
+raw_fixtures"`, ruff and `npm test`, then publishes on `main`. Locally the full suite runs and a missing fixture still
+fails. **Ron's full local run stays the gate before a server update.** *Ron approved the recommendation.*
+
+### 435 — Backups on the server: restic, and `export_backup` before each update (point 4)
+Ron is setting up restic on the server now; no `scp` copy to the laptop. The rule: before each update of the stack,
+`export_backup` on the server; restic backs up `appdata/store_exports/` and `appdata/tailscale/` and excludes the live
+`appdata/store/`. *Ron's decision.*
+
+### 436 — No move: the server starts with a fresh store (point 5 replaced)
+The Windows store is not moved. On the server: `run_once --bootstrap`, then `create_admin`. The Windows `data/store/`
+becomes the laptop's development and regression store (the labelled set and its posts stay there); it is no longer "the
+production store until the deployment". The transfer, `move_store` on the server and the Windows rename are dropped.
+**Amends #428** (and #416's "the one move"). *Ron: "the old data is over a week old and not worth the space."*
+
+### 437 — The server's bootstrap asks 30 posts per group
+The first collection run on the server is capped at 30 posts per group, by `run_once --max-posts 30` (new in round 28: this
+run only, from 1 up to the configured `max_posts`; the provider and the watermark logic read the same lowered value; the
+configured 50 is unchanged, so the regular runs keep it). The bootstrap asks 24 hours back (`BOOTSTRAP_WINDOW`, #79 D1).
+Each paid run on the server still needs Ron's go. *Ron: "a two-week pull is expensive and mostly irrelevant; within two
+days the store is current."*
+
+### 438 — The sharing rule is approved, applied only when the first friend is added (point 6)
+The policy text of `DEPLOY.md` is approved as shown; it is not applied now (no friend yet). *Ron's decision.*
+
+### 439 — The real phone numbers leave HEAD; history is not rewritten (point 7, option A)
+The expected phones of task 1.2's 20 posts live in `data/raw/thedoor_20posts_2026-09-13_phones.json` (gitignored; the test
+fails, never skips, without it); the other tests use made-up numbers; the docs show a neutral placeholder (`05X-XXXXXXX`).
+Hashes were not used: a phone number has about 10⁸ values, so its hash is no protection. *Ron approved the
+recommendation; the file over hashes decided by Claude Code.*
+
+### 440 — No friend now: "Adding the first friend" is a written procedure; the step's "done means" reworded (point 8)
+DoD 2 and 5 on the real store, the sharing rule (#438), the share invite and the friend's sign-up move to `DEPLOY.md`,
+"Adding the first friend", run the day Ron adds one: the reset on the friend's account with the friend present; flag →
+restore on a real post; a report → correct → restore only on a truly misclassified post. **The deployment step's "done
+means": the site is reached at `https://tlvapthunter.<tailnet>.ts.net`, the probe passes, and Ron signs in as the admin on
+the server.** Amends #427 point 102 and `BASELINE.md` §12's row. *Ron's decision: he has no friend to add now.*
 
 ---
 

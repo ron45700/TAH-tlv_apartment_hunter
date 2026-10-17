@@ -1,6 +1,7 @@
 """The collection run command (task 1.14). Paid: every run starts an Apify run.
 
     uv run --env-file .env python -m tlv_hunter.jobs.run_once --bootstrap   # first run
+    ... run_once --bootstrap --max-posts 30   # the server's first run, 30 posts a group (DEPLOY.md)
     uv run --env-file .env python -m tlv_hunter.jobs.run_once               # every run after it
 
 The only code that reads `APIFY_TOKEN` and the only code that constructs the production store
@@ -52,12 +53,28 @@ def main(
             f"{BOOTSTRAP_WINDOW // timedelta(hours=1)} hours back"
         ),
     )
+    parser.add_argument(
+        "--max-posts",
+        type=int,
+        metavar="N",
+        help=(
+            "this run only: ask at most N posts per group, from 1 up to the configured max_posts "
+            "(the server's bootstrap, DEPLOY.md)"
+        ),
+    )
     args = parser.parse_args(argv)
 
     with job_logging(stream):
         try:
             return _run(
-                args.bootstrap, environ, config_root, repo_root, transport, image_transport, clock
+                args.bootstrap,
+                args.max_posts,
+                environ,
+                config_root,
+                repo_root,
+                transport,
+                image_transport,
+                clock,
             )
         except Exception as error:
             log_failure(logger, error)
@@ -66,6 +83,7 @@ def main(
 
 def _run(
     bootstrap: bool,
+    max_posts: int | None,
     environ: Mapping[str, str],
     config_root: Path,
     repo_root: Path,
@@ -77,6 +95,14 @@ def _run(
     if config.provider != "thedoor":
         logger.error("provider %s is not built", config.provider)
         return 1
+    if max_posts is not None:
+        # Only lower: the configured value is what keeps groups × max_posts under the charge cap's
+        # maxItems (#78 W3). The provider and the watermark logic read the same copy.
+        if not 1 <= max_posts <= config.max_posts:
+            logger.error("--max-posts must be from 1 to %d, got %d", config.max_posts, max_posts)
+            return 1
+        logger.info("max_posts %d for this run (configured %d)", max_posts, config.max_posts)
+        config = config.model_copy(update={"max_posts": max_posts})
     token = environ.get(TOKEN_VARIABLE, "").strip()
     if not token:
         logger.error("%s is not set", TOKEN_VARIABLE)

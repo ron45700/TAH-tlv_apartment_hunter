@@ -14,6 +14,9 @@ from tlv_hunter.premodel.rejects import initial_lifecycle, pre_model_reason, rec
 from tlv_hunter.providers.thedoor import to_raw_post
 from tlv_hunter.textnorm.annotate import annotate
 
+# Every test here reads data/raw/ (gitignored): left out by the GitHub Action.
+pytestmark = pytest.mark.raw_fixtures
+
 LISTING_TEXT = "דירת 3 חדרים להשכרה בפלורנטין, כניסה מיידית"
 MODEL_REASONS = ["other_city", "seeking", "for_sale", "not_listing"]
 FLAG = {"flagged_by": "ron", "flagged_at": datetime(2026, 10, 4, 9, 0, tzinfo=UTC)}

@@ -207,6 +207,7 @@ def test_cap_must_be_above_zero(tmp_path: Path, cap: str) -> None:
         run_main(tmp_path, "--run", "--cap", cap, "--limit", "1")
 
 
+@pytest.mark.raw_fixtures
 def test_a_missing_store_is_refused_and_not_created(tmp_path: Path) -> None:
     for argv in ((), ("--run", "--cap", "1", "--limit", "1")):
         code, out, _, keys, _ = run_main(tmp_path, *argv, transport=answers(1))

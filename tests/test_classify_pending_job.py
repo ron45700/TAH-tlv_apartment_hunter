@@ -95,6 +95,7 @@ def test_a_missing_key_exits_1_and_opens_nothing(tmp_path: Path, posts) -> None:
     assert lines[-1]["msg"] == "OPENAI_API_KEY is not set"
 
 
+@pytest.mark.raw_fixtures
 def test_a_missing_store_exits_1_and_is_not_created(tmp_path: Path) -> None:
     code, lines, _, keys = _main(tmp_path, "--cap", "1", transport=answers(1))
     assert (code, keys) == (1, [])

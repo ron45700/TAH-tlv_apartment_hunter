@@ -27,6 +27,7 @@ def test_there_are_71_areas_numbered_1_to_71() -> None:
     assert [area.number for area in load_areas()] == list(range(1, 72))
 
 
+@pytest.mark.raw_fixtures
 def test_every_name_is_the_layer_511_name_verbatim() -> None:
     features = _load_fixture(LAYER_511)["features"]
     expected = {f["attributes"]["ms_shchuna"]: f["attributes"]["shem_shchuna"] for f in features}

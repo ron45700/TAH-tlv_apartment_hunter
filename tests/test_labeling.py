@@ -59,6 +59,7 @@ def _entry(listing_id: str, case: str = "a case") -> dict:
 # --- the proposed set, read in place ---
 
 
+@pytest.mark.raw_fixtures
 def test_the_proposed_set_holds_the_spike_posts_and_about_fifty() -> None:
     regression_set = RegressionSet.model_validate_json(_fixture(PROPOSED_SET))
     cases = {entry.listing_id: entry.case for entry in regression_set.posts}
@@ -273,6 +274,7 @@ def test_with_no_regression_set_the_command_fails(tmp_path: Path, posts) -> None
     assert _main(tmp_path)[0] == 1
 
 
+@pytest.mark.raw_fixtures
 def test_the_real_set_loads(tmp_path: Path) -> None:
     _fixture(PROPOSED_SET)
     assert load_regression_set(PROPOSED_SET).posts

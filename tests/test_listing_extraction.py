@@ -67,6 +67,7 @@ def test_the_derived_schema_obeys_strict_mode() -> None:
             assert sorted(node["required"]) == sorted(node["properties"]), path
 
 
+@pytest.mark.raw_fixtures
 def test_the_derived_schema_is_the_spikes_but_for_areas_and_the_value_description() -> None:
     """DECISIONS.md #179: the schema sent in spike 2.1 passed strict mode; only two differences
     are expected, so an SDK upgrade that changes the derivation fails here, before any call."""
@@ -87,6 +88,7 @@ def test_the_derived_schema_is_the_spikes_but_for_areas_and_the_value_descriptio
     assert derived == expected
 
 
+@pytest.mark.raw_fixtures
 def test_every_spike_answer_validates_once_areas_is_added() -> None:
     names = sorted(path.stem for path in OPENAI_SPIKE.glob("*_p[12]_*.json"))
     assert len(names) == 120
