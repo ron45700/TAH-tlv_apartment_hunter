@@ -3865,6 +3865,51 @@ restore on a real post; a report → correct → restore only on a truly misclas
 means": the site is reached at `https://tlvapthunter.<tailnet>.ts.net`, the probe passes, and Ron signs in as the admin on
 the server.** Amends #427 point 102 and `BASELINE.md` §12's row. *Ron's decision: he has no friend to add now.*
 
+
+## The server deployment: live; the measured day; backups (2026-10-17, round 29)
+
+### 441 — The server deployment is live (its "done means" met, #440)
+On `homeserver`, 2026-10-17, by Ron: the image pulled (SQLite 3.46.1: `ASSUMPTIONS.md` I8 on the server); `run_once
+--bootstrap --max-posts 30` (219 photos); `classify_pending` (every post classified but one, which failed `invalid` twice and
+is retried by later runs, #139); `create_admin` (`ron45700`); the site healthy; `tlvapthunter` registered, its key expiry
+disabled, `TS_AUTHKEY` cleared; `export_backup` run (219 photos exported). Ron signed in as the admin through
+`https://tlvapthunter.<tailnet>.ts.net`. **A sign-in is a write checked against `Host`/`Origin` (`web/auth.check_write`),
+so `ASSUMPTIONS.md` I25 is VERIFIED and the separate probe is not needed.** The step's "done means" is met. *Ron's report.*
+
+### 442 — Quiet hours are 00:00–07:00 Israel time
+`BASELINE.md` said 01:00–07:00. **`BASELINE.md` §4 and the configuration's default are amended when the Phase 5 scheduler
+is built** (no scheduler exists yet). Round 29's measuring script already uses 00:00–07:00. *Ron's decision.*
+
+### 443 — For Phase 5: a run after a pause looks back at most X hours
+After a pause (the stack stopped for days), the next run's window spans the whole gap, bounded only by `max_posts` per
+group. Ron wants a rule that a run after a pause looks back at most X hours; X and the rule are decided when the scheduler
+is planned. *Ron's request.*
+
+### 444 — `TELEGRAM_BOT_TOKEN` is in the stack's `.env`, passed to no service until Phase 4
+It is not in `jobs.env`; no service of `stacks/tlv-hunter/compose.yaml` receives it. Phase 4 decides which service reads
+it. *Ron's report.*
+
+### 445 — One measured day by a script on the server, `homelab/stacks/tlv-hunter/measure_day.sh` (DoD 6, 3.10)
+Not the Phase 5 scheduler: for 24 hours from its start, a slot every 30 minutes at :00 and :30, none starting 00:00–07:00
+`Asia/Jerusalem` (#442; the zone set explicitly, and refused when the machine lacks it); in each slot, serially, `run_once`
+then `classify_pending --cap 0.05` (#140: a slot that runs long delays the next, never in parallel); every command's output
+and exit code appended to `appdata/measure/<start date>.log`; a failed command logged and the day goes on, 3 failed
+collection runs in a row stop it; its PID in `appdata/measure/measure_day.pid`; **a stop request lets the running command
+finish, then stops** (the command is never killed, so the store is never left half-written; a wait between slots ends at
+once); started under `nohup`; `totals` reads the log. Each slot is paid: the day runs only on Ron's go. *Ron's request; the
+details decided by Claude Code.*
+
+### 446 — The server's export holds no photos (amends #427 point 99)
+`export_backup --no-photos` on the server: the database only. Restic on the server backs up configuration and the small
+database, never photos. Without the flag (the laptop) it exports the new photos as before. *Ron's decision.*
+
+### 447 — The 7 newest dated backups are kept
+In the store folder (`backup_store`) and in the exports (`data/store_exports/`): once the new backup or export is written
+and checked, the command that wrote it deletes the older dated ones beyond the 7 newest. Only names of the form
+`tlv_hunter.<date>[T<time>].backup.sqlite3` are touched: never the live store or any other file; a failed check deletes
+nothing. **Applies on every machine**: on Windows the next command that writes a backup (on Ron's go) also prunes the old
+dated backups in `data/store/`. Homelab's README states restic's include (`store_exports/*.sqlite3`, `appdata/tailscale/`)
+and exclude (`appdata/store/`, every `images/` folder). *Ron's decision.*
 ---
 
 ## Corrections to recorded facts

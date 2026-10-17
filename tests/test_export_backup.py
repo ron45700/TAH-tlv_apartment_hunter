@@ -91,3 +91,37 @@ def test_it_exports_only_the_photos_not_yet_exported_and_never_overwrites(repo: 
     assert export_backup.main([], repo_root=repo, clock=lambda: later, stream=again) == 0
     assert "photos: 1 new exported, 2 already there" in again.getvalue()
     assert (exported / "b" / "0.jpg").read_bytes() == b"photo b0"
+
+
+def test_no_photos_exports_the_database_only(repo: Path) -> None:
+    """#446: the server's export holds no photo."""
+    images = repo / "data" / "store" / "images"
+    (images / "a").mkdir(parents=True)
+    (images / "a" / "0.jpg").write_bytes(b"photo a0")
+    out = io.StringIO()
+    assert export_backup.main(["--no-photos"], repo_root=repo, clock=lambda: NOW, stream=out) == 0
+    exports = repo / "data" / "store_exports"
+    assert (exports / "tlv_hunter.2026-10-16.backup.sqlite3").is_file()
+    assert not (exports / "images").exists()
+    assert "photos: not exported (--no-photos)" in out.getvalue()
+
+
+def test_the_exports_keep_the_7_newest(repo: Path) -> None:
+    """#447: older dated exports are deleted once the new one is checked; nothing else."""
+    exports = repo / "data" / "store_exports"
+    exports.mkdir(parents=True)
+    old = [exports / f"tlv_hunter.2026-10-0{day}.backup.sqlite3" for day in range(1, 9)]
+    for path in old:
+        path.write_bytes(b"an earlier export")
+    (exports / "images").mkdir()
+    (exports / "images" / "keep.jpg").write_bytes(b"a photo")
+    out = io.StringIO()
+    assert export_backup.main(["--no-photos"], repo_root=repo, clock=lambda: NOW, stream=out) == 0
+    left = sorted(exports.glob("tlv_hunter.*.backup.sqlite3"))
+    assert [p.name for p in left] == [p.name for p in old[2:]] + [
+        "tlv_hunter.2026-10-16.backup.sqlite3"
+    ]
+    assert (
+        "old export deleted (7 newest kept): tlv_hunter.2026-10-01.backup.sqlite3" in out.getvalue()
+    )
+    assert (exports / "images" / "keep.jpg").is_file()

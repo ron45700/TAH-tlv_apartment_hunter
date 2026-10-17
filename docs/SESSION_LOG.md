@@ -7104,3 +7104,31 @@ CLAUDE.md's store notes).
 copy of the git-visible files with no `data/`: 1108 passed, 873 left out, none failed; no real number in a tracked file.
 
 **Next:** Ron commits and pushes both repos (step 3, the first publish), then the server's steps 4–8.
+
+## 2026-10-17 (continued) — Round 29: the deployment live (#441); the measured day's script; backups capped
+
+No paid call, nothing on the server, no git write. A local container of `tlv-hunter:local` was run to test the script (a
+fake `docker compose`, nothing paid, no store).
+
+**Recorded:** #441 (deployed on `homeserver` by Ron: the bootstrap at 30 a group, 219 photos, one post failing `invalid`
+twice and retried later, the admin `ron45700`, `tlvapthunter`, key expiry off, the export; Ron's sign-in through
+`tlvapthunter` is the probe: I25 VERIFIED, "done means" met), #442 (quiet hours 00:00–07:00; `BASELINE.md` §4 and the
+default amended with the scheduler), #443 (Phase 5: a run after a pause looks back at most X hours), #444 (the bot token in
+the stack's `.env`, read by no service), #445 (the measured day's script), #446 (`--no-photos` on the server; amends #427
+point 99), #447 (the 7 newest dated backups kept, everywhere). `ASSUMPTIONS.md` I25 VERIFIED, I8 on the server; DEPLOY.md
+status LIVE, steps 3–7 done, §5 rewritten; BACKLOG; CLAUDE.md.
+
+**Built:** `export_backup --no-photos`; `jobs.common.prune_backups` (called by `backup_store` after its checks and by the
+export after its hash check; only `tlv_hunter.<date>[T<time>].backup.sqlite3` names), 6 tests. In homelab:
+`stacks/tlv-hunter/measure_day.sh` (`start`, `status`, `log`, `stop`, `totals`), `.gitattributes` (`*.sh` LF); the README's
+"Backups (restic)" and "The measured day" sections, `--no-photos` in "Updating", the stack "in use".
+
+**Verified:** `uv run pytest` **1989 passed**; ruff clean. The script in a local container with 4-second slots: aligned
+serial slots ending on time, a second start refused, 3 failed collections stop it, a stop waits for the running command,
+the quiet hours at 23:30/00:00/06:30/07:00, the totals, a start without the exec bit; on Git Bash (no zone data) it refuses.
+
+**Found:** the Windows `data/store/` holds 5 dated backups (listed, not opened): the third backup written there from now on
+starts deleting the oldest (2026-10-06). The server's `appdata/store_exports/images/` keeps the 219 photos exported before
+#446 until Ron deletes them. homelab's `docs/ROADMAP.md` has a change of Ron's, not mine.
+
+**Next:** Ron commits and pushes both repos, updates the stack on the server, then starts the measured day on his go.

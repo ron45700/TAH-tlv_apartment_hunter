@@ -7,6 +7,7 @@ dropped-names line (#182).
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 import sys
 import traceback
@@ -26,6 +27,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_ROOT = REPO_ROOT / "config"
 # The one SQLite file both `store` and `state` open, under `store_root` (DECISIONS.md #65).
 SQLITE_FILENAME = "tlv_hunter.sqlite3"
+# The dated backups kept, in the store folder and in the exports (DECISIONS.md #447).
+BACKUPS_KEPT = 7
 
 _run_id: ContextVar[str] = ContextVar("run_id", default="-")
 
@@ -142,7 +145,29 @@ def backup_store(database: Path, now: datetime) -> Path:
         raise RuntimeError("the backup fails SQLite's integrity check")
     if raw_post_rows(target) != raw_post_rows(database):
         raise RuntimeError("the backup's RawPost rows differ from the store's")
+    prune_backups(target, database.stem, database.suffix)
     return target
+
+
+def prune_backups(newest: Path, stem: str, suffix: str, keep: int = BACKUPS_KEPT) -> list[Path]:
+    """Keeps the `keep` newest dated backups in `newest`'s folder, `newest` among them, and deletes
+    the older ones (DECISIONS.md #447). Only the names `backup_store` writes are touched
+    (`<stem>.<date>[T<time>].backup<suffix>`): never the store itself or any other file. Called
+    once `newest` is written and checked. Returns what was deleted, oldest first."""
+    pattern = re.compile(
+        rf"{re.escape(stem)}\.\d{{4}}-\d{{2}}-\d{{2}}(T\d{{6}})?\.backup{re.escape(suffix)}"
+    )
+    older = sorted(
+        path
+        for path in newest.parent.iterdir()
+        if path != newest and path.is_file() and pattern.fullmatch(path.name)
+    )
+    # The date and time in the name order them: a day's first backup has no time and sorts before
+    # that day's later ones ('.' before 'T').
+    deleted = older[: max(len(older) - (keep - 1), 0)]
+    for path in deleted:
+        path.unlink()
+    return deleted
 
 
 def raw_post_rows(path: Path) -> list[tuple[str, str, str | None]]:

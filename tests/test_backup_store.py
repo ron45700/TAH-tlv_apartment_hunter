@@ -90,3 +90,59 @@ def test_online_copy_refuses_a_missing_store_and_an_existing_target(tmp_path: Pa
     with pytest.raises(FileExistsError):
         online_copy(source, target)
     assert target.read_bytes() == b"earlier"
+
+
+def _dated(folder: Path, *stamps: str) -> list[Path]:
+    paths = [folder / f"tlv_hunter.{stamp}.backup.sqlite3" for stamp in stamps]
+    for path in paths:
+        path.write_bytes(path.name.encode())
+    return paths
+
+
+def test_prune_keeps_the_7_newest_by_their_name_and_touches_nothing_else(tmp_path: Path) -> None:
+    """#447: the dated backups beyond the 7 newest go; the store, other names and a journal stay."""
+    older = _dated(tmp_path, "2026-10-01", "2026-10-02", "2026-10-02T093000")
+    kept = _dated(
+        tmp_path, "2026-10-03", "2026-10-04", "2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08"
+    )
+    (newest,) = _dated(tmp_path, "2026-10-08T120000")
+    others = [
+        tmp_path / SQLITE_FILENAME,
+        tmp_path / "tlv_hunter.2026-09-01.backup.sqlite3-journal",
+        tmp_path / "other.2026-09-01.backup.sqlite3",
+        tmp_path / "tlv_hunter.moved.backup.sqlite3",
+        tmp_path / "notes.txt",
+    ]
+    for path in others:
+        path.write_bytes(b"not a dated backup")
+
+    deleted = common.prune_backups(newest, "tlv_hunter", ".sqlite3")
+
+    assert deleted == older
+    assert sorted(p for p in tmp_path.iterdir()) == sorted([*kept, newest, *others])
+    assert common.BACKUPS_KEPT == 7
+
+
+def test_prune_never_deletes_the_new_backup_even_if_its_name_sorts_first(tmp_path: Path) -> None:
+    later = _dated(tmp_path, *(f"2026-10-1{day}" for day in range(8)))
+    (newest,) = _dated(tmp_path, "2026-10-01")  # a clock set back
+    deleted = common.prune_backups(newest, "tlv_hunter", ".sqlite3")
+    assert newest.is_file()
+    assert deleted == later[:2] and all(path.is_file() for path in later[2:])
+
+
+def test_backup_store_prunes_after_its_checks(database: Path) -> None:
+    _dated(database.parent, *(f"2026-10-0{day}" for day in range(1, 9)))
+    backup = backup_store(database, NOW)
+    backups = sorted(database.parent.glob("tlv_hunter.*.backup.sqlite3"))
+    assert len(backups) == 7 and backup in backups
+    assert database.is_file()
+    assert backups[0].name == "tlv_hunter.2026-10-03.backup.sqlite3"
+
+
+def test_a_failed_check_prunes_nothing(database: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    old = _dated(database.parent, *(f"2026-10-0{day}" for day in range(1, 9)))
+    monkeypatch.setattr(common, "integrity_ok", lambda path: False)
+    with pytest.raises(RuntimeError, match="integrity"):
+        backup_store(database, NOW)
+    assert all(path.is_file() for path in old)

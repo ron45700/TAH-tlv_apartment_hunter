@@ -1,9 +1,6 @@
 # The server deployment step — plan
 
-**Status (2026-10-17, round 28):** points 1–8 decided (`DECISIONS.md` #431–#440); **steps 1 and 2 built** (the
-repository; homelab's stack files), not committed (git is Ron's). Next: step 3, Ron's first publish. Nothing has run on
-the server. **Parent:** `BASELINE.md` §12, the "Server deployment" row · **after** Phase 3 (complete, #430) **and
-before** Phase 4. **Owner:** Ron.
+**Status (2026-10-17, round 29): LIVE.** Deployed on `homeserver` by Ron (`DECISIONS.md` #441): steps 1–7 done, the "done means" met (Ron signed in as the admin through `tlvapthunter`; I25 VERIFIED). **Next: step 8, the measured day** (§5, `measure_day.sh`, #445), on Ron's go. §6 waits for the first friend. **Parent:** `BASELINE.md` §12, the "Server deployment" row · **after** Phase 3 (complete, #430) **and before** Phase 4. **Owner:** Ron.
 
 **Scope (#426, #428, #436):** the image on `homeserver`, published from git by the repo's GitHub Action and pulled by
 homelab's `stacks/tlv-hunter/` (#420, #433); the site's own tailnet machine `tlvapthunter`, a Tailscale container with
@@ -99,22 +96,24 @@ him. Git is Ron's at every step.
 1. **The repository — BUILT (round 28):** #439's change; the marker; `.github/workflows/docker.yml`; `run_once
    --max-posts`. Verified on Windows (§7).
 2. **The homelab stack — BUILT (round 28):** §3.
-3. **The first publish (R):** Ron commits and pushes both repos. The Action runs on the TLV repo: its test job, then the
+3. **The first publish (R) — DONE 2026-10-17:** Ron commits and pushes both repos. The Action runs on the TLV repo: its test job, then the
    image. On the package page: the image linked to the repository, its name lowercase; **R** makes the package public
    (irreversible; nothing sensitive is in the image). The digest recorded.
-4. **The stack on the server (R):** `git pull` in `~/homelab`; in `stacks/tlv-hunter/`, the first run's steps 1–3 of
+4. **The stack on the server (R) — DONE 2026-10-17** (SQLite 3.46.1, I8): `git pull` in `~/homelab`; in `stacks/tlv-hunter/`, the first run's steps 1–3 of
    homelab's README: `.env` and `jobs.env` (`chmod 600`), the `appdata/` folders and their owner, `docker compose pull`,
    SQLite 3.46.1 in the image (I8 on the server). Check that nothing else listens on the server's port 8000 (`ss -ltn`).
-5. **The fresh store (R; PAID, each on Ron's go):**
+5. **The fresh store (R; PAID, each on Ron's go) — DONE 2026-10-17** (219 photos; every post classified but one, which
+   failed `invalid` twice and is retried by later runs; the admin `ron45700`; `export_backup` with 219 photos, before #446):
    1. `docker compose run --rm jobs python -m tlv_hunter.jobs.run_once --bootstrap --max-posts 30` — at most $0.50 (the
       charge cap); 6 groups × 30 = at most 180 rows, from the last 24 hours.
    2. `docker compose run --rm jobs python -m tlv_hunter.jobs.classify_pending --cap 0.10`.
    3. `docker compose run --rm jobs python -m tlv_hunter.jobs.create_admin` (free; it asks the username and the password
       twice).
-6. **The site and its machine (R):** `docker compose up -d site tailscale-tlvapthunter`; `site` healthy; on the Machines
+6. **The site and its machine (R) — DONE 2026-10-17:** `docker compose up -d site tailscale-tlvapthunter`; `site` healthy; on the Machines
    page `tlvapthunter` → **Disable Key Expiry**; `TS_AUTHKEY` cleared from `.env`. Ron opens
    `https://tlvapthunter.<tailnet>.ts.net` from his own devices.
-7. **The probe, then a real sign-in (R, from Ron's laptop on the tailnet):** `POST /api/sign-in` with `{}` and `Origin:
+7. **A real sign-in (R) — DONE 2026-10-17; the probe was not needed** (#441: a sign-in is a write `check_write` checks
+   against `Host`/`Origin`, so it passing is what the probe would have shown; I25 VERIFIED). *As planned:* `POST /api/sign-in` with `{}` and `Origin:
    https://tlvapthunter.<tailnet>.ts.net` → **422** (the `Host` matched); with `Origin: https://example.invalid` →
    **403**; nothing is written. A 403 on the first means Serve rewrote the `Host`: stop, nothing is shared, a fix is
    planned. Then Ron signs in as the admin, saves his preferences, marks a post viewed: I25 VERIFIED. **Done means is met
@@ -123,23 +122,35 @@ him. Git is Ron's at every step.
 9. **Close:** `BASELINE.md` §12's row marked done; `ASSUMPTIONS.md` I3 and I25; BACKLOG. Then Phase 4 is planned. §6 waits
    for the day Ron adds a friend.
 
-## 5. The measured working day (3.10) — for Ron's go, run by run
+## 5. The measured working day (3.10) — `measure_day.sh`, on Ron's go (#445)
 
-On the server, from the stack's folder, one job command at a time (#140), the site running beside them (#260).
-Recommended: **a full day after the store is current** (the bootstrap's day is not the measured one; Ron: "within two days
-the store is current").
+**The script:** `homelab/stacks/tlv-hunter/measure_day.sh`, run on the server from the stack's folder (its commands and
+what they do are in homelab's README, "The measured day"). For 24 hours from its start: a slot every 30 minutes at :00 and
+:30, **none starting 00:00–07:00 Israel time** (#442); in each slot, one after the other, `run_once` (the configured 50 per
+group, under the $0.50 charge cap, #78 W3) then `classify_pending --cap 0.05`; never two job commands at once (#140). A
+failed command is logged and the day goes on; 3 failed collection runs in a row stop it. **Stopping early** (`bash
+measure_day.sh stop`) lets the running command finish and then stops: no command is ever killed, so the store is never left
+half-written. Every command's output, with a header per slot and the exit codes, goes to `appdata/measure/<start date>.log`.
 
-- **Collection:** `docker compose run --rm jobs python -m tlv_hunter.jobs.run_once` (the configured 50 per group), each
-  run under the configured charge cap of $0.50 (6 × 50 = 300 rows, under the cap's 333, #78 W3).
-- **Classification:** after each collection run, `classify_pending --cap 0.10`.
-- **The day:** recommended, 4 collection runs spread over the day, each followed by its classification: **at most $2.40**
-  (4 × $0.50 + 4 × $0.10), expected well below. Ron sets the number of runs and each cap.
-- **Measured and recorded:** calls, tokens and cost from the usage metadata, then the OpenAI bill (I3, O2); Apify's cost
-  per run; the background recompute under real use and the busy timeout (#385, #259); Ron's look at the interface.
+**The most it can cost:** 34 slots (07:00 to 23:30, 17 hours at two an hour) × ($0.50 + $0.05) = **$18.70 at the caps**, if
+every run hit both. Expected far below: with 30-minute windows a run returns few rows (Apify's cost is per row), and each
+classification only the posts that are new. The bootstrap's actual figures are in the server's log; the day's totals say.
+
+**Measured and recorded at the end** (`bash measure_day.sh totals`): the slots, the collection runs (done, failed), rows
+fetched, posts stored, Apify's cost as each run reported it (`usageTotalUsd`); the classification runs, posts attempted
+and their outcomes, model calls, tokens by kind, cost. Then the two bills (Apify's console, OpenAI's usage page) for I3 and
+O2; the background recompute and the busy timeout (#385, #259) are judged from the site's behaviour that day; Ron's look at
+the interface.
+
+**Tested in round 29 on the laptop, in a local container of the image with a fake `docker compose`** (4-second slots, no
+paid call): the aligned slots run serially and end on time; a second start is refused; 3 failed collections stop it; a stop
+during a command waits for it, then stops before the classification; the quiet hours (23:30 a slot, 00:00 and 06:30
+skipped, 07:00 a slot); the totals from the log; the start works without the file's exec bit; a machine without the
+`Asia/Jerusalem` zone is refused (Git Bash on Windows). Not tested: real Docker on the server, a real 24 hours.
 
 ## 6. Adding the first friend (a procedure, run the day Ron adds one; #438, #440)
 
-Before: the probe and Ron's sign-in have passed (step 7); a fresh `export_backup`.
+Before: Ron's sign-in has passed (step 7, done); a fresh `export_backup --no-photos`; `measure_day.sh` not running.
 
 1. **The sharing rule (R),** approved as shown (#438), with `tlvapthunter`'s real `100.x` address from the Machines page;
    applied as `03-tailscale-machines.md` says ("Changing the rules safely": copy the current policy first; save; then `ssh
