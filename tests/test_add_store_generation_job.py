@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import SQLITE_FILENAME, make_listing
+from tests.conftest import SQLITE_FILENAME, make_listing, sqlite_dump
 from tests.test_userdata_store import ADMIN_ID, NOW, admin, correction
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.contracts.profile import new_profile
@@ -108,14 +108,14 @@ def test_it_migrates_after_a_backup_and_changes_no_record(
     _filled(database, posts)
     _as_layout_1(database)
     contents = _contents(database)
-    before = _sha256(database)
+    dump = sqlite_dump(database)
 
     code, output = _run(tmp_path)
 
     assert code == 0, output
     (backup,) = _backups(database)
     assert backup.name == "tlv_hunter.2026-10-12.backup.sqlite3"
-    assert _sha256(backup) == before
+    assert sqlite_dump(backup) == dump  # the store before, row for row (#424 point 89)
     assert _layout(backup) == {"store": 1, "store.listings": 1, "userdata": 1, "state": 1}
     assert _layout(database) == {"store": 2, "store.listings": 2, "userdata": 2, "state": 1}
     assert _contents(database) == contents

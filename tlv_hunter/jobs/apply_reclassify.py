@@ -12,8 +12,9 @@ lines and blank lines ignored). Every entry must match a post of that run that h
 
 It refuses a run whose report is not complete, and one made for another prompt than the code's.
 Then it copies the store to a dated backup beside it (its path and SHA-256 are printed, and the
-copy must hash the same), reads each post again right before its write, and writes `Listing` and
-record in one transaction. A post that is no longer what the run saw is not written and is listed.
+copy must pass the integrity and `RawPost` checks, #424), reads each post again right before its
+write, and writes `Listing` and record in one transaction. A post that is no longer what the run
+saw is not written and is listed.
 Afterwards it checks that every stored `RawPost` is identical to the backup's (invariant 14).
 
 This is the fourth command that writes the production store (#220). **It takes no lock** (#140):
@@ -149,7 +150,10 @@ def _run(
         backup,
     )
     print(f"backup: {backup}", file=out)
-    print(f"backup SHA-256: {sha256_file(backup)} (the store's, before: the same)", file=out)
+    print(
+        f"backup SHA-256: {sha256_file(backup)} (an online copy: integrity ok, same RawPost rows)",
+        file=out,
+    )
 
     names_path = store_root / RUNS_DIRECTORY / f"{apply_run_id}.jsonl"
     repository = SqliteRepository(database)

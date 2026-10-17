@@ -1,0 +1,13 @@
+*
+# An allow-list (docs/PHASE_3.md 3.9 (b) 3): only what the image is built from enters the build
+# context. Never data/ (real people's phone numbers), .env (the keys), scratch/, docs/ or .git/.
+!tlv_hunter
+!config
+!reference
+!frontend
+!pyproject.toml
+!uv.lock
+!.python-version
+frontend/node_modules
+frontend/dist
+**/__pycache__

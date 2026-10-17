@@ -18,6 +18,7 @@ from tests.conftest import (
     overwrite_classification,
     overwrite_lifecycle,
     post_with_text,
+    sqlite_dump,
 )
 from tests.test_classification_run import lifecycle
 from tlv_hunter.config.yaml_config import YamlConfig
@@ -197,7 +198,7 @@ def test_apply_refuses_an_allowed_post_that_is_not_in_the_plan(tmp_path: Path, p
 
 def test_apply_backs_up_writes_the_three_and_leaves_everything_else(tmp_path: Path, posts) -> None:
     database, named = build(tmp_path, posts)
-    before = sha(database)
+    dump = sqlite_dump(database)
     raw_before = _raw(database)
     lifecycles = {
         n: SqliteRepository(database, read_only=True).get_lifecycle(p.listing_id)
@@ -211,8 +212,8 @@ def test_apply_backs_up_writes_the_three_and_leaves_everything_else(tmp_path: Pa
     assert code == 0, output
 
     backup = database.with_name("tlv_hunter.2026-10-08.backup.sqlite3")
-    assert backup.is_file() and sha(backup) == before
-    assert f"backup SHA-256: {before}" in output and str(backup) in output
+    assert backup.is_file() and sqlite_dump(backup) == dump  # #424 point 89
+    assert f"backup SHA-256: {sha(backup)}" in output and str(backup) in output
     assert "stored RawPost documents identical to the backup's: True" in output
     assert _raw(database) == raw_before
 

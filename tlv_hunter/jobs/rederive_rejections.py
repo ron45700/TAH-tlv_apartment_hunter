@@ -7,10 +7,10 @@ model, no network.
 The dry run lists every post whose state or reason would change, and the counts before and after.
 `--apply` needs `--allow`, the id prefixes (at least 8 characters) of exactly the posts the dry run
 shows: any other difference refuses it, with nothing written. Then it copies the store to a dated
-backup beside it (its path and SHA-256 are printed, and the copy must hash the same), re-reads each
-record right before writing it, writes only `state` and `rejection_reason` through
-`save_lifecycle`, and checks that every stored `RawPost` is identical to the backup's
-(invariant 14).
+backup beside it (its path and SHA-256 are printed; the copy must pass the integrity and
+`RawPost` checks, #424), re-reads each record right before writing it, writes only `state` and
+`rejection_reason` through `save_lifecycle`, and checks that every stored `RawPost` is identical
+to the backup's (invariant 14).
 
 This is the third command that writes the production store, with `run_once` and `classify_pending`.
 **It does not check that they are not running** (none of them takes a lock, DECISIONS.md #79 O9,
@@ -113,7 +113,10 @@ def _run(
 
     backup = backup_store(database, clock())
     print(f"backup: {backup}", file=out)
-    print(f"backup SHA-256: {sha256_file(backup)} (the store's, before: the same)", file=out)
+    print(
+        f"backup SHA-256: {sha256_file(backup)} (an online copy: integrity ok, same RawPost rows)",
+        file=out,
+    )
 
     repository = SqliteRepository(database)
     for change in plan.changes:

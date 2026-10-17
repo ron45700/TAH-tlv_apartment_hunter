@@ -3677,6 +3677,88 @@ WCAG 2.5.8. *Ron approved the reviewer's recommendation.*
 Not only on the fields the report named; the correction answers the post's earliest open or left-out report. **Refines
 #395.** *Ron's decision.*
 
+## Phase 3: 3.8 closed (2026-10-15, round 23)
+
+### 415 — Task 3.8 (the admin's pages) is complete
+Ron walked the whole walkthrough of rounds 21–22 (steps 1–11) himself on a dated copy of the store: a code issued and a
+second account signed up with it; a flag → restore; a report → correct → restore; a leave out → restore later; disable
+and enable. All worked. DoD 2 and DoD 5 are shown on the copy (#400); what is made for real on the production store is
+planned in 3.9 (`PHASE_3.md` 3.9, point 92). *Ron's decision.*
+
+## Phase 3: Ron's answers on 3.9's points 84–95 (2026-10-15/16, round 24)
+
+**Ron answered points 84–95 of `PHASE_3.md` 3.9 (round 23) and narrowed 3.9's scope.** Recorded in round 24; 3.9's plan
+rewritten to the new scope in the same round. Nothing built.
+
+### 416 — The store moves into a named Docker volume (point 84, option A)
+The store moves into a named Docker volume, `tlv-hunter-store`; every command that opens it runs in the `jobs` container;
+a one-time `move_store` copies it there. *Ron approved the reviewer's recommendation.*
+
+### 417 — 3.9 on the laptop is Docker locally only
+The laptop is for development only. No one but Ron uses the system before it runs on the home server; Ron runs its first
+version from the server. So 3.9 on the laptop is Docker locally only: the image, `compose.yaml`, the volume, the site
+published on 127.0.0.1:8000. No Tailscale Serve on the laptop, no sharing, no friend. **Amends #258 and `PHASE_3.md`
+§5.1** ("Tailscale Serve on the host publishes that port") for the laptop, and `BASELINE.md` §3 and §12. *Ron's decision.
+His reason: "the laptop is meant for development"; the first version runs from the server when it is ready.*
+
+### 418 — Phase 3's DoD 1 reworded
+"Ron filters and sees real apartments in a browser, from the site in Docker on his laptop, over the production store in
+its volume." Superseded wording, kept in `PHASE_3.md`: "Ron filters and sees real apartments in a browser, through
+Tailscale Serve, on his laptop in Docker." *Approved by Ron.*
+
+### 419 — On the home server the site gets its own tailnet machine, `tlvapthunter` (Phase 5)
+A Tailscale container beside the site on the machine `homeserver` (point 85's other option: an auth key, a state volume,
+`TS_SERVE_CONFIG`), as its own tailnet machine named `tlvapthunter`. Friends are shared `tlvapthunter` only. Not built
+now; planned in Phase 5. *Ron's decision. His reason: he wants the Telegram Mini App from the server too.* Context:
+`homeserver` already runs most of his systems (for example event seeker); he first said this system would be part of that
+machine and not its own tailnet machine, then chose its own machine for the Mini App.
+
+### 420 — Deploying to the server from git (Phase 5)
+The system is deployed to the server from git, so it is easy to update there. The choice between building on the server
+(`git pull`, then `docker compose build`) and a published image is made when Phase 5 is planned. Never `.env` or the
+volume in git or in the image; an update never touches the volume; a backup before each update. *Ron's own.*
+
+### 421 — Points 85 and 86 closed
+85: closed by #419 (no Tailscale on the laptop; on the server, the `tlvapthunter` container). 86: no certificate is issued
+for the laptop; the server's address is `tlvapthunter.<tailnet>.ts.net`, a neutral name.
+
+### 422 — Moved to Phase 5, the server deployment
+Point 87 (a policy rule allowing `autogroup:shared` only `tlvapthunter` port 443; its exact text shown to Ron and reviewed
+before he applies it); point 92 (DoD 2 and 5 made on the real store); and the `Host`/`Origin` probe through Serve and the
+real sign-in (3.9 (d), layers 2 and 3, round 23), still needed, since Serve sits in front of the site there too.
+
+### 423 — Phase 3's DoD 2 and DoD 5 accepted as shown on the copy
+As Ron's walk showed them (#415); made for real at the server deployment (#422). *Ron approved the reviewer's
+recommendation.*
+
+### 424 — Points 88, 89, 90, 91, 93, 94, 95 as recommended, 88 adapted
+(88, adapted) On the laptop the image runs `serve --store` over the store in the volume; what Ron saves there is real and
+moves to the server with the store; `--copy` stays for trying a change. **Ends #331 and #400 once the move is made.** (89)
+`backup_store` takes SQLite's online backup from a read-only connection and checks the copy's integrity and its `RawPost`
+rows, not the whole file's hash. (90) Beside the site: `run_once`, `classify_pending`, `rederive_rejections`,
+`apply_reclassify` and the read-only commands; `reset_admin_password` with the site stopped; never two job commands at once
+(#140). (91) The keys only in the `jobs` service (`env_file: .env`); the site's container holds none. (93) Never `docker
+compose down -v`; a dated backup exported to Windows (`data/store_exports/`) after each working session, by a small `jobs`
+command, until Phase 5's scheduler. (94) On the laptop the site is up only while the laptop is awake and Docker Desktop
+runs. (95) `ASSUMPTIONS.md` I8 closes at 3.9 for both machines, since the SQLite comes with the image. *Ron approved the
+reviewer's recommendations.*
+
+## Phase 3: points 96 and 97 (2026-10-16, round 25)
+
+### 425 — Phase 3's goal reworded (point 96)
+"Ron opens the site in Docker on his laptop and scrolls and filters the real active posts; signed in, he saves his
+profile, marks posts viewed, flags and reports them, and works the admin's lists. Friends and the tailnet come with the
+server." The old wording is kept in `PHASE_3.md` as superseded. *Ron approved the reviewer's recommendation.*
+
+### 426 — The server deployment comes before Phase 4 (point 97, option b)
+After 3.10, a deployment step takes from Phase 5 only: the image on `homeserver`, the `tlvapthunter` Tailscale container,
+Serve, the `Host`/`Origin` probe and real sign-in (#422), the sharing rule (point 87), DoD 2 and 5 on the real store
+(#423), deploying from git (#420). The scheduler, archive and deletion, the digest and the rest stay in Phase 5. Then Phase
+4, so its alert buttons, the bot's menu button (#363, #365) and the Mini App spike (`ASSUMPTIONS.md` T5) work against the
+real address from a phone. Planned in detail when reached, not now. **Amends `BASELINE.md` §12's order.** *Ron approved the
+reviewer's recommendation. The reviewer's reason: Phase 4's buttons open the site, which a phone cannot reach at the
+laptop's 127.0.0.1; and Ron runs the system, the Mini App included, from the server (#417, #419).*
+
 ---
 
 ## Corrections to recorded facts

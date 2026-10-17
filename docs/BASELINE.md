@@ -35,6 +35,12 @@ sublet switch per profile, #317; an orange location caps the tier at the middle,
 holds no preference, #322), §9 (the sublet switch, #317).
 Amended again 2026-10-12 (round 9): §8 (the bar resets to the saved preferences; "save as my preferences" removed for
 now, #335, amending #315).
+**Amended 2026-10-16 (round 24; approved by Ron in round 25):** §3 (the laptop serves the site locally only; on the home server
+the site gets its own tailnet machine, `tlvapthunter`; deployed from git; `DECISIONS.md` #417, #419, #420) and §12 (Phase 3's
+line reworded, #418; Phase 5's row: `tlvapthunter`, Serve, the `Host`/`Origin` check, DoD 2 and 5 on the real store, deploy
+from git, #419–#423; the laptop for development, #417).
+Amended again 2026-10-16 (round 25): §12 (the server deployment step between Phase 3 and Phase 4, taken from Phase 5,
+`DECISIONS.md` #426; Phase 5's row keeps the rest) and §14 (the Mini App spike against `tlvapthunter`, #426).
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -88,10 +94,10 @@ also a later addition and will probably need its own scraper; the design must st
 |---|---|
 | Machine | Ron's home server (a laptop being converted), running 24/7. Development and first runs on Ron's personal laptop. |
 | OS | Ubuntu Server LTS or Debian, no desktop. |
-| Runtime | Docker Compose. The same compose file runs on the personal laptop and on the server. |
+| Runtime | Docker Compose. The same compose file runs on the personal laptop and on the server. **The store is in a named Docker volume, and every command that opens it runs in a container (#416).** The server's deployment is from git; never `.env` or the volume in git or the image; an update never touches the volume; a backup before each update (#420, Phase 5). |
 | Database | SQLite, one file, behind the `store` interface (posts and their lifecycle records), the `state` interface (per-group watermarks) and, from phase 3, a third interface for what users and the admin write through the site, `userdata/` (`DECISIONS.md` #267, #289). The rollback journal with an explicit busy timeout in phase 3 (#259). Postgres stays a cheap swap. |
 | Images | Downloaded at fetch time to a directory on disk (Facebook image links expire within days). |
-| Remote access | Tailscale. The dashboard is published with Tailscale Serve (HTTPS, tailnet only). Friends get access through Tailscale device sharing. |
+| Remote access | Tailscale, **on the home server only** (amended 2026-10-16, #417, #419). The site gets its own tailnet machine, `tlvapthunter`: a Tailscale container beside the site on `homeserver`, publishing it with Tailscale Serve (HTTPS, tailnet only). Friends are shared `tlvapthunter` only (device sharing). **The laptop is for development: the site there is served on 127.0.0.1 only, with no Serve and no sharing;** no one but Ron uses the system before it runs on the server. *Until 2026-10-16: "The dashboard is published with Tailscale Serve (HTTPS, tailnet only). Friends get access through Tailscale device sharing."* |
 | Telegram | Outbound only: long polling (`getUpdates`) and send calls. No public address or open port. |
 | Fallback | GCP, as in the original plan, if the home server proves unworkable. |
 
@@ -459,12 +465,15 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 |---|---|---|
 | **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · **Gate E** (post lifecycle fields) · SQLite store · thedoor fetch · pre-model rejects · dedup A · repost log · image download · per-group watermark | A real run stores posts and images with no duplicates, and a second run does not repeat them |
 | **2. Classification** | **Gate B** (field schema from §5–§7) · the model · post-model rejects · street and area · **Gate D** (the key, #230; its use is phase 3's, #231) · reclassify job | Every post has fields and a state |
-| **3. Dashboard** | **Gate C** (filter rules, and the user, key, session, profile, viewed-post, report and correction records) · users and keys · profile with two search options and filters · cards · viewed posts · rejected list · flagging · "wrong classification" reports and the admin's corrections · the admin lists · the same-listing grouping, derived by the Gate D key (#231) · **the polished UI** (#257) | Ron filters and sees real apartments in a browser |
-| **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike | A real alert arrives according to Ron's profile |
-| **5. Server** | Compose on the home server · Tailscale · scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
+| **3. Dashboard** | **Gate C** (filter rules, and the user, key, session, profile, viewed-post, report and correction records) · users and keys · profile with two search options and filters · cards · viewed posts · rejected list · flagging · "wrong classification" reports and the admin's corrections · the admin lists · the same-listing grouping, derived by the Gate D key (#231) · **the polished UI** (#257) | Ron filters and sees real apartments in a browser, from the site in Docker on his laptop, over the production store in its volume (#418) |
+| **Server deployment** (between 3 and 4, #426) | After 3.10, taken from Phase 5: the image on `homeserver`, deployed from git (#420) · the site's own tailnet machine `tlvapthunter`, a Tailscale container with Serve (#419) · the `Host`/`Origin` probe through Serve and a real sign-in (#422) · the sharing rule for friends (#422) · DoD 2 and 5 of Phase 3 made on the real store (#423). Planned in detail when reached | The site is reached at `tlvapthunter.<tailnet>.ts.net` |
+| **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike, against `tlvapthunter` (#426) | A real alert arrives according to Ron's profile |
+| **5. Server** | The home server already runs the system from the deployment step (#426); Phase 5 adds the scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended; first friend connected |
 | **6. Later** | memo23 failover · editing the quiet hours, the group list and `max_posts` from the dashboard · Yad2 | |
 
-Phases 1–4 run on Ron's personal laptop in Docker.
+Phases 1–4 are developed on Ron's personal laptop in Docker, **for development only (#417)**: no one but Ron uses the
+system before it runs on the home server, from the server deployment step (#426), which comes after Phase 3 and before
+Phase 4 so that Phase 4's buttons and the Mini App spike work against the real address from a phone.
 
 **Gates.** A (`RawPost`) and E (post lifecycle record and `GroupWatermark`, 2026-10-04) are
 approved. B (2026-10-05) and D (2026-10-08) are settled. **C is approved** (2026-10-10, `DECISIONS.md` #242–#257,
@@ -517,7 +526,7 @@ bootstrap mode, Gate A.
 
 | Item | Tag |
 |---|---|
-| A Telegram Mini App loads from a tailnet-only HTTPS address on a phone with Tailscale on | `ASSUMED` — spike in Phase 4. If it fails, the plain site still works |
+| A Telegram Mini App loads from a tailnet-only HTTPS address on a phone with Tailscale on | `ASSUMED` — spike in Phase 4, against `tlvapthunter` after the server deployment step (#426). If it fails, the plain site still works |
 | Tailscale device sharing covers the number of friends on the free plan | `VERIFIED` 2026-10-14, Ron's check (`DECISIONS.md` #361): friends come through device sharing, not as users of Ron's tailnet, so the free plan sets no limit on their number and nothing is paid (`ASSUMPTIONS.md` I5) |
 | Public source for Tel Aviv areas, the Old North split, and streets per area | Chosen by Ron 2026-10-05 (`DECISIONS.md` #81, #84). The areas and the Old North split: `VERIFIED`, the municipality's open `שכונות` dataset (71 entries, re-read 2026-10-05). Streets per area: not needed since the model decides the area (#167); a street table is recorded for later (#169) |
 | Image download from the signed Facebook links works at fetch time | `VERIFIED` 2026-10-04 from the laptop: spike 1.1a, 5 of 5; then the task 1.12 check, 632 of 632, all JPEG; then the four real runs, 818 photos held (`ASSUMPTIONS.md` I6, `RESEARCH.md` §11). From the home server itself: still unverified |

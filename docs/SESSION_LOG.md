@@ -6835,3 +6835,203 @@ Everything below lands in a dated copy of the store; a new `--copy` starts again
 ### Next
 
 STOP. For Ron: the walkthrough above. Then 3.8 closes, and 3.9 (serving on the tailnet) is planned.
+
+## 2026-10-15 (continued) — Phase 3, round 23: 3.8 closed (#415); 3.9's plan (serving on the tailnet)
+
+**Git:** read-only only (`git status`: clean at the start). No paid call, no model call, nothing installed, no image
+pulled or built, no Docker or Tailscale setting changed. **The production store was not opened** (its file hashed only):
+SHA-256 `5df9bc9a…a77ac`, as at the end of round 22. Network: documentation pages only (Tailscale, Docker, Docker Hub,
+Debian, uv, SQLite; Tailscale's `serve.go` on GitHub).
+
+### A. Recorded
+
+`DECISIONS.md` **#415**: Ron closed 3.8 after walking the whole walkthrough (steps 1–11) himself on a dated copy: a code
+issued and a second account signed up, flag → restore, report → correct → restore, leave out → restore later, disable and
+enable; all worked (DoD 2 and 5 shown on the copy). `PHASE_3.md` 3.8 marked complete, with a "Round 23" note (the password
+reset and the cancel of an unused code were not steps of the walk; built and checked in round 20 and pinned by the tests).
+
+### B. 3.9's plan (`PHASE_3.md` 3.9, (a)–(m))
+
+The image (two stages: `node:24.22.0-trixie-slim` builds the pages; `python:3.12.15-slim-trixie` with the locked
+dependencies through uv 0.12.11, no dev group; both pinned by digest; `.dockerignore` an allow-list, so `data/` and `.env`
+never enter the build); `compose.yaml` (`site`: `serve --store --host 0.0.0.0` published on `127.0.0.1:8000` only, no key;
+`jobs`: the same image, a profile, `.env`, for every command that opens the store); Tailscale Serve on the laptop
+(`tailscale serve --bg 8000`, no Funnel); the `Host`/`Origin` check verified by a test, a free probe through Serve
+(`POST /api/sign-in` with `{}`: 422 = the `Host` is the ts.net name, 403 = rewritten) and a real sign-in; the store in a
+named Docker volume with a one-time `move_store` (SQLite's locks across the Windows/WSL2 file sharing are UNKNOWN, and
+SQLite warns against it); the end of #331 (`serve --store`; what the site then writes; what does not carry over from the
+copies; the admin as created on 2026-10-11); which job commands run beside the site; `backup_store` by SQLite's online
+backup; I8 from the image (trixie's SQLite 3.46.1); Ron's steps by hand; how DoD 1 and a friend's first access are shown;
+the tests; five build steps.
+
+**Read on the laptop, read-only:** Docker Desktop 29.1.2 running (Linux engine, Compose v2.40.3); Tailscale 1.102.4 signed
+in, machine `ron45700`, tailnet `tail437162.ts.net`, HTTPS certificates enabled, no serve or funnel config.
+
+### Verified
+
+Documentation read and quoted in 3.9 (a) with each page's date. **Found in Tailscale's source, not its documentation:** Serve
+passes the browser's `Host` to the backend (`r.Out.Host = r.In.Host`) and adds `X-Forwarded-Host`, `X-Forwarded-Proto`,
+`X-Forwarded-For` (read on `main`, so ASSUMED for 1.102.4 until the probe). From the code: `check_write` runs before a
+write's body is read (`_write_body`), so the probe writes nothing; a restore clears `flagged_by` and `flagged_at`
+(`restored_lifecycle`); the site reads no `tailscale-` header and makes no redirect; the server converts no time zone.
+
+### Not verified
+
+Everything that needs Docker or Serve running: the image's SQLite version, the wheel, Docker Desktop's loopback publish
+reached by Serve, the `Host` through Serve; the home server (Phase 5).
+
+### New points for Ron
+
+84 (the store in a named volume, A, or the Windows folder with the site stopped during jobs, B), 85 (Tailscale on the
+laptop, or a Tailscale container), 86 (rename the machine before the first certificate: `ron45700` would be in the public
+Certificate Transparency ledger), 87 (shared users to port 443 only), 88 (#331 and #400 end with `serve --store`), 89
+(`backup_store` by online backup), 90 (which job commands run beside the site), 91 (the keys only in the `jobs` service),
+92 (DoD 2 and 5 on the store: what is redone for real and what is taken from the copy), 93 (never `down -v`; backups exported
+to Windows), 94 (the site up only while the laptop is awake), 95 (I8 closes at 3.9).
+
+### BACKLOG and CLAUDE.md
+
+BACKLOG: "Last updated"; the round's line; item 6 now 3.9; the rows that were to leave with 3.8 removed (#242–#244, #251,
+#257, #262–#266, #276–#280); #258 and #331 point at 3.9; the `Host` row and the I8 row updated. `CLAUDE.md`: the status
+paragraph.
+
+### Next
+
+STOP. For Ron: points 84–95, then the go for 3.9's build step 1 (the code, no Docker).
+
+## 2026-10-16 — Phase 3, round 24: Ron's answers on 3.9's points 84–95 (#416–#424); 3.9's plan rewritten to the laptop
+
+**Docs only.** No code, no Docker command, no image, no Tailscale command, no paid call. **The production store was not
+opened, backed up or hashed.** Git: read-only (`git status`; round 23's doc changes are still uncommitted beside this
+round's). Files written: `docs/DECISIONS.md`, `docs/PHASE_3.md`, `docs/BASELINE.md`, `docs/ASSUMPTIONS.md`,
+`docs/BACKLOG.md`, this file, and `CLAUDE.md`'s status paragraph.
+
+### A. Recorded (`DECISIONS.md`)
+
+**#416** the store in a named Docker volume, `tlv-hunter-store`, every command that opens it in the `jobs` container,
+a one-time `move_store` (84 A). **#417** 3.9 on the laptop is Docker locally only, no Serve, no sharing, no friend (Ron's
+reason: "the laptop is meant for development"; the first version runs from the server when it is ready). **#418** DoD 1
+reworded. **#419** on the server, the site's own tailnet machine `tlvapthunter`, a Tailscale container beside the site on
+`homeserver`; friends shared `tlvapthunter` only (Ron's reason: he wants the Telegram Mini App from the server too).
+**#420** deploying to the server from git (Ron's own). **#421** points 85 and 86 closed. **#422** point 87, point 92 and the
+probe through Serve moved to Phase 5. **#423** DoD 2 and 5 accepted as shown on the copy. **#424** points 88 (adapted: what
+Ron saves on the store in the volume is real and moves to the server), 89, 90, 91, 93, 94, 95 as recommended.
+
+### B. `PHASE_3.md`
+
+3.9 rewritten to the new scope, (a)–(m) kept: the image, the compose file, `--host 0.0.0.0` in the container with the port on
+127.0.0.1 only, the volume and `move_store`, (f) without Serve, (g), (h), the tests (test 2, `check_write` with a ts.net
+`Host` and `Origin`, kept for the server); three steps (the code; the image and the site over a scratch volume; the move by
+Ron and the new DoD 1). Serve, sharing, the probe and the friend moved to a short "For Phase 5" block. Added to step 1: the
+time-zone check (read now: no module of `tlv_hunter/` imports `zoneinfo` or names a zone, and `tzdata` is not in
+`uv.lock`; checked again at steps 1 and 2, a proposal only if one needs it); `CLAUDE.md`'s commands and BACKLOG item 7 in the
+`docker compose run --rm jobs …` form; the "never `down -v`; Purge data also deletes the volume" line. Ron's step 3 says:
+never `serve --store` on Windows before the move. The DoD: 1 reworded with the old wording kept as superseded; 2 and 5
+marked accepted on the copy. The status paragraph, the order of work and §7 updated; **§7 item 3 lists the options for
+Phase 4's Mini App spike, now that the laptop has no Serve, without choosing.**
+
+### C. Drafts for Ron's review
+
+`BASELINE.md`: the header's amendment line (marked DRAFT), §3 (Runtime: the volume, deploy from git; Remote access: Tailscale
+on the server only, `tlvapthunter`, the laptop local only, the old wording kept), §12 (Phase 3's line as #418; Phase 5's row:
+`tlvapthunter`, Serve, the `Host`/`Origin` check, DoD 2 and 5 on the real store, the sharing rule, deploy from git; the laptop
+"for development only", with the open Mini App question). `ASSUMPTIONS.md`: I25 (the `Host` through Serve, ASSUMED, planned
+for the server deployment); I8's check moved to 3.9's step 2.
+
+### New points for Ron
+
+96 (Phase 3's goal still says "anyone on the tailnet … Ron and his friends": reword it, or keep it as the system's goal
+reached in Phase 5), 97 (the Mini App spike: `PHASE_3.md` §7, item 3, options (a)–(d), not chosen).
+
+### BACKLOG
+
+"Last updated"; the round's line; item 6 (the new 3.9, points 96–97); a pending-implementation row for #416 and #424; the
+`Host` row moved from the Phase 3 table into a Phase 5 row for #422; Phase 5 rows for #419 and #420; the #331 row (ends with
+the move); the I8 row closed at 3.9 (step 2).
+
+### Next
+
+STOP. For Ron: the drafts of `BASELINE.md` §3 and §12 and `ASSUMPTIONS.md` I25; points 96–97; then the go for 3.9's build
+step 1 (the code, no Docker).
+
+## 2026-10-16 (continued) — Phase 3, round 25: #425, #426; the round-24 docs finished; 3.9's build step 1 (the code, no Docker)
+
+**No Docker or Tailscale command, no image pulled or built, nothing installed, no paid call. The production store was not
+opened.** Git: read-only (`git status`). Network: documentation and registry pages only (Docker Hub's tag API, GitHub's
+package page for uv's image, Docker's Dockerfile reference).
+
+### A. Recorded
+
+`DECISIONS.md` **#425** (point 96: Phase 3's goal reworded; the old wording kept as superseded in `PHASE_3.md`) and **#426**
+(point 97, option b: after 3.10 a server deployment step takes from Phase 5 only the image on `homeserver`, `tlvapthunter`,
+Serve, the probe and real sign-in, the sharing rule, DoD 2 and 5 on the real store, deploying from git; then Phase 4; the
+reviewer's reason as given).
+
+### B. Docs
+
+`BASELINE.md`: round 24's §3 and §12 approved (DRAFT mark removed); §12 gains the server deployment row between Phases 3
+and 4, Phase 5's row keeps the rest, the Mini App note replaced by #426; §14's Mini App row against `tlvapthunter`.
+`ASSUMPTIONS.md`: T5 the same; I24's last line corrected (no HTTPS on the laptop). `PHASE_3.md`: the phase goal (#425); §7
+item 3 and points 96, 97 decided; the three stale lines fixed (3.8's "Round 23" note, §5.1's pointer, I24); 3.9's Phase 5
+references now "the server deployment" (#426).
+
+### C. Built (`PHASE_3.md` 3.9, "Round 25")
+
+`jobs/common.py` (`online_copy`, `integrity_ok`, `backup_store` by online backup); `jobs/serve.py` (`--store`, `--host`);
+`jobs/move_store.py`, `jobs/export_backup.py` (new); `Dockerfile`, `.dockerignore`, `compose.yaml` (new); tests (k) 1–8;
+`CLAUDE.md`'s commands and BACKLOG item 7 in the `docker compose run --rm jobs …` form. Digests read from registry pages
+(each twice, equal); `RUN --mount=from=<image>` read on Docker's reference; no `# syntax=` line (it would fetch an unpinned
+image). The time-zone check: no command needs zone data today.
+
+### Verified
+
+`ruff check`: all checks passed; `ruff format --check`: 210 files already formatted. `uv run pytest`: the full run (11 min 30 s): **1978 passed, 1 failed** — `tests/test_config.py::test_no_module_outside_config_reads_yaml_directly`: the new comments in `serve.py` named `compose.yaml`, which that test reads as a YAML reader outside `config/`; reworded to "the compose file"; then `test_config.py` and `test_web.py` **66 passed**. The whole suite was not run again (the fix touched comments only): 1979 tests in all.
+**Ron runs `uv run pytest` himself after this round.**
+
+### Not verified
+
+Anything in Docker: the build, the digests resolving, the SQLite version in the image, the wheel, Docker Desktop's
+`127.0.0.1` publish, the bind mounts' permissions. All at step 2.
+
+### Deviations and new points
+
+Deviations 1–4 (the backup not byte-identical, so three tests compare dumps; `move_store`'s journal refusal and the copy
+left on a failed check; a neutral tailnet name in the tests; `jobs` never pulls). Points **98** (the export's name), **99**
+(export the photos too), **100** (accept deviations 1–4), **101** (the bind mounts' owner on the server), **102** (Phase 5's
+"first friend connected" moved to the deployment row).
+
+### BACKLOG
+
+"Last updated"; the round's line; item 6 (step 1 built, points 98–102, step 2's go); item 7 in the docker form with the site
+stopped; the #416/#424 row (step 1 built); a row for the server deployment step (#426); the #419, #420 and #422 rows and the
+bot's menu button row retargeted to that step.
+
+### Step 2, what Ron will run (when he gives the go; I run the checks with him)
+
+Everything below is free: downloads only, nothing installed on Windows. **The real volume, `tlv-hunter-store`, is not
+used in step 2**: a scratch volume holds the copy, so step 3's move starts from an empty volume. Nothing runs on Windows
+against the store meanwhile (no `uv run` job command, no `serve`).
+
+1. **Docker Desktop running**, a PowerShell at the repository's root.
+2. **Build:** `docker compose build` (the first time downloads the node, python and uv images; a few minutes). It ends
+   with the image `tlv-hunter:local`; `docker image ls tlv-hunter` shows its size.
+3. **The checks:**
+   - `docker run --rm tlv-hunter:local python -c "import sqlite3; print(sqlite3.sqlite_version)"` — expected 3.46.1 (I8).
+   - `docker run --rm tlv-hunter:local python -c "import argon2; print(argon2.__version__)"` — the wheel (I13).
+   - `docker run --rm tlv-hunter:local sh -c "ls -A /app /app/data /app/data/store; ls /app/.env /app/data/raw 2>&1"`
+     — no `.env`, no `data/raw`, an empty store folder.
+   - `docker run --rm tlv-hunter:local python -m tlv_hunter.jobs.<command> --help` for each command — every module
+     imports in the image (the time-zone check).
+4. **The move rehearsed into a scratch volume** (the Windows store mounted read-only, nothing written there):
+   `docker run --rm -v tlv-hunter-scratch:/app/data/store -v ./data/store:/import:ro tlv-hunter:local python -m tlv_hunter.jobs.move_store`
+   — every check printed `True`.
+5. **The site over the scratch volume:** `docker run --rm -p 127.0.0.1:8000:8000 -v tlv-hunter-scratch:/app/data/store tlv-hunter:local`
+   — open `http://127.0.0.1:8000/` in Chrome: the list, sign in as the admin, a viewed mark or a preference saved (in the
+   scratch volume only). Ctrl+C stops it.
+6. **Clean up:** `docker volume rm tlv-hunter-scratch` (the scratch copy only; never `tlv-hunter-store`).
+
+Then step 3 (the move into `tlv-hunter-store` and `docker compose up -d site`) when Ron says.
+
+### Next
+
+STOP. For Ron: `uv run pytest`; points 98–102; then the go for step 2.

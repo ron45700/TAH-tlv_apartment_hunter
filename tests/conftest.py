@@ -1,7 +1,9 @@
 import json
 import socket
+import sqlite3
 import time
 from collections.abc import Callable
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -252,3 +254,13 @@ def make_repository(request: pytest.FixtureRequest, tmp_path: Path) -> Callable[
     if request.param == "local_json":
         return lambda: LocalJsonRepository(tmp_path)
     return lambda: SqliteRepository(tmp_path / SQLITE_FILENAME)
+
+
+def sqlite_dump(path: Path) -> list[str]:
+    """Every statement of a SQLite file's dump: equal for two files holding the same schema and
+    rows. A backup by SQLite's online backup holds the store's pages but not its bytes (two header
+    counters differ, DECISIONS.md #424 point 89), so a test compares dumps, not file hashes."""
+    with closing(
+        sqlite3.connect(f"file:{Path(path).resolve().as_posix()}?mode=ro", uri=True)
+    ) as conn:
+        return list(conn.iterdump())

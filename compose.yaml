@@ -1,0 +1,54 @@
+# The compose file of docs/PHASE_3.md 3.9 (c) (DECISIONS.md #416, #417, #424). The same file is
+# meant for the laptop and the server; the server adds its Tailscale container (#419, #426).
+#
+#   docker compose build                     # the image
+#   docker compose up -d site                # the site, on http://127.0.0.1:8000/ only
+#   docker compose run --rm jobs python -m tlv_hunter.jobs.<command> ...
+#   docker compose stop site
+#
+# Never `docker compose down -v`: -v deletes the volume, the store with it. Docker Desktop's
+# "Purge data" deletes it too.
+name: tlv-hunter
+
+services:
+  site:
+    build: .
+    image: tlv-hunter:local
+    command: ["python", "-m", "tlv_hunter.jobs.serve", "--store", "--host", "0.0.0.0"]
+    # Inside the container uvicorn listens on its own interface; the machine publishes the port
+    # on 127.0.0.1 only (3.9 (c)).
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - store:/app/data/store
+    # No env_file and no key: the site reads none (#424, point 91).
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/session', timeout=5)"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  jobs:
+    image: tlv-hunter:local
+    # Built by `docker compose build` for the site; never looked for in a registry.
+    pull_policy: never
+    profiles: ["jobs"]
+    env_file: .env
+    volumes:
+      - store:/app/data/store
+      # Plain files only, no SQLite: the pages and reports some commands write, and the exports.
+      - ./data/labeling:/app/data/labeling
+      - ./data/gate_d:/app/data/gate_d
+      - ./data/store_exports:/app/data/store_exports
+    init: true
+
+volumes:
+  store:
+    name: tlv-hunter-store

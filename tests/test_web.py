@@ -23,7 +23,9 @@ from pathlib import Path
 from typing import Any, get_args
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from tests.conftest import (
     SQLITE_FILENAME,
@@ -47,6 +49,7 @@ from tlv_hunter.web.app import (
     create_app,
     site_over,
 )
+from tlv_hunter.web.auth import check_write
 from tlv_hunter.web.routes import router
 
 NOW = datetime(2026, 10, 13, 9, 0, tzinfo=UTC)
@@ -568,3 +571,101 @@ def test_serve_never_serves_the_store_itself(tmp_path: Path) -> None:
     database.write_bytes(b"")
     with pytest.raises(serve.Refused, match="#331"):
         serve._not_the_store(database, database)
+
+
+# --- serve --store and --host (3.9 (k) 1; #424 point 88) ---
+
+
+def test_serve_store_serves_the_store_itself_and_makes_no_copy(
+    tmp_path: Path, store: Store
+) -> None:
+    repo = _moved_under_a_repo(tmp_path, store)
+    database = repo / YamlConfig(CONFIG_ROOT).collection().store_root / SQLITE_FILENAME
+    served: list[Any] = []
+
+    def run(app: Any, **kwargs: Any) -> None:
+        served.append(kwargs)
+        assert app.state.site.grouping.wait(10)
+        assert TestClient(app).get("/api/cards").status_code == 200
+
+    out = io.StringIO()
+    assert serve.main(["--store"], repo_root=repo, clock=lambda: NOW, stream=out, run=run) == 0
+    assert served == [{"host": "127.0.0.1", "port": 8000}]
+    assert f"serving the store itself: {database}" in out.getvalue()
+    assert not (database.parent / "site").exists()
+
+
+def test_serve_store_refuses_when_there_is_no_store(tmp_path: Path) -> None:
+    out = io.StringIO()
+    code = serve.main(
+        ["--store"], repo_root=tmp_path, clock=lambda: NOW, stream=out, run=lambda *a, **k: None
+    )
+    assert code == 1 and "refused: no store at" in out.getvalue()
+
+
+def test_serve_listens_on_0_0_0_0_only_when_asked_for_the_container(
+    tmp_path: Path, store: Store
+) -> None:
+    repo = _moved_under_a_repo(tmp_path, store)
+    served: list[Any] = []
+    out = io.StringIO()
+    argv = ["--store", "--host", "0.0.0.0"]
+
+    def run(app: Any, **kwargs: Any) -> None:
+        served.append(kwargs)
+
+    assert serve.main(argv, repo_root=repo, clock=lambda: NOW, stream=out, run=run) == 0
+    assert served == [{"host": "0.0.0.0", "port": 8000}]
+    # The address to open is the one compose.yaml publishes on the machine.
+    assert "open: http://127.0.0.1:8000/api/cards" in out.getvalue()
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--host", "192.168.1.5"],
+        ["--host", "localhost"],
+        ["--host", "::"],
+        ["--store", "--copy"],
+    ],
+)
+def test_serve_refuses_any_other_address_and_two_modes(tmp_path: Path, argv: list[str]) -> None:
+    with pytest.raises(SystemExit) as refused:
+        serve.main(argv, repo_root=tmp_path, stream=io.StringIO(), run=lambda *a, **k: None)
+    assert refused.value.code == 2
+
+
+# --- the write check behind Tailscale Serve, ready for the server (3.9 (k) 2, (d)) ---
+
+
+def _write_request(host: str, origin: str) -> Request:
+    headers = [
+        (b"host", host.encode()),
+        (b"origin", origin.encode()),
+        (b"content-type", b"application/json"),
+    ]
+    return Request({"type": "http", "method": "POST", "path": "/api/sign-in", "headers": headers})
+
+
+def test_check_write_passes_a_ts_net_host_with_its_own_https_origin() -> None:
+    check_write(_write_request("x.tail00000.ts.net", "https://x.tail00000.ts.net"))
+
+
+@pytest.mark.parametrize(
+    "host",
+    ["127.0.0.1:8000", "y.tail00000.ts.net", "x.tail00000.ts.net:8000"],
+)
+def test_check_write_refuses_a_ts_net_origin_when_the_host_differs(host: str) -> None:
+    with pytest.raises(HTTPException) as refused:
+        check_write(_write_request(host, "https://x.tail00000.ts.net"))
+    assert refused.value.status_code == 403
+
+
+def test_no_module_of_the_site_reads_a_tailscale_header() -> None:
+    """Serve adds `Tailscale-User-Login`, `-Name`, `-Profile-Pic` (a viewer's Tailscale login, for a
+    shared machine a friend's email address): the site neither reads nor logs them (3.9 (k) 3)."""
+    web = Path(__file__).resolve().parents[1] / "tlv_hunter" / "web"
+    sources = sorted(web.glob("*.py"))
+    assert sources
+    for source in sources:
+        assert "tailscale-" not in source.read_text(encoding="utf-8").lower(), source.name

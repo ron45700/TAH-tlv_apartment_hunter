@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import CONFIG_ROOT, overwrite_lifecycle
+from tests.conftest import CONFIG_ROOT, overwrite_lifecycle, sqlite_dump
 from tests.test_classify_pending_job import ANSWER, answers
 from tests.test_openai_classifier import FakeTransport, spike_response
 from tests.test_reclassify_job import (
@@ -200,15 +200,15 @@ def test_apply_with_the_unchanged_list_replaces_exactly_those_and_no_raw_post(
     tmp_path: Path, posts
 ) -> None:
     stored, folder, run_id = stage1(tmp_path, posts)
-    before = sha(database(tmp_path))
+    dump = sqlite_dump(database(tmp_path))
     rows = raw_post_rows(database(tmp_path))
     code, out, _ = apply(
         tmp_path, run_id, "--apply", "--allow-file", str(folder / ALLOW_UNCHANGED_FILE)
     )
     assert code == 0, out
     (backup,) = backups(tmp_path)
-    assert backup.name == BACKUP and sha(backup) == before
-    assert f"backup SHA-256: {before}" in out and str(backup) in out
+    assert backup.name == BACKUP and sqlite_dump(backup) == dump  # #424 point 89
+    assert f"backup SHA-256: {sha(backup)}" in out and str(backup) in out
     assert "stored RawPost documents identical to the backup's: True" in out
     assert raw_post_rows(database(tmp_path)) == rows  # invariant 14
     assert listing_versions(tmp_path, stored) == [PROMPT_VERSION] * 3

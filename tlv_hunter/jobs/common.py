@@ -7,13 +7,12 @@ dropped-names line (#182).
 import hashlib
 import json
 import logging
-import shutil
 import sqlite3
 import sys
 import traceback
 import uuid
 from collections.abc import Collection, Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from pathlib import Path
@@ -96,9 +95,40 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def online_copy(database: Path, target: Path) -> None:
+    """A consistent copy of `database` into the new file `target`, by SQLite's online backup from a
+    read-only connection (`mode=ro`): the store is only read, and a writer beside it (the site,
+    #260) is neither blocked for long nor half-copied. The copy holds the same pages; two header
+    counters (the file change counter and the version-valid-for number) may differ, so it does not
+    hash like the store. Nothing is overwritten."""
+    if not Path(database).is_file():
+        raise FileNotFoundError(f"no store at {database}")
+    if Path(target).exists():
+        raise FileExistsError(f"{target} exists: not overwritten")
+    source = sqlite3.connect(
+        f"file:{Path(database).resolve().as_posix()}?mode=ro",
+        uri=True,
+        timeout=BUSY_TIMEOUT_SECONDS,
+    )
+    with closing(source), closing(sqlite3.connect(target)) as destination:
+        source.backup(destination)
+
+
+def integrity_ok(path: Path) -> bool:
+    """`PRAGMA integrity_check` answers the one row `ok`, read-only."""
+    connection = sqlite3.connect(
+        f"file:{Path(path).resolve().as_posix()}?mode=ro", uri=True, timeout=BUSY_TIMEOUT_SECONDS
+    )
+    with closing(connection):
+        return connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)]
+
+
 def backup_store(database: Path, now: datetime) -> Path:
     """A dated copy of the store beside it; a second one on the same day gets the time in its name.
-    The copy must hash like the store. Nothing is overwritten."""
+    Taken by SQLite's online backup (`online_copy`, DECISIONS.md #424 point 89), so the site may
+    write beside it; the copy must pass `integrity_ok` and hold the same `RawPost` rows as the store
+    (only `run_once` changes them, never beside another job command, #140). Nothing is
+    overwritten."""
     base = database.with_name(f"{database.stem}.{now.date().isoformat()}.backup{database.suffix}")
     target = (
         base
@@ -107,11 +137,11 @@ def backup_store(database: Path, now: datetime) -> Path:
             f"{database.stem}.{now.strftime('%Y-%m-%dT%H%M%S')}.backup{database.suffix}"
         )
     )
-    if target.exists():
-        raise FileExistsError(f"{target} exists: not overwritten")
-    shutil.copy2(database, target)
-    if sha256_file(target) != sha256_file(database):
-        raise RuntimeError("the backup does not hash like the store")
+    online_copy(database, target)
+    if not integrity_ok(target):
+        raise RuntimeError("the backup fails SQLite's integrity check")
+    if raw_post_rows(target) != raw_post_rows(database):
+        raise RuntimeError("the backup's RawPost rows differ from the store's")
     return target
 
 
