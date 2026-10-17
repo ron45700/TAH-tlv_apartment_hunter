@@ -1,37 +1,8 @@
 # Phase 3 — The dashboard (semi-macro)
 
-**Status:** a plan, written 2026-10-10 and revised the same day after Ron's answers. **Approved by Ron (2026-10-10):**
-the content of Gate C (`DECISIONS.md` #242–#257) and its 31 open points (#262–#287); the task order and the DoD; the
-technical choices (§5, #258–#260); the area grouping (§6, #261); Gate C's names and types and R1–R9 (#288, R7 amended
-by #291); the plans for 3.4 and 3.5 (#289, #290). **Built:** 3.4 (2026-10-10, round 3), 3.5 (2026-10-11, round 4);
-the admin created on the production store by Ron (2026-10-11); `jobs/reset_admin_password.py` (#294, 2026-10-11, round
-5). **3.6: plan and its 16 points approved (#295–#300, 2026-10-11); built in round 6 (2026-10-11).** **Round 7
-(2026-10-11):** #302 built (a post with no written price always at the bottom); Ron's direction for the site recorded
-(#303–#315); 3.7's plan written, with 26 points. **Round 8 (2026-10-12): 3.7's plan and its 26 points approved, with
-Ron's notes on the mock (#316–#331)**; built in the round: one sublet switch per profile (#317) and the orange-location
-cap (#320); a new mock. **Round 9 (2026-10-12): points 27–30 and Ron's notes on the round-8 mock approved
-(#332–#339); the bar redesigned; `Profile.from_stored_json`; 3.7's build step 1 built (the store generation counter and
-its migration command, #316). **Round 10 (2026-10-13): Ron ran the migration on the production store; Ron's notes on
-the round-9 mock (#340–#343); 3.7's build step 2 built: the read-only API for a guest, served from a dated copy of the
-store.** **Round 11 (2026-10-13): this file's lost block restored; Ron's answers on round 10 (#344–#348: points 31 and 32,
-the screen sizes, the mock retired); 3.7's build step 3 built: the site itself for a guest (`frontend/`, the list and
-the opened post, `policy/colours.py`).** **Round 12 (2026-10-14): Ron's answers on round 11 (#349–#351: 3.7's rebuilt
-text and points 33–35 accepted; the card's buttons packed to the left); 3.7's build steps 4 and 5 built: the filter
-bar, sign-in, sign-up, the forced password change, the preferences page and the session cookie (`web/auth.py`).**
-**Round 13 (2026-10-14): Ron's answers on round 12 (#352, #353: points 36–39; the phone's bar compacted, built); Ron's
-studio rule for the model (#354, instructions version 5 written, its regression run planned in `PHASE_2.md`); 3.7's build
-step 6 built: viewed, "mark as not viewed", the "lied" flag and the "wrong classification" report (`web/writes.py`).**
-**Rounds 14–18:** step 7 measured, then A, C, D built and measured again (both targets met). **Round 19 (2026-10-15): points
-57–59 decided (#385–#387, the scratch stores deleted); 3.7 complete (#388); 3.8's plan written.** **Round 20 (2026-10-15):
-3.8's plan and points 60–76 approved (#389–#406); 3.8's build steps 1–3 built (the admin's read API, the read pages, keys
-and users).** **Round 21 (2026-10-15): 3.8's steps 4–6 built and checked (the post writes, corrections, the DoD 5 walk);
-points 77–83 wait for Ron.** **Round 22 (2026-10-15): points 77–83 decided (#407–#413) and 78–83
-built; round 21's deviation 1 accepted (#414).** **Round 23 (2026-10-15): Ron walked the admin's pages on a dated copy and
-closed 3.8 (#415); 3.9's plan written (serving on the tailnet), points 84–95 wait for Ron; nothing built.** **Round 24
-(2026-10-16): Ron's answers on 84–95 (#416–#424): 3.9 on the laptop is Docker locally only (#417), the tailnet and friends
-move to the server (Phase 5, #419–#423), DoD 1 reworded (#418); 3.9's plan rewritten to that scope.** **Round 25 (2026-10-16): points 96 and 97 decided (#425 the phase goal; #426 the server
-deployment after 3.10 and before Phase 4); 3.9's step 1 built (the code, no Docker).** No code before a task's plan is approved; no paid call before its
-own go.
+**Status (2026-10-17):** 3.1–3.8 built and closed; 3.9 (Docker on the laptop) built, its step 2 run in round 26: the
+image and the site over the laptop's development copy of the store (#428). Ron opens the site (DoD 1), then Phase 3
+closes. 3.10 (DoD 6) moves to the server deployment step (#428). The history is in `SESSION_LOG.md` and `DECISIONS.md`.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §12 · **Schema:** `SCHEMA.md`, Gates A, B, C, E (approved), Gate D
 (the key, #230, #232) · **Research:** `RESEARCH.md` §16 (the area grouping check)
@@ -45,8 +16,9 @@ profile, mark posts viewed, flag and report them, in a polished UI (#257); the a
 archive lists, the flags, the reports and the corrections."*
 
 **Phase DoD (approved by Ron, 2026-10-10):**
-1. **Reworded 2026-10-16 (#418):** Ron filters and sees real apartments in a browser, from the site in Docker on his
-   laptop, over the production store in its volume. *Superseded wording (`BASELINE.md` §12's line, 2026-10-10): "Ron
+1. **Reworded 2026-10-17 (#428):** Ron filters and sees real apartments in a browser, from the site in Docker on his
+   laptop, over a copy of the store in its volume. *Superseded (2026-10-16, #418): "… over the production store in its
+   volume."* *Superseded wording (`BASELINE.md` §12's line, 2026-10-10): "Ron
    filters and sees real apartments in a browser, through Tailscale Serve, on his laptop in Docker."*
 2. A second account is created with a one-time key (#243) and signs in with a username and a password (#242); the
    admin resets its password (#242) and cancels an unused key (#243). *Accepted as shown on the copy (#423); made for real
@@ -59,7 +31,8 @@ archive lists, the flags, the reports and the corrections."*
    real at the server deployment (#422, #426).*
 6. **DoD 4 moved from Phase 2 (#225), with `ASSUMPTIONS.md` I3 (#228):** a real working day is measured: the number of
    calls, the tokens and the cost of a day's classification, from the usage metadata and then the OpenAI bill; every
-   paid run under its cap. Ron also judges how the interface looks on that day.
+   paid run under its cap. Ron also judges how the interface looks on that day. *Moved to the server deployment step, on
+   the server (#428).*
 7. Tests pin: no user action writes a `RawPost` or a `Listing` (invariant 14); no per-user value is written on a post
    (invariant 12); no outgoing request carries a personal identifier (invariant 15).
 8. The per-user YAML is gone (#47), and the items of §3 are resolved or explicitly re-planned.
@@ -2187,7 +2160,9 @@ steps of the walk (they were built and checked in round 20 and are pinned by the
 production store is now the server deployment's (#422, #423, #426; round 23 wrote "3.9's point 92"). **3.8 is
 complete.**
 
-## 3.9 Docker on the laptop (serving on the tailnet moved to Phase 5) — PLAN REWRITTEN 2026-10-16 (round 24) to Ron's scope (#416–#424); nothing built
+## 3.9 Docker on the laptop (serving on the tailnet moved to the server deployment) — **#428 (2026-10-17): the laptop's
+volume holds a development copy; step 3 (the move on the laptop) is dropped; the production store moves once, into the
+server's volume, at the deployment step** — PLAN REWRITTEN 2026-10-16 (round 24) to Ron's scope (#416–#424); nothing built
 
 **Ron's scope (#417):** the laptop is for development only; no one but Ron uses the system before it runs on the home
 server, and Ron runs its first version from there. **3.9 on the laptop is Docker locally only:** the image, `compose.yaml`,
@@ -2541,7 +2516,23 @@ him (the digests resolved, the SQLite version, the wheel, the image's contents, 
 zone); then the site over a scratch volume holding a copy of the store, at `http://127.0.0.1:8000/`, before any move.
 `SESSION_LOG.md` (round 25) has the walkthrough.
 
-## 3.10 The measured working day (DoD 4, I3) — approved (#225, #228)
+### Round 26 (2026-10-17): #427–#429; the photo export; step 2 run
+
+- **Built:** `export_backup` also copies the photo files not yet in `data/store_exports/images/`, each checked by its hash;
+  never overwrites, never deletes (#427 point 99); a test.
+- **Step 2, run by me (free, downloads only):** the Windows store's SHA-256 `5df9bc9a…a77ac` before and after (read-only
+  mount only). `docker compose build`: the three pinned digests resolved; image `tlv-hunter:local` 243 MB. In the image:
+  SQLite 3.46.1 (I8), `argon2-cffi` 25.1.0 / bindings 26.1.0 (I13), runs as uid 10001, no `.env`, no `data/raw`, no
+  `node_modules`, no pytest, an empty store folder; all 15 commands' `--help` import (the time zone). `move_store` from the
+  read-only mount into `tlv-hunter-store` (the development copy, #428): 266 posts, 194 listings, 825 files, all seven checks
+  `True`. `docker compose up -d site`: **healthy** (`/api/session` as a guest answers 200; the healthcheck kept),
+  `127.0.0.1:8000` only. Chrome: the list (48 cards on the first page); a sign-in with an unknown username answered 401
+  "wrong", so the write check passes through Docker's port forward (not the admin: his password is Ron's). **The site is
+  left running for Ron (DoD 1).**
+- **Decided by me:** the export's photo folder `data/store_exports/images/` mirroring `images/`; the sign-in check with an
+  unknown username instead of the admin's.
+
+## 3.10 The measured working day (DoD 4, I3) — approved (#225, #228); MOVED to the server deployment step (#428)
 
 Once a dashboard exists: one real working day of collection and classification, each paid run under a cap Ron sets;
 calls, tokens and cost from the usage metadata, then the OpenAI bill. **Needs from Ron:** the go for each paid run, and

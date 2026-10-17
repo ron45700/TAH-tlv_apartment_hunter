@@ -9,8 +9,10 @@ lives outside it. It takes a fresh dated backup beside the store (`jobs.common.b
 SQLite's online backup, checked for integrity and for the same `RawPost` rows, so the site may run
 beside it), then copies that file into `data/store_exports/` (a folder of the machine, bind-mounted
 into the `jobs` container) and checks the export hashes like the backup. It overwrites nothing:
-an export of the same name refuses, and the backup stays in the volume. The database only: the
-photos stay in the volume.
+an export of the same name refuses, and the backup stays in the volume. Then the photos
+(DECISIONS.md #427, point 99): every file under `<store_root>/images/` that is not yet in
+`data/store_exports/images/` is copied there and checked by its hash. A photo never changes once
+written, so one already exported is left as it is: the export never overwrites and never deletes.
 
 Exit codes: 0, exported; 1, refused or failed.
 """
@@ -35,6 +37,7 @@ from tlv_hunter.jobs.common import (
 
 EXIT_DONE, EXIT_FAILED = 0, 1
 EXPORTS_DIR = Path("data") / "store_exports"
+IMAGES_DIR = "images"
 
 
 def main(
@@ -71,7 +74,27 @@ def export(database: Path, exports: Path, now: datetime, out: TextIO) -> Path:
     if sha256_file(target) != backup_sha:
         raise RuntimeError(f"the export {target} does not hash like the backup")
     print(f"exported: {target} (SHA-256 {backup_sha}, the backup's)", file=out)
+    new, kept = export_photos(database.parent / IMAGES_DIR, exports / IMAGES_DIR)
+    print(f"photos: {new} new exported, {kept} already there (left as they are)", file=out)
     return target
+
+
+def export_photos(images: Path, exported: Path) -> tuple[int, int]:
+    """Every photo file under `images` not yet under `exported`, copied there and checked by its
+    hash; a file already exported is left as it is. Returns (new, already there)."""
+    new = kept = 0
+    files = sorted(path for path in images.rglob("*") if path.is_file()) if images.is_dir() else []
+    for photo in files:
+        target = exported / photo.relative_to(images)
+        if target.exists():
+            kept += 1
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(photo, target)
+        if sha256_file(target) != sha256_file(photo):
+            raise RuntimeError(f"the exported photo {target} does not hash like {photo}")
+        new += 1
+    return new, kept
 
 
 if __name__ == "__main__":

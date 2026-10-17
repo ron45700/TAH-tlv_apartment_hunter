@@ -62,3 +62,32 @@ def test_it_refuses_when_there_is_no_store(tmp_path: Path) -> None:
     assert export_backup.main([], repo_root=tmp_path, clock=lambda: NOW, stream=out) == 1
     assert "no store at" in out.getvalue()
     assert not (tmp_path / "data" / "store_exports").exists()
+
+
+def test_it_exports_only_the_photos_not_yet_exported_and_never_overwrites(repo: Path) -> None:
+    """#427 point 99: new photo files are copied; one already exported is left as it is; nothing
+    is deleted from the exports."""
+    images = repo / "data" / "store" / "images"
+    (images / "a").mkdir(parents=True)
+    (images / "a" / "0.jpg").write_bytes(b"photo a0")
+    (images / "a" / "1.jpg").write_bytes(b"photo a1")
+    exported = repo / "data" / "store_exports" / "images"
+    (exported / "a").mkdir(parents=True)
+    (exported / "a" / "0.jpg").write_bytes(b"exported earlier")
+    (exported / "gone").mkdir()
+    (exported / "gone" / "0.jpg").write_bytes(b"a photo no longer in the store")
+
+    out = io.StringIO()
+    assert export_backup.main([], repo_root=repo, clock=lambda: NOW, stream=out) == 0
+    assert "photos: 1 new exported, 1 already there" in out.getvalue()
+    assert (exported / "a" / "1.jpg").read_bytes() == b"photo a1"
+    assert (exported / "a" / "0.jpg").read_bytes() == b"exported earlier"  # not overwritten
+    assert (exported / "gone" / "0.jpg").is_file()  # not deleted
+
+    (images / "b").mkdir()
+    (images / "b" / "0.jpg").write_bytes(b"photo b0")
+    later = datetime(2026, 10, 17, 21, 0, tzinfo=UTC)
+    again = io.StringIO()
+    assert export_backup.main([], repo_root=repo, clock=lambda: later, stream=again) == 0
+    assert "photos: 1 new exported, 2 already there" in again.getvalue()
+    assert (exported / "b" / "0.jpg").read_bytes() == b"photo b0"

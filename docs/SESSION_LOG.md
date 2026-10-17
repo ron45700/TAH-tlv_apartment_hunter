@@ -7035,3 +7035,23 @@ Then step 3 (the move into `tlv-hunter-store` and `docker compose up -d site`) w
 ### Next
 
 STOP. For Ron: `uv run pytest`; points 98–102; then the go for step 2.
+
+## 2026-10-17 — Phase 3, round 26: #427–#429; the photo export; 3.9's step 2 run
+
+**Recorded:** #427 (points 98–102 as recommended), #428 (production runs from the server; the laptop's volume holds a
+development copy; step 3 dropped; DoD 1 reworded; DoD 6 to the deployment step), #429 (less process). `CLAUDE.md`'s status
+cut to five lines and a "How we work" section; its command note rewritten for #428; `PHASE_3.md`'s opening status cut;
+`BASELINE.md` §12 amended.
+
+**Built:** `export_backup` exports the new photo files too (never overwrites, never deletes) and its test (4 passed);
+ruff clean.
+
+**Step 2 (run by me, free):** Windows store `5df9bc9a…a77ac` before and after (read-only mount only). Image built with the
+pinned digests, 243 MB; SQLite 3.46.1 (I8 ✅), argon2 25.1.0 / bindings 26.1.0 (I13 ✅); no `.env`, `data/raw` or
+`node_modules` in it; all 15 commands import. `move_store` into `tlv-hunter-store`: every check True (266 posts, 194
+listings, 825 files). The site healthy on `127.0.0.1:8000`; Chrome: the list (48 cards), the sign-in path answered 401 for
+an unknown user. **Left running.**
+
+**Not verified:** a sign-in as the admin (Ron's password); the full test suite after this round's small change (Ron runs it).
+
+**Next:** Ron opens `http://127.0.0.1:8000/` (DoD 1); Phase 3 closes; the server deployment step is planned.

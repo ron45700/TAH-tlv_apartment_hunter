@@ -3759,6 +3759,36 @@ real address from a phone. Planned in detail when reached, not now. **Amends `BA
 reviewer's recommendation. The reviewer's reason: Phase 4's buttons open the site, which a phone cannot reach at the
 laptop's 127.0.0.1; and Ron runs the system, the Mini App included, from the server (#417, #419).*
 
+## Phase 3: Ron's answers on round 25 (2026-10-17, round 26)
+
+### 427 — Points 98–102 as recommended
+(98) The export command is `export_backup`, into `data/store_exports/`. (99) The export also copies the photo files that
+are new since the last export: it never overwrites and never deletes. (100) Round 25's four deviations accepted (the online
+backup compared by its dump, not its hash; `move_store`'s journal refusal and the copy left on a failed check; a neutral
+tailnet name in the tests; `jobs` never pulls); a failed move is retried by removing the volume only while it holds nothing
+but that failed copy and no site has run on it. (101) The bind mounts' owner on the server is handled at the server
+deployment step. (102) "First friend connected" moves from Phase 5's "Done means" to the server deployment step's. *Ron
+approved the reviewer's recommendations.*
+
+### 428 — Production runs from the server; the laptop's volume holds a development copy
+Ron's store stays in `data/store/` on Windows and moves once, straight into the server's volume, at the deployment step
+(#426), with `move_store` from a read-only mount as built. No move into the laptop's volume: on the laptop,
+`tlv-hunter-store` holds a development copy made by `move_store` from the read-only Windows mount, served with `--store`;
+anything saved there is a copy and is lost when it is refreshed. Refreshing it means removing that volume and running the
+move again, which is allowed on the laptop only. 3.9's step 3 (the move on the laptop) is dropped. Phase 3's DoD 1
+reworded: "Ron filters and sees real apartments in a browser, from the site in Docker on his laptop, over a copy of the
+store in its volume." DoD 6 (3.10, the measured working day) moves to the deployment step, on the server. Until the
+deployment, the Windows folder is the production store; no paid run and no store write without Ron's explicit go.
+**Amends #416 and #418** (and #424 point 88: on the laptop, what is saved through the site is a copy). *Ron's decision:
+"the run will be from the server"; he develops on the laptop and updates the image on the server.*
+
+### 429 — How the work is run (Ron's request: less process)
+Inside an approved plan, the reviewer decides technical details (names, small structure, test shape, library calls) and
+lists them in the report as "decided by me". Brought to Ron only: a schema, field or filter change; a cost; a write to the
+production store; a change of scope; a contradiction between docs; anything irreversible. `CLAUDE.md`'s status is at most
+five lines of current state; `PHASE_3.md`'s opening status is short; the history lives in `SESSION_LOG.md` and here. Reports
+are short: what was built, what was verified, "decided by me", what needs Ron. *Ron's request.*
+
 ---
 
 ## Corrections to recorded facts
