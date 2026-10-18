@@ -152,6 +152,36 @@ export function setDateEnd(range: DateRange | null, end: 'earliest' | 'latest', 
   return next.earliest === null && next.latest === null ? null : next
 }
 
+/** How far "עד תאריך" is filled after "מתאריך" (Ron, 2026-10-18): three calendar months. */
+export const ENTRY_SPAN_MONTHS = 3
+
+/** A date `months` calendar months on: the same day, or the month's last day when it has fewer
+ *  (30.11 + 3 → 28.2). YYYY-MM-DD in and out. */
+export function addMonths(iso: string, months: number): string {
+  const [year, month, day] = iso.split('-').map(Number)
+  const index = year * 12 + month - 1 + months
+  const y = Math.floor(index / 12)
+  const m = index - y * 12 + 1
+  const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)
+  const last = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
+  const pad = (n: number, width: number) => String(n).padStart(width, '0')
+  return `${pad(y, 4)}-${pad(m, 2)}-${pad(Math.min(day, last), 2)}`
+}
+
+/** "מתאריך" typed (Ron, 2026-10-18): when "עד תאריך" is empty it is filled with the same date
+ *  three calendar months on, a fixed date the user can change. It keeps following "מתאריך" while
+ *  it still holds the date filled for the previous one (a date box reports each year digit as it is
+ *  typed: 0002, 0020, 0202, 2026), and goes with it when "מתאריך" is cleared; a date the user set
+ *  in "עד תאריך" is never touched. */
+export function setEarliest(range: DateRange | null, value: string): DateRange | null {
+  const before = range?.earliest ?? null
+  const latest = range?.latest ?? null
+  const filled = latest === null || (before !== null && latest === addMonths(before, ENTRY_SPAN_MONTHS))
+  if (!filled) return setDateEnd(range, 'earliest', value)
+  if (!value) return null
+  return { earliest: value, latest: addMonths(value, ENTRY_SPAN_MONTHS), level: range?.level ?? 'preference' }
+}
+
 /** The controls of one option that hold a value: what "סינון (3)" counts. "Women only" counts when
  *  the posts are shown (the default hides them). */
 export function heldCount(option: SearchOption): number {

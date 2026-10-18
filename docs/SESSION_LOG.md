@@ -7210,3 +7210,38 @@ everyone; the commit and the deploy (`PHASE_4.md` §4.7).
 **Closed (round 32, later):** Ron confirms the copy reflects what he did (other fields toggled, nothing restored); no
 defect in the report flow; the test flag and report stay on the development copy (#457). Next: the deploy, guided step by
 step in this chat (`PHASE_4.md` §4.7).
+
+## 2026-10-18 (continued) — Round 33: a fix round after Phase 4 (#458–#467); six items built, four planned
+
+No paid call, nothing on the server, no git write, no write to Windows `data/store/`. The development copy
+(`tlv-hunter-store`) was only read: one online backup from a read-only connection, with its photos, into this
+session's scratchpad; every write of the check (a known admin password, sessions, viewed marks) went to that scratch
+copy only. Network: 127.0.0.1, and npm for Lighthouse 12.8.2 (`npx`). The chrome-devtools plugin did not connect; the
+installed Chrome was driven over its DevTools protocol by a scratch script instead.
+
+**Recorded:** `DECISIONS.md` #458–#467 (#270 annotated: its chip rule replaced by #458); `BASELINE.md` §6 (the viewed look)
+and §8 (the chip, the fill, viewed on close, hidden posts); `SCHEMA.md` "Proposed in round 33" (`immediate`,
+`HiddenPost`: not approved); `PHASE_4.md` appendix A (the plan, points 1–19); `PHASE_3.md` two lines annotated
+(viewed order, point 37); BACKLOG item 9 and two pending rows; CLAUDE.md's "Now".
+
+**Built:** #459 `bar.ts` `addMonths`, `setEarliest` (the "עד תאריך" fill); #460 the tip leftwards on a phone and the
+"i"'s state class `is-open` (the bare `open` collided with `.card .open`, which moved the "i"); #461 `icon.svg`,
+`apple-touch-icon.png` (180), `favicon-32.png`, `icon-192/512.png` (drawn by Chrome from the SVGs), `site.webmanifest`,
+`index.html`'s links; #462 `components/BackToTop.tsx`; #463 `.topstack` (the header and the bar sticky together from 700
+px) and the scroll padding under what sticks; #467 the viewed look (`actions.css`) and `paging.withViewedSettled` on
+close. Also: the area groups' heading `h4` → `h3` (the preferences page's heading order, broken since Phase 4's
+Telegram card). Tests: `bar.test.ts` +3, `paging.test.ts` +4, `tests/test_web.py` +1 (the icons for a guest).
+
+**Verified:** `npm test` 91 passed; `npm run build` clean; `uv run pytest` 2104 passed; ruff clean. Chrome at 390 × 844,
+834 × 1194, 1194 × 834 (touch), 1440 × 900, 2560 × 1440: no sideways scroll, no console error. Before the fix at 390 the
+tapped "i" moved x 250 → 334 and the tip ran to x 529; after, the "i" stays and the tip spans x 83–277 (x 15–207 at 320).
+The stack: 216 px on both iPad sizes with both values rows (header 65 + bar 151), 204 px at 1440 and 2560; the phone's
+header scrolls away, its bar sticks (91 px). "Back to top": shown at none of the 11 resting places (of 67 signed in)
+where a card's buttons lay under it; a tap goes to the top and focuses the header. The icons: 200 with their types and the
+CSP, no cookie. The fill: 30.11.2026 typed digit by digit → 28.2.2027; a "עד תאריך" set by hand kept. Viewed: today
+the order moved only on a reload; now the closed card goes below the unviewed (to the end of the load while more is to
+come; to its place among the viewed when the list is drawn whole: position 2 → 119 of 120). Lighthouse accessibility 100
+on the list (guest and signed in, mobile and desktop) and the preferences page (98 before the heading fix); best
+practices 100.
+
+**Next:** Ron: appendix A's points 1–19; whether round 33's changes go with §4.7's deploy or after it; then the deploy.

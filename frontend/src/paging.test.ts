@@ -1,6 +1,6 @@
 // A, the list in pages (#376, #377): the page's merge of later pages and its removal in place.
 import { describe, expect, it } from 'vitest'
-import { PAGE, firstLoad, nextIds, withPage, withoutCard, type Loaded } from './paging'
+import { PAGE, firstLoad, nextIds, withPage, withViewedSettled, withoutCard, type Loaded } from './paging'
 import type { CardData } from './types'
 
 const card = (id: string, ...others: string[]) => ({ id, post_ids: [id, ...others] }) as unknown as CardData
@@ -57,5 +57,61 @@ describe('a card leaves in place (#377)', () => {
     expect(after.count).toBe(99)
     expect(after.next).toBe(list.next)
     expect(withoutCard(list, 'nobody')).toBe(list)
+  })
+})
+
+describe('a viewed card takes its place when its post closes (Ron, 2026-10-18; #62)', () => {
+  type Tier = 'preferences_met' | 'critical_met' | 'unknown'
+  const at = (hour: number) => `2026-10-18T${String(hour).padStart(2, '0')}:00:00+00:00`
+  const sorted = (id: string, tier: Tier, hour: number, viewed = false) =>
+    ({ id, post_ids: [id], viewed, evaluation: { tier }, last_published_at: at(hour) }) as unknown as CardData
+  const listOf = (cards: CardData[], more: string[] = []): Loaded => ({
+    count: cards.length + more.length,
+    order: [...cards.map((c) => c.id), ...more],
+    cards,
+    next: cards.length,
+  })
+  const viewedNow = (list: Loaded, id: string, viewed = true): Loaded => ({
+    ...list,
+    cards: list.cards.map((c) => (c.id === id ? { ...c, viewed } : c)),
+  })
+
+  const drawn = [
+    sorted('a', 'preferences_met', 9),
+    sorted('b', 'preferences_met', 8),
+    sorted('c', 'critical_met', 9),
+    sorted('d', 'preferences_met', 9, true),
+    sorted('e', 'critical_met', 7, true),
+  ]
+
+  it('goes below the unviewed cards, into its tier among the viewed ones', () => {
+    const after = withViewedSettled(viewedNow(listOf(drawn), 'b'), 'b')
+    expect(after.cards.map((c) => c.id)).toEqual(['a', 'c', 'd', 'b', 'e'])
+    expect(after.order).toEqual(['a', 'c', 'd', 'b', 'e'])
+    expect(after.next).toBe(5)
+    expect(after.count).toBe(5)
+  })
+
+  it('a card marked as not viewed comes back up', () => {
+    const after = withViewedSettled(viewedNow(listOf(drawn), 'e', false), 'e')
+    expect(after.cards.map((c) => c.id)).toEqual(['a', 'b', 'c', 'e', 'd'])
+  })
+
+  it('a viewed card that sorts after every drawn card, with more to come, goes to the end of the order', () => {
+    const list = viewedNow(listOf(drawn.slice(0, 3), ['x', 'y']), 'a')
+    const after = withViewedSettled(list, 'a')
+    expect(after.cards.map((c) => c.id)).toEqual(['b', 'c'])
+    expect(after.order).toEqual(['b', 'c', 'x', 'y', 'a'])
+    expect(after.next).toBe(2)
+    expect(nextIds(after)).toEqual(['x', 'y', 'a'])
+    expect(after.count).toBe(5)
+  })
+
+  it('changes nothing for a card in its place or a post the load does not hold', () => {
+    const list = listOf(drawn)
+    expect(withViewedSettled(list, 'c')).toBe(list)
+    expect(withViewedSettled(list, 'nobody')).toBe(list)
+    const unviewedLast = listOf(drawn.slice(0, 3), ['x'])
+    expect(withViewedSettled(unviewedLast, 'c')).toBe(unviewedLast)
   })
 })

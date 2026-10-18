@@ -2777,7 +2777,8 @@ level. The drafted `wanted` field is dropped.
 ### 270 — The entry date: a range; "immediate" is the date of evaluation (point 13)
 The entry-date criterion is a range, both ends optional. A post whose entry date is "immediate" compares as the date of
 the evaluation, not the publication date. Which calendar date (invariant 9): proposed in `SCHEMA.md`, Gate C.
-*Ron approved the reviewer's recommendation.* No reason recorded.
+*Ron approved the reviewer's recommendation.* No reason recorded. **The quick chip "מיידי" is replaced by #458
+(2026-10-18): a rolling "no later than 3 months from today"; the post-side rule above stays.**
 
 ### 271 — Half rooms and the basement in the ranges (point 14)
 Half rooms are allowed in the rooms range; a basement (-1) can be chosen in the floor range.
@@ -4020,6 +4021,78 @@ flagged (19:05 UTC), `0555aa328a77` with one open report (`parking` only, no not
 reported, and restored nothing); no defect in the report flow. The unrestored test flag and report stay on the
 development copy. **Next step, Ron's to decide (points 7 and 9):** a `web_app`
 menu button for every linked user, pointing at the site. *Ron's report; the check's.*
+
+## A fix round after Phase 4 (2026-10-18, round 33)
+
+**Approved by Ron on 2026-10-18**, items 1–10 of round 33's brief, all Ron's own. Not part of Phase 4's deploy (§4.7).
+#458, #464 and #465 need a schema or field change: their record and fields are proposed in `SCHEMA.md` ("Proposed in
+round 33") and in `PHASE_4.md` appendix A, **not approved yet**; nothing of them is built. #459–#463 and #467 are built
+(round 33).
+
+### 458 — "מיידי" in the entry-date filter is a rolling window: entry no later than 3 months from today
+The quick chip "מיידי" means entry **no later than 3 calendar months from today, with no lower bound, rolling**: it is
+re-computed each day at evaluation, and is saved in the profile as an "immediate" marker, not as fixed dates. Until now
+the chip stored `latest` = the day it was pressed, which goes stale in saved preferences and in the alerts. **Replaces
+#270's quick-chip rule** (`PHASE_3.md` 3.7, point 37's build). #270's rule for the post side stays: a post that says
+"כניסה מיידית" compares as today. 3 months are calendar months.
+*Ron's reason:* past entry dates in a post effectively mean "available now", and a rolling window never goes stale.
+**Not built:** the marker is a field change on `DateRangeCriterion` (invariant 1), proposed for Ron's approval
+(`PHASE_4.md` appendix A, points 1–5).
+
+### 459 — Typing "מתאריך" with "עד תאריך" empty fills "עד תאריך" three months on
+Typing a "מתאריך" while "עד תאריך" is empty fills "עד תאריך" with the same date +3 calendar months, as a fixed date the
+user can edit. Front end only. Not when "עד תאריך" already holds a value. *Ron's request.* **Built (round 33),** in the bar
+and on the preferences page (one control): a day the target month lacks becomes its last day (30.11 → 28.2); the filled
+date follows "מתאריך" while it is still the filled one (a date box reports each year digit as it is typed) and goes
+with it when "מתאריך" is cleared.
+
+### 460 — The card's "i" on a phone: the tip is never cut, and the "i" does not move
+On a phone the tip must not be cut and must stay inside the screen, and the "i" must not move when tapped. *Ron's report.*
+**Built (round 33).** Two causes, both measured at 390 × 844: the tip opened rightwards from the "i" (`left: 0`) while
+the photo sits at the screen's right edge in right to left, so it ran to x 529 and was clipped; and the open state's
+class `open` matched the card's covering link (`.card .open`, `inset: 0`), which moved the "i" to the photo's other
+corner (x 250 → 334), on a desktop click too. The tip now opens leftwards on a phone, at most `100vw − 128px` wide; the
+state class is `is-open`.
+
+### 461 — A home-screen icon for the iPhone
+iOS ignores `favicon.svg`. Following event_seeker's pattern: a 180 × 180 `apple-touch-icon.png` drawn from the same logo
+mark, a PNG favicon, `site.webmanifest`, served at the root by `serve` under the CSP, for a guest with no session.
+*Ron's request.* **Built (round 33).**
+
+### 462 — "Back to top" on a phone
+Phone only (the < 700 px breakpoint): a small "back to top" button at the bottom centre. It appears only after the user has
+scrolled, respects `safe-area-inset-bottom`, and never covers a card's buttons. The phone's top bar keeps scrolling
+away, as today. *Ron's request; Ron likes the scrolling top bar.* **Built (round 33).**
+
+### 463 — Wider than a phone, the header stays stuck together with the filter bar
+From the phone breakpoint up (an 11" iPad to a 27" monitor) the header (logo and user menu, `.appbar`) stays stuck on
+scroll, together with the filter bar under it. *Ron's request.* **Built (round 33);** measured with both values rows: 216
+px on an iPad held upright (834 × 1194) and sideways (1194 × 834), 204 px at 1440 and 2560.
+
+### 464 — Per-user "hide"
+A new per-user record of hidden posts, like `ViewedPost`. Never written on the post (invariant 12). Not available to a
+guest. Deleted with its post. **A Gate C addition:** the record's name, fields and table are proposed in `SCHEMA.md`
+for Ron's approval; field names are proposals. *Ron's request.* **Not built.**
+
+### 465 — "הצגת מוסתרים" in the filter bar; hiding applies only on the saved preferences
+A "הצגת מוסתרים" switch in the filter bar. Hiding applies **only while the bar shows the saved preferences**; in a
+temporary filter everything is shown. A hidden card that is shown has "בטל הסתרה". *Ron's request.* **Not built** (with
+#464).
+
+### 466 — Where "הסתר" appears: by tier
+On cards in the middle tier (`critical_met`) and the bottom tier (`unknown`) always, and in the top tier
+(`preferences_met`) only once viewed. Decided by tier, not by glow: a card with no preference has no glow. *Ron's
+rule.* **Not built** (with #464).
+
+### 467 — Viewed: the card looks faded and moves below the unviewed ones when the post closes
+A viewed card looks faded and stays clickable; its text stays readable (Lighthouse accessibility stays 100), the photo
+faded more than the text. A viewed card moves below the unviewed ones (#62) **when the post is closed**. *Ron's
+request.* **Built (round 33).** Found: until now the order followed only on the next load (by design since round 13,
+`PHASE_3.md` 3.7, A's "Viewed"), and the viewed style was a faint tint (#f8f7f4) and the photo at 55%, which Ron did not
+see. Now: the photo at 40% in greyscale, the card's tint #f6f5f2, the plain text in the muted ink (5.9:1), the glow's
+ring without its halo; a red or green value keeps its colour. On close the card goes to its place among the cards drawn,
+or, when more of the load is still to come, to the end of the load's order (its exact place among the viewed ones is
+the next load's); the focus goes to the card now in its old place.
 ---
 
 ## Corrections to recorded facts

@@ -13,6 +13,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import shutil
 import socket
 import sqlite3
 import sys
@@ -299,6 +300,42 @@ def test_the_builds_files_are_served_and_nothing_outside_it(site_with_pages: Tes
     assert site_with_pages.get("/assets/missing.js").status_code == 404
     for path in ("/..%2Fsecret.txt", "/%2E%2E/secret.txt", "/assets/..%2F..%2Fsecret.txt"):
         assert "outside the build" not in site_with_pages.get(path).text
+
+
+PUBLIC = Path(__file__).resolve().parents[1] / "frontend" / "public"
+ICONS = {
+    "favicon.svg": "image/svg+xml",
+    "favicon-32.png": "image/png",
+    "apple-touch-icon.png": "image/png",
+    "icon-192.png": "image/png",
+    "icon-512.png": "image/png",
+    "icon.svg": "image/svg+xml",
+    "site.webmanifest": "application/manifest+json",
+}
+
+
+def test_the_icons_and_the_manifest_are_served_at_the_root_to_a_guest(
+    store: Store, tmp_path: Path
+) -> None:
+    """Round 33: the iPhone's home-screen icon (iOS ignores an SVG), the PNG favicon and the
+    manifest, the front end's own files, served at the root with their types and the site's CSP
+    (its `default-src 'self'` covers the manifest), with no session."""
+    built = tmp_path / "dist"
+    built.mkdir()
+    (built / "index.html").write_text("<!doctype html><title>site</title>", encoding="utf-8")
+    for name in ICONS:
+        shutil.copy(PUBLIC / name, built / name)
+    guest = TestClient(create_app(site_over(store.db, store.root, pages=built, clock=lambda: NOW)))
+    for name, kind in ICONS.items():
+        response = guest.get(f"/{name}")
+        assert response.status_code == 200, name
+        assert response.headers["content-type"].startswith(kind), name
+        assert response.headers["content-security-policy"] == CONTENT_SECURITY_POLICY
+        assert response.content == (PUBLIC / name).read_bytes()
+    header = (PUBLIC / "apple-touch-icon.png").read_bytes()[16:24]  # the PNG's IHDR width, height
+    assert (int.from_bytes(header[:4]), int.from_bytes(header[4:])) == (180, 180)
+    manifest = json.loads((PUBLIC / "site.webmanifest").read_text(encoding="utf-8"))
+    assert {icon["src"].lstrip("/") for icon in manifest["icons"]} <= set(ICONS)
 
 
 def test_an_api_path_no_route_answers_stays_404(site_with_pages: TestClient) -> None:

@@ -177,6 +177,78 @@ a {
   }
 }
 
+/* The list's top (Ron, 2026-10-18): wider than a phone (an 11" iPad to a 27" screen) the header and
+   the filter bar under it stay at the top together; on a phone the stack is no box at all, so the
+   header scrolls away and the bar alone sticks, as before (round 13). */
+.topstack {
+  display: contents;
+}
+
+@media (min-width: 700px) {
+  .topstack {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .topstack .filterbar {
+    position: static;
+  }
+}
+
+/* "Back to top", a phone's only (Ron, 2026-10-18; components/BackToTop.tsx): small, at the bottom
+   centre over the safe area, under the bar's sheet, the opened post and the notice */
+.totop {
+  position: fixed;
+  z-index: 15;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  translate: -50% 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.96);
+  box-shadow: 0 4px 14px rgb(29 35 43 / 0.18);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s, visibility 0.15s;
+}
+
+.totop.is-shown {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* the arrow: drawn, a control and not a state glyph (#332 point 30) */
+.totop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 10px;
+  height: 10px;
+  border-top: 2px solid var(--ink);
+  border-left: 2px solid var(--ink);
+  rotate: 45deg;
+  translate: 0 2px;
+}
+
+/* 44 px to touch without growing (#372) */
+.totop::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+}
+
+@media (min-width: 700px) {
+  .totop {
+    display: none;
+  }
+}
+
 /* where the next page of the list is asked, as it comes near the view (#376) */
 .sentinel {
   height: 1px;

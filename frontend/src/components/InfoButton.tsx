@@ -20,7 +20,7 @@ export function InfoButton({ label }: { label: string }) {
   return (
     <button
       ref={button}
-      className={open ? 'info open' : 'info'}
+      className={open ? 'info is-open' : 'info'}
       type="button"
       aria-label={label}
       aria-expanded={open}

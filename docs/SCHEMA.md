@@ -1055,3 +1055,37 @@ retention job.
 | `sent_at` | `datetime` UTC | When Telegram accepted the alert |
 
 **Not stored:** the alert's tier or colours (an `Evaluation` is never stored), the message's id, the chat's history.
+
+---
+
+# PROPOSED in round 33 (2026-10-18) — **not approved; nothing built**
+
+For Ron's approval (`DECISIONS.md` #458, #464–#466; the plan and its points: `PHASE_4.md` appendix A). Every name below
+is a proposal. Until Ron approves, the records above stand unchanged.
+
+## `DateRangeCriterion` gains `immediate` (#458); `Profile` to version 3
+
+| Field | Type | Rule |
+|---|---|---|
+| `immediate` | `bool` | **Proposed.** `True`: the quick chip "מיידי", entry no later than 3 calendar months from the date of the evaluation, no lower bound, rolling; `earliest` and `latest` are then both `None`. `False`: the range as today (at least one end, `earliest` ≤ `latest`) |
+
+The 3 months are a constant in `policy/`, not a field (Ron fixed them). A date the target month lacks becomes its last
+day (30.11 → 28.2). `Profile.schema_version` 3; a stored version-2 (or 1) profile reads as version 3 at read time only
+(as #317), written as 3 at its next save; how the old chip shape reads: appendix A, point 3.
+
+## `HiddenPost` (#464)
+
+Which posts a user has hidden. Key: (`user_id`, `listing_id`). Table `hidden_posts`, the same shape as `viewed_posts`,
+with its own layout row `userdata.hidden` (version 1), created when absent, as Gate F's `userdata.telegram`.
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1 |
+| `user_id` | `str` | A signed-in user; a guest has none |
+| `listing_id` | `str` | The post the card shows (as #276 for viewed) |
+| `hidden_at` | `datetime` UTC | Written when the user presses "הסתר"; pressing again keeps the first time |
+
+**Rules (proposed).** A card is hidden, for a user, when any post the card stands for has a record (as `ViewedPost`, #253);
+"בטל הסתרה" deletes that user's records for every post of the card. Hiding applies only while the bar shows the saved
+preferences (#465). Never written on the post (invariant 12). Deleted with its post, by Phase 5's retention job (with
+`ViewedPost` and `SentAlert`). Kept for a disabled user.

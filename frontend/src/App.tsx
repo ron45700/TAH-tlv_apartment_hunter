@@ -8,9 +8,9 @@
 // `sessionStorage` (#330 point 14): a reload keeps a changed bar, a new visit starts again. It is sent
 // with each list request and never saved (#335): preferences are saved on the preferences page only.
 //
-// Build step 6 (3.7 (i)), signed-in only: viewed cards are dimmed and listed after the unviewed (the
-// server's order, #62); an opened post marks its card viewed at once, and the order follows on the
-// next load of the list, so nothing jumps under the reader. A "lied" flag asks first; a flag or a
+// Build step 6 (3.7 (i)), signed-in only: viewed cards are faded and listed after the unviewed (the
+// server's order, #62); an opened post marks its card viewed at once, and when the post closes the
+// card takes its place below the unviewed ones (Ron, 2026-10-18). A "lied" flag asks first; a flag or a
 // report says in words what it did (a partial flag offers a retry, #330 point 21) and the list
 // reloads, so the card leaves it. A write on a post removed meanwhile (409) says so and reloads.
 //
@@ -19,11 +19,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, api } from './api'
 import { barHeldCount, barOf, emptyBar, israelToday, refusalWords, sameBar, type Bar } from './bar'
 import { ConfirmFlag, NoticeBar, type Notice } from './components/actions'
+import { BackToTop } from './components/BackToTop'
 import { Card, type CardActions } from './components/Card'
 import { FilterBar, type BarStanding } from './components/FilterBar'
 import { Header } from './components/Header'
 import { PostView, type PostActions } from './components/PostView'
-import { PAGE, firstLoad, nextIds, withPage, withoutCard, type Loaded } from './paging'
+import { PAGE, firstLoad, nextIds, withPage, withViewedSettled, withoutCard, type Loaded } from './paging'
 import { navigate, postPath, useRoute } from './route'
 import { PasswordScreen, SignIn, SignUp } from './screens/Account'
 import { Admin } from './screens/admin/Admin'
@@ -208,13 +209,34 @@ export function App() {
     } else navigate('/')
   }, [])
 
-  // Closing a post opened from the list returns the focus to the card that opened it (#374); a card
-  // that left the list meanwhile (a flag, a report) leaves the focus where the page puts it.
+  // Closing a post settles its card in the list: a card viewed meanwhile goes below the unviewed
+  // ones, one marked as not viewed comes back up (Ron, 2026-10-18; #62). A post opened from the list
+  // returns the focus to its card (#374), or, when the card moved, to the card now in its place, so
+  // the page does not jump after it; a card that left the list meanwhile (a flag, a report) leaves
+  // the focus where the page puts it.
   const onPost = route.name === 'post'
+  const lastOpen = useRef<string | null>(null)
+  const listNow = useRef(list)
+  listNow.current = list
   useEffect(() => {
-    if (onPost || returnFocusTo.current === null) return
-    const id = returnFocusTo.current
+    if (route.name === 'post') lastOpen.current = route.id
+  }, [route])
+  useEffect(() => {
+    if (onPost) return
+    const closed = lastOpen.current
+    lastOpen.current = null
+    let id = returnFocusTo.current
     returnFocusTo.current = null
+    const current = listNow.current
+    if (closed && current) {
+      const settled = withViewedSettled(current, closed)
+      if (settled !== current) {
+        const was = current.cards.findIndex((card) => card.id === closed || card.post_ids.includes(closed))
+        setList(settled)
+        if (id !== null) id = settled.cards[was]?.id ?? null
+      }
+    }
+    if (id === null) return
     const frame = requestAnimationFrame(() => {
       document.querySelector<HTMLAnchorElement>(`a.open[href="${postPath(id)}"]`)?.focus()
     })
@@ -353,6 +375,22 @@ export function App() {
     else if (user && (route.name === 'sign-in' || route.name === 'sign-up')) navigate('/', { replace: true })
   }, [user, passwordDue, route.name])
 
+  // What sticks at the top of the list is kept clear of the focus (WCAG 2.4.11): a focused card is
+  // scrolled below it. On a phone that is the bar alone, wider the header and the bar together.
+  const stack = useRef<HTMLDivElement>(null)
+  const barReady = bar !== null && reference !== null
+  useEffect(() => {
+    const element = phone ? stack.current?.querySelector<HTMLElement>('.filterbar') : stack.current
+    if (!element) return
+    const root = document.documentElement
+    const observer = new ResizeObserver(() => root.style.setProperty('scroll-padding-top', `${element.offsetHeight}px`))
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('scroll-padding-top')
+    }
+  }, [phone, barReady, route.name])
+
   const header = <Header user={user} onSignOut={signOut} />
 
   if (passwordDue || (user && route.name === 'password')) {
@@ -408,23 +446,26 @@ export function App() {
 
   return (
     <>
-      {header}
-      {bar && reference ? (
-        <FilterBar
-          bar={bar}
-          onChange={setBar}
-          standing={standing}
-          onReset={() => saved && setBar(saved)}
-          count={list ? list.count : null}
-          error={barProblem}
-          groups={reference.area_groups}
-          names={names}
-          today={today}
-          phone={phone}
-        />
-      ) : (
-        <div className="filterbar is-waiting" aria-hidden="true" />
-      )}
+      {/* the header and the bar stay at the top together wider than a phone (Ron, 2026-10-18) */}
+      <div className="topstack" ref={stack}>
+        {header}
+        {bar && reference ? (
+          <FilterBar
+            bar={bar}
+            onChange={setBar}
+            standing={standing}
+            onReset={() => saved && setBar(saved)}
+            count={list ? list.count : null}
+            error={barProblem}
+            groups={reference.area_groups}
+            names={names}
+            today={today}
+            phone={phone}
+          />
+        ) : (
+          <div className="filterbar is-waiting" aria-hidden="true" />
+        )}
+      </div>
       <main className="shell">
         {failed && !list ? (
           <p className="empty">לא הצלחנו לטעון את המודעות. בדקו שהאתר פועל ורעננו את הדף.</p>
@@ -453,6 +494,7 @@ export function App() {
       {flagging && (
         <ConfirmFlag busy={flagBusy} onConfirm={() => runFlag(flagging)} onCancel={() => setFlagging(null)} />
       )}
+      {phone && !openId && !notice && <BackToTop />}
       <NoticeBar notice={notice} onDismiss={dismissNotice} />
     </>
   )

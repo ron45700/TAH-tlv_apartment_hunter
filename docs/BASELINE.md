@@ -301,6 +301,11 @@ that are not green: the red "women only" icon, the important-missing badge ("no 
 location line. The opened post shows every chip in its colour (green, orange, grey, plain). Every item and where it sits:
 `PHASE_3.md` 3.7 (c).
 
+**A viewed card** (#467, 2026-10-18) looks faded and stays clickable: the photo faded most, the plain text in a muted ink
+that keeps its contrast, a red or green value in its colour, the glow's ring without its halo, and the word "נצפה". A
+hidden card that is shown (§8, #465) has "בטל הסתרה"; where "הסתר" and "בטל הסתרה" sit is proposed in `PHASE_4.md`
+appendix A.
+
 ---
 
 ## 7. Location
@@ -351,8 +356,14 @@ on, nothing set, sublets off, "women only" hidden (#268). **Sublets are one swit
 2026-10-12; until then one per option): a sublet is shown only when the switch is on and the option of its kind is on,
 and is evaluated with that option's values. Broker, parking and balcony have a fixed wanted value (no
 broker, has parking, has a balcony): the user only turns them on and picks the level (#269). Half rooms and a basement
-can be chosen (#271). The entry date is a range, both ends optional; "immediate" compares as the date of the evaluation
-(#270).
+can be chosen (#271). The entry date is a range, both ends optional; a post whose entry is "immediate" compares as the date
+of the evaluation (#270). **The quick chip "מיידי"** (#458, 2026-10-18, replacing #270's chip rule) means entry **no later
+than 3 calendar months from today, with no lower bound, rolling**: re-computed each day at evaluation, saved in the profile
+as an "immediate" marker, never as fixed dates (Ron: past entry dates in a post effectively mean "available now", and a
+rolling window never goes stale). *Until 2026-10-18 the chip saved "until the day it was pressed", which went stale in the
+saved preferences and the alerts.* The marker is a field change, proposed and not built (`PHASE_4.md` appendix A).
+Typing "מתאריך" while "עד תאריך" is empty fills "עד תאריך" three calendar months on, a fixed date the user can change
+(#459; the page only).
 
 | Level | Categories | Behaviour |
 |---|---|---|
@@ -402,7 +413,15 @@ unviewed posts come first, then the viewed ones; within each of the two, the ord
 belongs to the user and is never written on the post. It survives a repost, since a repost updates
 the existing card, and goes when the post is deleted. Opening the card marks it viewed; scrolling past does not. An
 open card has "mark as not viewed". A card stays viewed when a further publication is grouped into it by the Gate D
-key (#253).
+key (#253). **A viewed card moves below the unviewed ones when its post is closed** (#467, 2026-10-18; until then only at
+the next load of the list).
+
+**Hidden posts** (#464–#466, 2026-10-18; approved in content, the record proposed and not built): a signed-in user can
+hide a post. It is a per-user record like the viewed one, never written on the post (invariant 12), not available to a
+guest, deleted with its post. **Hiding applies only while the bar shows the saved preferences**; in a temporary filter
+everything is shown. A "הצגת מוסתרים" switch in the bar shows the hidden ones, and a hidden card that is shown has "בטל
+הסתרה". "הסתר" is offered on a card in the middle and bottom tiers always, and in the top tier only once viewed: by tier,
+not by glow, since a card with no preference has no glow.
 
 ---
 

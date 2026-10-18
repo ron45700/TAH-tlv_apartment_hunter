@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#e4f2f6" />
+    <!-- The icons (round 33, as event_seeker's): the PNG for a browser without SVG favicons, the SVG
+         listed last for those with them; the home screen's 180 px PNG (iOS ignores the SVG) and the
+         manifest's, drawn from public/icon.svg, the tab's from public/favicon.svg. Served at the root
+         by `serve` (web/app.py), with no session. Redrawn from the SVGs by rendering each at its size
+         with a transparent background for the favicon only. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <title>TLV Apartment Hunter</title>
   </head>
   <body>

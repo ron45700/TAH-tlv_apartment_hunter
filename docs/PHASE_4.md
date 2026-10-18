@@ -344,3 +344,91 @@ site (points 7 and 9), not built.
    at the next :00 or :30 outside the quiet hours, the first slot.
 10. **DoD 1:** the first real alert that matches Ron's profile arrives; nothing is alerted twice.
 11. From then on: `docker compose stop scheduler` before any manual job command (homelab's README).
+
+---
+
+## Appendix A — Round 33's plan for #458 and #464–#466 (for Ron's approval; not part of §4.7's deploy)
+
+**Status: a plan, no code.** Items 2–6 and 10 of the same round are built (`DECISIONS.md` #459–#463, #467). The
+proposed fields and record are in `SCHEMA.md`, "Proposed in round 33". Each point has a recommendation; "or" is the
+other option.
+
+### A.1 "מיידי" as a rolling window (#458)
+
+1. **The field.** `DateRangeCriterion.immediate: bool` (proposed name). `True`: no `earliest`, no `latest`; the window is
+   "no later than today + 3 calendar months", no lower bound. `False`: the range as today. The 3 is a constant in
+   `policy/` (`IMMEDIATE_MONTHS`), not a field. *Or:* a separate type beside `DateRangeCriterion` in a union (more
+   shapes to validate, no gain).
+2. **The evaluation** (`policy/evaluate.py`, `_entry_date`): with `immediate`, a post's date is met when it is on or
+   before `add_months(today, 3)`; a past date is met; a post's "immediate" compares as today (#270's post side) and is
+   met. A day the month lacks becomes its last (30.11 → 28.2), as the page's fill (#459) does. `today` stays R2's UTC
+   date of the evaluation: **between 00:00 and 02:00/03:00 Israel time the window ends a day earlier.** Recommended: keep
+   R2 (one "today" for every comparison). *Or:* Israel's date for this window only.
+3. **Stored profiles** (`Profile.from_stored_json`): `Profile` to version 3; a version-2 (or 1) profile reads as 3 with
+   `immediate` false, at read time only, written as 3 at its next save (as #317). **The old chip shape** (`earliest` null,
+   `latest` a date): recommended, **convert** a criterion whose `latest` is on or before the Israel date of the profile's
+   `updated_at` into `immediate` true (only the chip saves "until a day not after the save"; a user who typed today's
+   date into "עד תאריך" is read the same way, accepted). *Or:* read as is (it stays stale until the user presses the chip
+   again). Counted: the laptop's development copy holds 1 profile, with no entry date; **the server's were not read**
+   (a read-only count there on Ron's go).
+4. **The alerts:** nothing changes in `policy/alert.py` or `telegram/alerts.py`: both evaluate with `now`, so the window
+   moves each day by itself. No new alert for an older post (the 24-hour window, #452).
+5. **The page:** "מיידי" sets `immediate` true (the dates empty); a date typed clears it; the words stay "כניסה מיידית";
+   the bar's JSON carries the field (an older bar kept in the tab reads it as false). The site's bar validation is the
+   profile's own (strict), so the API and the page change together.
+6. **Tests:** the contract (immediate with an end refused; alone accepted); `from_stored_json` (the chip shape converted,
+   a future `latest` kept, version 1 to 3); the evaluation (today + 3 months met, one day later failed, a past date met, a
+   post's "immediate" met, the month-end case, critical hides); the alert pass through the same evaluation; the web's
+   bar round trip and its 422 in words; `bar.test.ts` (the chip, the words, "changed").
+7. **The production store:** no table or layout change: the profile is a JSON document. After the deploy the site
+   writes version-3 profiles, which **an older image cannot read** (a rollback needs the backup taken before). It reaches
+   the server with Ron's commit and deploy, `export_backup` first.
+
+### A.2 Hiding (#464–#466)
+
+8. **The record** `HiddenPost` (`SCHEMA.md`, proposed): `schema_version`, `user_id`, `listing_id` (the card's shown post),
+   `hidden_at`; key (`user_id`, `listing_id`); table `hidden_posts`, as `viewed_posts`. **Its own layout row
+   `userdata.hidden` (version 1), created when absent**, as Gate F's `userdata.telegram`: no migration command, the
+   `userdata` row stays 2, and an older image still opens the store (every opener reads only its own module's row;
+   checked). *Or:* `userdata` to version 3 with a migration command, as `add_store_generation` (heavier, no gain).
+   `UserDataStore` gains three methods: hide, unhide (every post of the card), and the user's hidden ids.
+9. **The endpoints:** `POST` and `DELETE /api/hidden/{listing_id}` (signed in, `Origin` checked, a post gone is 409, as
+   viewed). The list (`POST /api/cards`, `/api/cards/by-id`) takes `show_hidden` (default false); a signed-in user's
+   card carries `hidden` (a guest's has no such field, as `viewed`); the first answer carries the count hidden.
+10. **Who decides "on the saved preferences":** recommended, **the server**: it hides only for a signed-in user whose bar
+    equals the stored profile (values compared, as the page's "changed" does) and with `show_hidden` false; the hidden
+    cards are dropped before the order. *Or:* the page says so in the request (simpler, but a page bug would hide in a
+    temporary filter).
+11. **A grouped card** is hidden when any of its posts has a mark (as viewed, #253); "בטל הסתרה" deletes the marks on
+    every post of the card. **A later publication grouped into a hidden card keeps it hidden**, as viewed (recommended).
+    *Or:* a new publication brings the card back.
+12. **Where the buttons sit.** Recommended (A): **a small "הסתר" pill on the photo's top-right corner**, opposite the "i",
+    drawn like it (faded background, text in words), so the foot and its packing rule (#341, #351) do not change; "בטל
+    הסתרה" in the same place; also in the opened post's foot beside "סימון כלא נצפה". On a phone the 118 px photo holds
+    the "i" (28 px) and the pill (about 52 px). *Or (B):* in the foot, packed after the report button (#351): at a phone's
+    334 px the three buttons take about 222 px beside the time, a fourth crowds them, and at the narrowest card (296 px)
+    it does not fit. *Or (C):* in the "דיווח" menu (it is not a report).
+13. **In a temporary filter** (everything shown, #465): recommended, "הסתר" is still offered (by tier, #466); pressed, the
+    card stays in place marked "מוסתרת" with "בטל הסתרה", and leaves when the bar is back on the saved preferences.
+    *Or:* no "הסתר" in a temporary filter, only "בטל הסתרה" on the hidden cards.
+14. **A hidden card that is shown** (the switch on, or a temporary filter) keeps its place in the order, faded as a viewed
+    card, with a "מוסתרת" tag (recommended). *Or:* all hidden cards at the end.
+15. **The count and the switch.** On the saved preferences with the switch off, the count leaves the hidden out and the
+    status line adds "· M מוסתרות" when there are any; "הצגת מוסתרים" shows only on the saved preferences (in a temporary
+    filter it would change nothing), for a signed-in user; its state lives in the tab, as the bar's, and is never saved
+    (no profile field). Pressing "הסתר" on the saved preferences takes the card out in place, the count one less (as a
+    flag, #377).
+16. **Alerts:** unaffected. A post is alerted before it can be hidden, and a later publication grouped into a card never
+    alerts (#360).
+17. **Deletion with the post:** `UserDataStore` has no delete-with-post method yet for `ViewedPost` or `SentAlert`
+    (`BACKLOG.md`, "Recorded for a later phase", the run-conflict row); `HiddenPost` joins them for Phase 5's retention
+    job. Until then a deleted post's marks match no card and do nothing.
+18. **The production store's layout is written:** the first opener of the store with the new image (the site, the bot or
+    a job) creates `hidden_posts` and the row `userdata.hidden`. It reaches the server only with Ron's commit and deploy,
+    after `export_backup`; an older image still opens the store afterwards (point 8).
+19. **Tests:** the record's contract; the store's three methods and the layout row created when absent on a store
+    without it (and left alone on one with it); the endpoints (guest 401, `Origin`, 409); the list hiding only on the saved
+    preferences, by any post of a grouped card, the count; `hidden` absent for a guest; the page: where the button shows
+    by tier and viewed (#466), the switch, the in-place removal.
+
+**Order of build when approved:** A.1 first (small, no layout change), then A.2.

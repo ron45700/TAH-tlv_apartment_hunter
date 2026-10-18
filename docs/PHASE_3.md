@@ -1409,7 +1409,8 @@ nothing to draw); and `cards`, the full payload of the first `first` cards only.
 - **The glow and the tier** come with each card's payload, from the same `evaluate` against the same bar, so a page asked
   later glows as the first; **the count** is the first answer's, less the cards the user removed (below).
 - **Viewed:** the mark is set on the list's card at once and the order follows on the next load, as today; "mark as not
-  viewed" the same. Viewed cards stay where they are in a load.
+  viewed" the same. Viewed cards stay where they are in a load. *Changed 2026-10-18 (#467, round 33): the card takes its
+  place below the unviewed ones when its post closes.*
 - **A flag or a report (point 49):** the card leaves the list in place and the count drops by one, **with no reload**, so the
   user keeps their place; today the list reloads, which with paging would send the user back to the top. A 409 `gone`
   does the same.
@@ -1708,7 +1709,8 @@ one dense row under them), by #353, built in round 13.**
 37. **What the quick chip "מיידי" sets** (#270 makes "immediate" a quick chip; its meaning in the range is not written).
     **Built:** "מיידי" sets the range's end to today in Israel ("until today"), so posts available now match, an
     "immediate" post included (it compares as the evaluation's date, #270). The two date boxes set any range. Or: a chip
-    with another meaning, or more chips ("from the 1st of next month").
+    with another meaning, or more chips ("from the 1st of next month"). *Replaced by #458 (2026-10-18): "מיידי" is a rolling
+    "no later than 3 months from today", saved as a marker; planned in `PHASE_4.md` appendix A, not built.*
 38. **The live count on the preferences page** (#330 point 24) asks `POST /api/cards` with the page's values, a moment
     after the last change, and reads its count: no count-only endpoint was added to (g). On today's store a warm request
     is tens of milliseconds and about 400 KB. **Built so;** measured with the rest at step 7 (#346), and a count-only

@@ -2,15 +2,41 @@
    button and its menu (#328, #338), the confirmation, the report form, the notice. Colour plus words
    only (#323). */
 
-/* --- viewed (#62, #253): the card dimmed and the word "נצפה"; text keeps its contrast --- */
+/* --- viewed (#62, #253): the card faded and the word "נצפה" (Ron, 2026-10-18: until then only a
+   tint, too faint to see). The photo fades most; the text only moves to the muted ink and keeps 4.5:1
+   or more on the card's tint (--muted 5.9:1, --grey 4.9:1 on #f6f5f2), so nothing is faded by
+   opacity. The glow keeps its ring and loses its halo. The card stays clickable. --- */
 .card.is-viewed {
-  background: #f8f7f4;
+  background: #f6f5f2;
 }
 
-/* the photos dimmed, not the counter, the dots or the arrows over them (#384) */
+.card.is-viewed.glow-green {
+  box-shadow: 0 0 0 1px var(--green);
+}
+
+.card.is-viewed.glow-orange {
+  box-shadow: 0 0 0 1px var(--amber);
+}
+
+.card.is-viewed.glow-red {
+  box-shadow: 0 0 0 1px var(--red);
+}
+
+.card.is-viewed.glow-none {
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+/* the photos faded, not the counter, the dots or the arrows over them (#384) */
 .card.is-viewed .car .track {
-  opacity: 0.55;
-  filter: saturate(0.6);
+  opacity: 0.4;
+  filter: grayscale(0.7);
+}
+
+/* only what carries no colour of its own: a red or green value keeps its meaning */
+.card.is-viewed .price.c-plain,
+.card.is-viewed .txt,
+.card.is-viewed .kind:not(.kind-unclear) {
+  color: var(--muted);
 }
 
 .seen {

@@ -9,6 +9,7 @@ import {
   FEATURES,
   FEATURE_NAMES,
   setDateEnd,
+  setEarliest,
   setRangeEnd,
   toggleAreas,
   type DateRange,
@@ -108,7 +109,7 @@ export function AreaPicker({
         return (
           <section key={group.heading} className="area-group">
             <div className="area-head">
-              <h4 className="area-heading">{group.heading}</h4>
+              <h3 className="area-heading">{group.heading}</h3>
               {all}
             </div>
             {list}
@@ -334,7 +335,7 @@ export function EntryField({
             name="entry-earliest"
             type="date"
             value={entry?.earliest ?? ''}
-            onChange={(event) => onChange(setDateEnd(entry, 'earliest', event.target.value))}
+            onChange={(event) => onChange(setEarliest(entry, event.target.value))}
           />
         </label>
         <label className="numbox">

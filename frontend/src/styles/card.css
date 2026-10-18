@@ -222,9 +222,11 @@
   content: 'i';
 }
 
+/* the open state is "is-open": a bare "open" is the card's covering link (.card .open), whose
+   `inset: 0` moved the "i" to the photo's other corner when tapped (Ron, 2026-10-18) */
 .info:hover,
 .info:focus-visible,
-.info.open {
+.info.is-open {
   background: rgb(255 255 255 / 0.94);
   opacity: 1;
 }
@@ -247,7 +249,7 @@
 
 .info:hover .tip,
 .info:focus-visible .tip,
-.info.open .tip {
+.info.is-open .tip {
   display: block;
 }
 
@@ -613,6 +615,16 @@
   .info {
     top: 6px;
     left: 6px;
+  }
+
+  /* The photo sits at the screen's right edge here, so the tip opens leftwards from the "i"'s right
+     edge, across the card, and never past the screen: the "i" ends 112 px from the right edge
+     (gutter 16, padding 12, photo 118, inset 6, width 28), the tip keeps 16 px on the left (Ron,
+     2026-10-18: it was cut, and the page under it moved) */
+  .info .tip {
+    left: auto;
+    right: 0;
+    max-width: min(260px, calc(100vw - 128px));
   }
 
   .kindrow {

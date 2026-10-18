@@ -47,6 +47,41 @@ export function withPage<T extends Item, P extends { cards: T[]; gone: string[] 
   }
 }
 
+const TIER_RANK = { preferences_met: 0, critical_met: 1, unknown: 2 } as const
+
+/** Whether card `a` comes before card `b` in a user's list, as the server orders it
+ * (`policy/order.py`): unviewed before viewed (#62), then the tier, then the newer last
+ * publication, then the id. */
+function sortsBefore(a: CardData, b: CardData): boolean {
+  const key = (card: CardData) =>
+    [Number(card.viewed === true), TIER_RANK[card.evaluation.tier ?? 'unknown'], -Date.parse(card.last_published_at)] as const
+  const [x, y] = [key(a), key(b)]
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i]
+  return a.id < b.id
+}
+
+/** A card whose viewed mark changed while its post was open takes its place in the list when the
+ * post closes (Ron, 2026-10-18; #62): a viewed card goes below the unviewed ones, a card marked
+ * as not viewed comes back up. Its place is found among the cards drawn; a viewed card that sorts
+ * after all of them while the load holds more goes to the end of the order, below every unviewed
+ * card (its exact place among the viewed ones is the next load's). Nothing changes for a post the
+ * load does not hold, or a card already in its place. */
+export function withViewedSettled(list: Loaded, postId: string): Loaded {
+  const card = list.cards.find((each) => each.id === postId || each.post_ids.includes(postId))
+  if (!card) return list
+  const rest = list.cards.filter((each) => each !== card)
+  const at = rest.findIndex((each) => sortsBefore(card, each))
+  const order = list.order.filter((id) => id !== card.id)
+  if (at >= 0 || list.next >= list.order.length) {
+    const cards = at >= 0 ? [...rest.slice(0, at), card, ...rest.slice(at)] : [...rest, card]
+    if (cards.every((each, i) => each === list.cards[i])) return list
+    const before = at >= 0 ? order.indexOf(rest[at].id) : order.length
+    return { ...list, order: [...order.slice(0, before), card.id, ...order.slice(before)], cards }
+  }
+  if (card.viewed !== true) return list
+  return { ...list, order: [...order, card.id], cards: rest, next: list.next - 1 }
+}
+
 /** The item holding this post leaves the list in place (#377); an item not drawn yet leaves the
  * order. Nothing changes for an id the load does not hold. */
 export function withoutCard<T extends Item>(list: Loaded<T>, postId: string): Loaded<T> {

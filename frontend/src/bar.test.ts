@@ -3,6 +3,7 @@
 // values in words (no glyph, #323), Israel's date for "immediate" (#270), a 422 in words.
 import { describe, expect, it } from 'vitest'
 import {
+  addMonths,
   barHeldCount,
   copyFromOther,
   emptyBar,
@@ -17,6 +18,7 @@ import {
   roomsWords,
   sameBar,
   setDateEnd,
+  setEarliest,
   setRangeEnd,
   toggleAreas,
   withOption,
@@ -105,6 +107,33 @@ describe('values as the profile keeps them', () => {
     expect(setRangeEnd({ min: 2, max: null, level: 'critical' }, 'min', null)).toBeNull()
     expect(setDateEnd(null, 'latest', '2026-11-01')).toEqual({ earliest: null, latest: '2026-11-01', level: 'preference' })
     expect(setDateEnd({ earliest: null, latest: '2026-11-01', level: 'preference' }, 'latest', '')).toBeNull()
+  })
+
+  it('three calendar months on: the same day, or the last day of a shorter month', () => {
+    expect(addMonths('2026-10-18', 3)).toBe('2027-01-18')
+    expect(addMonths('2026-11-30', 3)).toBe('2027-02-28')
+    expect(addMonths('2027-11-30', 3)).toBe('2028-02-29') // a leap year
+    expect(addMonths('2026-12-31', 3)).toBe('2027-03-31')
+    expect(addMonths('2026-05-31', 1)).toBe('2026-06-30')
+  })
+
+  it('"מתאריך" with "עד תאריך" empty fills it three months on; a set "עד תאריך" is kept (Ron, 2026-10-18)', () => {
+    expect(setEarliest(null, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', level: 'preference' })
+    const critical = { earliest: null, latest: null, level: 'critical' as const }
+    expect(setEarliest(critical, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', level: 'critical' })
+    const typed = { earliest: null, latest: '2026-12-15', level: 'preference' as const }
+    expect(setEarliest(typed, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2026-12-15', level: 'preference' })
+    const changed = { earliest: '2026-11-01', latest: '2027-01-10', level: 'preference' as const }
+    expect(setEarliest(changed, '2026-11-05')).toEqual({ earliest: '2026-11-05', latest: '2027-01-10', level: 'preference' })
+  })
+
+  it('the filled date follows the year as it is typed, and goes when "מתאריך" is cleared', () => {
+    let entry = setEarliest(null, '0002-11-01')
+    for (const year of ['0020', '0202', '2026']) entry = setEarliest(entry, `${year}-11-01`)
+    expect(entry).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', level: 'preference' })
+    expect(setEarliest(entry, '')).toBeNull()
+    const typed = { earliest: '2026-11-01', latest: '2026-12-15', level: 'preference' as const }
+    expect(setEarliest(typed, '')).toEqual({ earliest: null, latest: '2026-12-15', level: 'preference' })
   })
 
   it("a new bar is #268's: both on, nothing set, sublets off, women only hidden", () => {
