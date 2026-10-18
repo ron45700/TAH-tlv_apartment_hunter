@@ -67,6 +67,8 @@ RefusalReason = Literal[
     "unknown_key",
     "key_used",
     "no_admin",
+    "code_not_usable",
+    "chat_linked_elsewhere",
 ]
 
 
@@ -438,6 +440,8 @@ def _new_user(
         disabled_at=None,
         failed_sign_ins=0,
         last_failed_sign_in_at=None,
+        telegram_chat_id=None,
+        telegram_linked_at=None,
     )
 
 

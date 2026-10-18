@@ -43,7 +43,8 @@ archive lists, the flags, the reports and the corrections."*
 3. Met: 3.6's tests 5–7 and the site of 3.7.
 4. Met: the four pairs tie and nothing else (3.6, round 6); one flagged as one card on the site (3.7 step 6).
 5. Accepted as shown on the copy (#423); made for real the day the first friend is added (`DEPLOY.md`, #440).
-6. Moved to the server deployment, on the server (#428; `DEPLOY.md`).
+6. Met, 2026-10-18 (#448, #449, #451): the measured day on the server (34 runs, $0.044 by the usage metadata; the bills
+   $0.06 OpenAI, $0.90 Apify); I3 VERIFIED; Ron judged the interface that day.
 7. Met: `test_web_writes.py`, `test_web_admin_writes.py`, `test_policy.py` (invariants 14, 12); the socket guard and
    `test_web.py` (15).
 8. Met: the YAML is gone (3.4) and every §3 row is resolved or re-planned; the phone as a dedup B signal (#75 C) closed

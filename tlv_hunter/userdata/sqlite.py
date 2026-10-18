@@ -4,7 +4,9 @@ One JSON document per record, written and read by the pydantic model, plus looku
 (#65). Its own tables and layout row; it never touches `raw_posts`, `post_lifecycle`, `listings`
 or `group_watermarks`. Its layout version 2 adds a trigger on `corrections` that moves the store
 generation counter (#316, `store_generation.py`), whose one-row table it creates when it lays out
-a new file first. A report's or a correction's `listing_id` has no foreign key: they outlive
+a new file first. Gate F's tables (#453) have their own layout row, `userdata.telegram`, created
+when absent, as `store.listings` is in `store/`; they move no counter (no card changes with them).
+A report's or a correction's `listing_id` has no foreign key: they outlive
 their post (#255). SQLite only, as `state/` is (#64).
 """
 
@@ -20,16 +22,20 @@ from tlv_hunter import store_generation
 from tlv_hunter.contracts.classification_report import ClassificationReport
 from tlv_hunter.contracts.field_correction import FieldCorrection
 from tlv_hunter.contracts.profile import Profile
+from tlv_hunter.contracts.sent_alert import SentAlert
 from tlv_hunter.contracts.session import Session
 from tlv_hunter.contracts.signup_key import SignupKey
+from tlv_hunter.contracts.telegram_link_code import TelegramLinkCode
 from tlv_hunter.contracts.user import User
 from tlv_hunter.contracts.viewed_post import VIEWED_POST_SCHEMA_VERSION, ViewedPost
 from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS
 from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.userdata.base import (
     AdminExists,
+    ChatLinkedElsewhere,
     CorrectionInForce,
     KeyNotUsable,
+    LinkCodeNotUsable,
     OpenReportExists,
     UsernameTaken,
 )
@@ -40,6 +46,9 @@ LAYOUT_MODULE = "userdata"
 # Version 2 (DECISIONS.md #316): the counter trigger on `corrections`; a file at version 1 is
 # refused until `jobs/add_store_generation.py` migrates it.
 LAYOUT_VERSION = 2
+# Gate F's tables (#453): their own row, created when absent.
+TELEGRAM_LAYOUT_MODULE = "userdata.telegram"
+TELEGRAM_LAYOUT_VERSION = 1
 
 _CREATE_LAYOUT_VERSION = (
     "CREATE TABLE IF NOT EXISTS layout_version (module TEXT PRIMARY KEY, version INTEGER NOT NULL)"
@@ -66,6 +75,13 @@ _CREATE_TABLES = (
     "field TEXT NOT NULL, in_force INTEGER NOT NULL, doc TEXT NOT NULL)",
     "CREATE UNIQUE INDEX corrections_one_in_force "
     "ON corrections (listing_id, field) WHERE in_force = 1",
+)
+
+_CREATE_TELEGRAM_TABLES = (
+    "CREATE TABLE telegram_link_codes (code_hash TEXT PRIMARY KEY, "
+    "user_id TEXT NOT NULL REFERENCES users (user_id), doc TEXT NOT NULL)",
+    "CREATE TABLE sent_alerts (user_id TEXT NOT NULL REFERENCES users (user_id), "
+    "listing_id TEXT NOT NULL, doc TEXT NOT NULL, PRIMARY KEY (user_id, listing_id))",
 )
 
 
@@ -107,6 +123,21 @@ class SqliteUserDataStore:
                     f"{self._path}: module {LAYOUT_MODULE!r} expects layout version "
                     f"{LAYOUT_VERSION}, found {row[0]}; no automatic migration"
                 )
+            row = conn.execute(
+                "SELECT version FROM layout_version WHERE module = ?", (TELEGRAM_LAYOUT_MODULE,)
+            ).fetchone()
+            if row is None:
+                for statement in _CREATE_TELEGRAM_TABLES:
+                    conn.execute(statement)
+                conn.execute(
+                    "INSERT INTO layout_version (module, version) VALUES (?, ?)",
+                    (TELEGRAM_LAYOUT_MODULE, TELEGRAM_LAYOUT_VERSION),
+                )
+            elif row[0] != TELEGRAM_LAYOUT_VERSION:
+                raise RuntimeError(
+                    f"{self._path}: module {TELEGRAM_LAYOUT_MODULE!r} expects layout version "
+                    f"{TELEGRAM_LAYOUT_VERSION}, found {row[0]}; no automatic migration"
+                )
 
     # --- users ---
 
@@ -116,7 +147,7 @@ class SqliteUserDataStore:
         _require_profile_of(user, profile)
         with self._transaction() as conn:
             for (doc,) in conn.execute("SELECT doc FROM users").fetchall():
-                if User.model_validate_json(doc).is_admin:
+                if User.from_stored_json(doc).is_admin:
                     raise AdminExists("there is already an admin (#244)")
             _insert_user(conn, user)
             _put(conn, "profiles", ("user_id",), (profile.user_id,), profile)
@@ -395,19 +426,79 @@ class SqliteUserDataStore:
             )
         return record
 
+    # --- Gate F: Telegram (#453) ---
+
+    def add_link_code(self, code: TelegramLinkCode) -> TelegramLinkCode:
+        if code.used_at is not None:
+            raise ValueError("a new code is unused")
+        with self._transaction() as conn:
+            conn.execute(
+                "INSERT INTO telegram_link_codes (code_hash, user_id, doc) VALUES (?, ?, ?)",
+                (code.code_hash, code.user_id, code.model_dump_json()),
+            )
+        return code
+
+    def link_telegram(self, code_hash: str, chat_id: int, now: datetime) -> User:
+        with self._transaction() as conn:
+            row = conn.execute(
+                "SELECT doc FROM telegram_link_codes WHERE code_hash = ?", (code_hash,)
+            ).fetchone()
+            code = None if row is None else TelegramLinkCode.model_validate_json(row[0])
+            if code is None or not code.usable(now):
+                raise LinkCodeNotUsable("no usable code with that hash")
+            users = [User.from_stored_json(doc) for (doc,) in conn.execute("SELECT doc FROM users")]
+            user = next((u for u in users if u.user_id == code.user_id), None)
+            if user is None or user.disabled_at is not None:
+                raise LinkCodeNotUsable("the code's user cannot be linked")
+            if any(u.telegram_chat_id == chat_id and u.user_id != user.user_id for u in users):
+                raise ChatLinkedElsewhere("the chat is linked to another user")
+            if user.telegram_chat_id != chat_id:
+                user = User.model_validate(
+                    {**user.model_dump(), "telegram_chat_id": chat_id, "telegram_linked_at": now}
+                )
+                conn.execute(
+                    "UPDATE users SET doc = ? WHERE user_id = ?",
+                    (user.model_dump_json(), user.user_id),
+                )
+            used = TelegramLinkCode.model_validate({**code.model_dump(), "used_at": now})
+            conn.execute(
+                "UPDATE telegram_link_codes SET doc = ? WHERE code_hash = ?",
+                (used.model_dump_json(), code_hash),
+            )
+        return user
+
+    def find_user_by_chat(self, chat_id: int) -> User | None:
+        return next((u for u in self.list_users() if u.telegram_chat_id == chat_id), None)
+
+    def add_sent_alert(self, alert: SentAlert) -> bool:
+        with self._transaction() as conn:
+            cursor = conn.execute(
+                "INSERT INTO sent_alerts (user_id, listing_id, doc) VALUES (?, ?, ?) "
+                "ON CONFLICT (user_id, listing_id) DO NOTHING",
+                (alert.user_id, alert.listing_id, alert.model_dump_json()),
+            )
+            return cursor.rowcount == 1
+
+    def sent_listing_ids(self, user_id: str) -> set[str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT listing_id FROM sent_alerts WHERE user_id = ?", (user_id,)
+            ).fetchall()
+        return {listing_id for (listing_id,) in rows}
+
     # --- plumbing ---
 
-    def _get[M: BaseModel](self, model: type[M], sql: str, params: tuple[str, ...]) -> M | None:
+    def _get[M: BaseModel](self, model: type[M], sql: str, params: tuple[object, ...]) -> M | None:
         with self._connect() as conn:
             row = conn.execute(sql, params).fetchone()
-        return None if row is None else model.model_validate_json(row[0])
+        return None if row is None else _read(model, row[0])
 
     def _all[M: BaseModel](
         self, model: type[M], sql: str, params: tuple[object, ...] = ()
     ) -> list[M]:
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
-        return [model.model_validate_json(doc) for (doc,) in rows]
+        return [_read(model, doc) for (doc,) in rows]
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
@@ -468,8 +559,15 @@ def _require_expected[M: BaseModel](
 ) -> None:
     """Compare and set inside the write's transaction, as for `PostLifecycle` (#289)."""
     row = conn.execute(sql, (record_id,)).fetchone()
-    if row is None or model.model_validate_json(row[0]) != expected:
+    if row is None or _read(model, row[0]) != expected:
         raise StaleRecordError(record_id)
+
+
+def _read[M: BaseModel](model: type[M], doc: str) -> M:
+    """A stored document; a `User` through `User.from_stored_json` (a version-1 one reads as 2)."""
+    if model is User:
+        return User.from_stored_json(doc)  # type: ignore[return-value]
+    return model.model_validate_json(doc)
 
 
 def _end(conn: sqlite3.Connection, session: Session, now: datetime) -> bool:

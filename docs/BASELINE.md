@@ -43,6 +43,9 @@ Amended again 2026-10-16 (round 25): §12 (the server deployment step between Ph
 `DECISIONS.md` #426; Phase 5's row keeps the rest) and §14 (the Mini App spike against `tlvapthunter`, #426).
 Amended 2026-10-17 (round 26): §12 (Phase 3's line over a copy of the store; the store moved once into the server's
 volume and the measured working day at the deployment step; "first friend connected" there; `DECISIONS.md` #427, #428).
+Amended 2026-10-18 (round 30): §12 (the server deployment row marked done, `DECISIONS.md` #451).
+Amended again 2026-10-18 (round 31, Ron's answers on `PHASE_4.md`): §9 (alerted only on posts first stored after linking
+Telegram, #452 point 10), §4 (quiet hours 00:00–07:00, #442; the bridge scheduler, #454), §12 (Phase 4 built).
 Amended again 2026-10-17 (round 28): §3 (the same image, not the same compose file, #433; the server's store in
 `./appdata/store/`, #432) and §12 (the deployment row: a fresh store, the first friend as a procedure, the new "done
 means", `DECISIONS.md` #436–#440).
@@ -127,9 +130,10 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
 
 - **Stored before the model** (`DECISIONS.md` #79): in phase 1 the post is stored before the
   model, as `"pending"`; the model updates the stored post later.
-- **Schedule:** every 30 minutes by default. No scheduled runs between 01:00 and 07:00 Israel
-  time. The 07:00 run covers the whole night: its window starts at the last successful run. The hours live in config;
-  later they are editable by the admin from the dashboard.
+- **Schedule:** every 30 minutes by default. No scheduled runs between **00:00** and 07:00 Israel
+  time (#442; *until 2026-10-18: 01:00*). The 07:00 run covers the whole night: its window starts at the last successful
+  run. **From Phase 4 a simple `scheduler` service runs on the server** (#454): the interval and the hours from the
+  stack's `.env`, read at its start; later they are editable by the admin from the dashboard (Phase 5).
 - **Interval and manual run** (`DECISIONS.md` #61, phase 5): the interval is an admin setting, and
   a change takes effect at once — the next run is the last run's start plus the new interval. The
   admin can start a run now, also during the quiet hours. A manual run is an ordinary run; when it
@@ -418,8 +422,10 @@ A post alerts a user when all of these hold:
 Preferences never block an alert. If a category the user made critical is not written in the
 post, the alert is still sent and names the missing item.
 
-A new user sees all existing posts in the dashboard but is alerted only on posts that arrive after
-signing up.
+A new user sees all existing posts in the dashboard but is alerted only on posts first stored after **linking
+Telegram** (`DECISIONS.md` #452 point 10, 2026-10-18). *Until 2026-10-18: "that arrive after signing up".* A post is
+alerted to a user at most once (the sent-alert record, Gate F, #453); a post the Gate D key ties to an earlier one, or a
+repost, never alerts; a post whose kind is unclear or not written never alerts (#360).
 
 ---
 
@@ -471,8 +477,8 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 | **1. Collection** | Fixes for decisions #37 and #38 · Apify spike (task 1.1a) · **Gate E** (post lifecycle fields) · SQLite store · thedoor fetch · pre-model rejects · dedup A · repost log · image download · per-group watermark | A real run stores posts and images with no duplicates, and a second run does not repeat them |
 | **2. Classification** | **Gate B** (field schema from §5–§7) · the model · post-model rejects · street and area · **Gate D** (the key, #230; its use is phase 3's, #231) · reclassify job | Every post has fields and a state |
 | **3. Dashboard** | **Gate C** (filter rules, and the user, key, session, profile, viewed-post, report and correction records) · users and keys · profile with two search options and filters · cards · viewed posts · rejected list · flagging · "wrong classification" reports and the admin's corrections · the admin lists · the same-listing grouping, derived by the Gate D key (#231) · **the polished UI** (#257) | Ron filters and sees real apartments in a browser, from the site in Docker on his laptop, over a copy of the store in its volume (#428) |
-| **Server deployment** (between 3 and 4, #426) | After Phase 3, taken from Phase 5: the image on `homeserver`, published from git by the repo's GitHub Action and pulled by homelab's `stacks/tlv-hunter/` (#420, #433) · the site's own tailnet machine `tlvapthunter`, a Tailscale container with Serve (#419) · a fresh store: `run_once --bootstrap` (30 posts per group, #437), then `create_admin`; the Windows store is not moved (#436) · the `Host`/`Origin` probe through Serve and a real sign-in (#422) · the measured working day, Phase 3's DoD 6 (#428) · "Adding the first friend" as a written procedure, run when Ron adds one: the sharing rule, DoD 2 and 5 on the real store (#438, #440). Planned in `docs/DEPLOY.md` | The site is reached at `tlvapthunter.<tailnet>.ts.net`, the probe passes, and Ron signs in as the admin on the server (#440) |
-| **4. Telegram** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike, against `tlvapthunter` (#426) | A real alert arrives according to Ron's profile |
+| **Server deployment** (between 3 and 4, #426) — **DONE 2026-10-18 (#441, #451)** | After Phase 3, taken from Phase 5: the image on `homeserver`, published from git by the repo's GitHub Action and pulled by homelab's `stacks/tlv-hunter/` (#420, #433) · the site's own tailnet machine `tlvapthunter`, a Tailscale container with Serve (#419) · a fresh store: `run_once --bootstrap` (30 posts per group, #437), then `create_admin`; the Windows store is not moved (#436) · the `Host`/`Origin` probe through Serve and a real sign-in (#422) · the measured working day, Phase 3's DoD 6 (#428) · "Adding the first friend" as a written procedure, run when Ron adds one: the sharing rule, DoD 2 and 5 on the real store (#438, #440). Planned in `docs/DEPLOY.md` | The site is reached at `tlvapthunter.<tailnet>.ts.net`, the probe passes, and Ron signs in as the admin on the server (#440) |
+| **4. Telegram** — **built 2026-10-18 (round 31)**, the real-bot test and the server's real alert pending | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike, against `tlvapthunter` (#426) · a bridge `scheduler` for continuous collection on the server (#454) | A real alert arrives according to Ron's profile |
 | **5. Server** | The home server already runs the system from the deployment step (#426); Phase 5 adds the scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended (#427) |
 | **6. Later** | memo23 failover · editing the quiet hours, the group list and `max_posts` from the dashboard · Yad2 | |
 

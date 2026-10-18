@@ -3910,6 +3910,116 @@ and checked, the command that wrote it deletes the older dated ones beyond the 7
 nothing. **Applies on every machine**: on Windows the next command that writes a backup (on Ron's go) also prunes the old
 dated backups in `data/store/`. Homelab's README states restic's include (`store_exports/*.sqlite3`, `appdata/tailscale/`)
 and exclude (`appdata/store/`, every `images/` folder). *Ron's decision.*
+
+## The measured day; the server deployment closed (2026-10-18, round 30)
+
+### 448 — The measured day: 34 slots, nothing failed
+On `homeserver`, 2026-10-17 17:53 → 2026-10-18 17:53 IDT, by `measure_day.sh` (#445): **34 slots, 34 collection runs and 34
+classification runs, 0 failed.** 398 rows fetched; 165 posts classified (129 active, 18 `other_city`, 11 `for_sale`, 6
+`not_listing`, 1 `seeking`); 168 model calls; tokens: input 910,562 (cached 814,008, cache write 62,616), output 49,590;
+**$0.044159 by the usage metadata.** *Ron's figures, from `bash measure_day.sh totals`.*
+
+### 449 — The bills; the monthly cost; Ron accepts it
+Read by Ron on 2026-10-18, covering 2026-10-17 and 18, the bootstrap included. **OpenAI: $0.06 in all**, matching the
+runs' usage metadata (the day's $0.044 plus the bootstrap's classification): `ASSUMPTIONS.md` I3 is VERIFIED. **Apify:
+$0.90 in all**, while the runs' logged `usageTotalUsd` summed to $0.302 for the day. 398 + 180 (the bootstrap) rows at
+$1.50 / 1,000 = $0.87, which matches the bill. **The estimate from now on:** about 400 rows a day, about $0.60 a day for
+Apify, **about $19–20 a month in all** (Apify about $18, OpenAI about $1.3). *Ron's decision, 2026-10-18: he accepts this
+cost.*
+
+**Two points the round-30 record leaves open (for Ron):**
+1. **Why the logged figure is low.** Ron's reading: `usageTotalUsd` is platform usage only and leaves out the actor's
+   per-result charge. `ASSUMPTIONS.md` P19 recorded something else on 2026-10-04: the figure logged at the end of a run is
+   preliminary, and read again 10–13 minutes later it had grown to rows × $0.0015 + $0.005 (run B: $0.005 logged, $0.0545
+   later). Both readings agree that the logged figure is not the run's cost; which one holds is settled when the field is
+   verified (#450).
+2. **The start fee.** P6 recorded $0.005 per run start on 2026-10-04's bills. For 35 runs that is $0.175, which the $0.87
+   leaves out: rows and starts together would be about $1.04, above the $0.90 billed. Either the start fee is no longer
+   charged, or the bill was read before all of the day's charges were posted. If it is charged, the day is about $0.77
+   for Apify and the month about $24.
+
+### 450 — Apify's real cost comes from the run's charged events or the pricing model, not `usageTotalUsd`
+For Phase 5's digest (its cost line) and for `measure_day.sh`'s totals. The field (`chargedEventCounts`, or another the API
+documents) is verified under the `external-contract-verification` skill before anything is built on it, with the timing
+of P19 in mind. **No change to `measure_day.sh` now.** *Ron's decision.*
+
+### 451 — Phase 3's DoD 6 is met; the server deployment step is complete
+DoD 6 (the measured working day, #225, #228, moved by #428) is met by #448 and #449; Ron judged the interface on the day.
+The server deployment step (#426) is complete: `BASELINE.md` §12's row is marked done. "Adding the first friend"
+(`DEPLOY.md` §6, #440) stays a written procedure, run the day Ron adds one. Next: Phase 4, planned in `PHASE_4.md`
+(draft). *Ron's decision.*
+
+## Phase 4: Ron's answers on `PHASE_4.md`'s points 1–14; Gate F (2026-10-18, round 31)
+
+### 452 — Points 1–11 and 13 approved as recommended
+1. **The Telegram library: our own small client over the standard library** (`urllib`), with a transport the tests
+   replace; no new dependency for Telegram (A).
+2. **The bot is its own service, `bot`,** in the server's stack: the same image, `python -m tlv_hunter.jobs.bot`,
+   `restart: unless-stopped`, long polling; `TELEGRAM_BOT_TOKEN` passed to this service only (A).
+3. **The bot sends the alerts when the store changes:** it watches the store generation counter (#316) and runs the
+   alert pass; the classification job stays extraction only (A).
+4. The sent-alert record, minimal (A): its names and fields are Gate F (#453).
+5. **Linking by a deep link with a one-time code** (A): the code 32 characters of `A-Za-z0-9_-`, stored as its
+   SHA-256, single use, valid 15 minutes, also typed by hand; one chat per user and one user per chat; unlinking from
+   the preferences page and `/stop`; the bot answers an unlinked chat only for a code; failed codes delayed as failed
+   sign-ins (#264). The fields are Gate F (#453).
+6. **Alerts are sent as they come,** at most one message a second per chat, in publication order (A).
+7. **"Open on the site" opens the site's post page** (`/post/<listing_id>`); the Mini App only if the spike passes (A).
+8. **Invariant 15 is amended:** a Telegram `chat_id` may be carried in requests to `api.telegram.org`, and only there;
+   the bot's token only in that address; the rest of the invariant unchanged; a test pins both (A).
+9. **The Mini App spike on Ron's chat:** a `MenuButtonWebApp` pointing at `tlvapthunter` on his chat only, opened on
+   his phone with Tailscale on and off; no `initData` validation for the spike (A).
+10. **A user is alerted only on posts first stored after `telegram_linked_at`** (A): `BASELINE.md` §9's last sentence
+    is amended ("after linking Telegram", not "after signing up").
+11. **The report flow is in the bot** (A): "report" opens "lied" (asks to confirm, then flags every member of the card)
+    and "wrong classification" (the fields as toggles, "send", then an optional note or "skip"); every callback
+    answered; the buttons carry a short reference (a kind letter and the first 16 hex characters of the `listing_id`).
+13. **The photo:** the card's shown post's first stored photo, uploaded from the store; none, or one Telegram would
+    refuse, a text message with the same lines and buttons (as written).
+*Ron's decision.*
+
+### 453 — Gate F approved: the link and sent-alert records
+Approved as written in points 4 and 5: **`SentAlert`**: `user_id`, `listing_id`, `sent_at`; **on `User`**:
+`telegram_chat_id`, `telegram_linked_at`; **`TelegramLinkCode`**: the code's hash, `user_id`, `created_at`,
+`used_at`. If building shows a field must change, the build stops and asks; no field is changed by the build. Written
+into `SCHEMA.md` (Gate F). *Ron's approval.*
+
+### 454 — Point 12 replaced: continuous collection on the server by a `scheduler` service
+Not `measure_day.sh`. A `scheduler` service in the stack: the same image, `python -m tlv_hunter.jobs.scheduler`,
+`restart: unless-stopped`, `jobs.env` for the keys (not the Telegram token). It runs `run_once` then
+`classify_pending` (the cap per run of `measure_day.sh`: $0.05), serially, never in parallel (#140), every
+`RUN_INTERVAL_MINUTES` (default 30), no run starting in `QUIET_FROM`–`QUIET_UNTIL` Israel time (default 00:00–07:00,
+#442); all three from the stack's `.env`, read at start (a change is a restart of the service). It logs as the jobs do,
+to stdout (`docker logs`) and to `appdata/measure/`. A stop lets the running command finish. 3 failed collections in a
+row: it logs it and waits for the next interval (no silent exit). **The rule for Ron: stop the scheduler before any
+manual job command.** A simple bridge to Phase 5's scheduler: the admin-set interval, "run now" and retention stay
+Phase 5's. `measure_day.sh` stays for one-off measured days. *Ron's decision.*
+
+### 455 — Point 14: the token on the laptop, for this round's tests only
+The token is in the laptop's `.env`. The bot runs on the laptop only for this round's tests, **never at the same time
+as one on the server** (Telegram allows one `getUpdates` consumer per bot). No collection or classification run on the
+laptop (no Apify, no OpenAI calls). *Ron's decision.*
+
+### 456 — A free admin command `send_test_alert`
+`send_test_alert --listing <id prefix> [--user <username>]`: builds the alert for an existing post exactly as a real one
+(photo, caption, buttons) and sends it to a linked user's chat; writes no sent-alert record. For checking the layout
+without new posts. *Ron's request.*
+
+## Phase 4: the real-bot test (2026-10-18, round 32)
+
+### 457 — The real-bot test passed on the laptop; T5 is VERIFIED; the menu button for everyone is Ron's next step
+Ron ran `PHASE_4.md` §4.6 on the laptop's development copy and reports every step passed: linking and #358's message;
+the three test alerts; "lied" on alert 1 and its restore; "wrong classification" on alert 3 (with a note) and on alert 2
+(skip) and their restores; `/site`; a wrong code. **The Mini App spike (T5):** on Ron's phone the menu button opens the
+site inside Telegram with Tailscale on, the sign-in holds across reopening; with Tailscale off it does not load; on
+Telegram Desktop it opens in the browser (not a concern). The laptop's bot is stopped. **The check that followed**
+(read-only, the copy against the Windows store it was moved from): the `RawPost` (266) and `Listing` (194) rows are
+identical, and no `SentAlert` was written. **It did not find steps 5–7's writes as reported:** `1121aaad36bc` still
+flagged (19:05 UTC), `0555aa328a77` with one open report (`parking` only, no note), still off the list, and no report on
+`e75310053330`. **Closed (Ron, same day):** the copy reflects what Ron actually did (he toggled other fields than he
+reported, and restored nothing); no defect in the report flow. The unrestored test flag and report stay on the
+development copy. **Next step, Ron's to decide (points 7 and 9):** a `web_app`
+menu button for every linked user, pointing at the site. *Ron's report; the check's.*
 ---
 
 ## Corrections to recorded facts
@@ -3928,3 +4038,5 @@ so the corrections are visible in one place.
 | The actor's absolute date filter accepts full ISO | Date only. Minute granularity comes from the **relative** form instead | 2026-09-14, OpenAPI |
 | The actor page's "from $1.00" is the price | It is a tiered floor. The working rate is $1.50 | 2026-09-14 |
 | Near-duplicate matching might be required | It is not. 3/3 pairs collided on hash, no false collisions, no near-misses above 0.90 | Task 1.2, 2026-09-14 |
+| The bot's "joining groups is disabled" (#356) | `getMe` answers `can_join_groups: true` (2026-10-18, `ASSUMPTIONS.md` T7). The bot ignores every chat that is not private, so nothing depends on it; BotFather's `/setjoingroups` turns it off | Round 31, the contract check |
+| The `usageTotalUsd` each run logs is the run's Apify cost (`measure_day.sh`'s totals report it as such) | It under-reports: the measured day's 34 runs summed to $0.302, while the bill for the day and the bootstrap is $0.90, about the rows charged at $1.50 / 1,000 ($0.87). The cause is open (#449 point 1: platform usage only, or the preliminary end-of-run figure of P19); the real cost comes from the charged events or the pricing (#450) | The measured day, 2026-10-18 |

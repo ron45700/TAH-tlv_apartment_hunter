@@ -34,7 +34,7 @@ LISTING_ID = "b" * 64
 
 def user(**changes: Any) -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "user_id": USER_ID,
         "username": "dana.k",
         "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$c2FsdA$aGFzaA",
@@ -46,6 +46,8 @@ def user(**changes: Any) -> dict[str, Any]:
         "disabled_at": None,
         "failed_sign_ins": 0,
         "last_failed_sign_in_at": None,
+        "telegram_chat_id": None,
+        "telegram_linked_at": None,
         **changes,
     }
 
@@ -129,7 +131,8 @@ def round_trip[M: BaseModel](record: M) -> M:
             User,
             "schema_version user_id username password_hash is_admin created_at signup_key_id "
             "must_change_password password_changed_at disabled_at failed_sign_ins "
-            "last_failed_sign_in_at",
+            "last_failed_sign_in_at "
+            "telegram_chat_id telegram_linked_at",  # Gate F (#453)
         ),
         (SignupKey, "schema_version key_id key_hash label created_at used_by used_at cancelled_at"),
         (Session, "schema_version token_hash user_id created_at expires_at ended_at"),
@@ -492,7 +495,7 @@ def test_removed_by_and_removed_at_go_together() -> None:
 @pytest.mark.parametrize(
     "build",
     [
-        lambda: User(**user(schema_version=2)),
+        lambda: User(**user(schema_version=3)),
         lambda: SignupKey(**key(schema_version=2)),
         lambda: Session(**session(schema_version=2)),
         lambda: ClassificationReport(**report(schema_version=2)),

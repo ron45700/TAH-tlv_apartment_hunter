@@ -7132,3 +7132,81 @@ starts deleting the oldest (2026-10-06). The server's `appdata/store_exports/ima
 #446 until Ron deletes them. homelab's `docs/ROADMAP.md` has a change of Ron's, not mine.
 
 **Next:** Ron commits and pushes both repos, updates the stack on the server, then starts the measured day on his go.
+
+## 2026-10-18 — Round 30: the measured day recorded; DoD 6 and the server deployment closed; Phase 4 drafted
+
+Docs only. No paid call, nothing on the server, no git write. Network: Telegram's documentation pages
+(core.telegram.org/bots/api, /bots/features, /bots/faq, /bots/webapps) and PyPI's JSON for two libraries.
+
+**Recorded:** #448 (the measured day: 34 slots, 34 + 34 runs, 0 failed, 398 rows, 165 posts classified, 168 calls,
+$0.044159), #449 (the bills: OpenAI $0.06, Apify $0.90; about 400 rows and $0.60 a day for Apify, about $19–20 a month;
+Ron accepts it; **two points left open**: the cause of the low logged `usageTotalUsd`, Ron's "platform usage only" against
+P19's "preliminary at the end of a run"; and the $0.005 start fee of P6, $0.175 for 35 runs, not in the $0.87), #450
+(Apify's real cost from the charged events or the pricing, verified first; `measure_day.sh` unchanged), #451 (DoD 6 met;
+the server deployment complete). A row in "Corrections to recorded facts" (`usageTotalUsd` under-reports). `ASSUMPTIONS.md`:
+I3 VERIFIED, P7 measured, notes on P6 and P19, T1 and T2 documented. `RESEARCH.md` §3: the measured cost. `BASELINE.md` §12's
+row done; `PHASE_3.md` DoD 6 met; `DEPLOY.md` complete, §5's result. BACKLOG: the I3, DoD 4, deployment and bill rows closed;
+the recompute and busy-timeout rows left for Ron (not measured on the day); a Phase 5 row for #450.
+
+**Planned:** `docs/PHASE_4.md` (draft): goal, DoD 1–6, anchors, the order of work, what was read (Bot API 10.3: the caption
+1–1024, text 4096, media group 2–10, `callback_data` 1–64 bytes, deep links 64 characters `A-Za-z0-9_-`, `answerCallbackQuery`
+required, HTML escaping, one message a second per chat, `retry_after`, the token in the URL, Mini App `initData`
+validation), the alert from #363, points 1–14 for Ron (Gate F in points 4 and 5; invariant 15 and the chat id, a
+contradiction, point 8). **Found:** a `listing_id` (64 hex characters) does not fit in `callback_data`; the site already
+opens one post at `/post/<id>`.
+
+**Next:** Ron answers PHASE_4.md's points 1–14 and #449's two open points; then Gate F and the build.
+
+## 2026-10-18 (continued) — Round 31: Phase 4 approved (#452–#456, Gate F) and built; the real-bot test prepared
+
+No paid call, nothing on the server, no git write. Network: Telegram's API documentation, PyPI (`tzdata`), and three
+free Bot API calls for the contract check (`getMe`, `getWebhookInfo`, `answerCallbackQuery` with an invalid id; no
+update read). The bot was not started.
+
+**Recorded:** #452 (points 1–11 and 13 as recommended; invariant 15 amended for the `chat_id`; `BASELINE.md` §9: after
+linking), #453 (Gate F), #454 (the `scheduler` service, replacing point 12), #455 (the token on the laptop, tests only),
+#456 (`send_test_alert`); a correction row (`can_join_groups` is true). `SCHEMA.md` Gate F (the stub section removed);
+`BASELINE.md` §4 (00:00, the scheduler), §9, §12; `ASSUMPTIONS.md` T5–T11; `PHASE_4.md` approved, §4.5–§4.7; CLAUDE.md.
+
+**Built:** `contracts/` (`User` version 2, `SentAlert`, `TelegramLinkCode`; the three Phase 0 stubs removed); `userdata/`
+Gate F's methods and tables (layout row `userdata.telegram`, created when absent); `accounts/linking.py`; `telegram/`
+(`client`, `callbacks`, `alerts`, `bot`); `policy/alert.py`; `notify/alert.py`, `notify/telegram.py`; `jobs/bot.py`,
+`send_test_alert.py`, `telegram_menu.py`, `scheduler.py`; the site's three `/api/telegram` endpoints and the
+preferences page's Telegram card; `compose.yaml` (`bot`, profile `bot`; `jobs` given its two keys by name); the
+`Dockerfile`'s `data/measure`; `tzdata`. homelab: the stack's `bot` and `scheduler`, `.env.example`, the README.
+
+**Verified:** `uv run pytest` **2103 passed**; ruff clean; `npm test` 84 passed, `npm run build` clean. The image built:
+`Asia/Jerusalem` (tzdata 2026e) and SQLite 3.46.1 in it; the scheduler and the bot refuse a wrong setting there before
+any call; Compose gives the token to `bot` only (checked without printing it). The site on the new image over the
+development copy: the new endpoints answer a guest 401, the page carries the card; it laid out Gate F's empty tables;
+then stopped again, as it was. The three test alerts rendered read-only from the copy (nothing sent).
+
+**Found:** the phone cannot reach the laptop's site, so on the laptop the link code comes from the laptop's browser
+(§4.6); the alerts' "open on the site" opens the server's site, which lacks the copy's posts; `0158ee1d1fdc` is a
+"women only" post, so `0555aa328a77` is the room post of the test.
+
+**Next:** the real-bot test with Ron in this chat (`PHASE_4.md` §4.6); then Ron's commit and the deploy (§4.7).
+
+## 2026-10-18 (continued) — Round 32: the real-bot test recorded; T5 VERIFIED; the check after it
+
+Docs and one read-only check; no paid call, nothing on the server, no git write, the bot not started.
+
+**Recorded:** #457 (Ron's real-bot test, every step reported passed; T5 on his phone: the menu button opens the site in
+Telegram with Tailscale on, the sign-in holds, nothing loads with it off; Desktop opens the browser). `ASSUMPTIONS.md`
+T5 and T9 ✅ VERIFIED; `PHASE_4.md` §4.6's result; BACKLOG item 6. **Kept for Ron's next step:** a `web_app` menu button
+for every linked user, pointing at the site (points 7, 9).
+
+**Verified (read-only, the copy against the Windows store it was moved from):** `raw_posts` 266 and `listings` 194 rows
+identical; `sent_alerts` 0; one user linked (18:56 UTC).
+
+**Found, open for Ron:** steps 5–7's writes are not in the copy as reported. `1121aaad36bc` is still `rejected`/`flagged`
+(flagged 19:05 UTC); `0555aa328a77` is `rejected`/`misclassified` with one open report, fields `["parking"]`, no note;
+`e75310053330` is active with no report; no restore is in the copy. The bot's log records only its start, the link and
+its stop (the writes are not logged).
+
+**Next:** Ron settles steps 5–7 (where they were made, or a restore from the laptop's admin pages); the menu button for
+everyone; the commit and the deploy (`PHASE_4.md` §4.7).
+
+**Closed (round 32, later):** Ron confirms the copy reflects what he did (other fields toggled, nothing restored); no
+defect in the report flow; the test flag and report stay on the development copy (#457). Next: the deploy, guided step by
+step in this chat (`PHASE_4.md` §4.7).

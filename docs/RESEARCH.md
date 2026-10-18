@@ -157,6 +157,12 @@ projection, kept for the record: ~150 posts/day gave ~$12–16/month for one run
 groups and ~$39–43/month for six runs; the earlier "~1,500 posts/month ≈ $2.25" ignored the start
 fee and underestimated volume.*
 
+**Measured, 2026-10-17/18 (`DECISIONS.md` #448, #449):** one real day of 34 runs every 30 minutes (none 00:00–07:00):
+398 rows, 165 new posts classified. Apify's bill for that day and the bootstrap (180 rows) is $0.90, about 578 rows ×
+$0.0015; OpenAI's $0.06. **About $0.60 a day for Apify, about $19–20 a month in all**, accepted by Ron. Open: whether the
+$0.005 start fee is still charged (35 runs, $0.175; with it, about $24 a month), and why the runs' logged `usageTotalUsd`
+summed to only $0.302 (P19; #450: the real cost from the charged events, verified first).
+
 **The projection holds only with a short window.** It assumes each run asks for about 30 minutes
 plus the buffer. Under the earlier rule, `min(all watermarks) - buffer` with the watermark as the
 highest `posted_at`, every run reached back to the quietest group's last post. Simulated over the

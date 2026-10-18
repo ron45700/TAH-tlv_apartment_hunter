@@ -1,6 +1,6 @@
 # The server deployment step — plan
 
-**Status (2026-10-17, round 29): LIVE.** Deployed on `homeserver` by Ron (`DECISIONS.md` #441): steps 1–7 done, the "done means" met (Ron signed in as the admin through `tlvapthunter`; I25 VERIFIED). **Next: step 8, the measured day** (§5, `measure_day.sh`, #445), on Ron's go. §6 waits for the first friend. **Parent:** `BASELINE.md` §12, the "Server deployment" row · **after** Phase 3 (complete, #430) **and before** Phase 4. **Owner:** Ron.
+**Status (2026-10-18, round 30): COMPLETE (`DECISIONS.md` #451).** Live on `homeserver` since 2026-10-17 (#441); the measured day done (§5, #448, #449). **§6, "Adding the first friend", stays a procedure, run the day Ron adds one.** **Parent:** `BASELINE.md` §12, the "Server deployment" row · **after** Phase 3 **and before** Phase 4 (`PHASE_4.md`). **Owner:** Ron.
 
 **Scope (#426, #428, #436):** the image on `homeserver`, published from git by the repo's GitHub Action and pulled by
 homelab's `stacks/tlv-hunter/` (#420, #433); the site's own tailnet machine `tlvapthunter`, a Tailscale container with
@@ -123,6 +123,12 @@ him. Git is Ron's at every step.
    for the day Ron adds a friend.
 
 ## 5. The measured working day (3.10) — `measure_day.sh`, on Ron's go (#445)
+
+**DONE, 2026-10-17 17:53 → 2026-10-18 17:53 IDT (#448, #449):** 34 slots, 34 collection and 34 classification runs, none
+failed; 398 rows; 165 posts classified; 168 calls, $0.044159 by the usage metadata. The bills (the bootstrap included):
+OpenAI $0.06, Apify $0.90. **The totals' Apify line (`usageTotalUsd`) under-reports** (it summed to $0.302): the real cost
+comes from the charged events or the pricing (#450); the script is not changed now.
+
 
 **The script:** `homelab/stacks/tlv-hunter/measure_day.sh`, run on the server from the stack's folder (its commands and
 what they do are in homelab's README, "The measured day"). For 24 hours from its start: a slot every 30 minutes at :00 and

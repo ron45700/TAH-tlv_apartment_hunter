@@ -5,7 +5,7 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-12 (round 8) — **a field moved, approved explicitly by Ron (`DECISIONS.md` #317):**
+**Last updated:** 2026-10-18 (round 31) — **Gate F approved by Ron (`DECISIONS.md` #453):** `telegram_chat_id` and `telegram_linked_at` on `User` (schema version 2; a stored version-1 user reads as 2), `TelegramLinkCode` and `SentAlert`; the Phase 0 stub contracts removed. Before that, 2026-10-12 (round 8) — **a field moved, approved explicitly by Ron (`DECISIONS.md` #317):**
 `include_sublets` is now one switch on `Profile` (schema version 2), no longer one per `SearchOption`; a stored version-1
 profile reads as version 2. Before that, 2026-10-11 (round 6) — rule text only, approved by Ron: a correction of `other_city` in force
 outranks Facebook's location field (Gate B, "The city comes from…", `DECISIONS.md` #296); the gate table's row D says
@@ -113,6 +113,7 @@ Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 | B | `Listing`, and the model's response `ListingExtraction` | ✅ Approved 2026-10-05 (#81–#125; the response #137, #151) |
 | D | Dedup stage B key | ✅ Key decided 2026-10-08 (#230, rule 1 amended by #232: a shared phone that is not an agent number and the fields rule, or an identical photo and one of the two rules; nothing else merges). **Nothing is stored:** the result is derived from the stored posts and never written onto a post (#231); it is the same for every user, computed once for all users, held in the site's memory and computed again only when the store changed (#301); no field, record or schema change |
 | C | Filter rules, and the user, key, session, profile, viewed-post, report and correction records | ✅ Approved 2026-10-10: content #242–#257, #262–#287; names and types, R1–R9 and the Gate E amendments #288 |
+| F | Telegram: the link on `User`, `TelegramLinkCode`, `SentAlert` | ✅ Approved 2026-10-18 (#453) |
 
 ---
 
@@ -700,7 +701,7 @@ Whether the schema pydantic derives passes them is the spike's first question.
 (names and types, points R1–R9, the Gate E amendments) · **Amended 2026-10-12:** #317 (one sublet switch per
 profile) · **Schema version:** 1 on every record but `Profile`, which is 2 (#317)
 
-Telegram fields (account linking, sent alerts) are Phase 4's and are not here. The Gate E amendments this gate needs
+Telegram's fields (account linking, sent alerts) are Gate F's, below (#453). The Gate E amendments this gate needs
 are written into Gate E (amended 2026-10-10).
 
 **Common to every record below:**
@@ -741,6 +742,7 @@ One record per account, keyed by `user_id`. Never deleted (#265).
 | `disabled_at` | `datetime` UTC / `None` | #265. Set by the admin to disable the user; `None` when enabled. A disabled user cannot sign in, and disabling ends their sessions; profile, viewed records and reports are kept; enabling sets it back to `None`. The admin cannot be disabled (R8) |
 | `failed_sign_ins` | `int` | #264, R1. Consecutive failed sign-ins for this username; 0 after a success or a reset |
 | `last_failed_sign_in_at` | `datetime` UTC / `None` | #264, R1. The time of the last failure; `None` when `failed_sign_ins` is 0 |
+| `telegram_chat_id`, `telegram_linked_at` | | Gate F (#453): the link to Telegram, below; `User` is at version 2 |
 
 **The delay after failed sign-ins (#264, R1).** From the 5th consecutive failure on, an attempt made
 less than 30 seconds after the last failure is refused without checking the password, and says when to try again. A
@@ -934,6 +936,8 @@ Every record, field and type above, in one table. The rules are in each record's
 | | `disabled_at` | `datetime` UTC / `None` |
 | | `failed_sign_ins` | `int` |
 | | `last_failed_sign_in_at` | `datetime` UTC / `None` |
+| | `telegram_chat_id` | `int` / `None` (Gate F) |
+| | `telegram_linked_at` | `datetime` UTC / `None` (Gate F) |
 | `SignupKey` | `schema_version` | `int` |
 | | `key_id` | `str` |
 | | `key_hash` | `str` |
@@ -1005,24 +1009,49 @@ Every record, field and type above, in one table. The rules are in each record's
 
 ---
 
-# Stub contracts (Phase 0 only)
+# GATE F — Telegram: the link and the sent alerts
 
-**Approved:** 2026-09-14
+**Approved:** 2026-10-18 (`DECISIONS.md` #453; the content, `PHASE_4.md` points 4 and 5, #452)
+**Schema version:** 1 on `SentAlert` and `TelegramLinkCode`; `User` is at version 2 (its two fields below)
 
-`Listing`, `Decision` and `Notification` have no approval gate yet. Invariant 1
-applies to stubs too, so their Phase 0 shapes are approved explicitly and narrowly.
+The same rules as Gate C's records: per user, never on the post (invariant 12); datetimes tz-aware UTC; stored by
+`UserDataStore` (`userdata/`), in its own tables with their own layout row (`userdata.telegram`, version 1); a secret
+stored as its SHA-256 only. *Replaces the Phase 0 stubs (`ListingStub`, `DecisionStub`), kept for `notify/` until
+this phase and removed with it.*
 
-| Stub | Fields | Notes |
+## On `User` (version 2)
+
+| Field | Type | Rule |
 |---|---|---|
-| `ListingStub` | `listing_id` | Not persisted in Phase 0 |
-| `DecisionStub` | `user_id`, `listing_id`, `notify` | Not persisted in Phase 0 |
+| `telegram_chat_id` | `int` / `None` | The linked Telegram chat; `None` when not linked. One chat per user and one user per chat. Sent only to `api.telegram.org` (invariant 15 as amended, #452 point 8) |
+| `telegram_linked_at` | `datetime` UTC / `None` | When the chat was linked; set together with `telegram_chat_id`. **A user is alerted only on posts first stored after it** (#452 point 10). Linking the same chat again keeps it |
 
-`Notification` and `GroupWatermark` are **not** created in Phase 0. `GroupWatermark` was approved at
-Gate E on 2026-10-04 (above); its storage is built in task 1.10, and the watermark logic (when it
-advances) in task 1.13. The sent-alert record arrives with alerts in phase 4; its field set is
-approved before it is written.
+A stored version-1 `User` reads as version 2 with both `None` (read-time only, as `Profile`, #317).
 
-**The class and module names must contain `Stub`** (`contracts/listing_stub.py`, `ListingStub`).
-A class named `Listing` sitting in the codebase looks like an approved starting point, which is
-exactly the confusion that made `schema.py` worth renaming. Gate B replaces these; it does not
-extend them.
+## `TelegramLinkCode`
+
+The one-time code the site shows on the preferences page, in a deep link `https://t.me/tlv_apartment_hunter_bot?start=<code>`
+(32 characters of `A-Za-z0-9_-`, 192 random bits). Keyed by `code_hash`. Never deleted.
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1 |
+| `code_hash` | `str` | SHA-256 (hex) of the code. The code is shown once and never stored |
+| `user_id` | `str` | The user the code links |
+| `created_at` | `datetime` UTC | The code is usable for 15 minutes from it |
+| `used_at` | `datetime` UTC / `None` | Set when the bot links a chat with it; single use. Not before `created_at` |
+
+## `SentAlert`
+
+One per user and post: "nothing alerted twice" means "no record yet". Keyed by (`user_id`, `listing_id`). A card whose
+posts include one with a record does not alert again. Deleted with its post (as `ViewedPost`, #62), by Phase 5's
+retention job.
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1 |
+| `user_id` | `str` | The alerted user |
+| `listing_id` | `str` | The post alerted: the card's shown post |
+| `sent_at` | `datetime` UTC | When Telegram accepted the alert |
+
+**Not stored:** the alert's tier or colours (an `Evaluation` is never stored), the message's id, the chat's history.

@@ -150,6 +150,19 @@ export interface SessionUser {
   must_change_password: boolean
 }
 
+/** GET /api/telegram (#453): whether the account is linked, and since when (ISO, UTC). */
+export interface TelegramState {
+  linked: boolean
+  linked_at: string | null
+}
+
+/** POST /api/telegram/link: a one-time code, shown once (#453). */
+export interface TelegramCode {
+  link: string
+  code: string
+  expires_at: string
+}
+
 /** GET and PUT /api/profile: the saved profile's values (#317). */
 export interface SavedProfile extends Bar {
   updated_at: string

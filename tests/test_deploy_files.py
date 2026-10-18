@@ -58,9 +58,26 @@ def test_both_services_mount_the_one_volume_at_the_store_root(compose: dict) -> 
 def test_jobs_has_a_profile_the_keys_and_never_pulls(compose: dict) -> None:
     jobs = compose["services"]["jobs"]
     assert jobs["profiles"] == ["jobs"]
-    assert jobs["env_file"] == ".env"
+    # The two job keys by name, from .env (#452): never the whole file, which holds the bot's token.
+    assert "env_file" not in jobs
+    assert jobs["environment"] == {name: f"${{{name}:-}}" for name in KEY_NAMES}
     assert jobs["pull_policy"] == "never"
     assert jobs["image"] == compose["services"]["site"]["image"]
+
+
+def test_the_bot_alone_gets_the_token_and_starts_only_by_name(compose: dict) -> None:
+    bot = compose["services"]["bot"]
+    assert bot["profiles"] == ["bot"] and bot["pull_policy"] == "never"
+    assert bot["image"] == compose["services"]["site"]["image"]
+    assert bot["command"] == ["python", "-m", "tlv_hunter.jobs.bot"]
+    assert bot["environment"] == {
+        "TELEGRAM_BOT_TOKEN": "${TELEGRAM_BOT_TOKEN:-}",
+        "SITE_URL": "${SITE_URL:-}",
+    }
+    assert bot["volumes"] == [STORE_MOUNT] and "ports" not in bot
+    for name, service in compose["services"].items():
+        if name != "bot":
+            assert "TELEGRAM_BOT_TOKEN" not in yaml.safe_dump(service), name
 
 
 def test_every_base_image_carries_a_digest(dockerfile: str) -> None:

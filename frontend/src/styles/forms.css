@@ -213,6 +213,33 @@
   font-size: 0.9rem;
 }
 
+/* Linking Telegram (#453): the card under the summary. */
+.telegram {
+  padding-bottom: 16px;
+}
+
+.telegram h2 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+
+.telegram .mainbtn,
+.telegram .barbtn {
+  margin-top: 12px;
+}
+
+.tg-open {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.tg-code {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
 .tabs {
   display: flex;
   gap: 6px;

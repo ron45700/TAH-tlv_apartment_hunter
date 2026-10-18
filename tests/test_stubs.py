@@ -2,15 +2,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
 from tests.conftest import CONFIG_ROOT, FETCHED_AT, SQLITE_FILENAME, THEDOOR_20
 from tlv_hunter.config.base import ConfigSource
 from tlv_hunter.config.yaml_config import YamlConfig
-from tlv_hunter.contracts.decision_stub import DecisionStub
-from tlv_hunter.contracts.listing_stub import ListingStub
 from tlv_hunter.notify.base import Notifier
-from tlv_hunter.notify.notifier_stub import RecordingNotifierStub
+from tlv_hunter.notify.telegram import TelegramNotifier
 from tlv_hunter.providers.base import Provider
 from tlv_hunter.providers.fixture import FixtureProvider
 from tlv_hunter.state.base import WatermarkStore
@@ -18,38 +15,22 @@ from tlv_hunter.state.sqlite import SqliteWatermarkStore
 from tlv_hunter.store.base import Repository
 from tlv_hunter.store.local_json import LocalJsonRepository
 from tlv_hunter.store.sqlite import SqliteRepository
+from tlv_hunter.telegram.client import TelegramClient
 
 
-def test_listing_stub_fields_are_exactly_approved() -> None:
-    assert set(ListingStub.model_fields) == {"listing_id"}
-
-
-def test_decision_stub_fields_are_exactly_approved() -> None:
-    assert set(DecisionStub.model_fields) == {"user_id", "listing_id", "notify"}
-
-
-def test_stubs_reject_unapproved_fields() -> None:
-    with pytest.raises(ValidationError):
-        ListingStub(listing_id="x", price=1)
-    with pytest.raises(ValidationError):
-        DecisionStub(user_id="ron", listing_id="x", notify=True, reasons=[])
-
-
-def test_stub_names_say_stub() -> None:
-    contracts = Path(__file__).resolve().parent.parent / "tlv_hunter" / "contracts"
-    assert (contracts / "listing_stub.py").is_file()
-    assert (contracts / "decision_stub.py").is_file()
-    # contracts/listing.py exists since Gate B was approved (DECISIONS.md #125, task 2.2);
-    # ListingStub and DecisionStub stay for notify/ until phase 4 (policy/'s stub left in 3.6,
-    # DECISIONS.md #295).
-    assert not (contracts / "decision.py").exists()
+def test_the_phase_0_stubs_are_gone() -> None:
+    # ListingStub and DecisionStub stayed for notify/ until Phase 4 (DECISIONS.md #295); Phase 4
+    # built notify/ (#452), so no stub contract is left.
+    package = Path(__file__).resolve().parent.parent / "tlv_hunter"
+    assert not list(package.rglob("*_stub.py"))
 
 
 def test_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
     assert isinstance(FixtureProvider(THEDOOR_20, lambda: FETCHED_AT), Provider)
     assert isinstance(LocalJsonRepository(tmp_path), Repository)
     assert isinstance(YamlConfig(CONFIG_ROOT), ConfigSource)
-    assert isinstance(RecordingNotifierStub(), Notifier)
+    client = TelegramClient("1:" + "a" * 35, transport=lambda *args: (200, b"{}"))
+    assert isinstance(TelegramNotifier(client), Notifier)
 
 
 def test_repository_has_no_delete() -> None:
@@ -66,14 +47,6 @@ def test_sqlite_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
 def test_sqlite_store_and_watermark_store_have_no_delete() -> None:
     for cls in (SqliteRepository, WatermarkStore, SqliteWatermarkStore):
         assert not any("delete" in name or "remove" in name for name in dir(cls))
-
-
-def test_recording_notifier_captures_calls() -> None:
-    notifier = RecordingNotifierStub()
-    listing = ListingStub(listing_id="abc")
-    decision = DecisionStub(user_id="ron", listing_id="abc", notify=True)
-    notifier.send(listing, decision)
-    assert notifier.sent == [(listing, decision)]
 
 
 @pytest.mark.raw_fixtures

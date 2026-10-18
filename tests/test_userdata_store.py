@@ -47,19 +47,23 @@ def _hash(text: str) -> str:
 
 def admin(**changes: Any) -> User:
     return User(
-        schema_version=1,
-        user_id=ADMIN_ID,
-        username="ron",
-        password_hash="$argon2id$hash",
-        is_admin=True,
-        created_at=NOW,
-        signup_key_id=None,
-        must_change_password=False,
-        password_changed_at=NOW,
-        disabled_at=None,
-        failed_sign_ins=0,
-        last_failed_sign_in_at=None,
-        **changes,
+        **{
+            "schema_version": 2,
+            "user_id": ADMIN_ID,
+            "username": "ron",
+            "password_hash": "$argon2id$hash",
+            "is_admin": True,
+            "created_at": NOW,
+            "signup_key_id": None,
+            "must_change_password": False,
+            "password_changed_at": NOW,
+            "disabled_at": None,
+            "failed_sign_ins": 0,
+            "last_failed_sign_in_at": None,
+            "telegram_chat_id": None,
+            "telegram_linked_at": None,
+            **changes,
+        }
     )
 
 
@@ -379,7 +383,7 @@ def test_a_layout_row_and_refusal_on_a_mismatch(path: Path) -> None:
     SqliteUserDataStore(path)
     with closing(sqlite3.connect(path)) as conn:
         rows = conn.execute("SELECT module, version FROM layout_version").fetchall()
-        assert rows == [("userdata", 2)]
+        assert rows == [("userdata", 2), ("userdata.telegram", 1)]  # Gate F's own row (#453)
         conn.execute("UPDATE layout_version SET version = 3 WHERE module = 'userdata'")
         conn.commit()
     with pytest.raises(RuntimeError, match="'userdata' expects layout version 2, found 3"):

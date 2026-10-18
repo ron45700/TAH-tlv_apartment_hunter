@@ -5,7 +5,17 @@
 // `Origin: null` on a same-origin write, so each request asks for the "same-origin" policy: the
 // `Origin` is then the site's own, and no referrer ever leaves for another host.
 import type { Bar } from './bar'
-import type { CardsPage, CardsResponse, FlagAnswer, PostData, Reference, SavedProfile, SessionUser } from './types'
+import type {
+  CardsPage,
+  CardsResponse,
+  FlagAnswer,
+  PostData,
+  Reference,
+  SavedProfile,
+  SessionUser,
+  TelegramCode,
+  TelegramState,
+} from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -73,6 +83,11 @@ export const api = {
   profile: () => call<SavedProfile>('GET', '/api/profile'),
   /** The preferences page's save: the only place preferences are saved (#335). */
   saveProfile: (bar: Bar) => call<SavedProfile>('PUT', '/api/profile', bar),
+  // Phase 4: linking Telegram from the preferences page (#453).
+  telegram: () => call<TelegramState>('GET', '/api/telegram'),
+  /** A one-time code, shown once: the deep link to the bot, and the code to type. */
+  telegramLink: () => call<TelegramCode>('POST', '/api/telegram/link', {}),
+  telegramUnlink: () => call<TelegramState>('DELETE', '/api/telegram', {}),
   // Build step 6 (3.7 (i)): a post no longer in a current card answers 409, refusal "gone".
   /** Opening a post marks its card viewed (#253). */
   markViewed: (id: string) => call<{ viewed: true }>('POST', `/api/viewed/${encodeURIComponent(id)}`, {}),

@@ -225,6 +225,9 @@ def test_the_api_writes_only_the_account_the_profile_and_the_card_writes() -> No
         ("/api/viewed/{listing_id}", "DELETE"),
         ("/api/flag/{listing_id}", "POST"),
         ("/api/report/{listing_id}", "POST"),
+        # Phase 4 (#453): a link code for the user, and unlinking; user-data tables only.
+        ("/api/telegram/link", "POST"),
+        ("/api/telegram", "DELETE"),
     }
 
 

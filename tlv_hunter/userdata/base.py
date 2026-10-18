@@ -1,7 +1,8 @@
 """The eighth seam: what users and the admin write through the site (DECISIONS.md #267, #289).
 
-`UserDataStore` holds the Gate C records. It is not part of the Repository and never reads or
-writes a `RawPost`, `Listing` or `PostLifecycle`. Compare and set raises the store's
+`UserDataStore` holds the Gate C records and, from Phase 4, Gate F's (the Telegram link on `User`,
+`TelegramLinkCode`, `SentAlert`; DECISIONS.md #453). It is not part of the Repository and never
+reads or writes a `RawPost`, `Listing` or `PostLifecycle`. Compare and set raises the store's
 `StaleRecordError`, as for `PostLifecycle` (#289).
 """
 
@@ -12,8 +13,10 @@ from typing import Protocol, runtime_checkable
 from tlv_hunter.contracts.classification_report import ClassificationReport
 from tlv_hunter.contracts.field_correction import FieldCorrection
 from tlv_hunter.contracts.profile import Profile
+from tlv_hunter.contracts.sent_alert import SentAlert
 from tlv_hunter.contracts.session import Session
 from tlv_hunter.contracts.signup_key import SignupKey
+from tlv_hunter.contracts.telegram_link_code import TelegramLinkCode
 from tlv_hunter.contracts.user import User
 
 
@@ -35,6 +38,14 @@ class OpenReportExists(RuntimeError):
 
 class CorrectionInForce(RuntimeError):
     """The post's field already has a correction in force."""
+
+
+class LinkCodeNotUsable(RuntimeError):
+    """No code with that hash, or it is used or 15 minutes old, or its user is disabled."""
+
+
+class ChatLinkedElsewhere(RuntimeError):
+    """The chat is linked to another user: one user per chat (#453)."""
 
 
 @runtime_checkable
@@ -132,3 +143,25 @@ class UserDataStore(Protocol):
     ) -> FieldCorrection:
         """Compare and set; a removed correction is never put back in force (#284)."""
         ...
+
+    # --- Gate F: Telegram (#453) ---
+
+    def add_link_code(self, code: TelegramLinkCode) -> TelegramLinkCode:
+        """A new, unused code."""
+        ...
+
+    def link_telegram(self, code_hash: str, chat_id: int, now: datetime) -> User:
+        """One transaction: the code with `code_hash` must be usable at `now` and its user not
+        disabled (else `LinkCodeNotUsable`); the chat must be linked to no other user (else
+        `ChatLinkedElsewhere`). The code is marked used and the user's chat set, with
+        `telegram_linked_at` at `now`; a user linking the chat already theirs keeps the first
+        time. A user linking another chat leaves the old one (one chat per user)."""
+        ...
+
+    def find_user_by_chat(self, chat_id: int) -> User | None: ...
+
+    def add_sent_alert(self, alert: SentAlert) -> bool:
+        """Inserted only if absent; `False` when the user already has one for the post."""
+        ...
+
+    def sent_listing_ids(self, user_id: str) -> set[str]: ...

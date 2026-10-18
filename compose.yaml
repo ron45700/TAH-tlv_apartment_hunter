@@ -40,7 +40,10 @@ services:
     # Built by `docker compose build` for the site; never looked for in a registry.
     pull_policy: never
     profiles: ["jobs"]
-    env_file: .env
+    # The two job keys only, from .env: never the bot's token (DECISIONS.md #452, point 2).
+    environment:
+      APIFY_TOKEN: ${APIFY_TOKEN:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:
       - store:/app/data/store
       # Plain files only, no SQLite: the pages and reports some commands write, and the exports.
@@ -48,6 +51,25 @@ services:
       - ./data/gate_d:/app/data/gate_d
       - ./data/store_exports:/app/data/store_exports
     init: true
+
+  # The Telegram bot (PHASE_4.md 4.3, #452): on the laptop for this round's tests only, started by
+  # name (`docker compose up -d bot`) and stopped by name. Telegram allows one getUpdates consumer
+  # per bot: never while the server's bot runs (#452, point 14).
+  #   docker compose run --rm bot python -m tlv_hunter.jobs.send_test_alert --listing <prefix>
+  bot:
+    image: tlv-hunter:local
+    pull_policy: never
+    profiles: ["bot"]
+    command: ["python", "-m", "tlv_hunter.jobs.bot"]
+    # The token to this service only; SITE_URL is the site the alerts' buttons open.
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      SITE_URL: ${SITE_URL:-}
+    volumes:
+      - store:/app/data/store
+    init: true
+    # A stop ends the long poll in progress (25 s) and the alert pass between two sends.
+    stop_grace_period: 45s
 
 volumes:
   store:

@@ -87,7 +87,7 @@ def option_of(profile: Profile, evaluation: Evaluation) -> SearchOption | None:
 def holds_a_preference(option: SearchOption) -> bool:
     """Any category at the level "preference" (#322). Areas, price and "women only" are critical
     by their nature."""
-    return any(_level(option, name) == "preference" for name in LEVELLED)
+    return any(level_of(option, name) == "preference" for name in LEVELLED)
 
 
 def glow(evaluation: Evaluation, profile: Profile) -> Glow | None:
@@ -116,13 +116,13 @@ def tier_reasons(listing: Listing, evaluation: Evaluation, profile: Profile) -> 
             reasons.append("price")
         for name in CATEGORIES:
             unknown = fields.get(name) in ("not_written", "unclear")
-            if unknown and _level(option, name) == "critical" and name not in reasons:
+            if unknown and level_of(option, name) == "critical" and name not in reasons:
                 reasons.append(name)
         return tuple(reasons)
     reasons = [
         name
         for name in CATEGORIES
-        if _level(option, name) == "preference" and fields.get(name) != "match"
+        if level_of(option, name) == "preference" and fields.get(name) != "match"
     ]
     if evaluation.area_orange or fields.get("areas") == "unclear":
         reasons.append("location")
@@ -148,7 +148,7 @@ def _area(listing: Listing, evaluation: Evaluation | None, state: str) -> Colour
     return "green" if state == "match" else "plain"
 
 
-def _level(option: SearchOption, name: str) -> str | None:
+def level_of(option: SearchOption, name: str) -> str | None:
     """The level of a category in the option; `None` when it holds no value. Areas and price are
     critical when set; "women only" is critical while it hides (§8)."""
     if name == "areas":

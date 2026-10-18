@@ -116,8 +116,22 @@ def test_it_migrates_after_a_backup_and_changes_no_record(
     (backup,) = _backups(database)
     assert backup.name == "tlv_hunter.2026-10-12.backup.sqlite3"
     assert sqlite_dump(backup) == dump  # the store before, row for row (#424 point 89)
-    assert _layout(backup) == {"store": 1, "store.listings": 1, "userdata": 1, "state": 1}
-    assert _layout(database) == {"store": 2, "store.listings": 2, "userdata": 2, "state": 1}
+    # Gate F's tables (#453) have their own row, which the migration leaves as it is.
+    telegram = {"userdata.telegram": 1}
+    assert _layout(backup) == {
+        "store": 1,
+        "store.listings": 1,
+        "userdata": 1,
+        "state": 1,
+        **telegram,
+    }
+    assert _layout(database) == {
+        "store": 2,
+        "store.listings": 2,
+        "userdata": 2,
+        "state": 1,
+        **telegram,
+    }
     assert _contents(database) == contents
     assert _triggers(database) == {
         f"{table}_generation_{event}"

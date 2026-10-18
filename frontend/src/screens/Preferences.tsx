@@ -22,6 +22,7 @@ import {
   type SearchOption,
 } from '../bar'
 import { MUST_HIDES, Switch } from '../components/controls'
+import { TelegramLink } from '../components/TelegramLink'
 import { AreasField, EntryField, FeaturesField, PriceField, RangeField, WomenField } from '../components/fields'
 import { navigate, setLeaveGuard } from '../route'
 import type { AreaGroup } from '../types'
@@ -143,6 +144,7 @@ export function Preferences({ saved, onSaved, groups, names, today }: Props) {
             <p className="sum-sublet">{draft.include_sublets ? 'כולל סאבלטים' : 'בלי סאבלטים'}</p>
             <div className="side-save">{saveRow}</div>
           </div>
+          <TelegramLink />
           <p className="side-link">
             <a
               href="/password"

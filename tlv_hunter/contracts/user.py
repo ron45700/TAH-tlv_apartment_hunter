@@ -1,9 +1,11 @@
-"""Gate C: a user's account (SCHEMA.md, Gate C; DECISIONS.md #242, #244, #262–#265, #288).
+"""Gate C: a user's account (SCHEMA.md, Gate C; DECISIONS.md #242, #244, #262–#265, #288), with
+Gate F's two Telegram fields (SCHEMA.md, Gate F; DECISIONS.md #453, version 2).
 
 Also the two id forms every Gate C record checks: the opaque ids (32 hex characters, #262, #288)
 and the SHA-256 hashes of keys and session tokens (64 hex characters).
 """
 
+import json
 import re
 from datetime import datetime
 from typing import Self
@@ -12,7 +14,9 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from tlv_hunter.parsing.datetimes import require_utc
 
-USER_SCHEMA_VERSION = 1
+USER_SCHEMA_VERSION = 2
+# Version 2 adds the link to Telegram (Gate F, #453), both None on a version-1 record.
+_ADDED_IN_VERSION_2 = {"telegram_chat_id": None, "telegram_linked_at": None}
 OPAQUE_ID = re.compile(r"[0-9a-f]{32}")
 SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 # Latin letters, digits, "_", "." and "-" only, 3 to 32 characters (#262).
@@ -48,6 +52,22 @@ class User(BaseModel):
     disabled_at: datetime | None
     failed_sign_ins: int
     last_failed_sign_in_at: datetime | None
+    telegram_chat_id: int | None
+    """The linked Telegram chat (Gate F, #453): one chat per user and one user per chat."""
+    telegram_linked_at: datetime | None
+    """When it was linked: alerts come only for posts first stored after it (#452, point 10)."""
+
+    @classmethod
+    def from_stored_json(cls, doc: str) -> "User":
+        """Read a stored user. A version-1 one reads as version 2 with no link (#453). Read-time
+        only, as `Profile.from_stored_json` does: it is written as version 2 the next time it is
+        saved, and nothing is rewritten in bulk. `UserDataStore` reads users only through here."""
+        data = json.loads(doc)
+        if isinstance(data, dict) and data.get("schema_version") == 1:
+            if _ADDED_IN_VERSION_2.keys() & data.keys():
+                raise ValueError("a version-1 user cannot carry version-2 fields")
+            doc = json.dumps({**data, **_ADDED_IN_VERSION_2, "schema_version": USER_SCHEMA_VERSION})
+        return cls.model_validate_json(doc)
 
     @field_validator("user_id", "signup_key_id")
     @classmethod
@@ -61,7 +81,13 @@ class User(BaseModel):
             raise ValueError("a username is 3 to 32 Latin letters, digits, '_', '.' or '-'")
         return value
 
-    @field_validator("created_at", "password_changed_at", "disabled_at", "last_failed_sign_in_at")
+    @field_validator(
+        "created_at",
+        "password_changed_at",
+        "disabled_at",
+        "last_failed_sign_in_at",
+        "telegram_linked_at",
+    )
     @classmethod
     def _require_utc(cls, value: datetime | None) -> datetime | None:
         return None if value is None else require_utc(value)
@@ -80,6 +106,8 @@ class User(BaseModel):
             raise ValueError("failed_sign_ins cannot be negative")
         if (self.failed_sign_ins == 0) != (self.last_failed_sign_in_at is None):
             raise ValueError("last_failed_sign_in_at is None exactly when failed_sign_ins is 0")
+        if (self.telegram_chat_id is None) != (self.telegram_linked_at is None):
+            raise ValueError("telegram_chat_id and telegram_linked_at are set together, or neither")
         return self
 
     @property

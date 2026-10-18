@@ -34,7 +34,8 @@ COPY config/ config/
 COPY reference/ reference/
 COPY --from=pages /frontend/dist frontend/dist
 # The store root is the volume's mount point: a new named volume takes this folder's owner.
-RUN mkdir -p data/store data/labeling data/gate_d data/store_exports && chown -R app:app data
+RUN mkdir -p data/store data/labeling data/gate_d data/store_exports data/measure \
+    && chown -R app:app data
 ENV PATH="/app/.venv/bin:$PATH"
 USER app
 EXPOSE 8000

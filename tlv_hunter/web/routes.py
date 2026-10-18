@@ -36,7 +36,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from tlv_hunter.accounts import actions
+from tlv_hunter.accounts import actions, linking
 from tlv_hunter.accounts.passwords import PRODUCTION_HASHER
 from tlv_hunter.areas.reference import Area, AreaGroup
 from tlv_hunter.contracts.classification_report import ReportableField
@@ -323,6 +323,47 @@ async def put_profile(request: Request) -> Response:
     except sqlite3.Error:
         raise HTTPException(status_code=503, detail="not saved") from None
     return _json(_profile_json(saved))
+
+
+# --- linking Telegram (Phase 4, `PHASE_4.md` 4.4, point 5 A; #453) ---
+
+
+@router.get("/telegram")
+def telegram(request: Request) -> Response:
+    """Whether the user's account is linked to a Telegram chat, and since when."""
+    site = _site(request)
+    user = _user(_signed_in_viewer(request, site))
+    linked_at = user.telegram_linked_at
+    return _json(
+        {
+            "linked": user.telegram_chat_id is not None,
+            "linked_at": None if linked_at is None else linked_at.isoformat(),
+        }
+    )
+
+
+@router.post("/telegram/link")
+async def telegram_link(request: Request) -> Response:
+    """A new one-time code, shown once: the deep link that opens the bot with it, and the code by
+    itself to type to the bot. Valid for 15 minutes; never cached."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    check_write(request)
+    issued = linking.new_link_code(site.userdata, _token(who), site.clock())
+    return _json(
+        {"link": issued.link, "code": issued.code, "expires_at": issued.expires_at.isoformat()},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.delete("/telegram")
+async def telegram_unlink(request: Request) -> Response:
+    """Unlinking from the preferences page: no more alerts (as `/stop` to the bot)."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    check_write(request)
+    linking.unlink_session_user(site.userdata, _token(who), site.clock())
+    return _json({"linked": False, "linked_at": None})
 
 
 # --- a user's writes on a card (build step 6, 3.7 (i)) ---
