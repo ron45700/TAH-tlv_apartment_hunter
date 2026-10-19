@@ -14,6 +14,7 @@ import pytest
 from tests.conftest import SQLITE_FILENAME, make_listing
 from tlv_hunter.contracts.classification_report import ClassificationReport
 from tlv_hunter.contracts.field_correction import FieldCorrection
+from tlv_hunter.contracts.hidden_post import HiddenPost
 from tlv_hunter.contracts.profile import new_profile
 from tlv_hunter.contracts.session import SESSION_LIFETIME, Session
 from tlv_hunter.contracts.signup_key import SignupKey
@@ -383,11 +384,60 @@ def test_a_layout_row_and_refusal_on_a_mismatch(path: Path) -> None:
     SqliteUserDataStore(path)
     with closing(sqlite3.connect(path)) as conn:
         rows = conn.execute("SELECT module, version FROM layout_version").fetchall()
-        assert rows == [("userdata", 2), ("userdata.telegram", 1)]  # Gate F's own row (#453)
+        # Gate F's own row (#453) and HiddenPost's (#468)
+        assert rows == [("userdata", 2), ("userdata.telegram", 1), ("userdata.hidden", 1)]
         conn.execute("UPDATE layout_version SET version = 3 WHERE module = 'userdata'")
         conn.commit()
     with pytest.raises(RuntimeError, match="'userdata' expects layout version 2, found 3"):
         SqliteUserDataStore(path)
+
+
+def test_the_hidden_row_and_table_are_created_when_absent_and_left_alone_after(
+    path: Path,
+) -> None:
+    """#468, appendix A point 8: a store laid out before `HiddenPost` (no `hidden_posts`, no row
+    `userdata.hidden`) gains both at its next open, and nothing else changes; a second open leaves
+    them as they are, a mark kept."""
+    store = SqliteUserDataStore(path)
+    store.create_admin(admin(), new_profile(ADMIN_ID, NOW))
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("DROP TABLE hidden_posts")
+        conn.execute("DELETE FROM layout_version WHERE module = 'userdata.hidden'")
+        conn.commit()
+        before = conn.execute("SELECT module, version FROM layout_version").fetchall()
+    store = SqliteUserDataStore(path)
+    assert store.hidden_listing_ids(ADMIN_ID) == set()
+    store.hide(ADMIN_ID, "a" * 64, NOW)
+    with closing(sqlite3.connect(path)) as conn:
+        after = conn.execute("SELECT module, version FROM layout_version").fetchall()
+    assert after == [*before, ("userdata.hidden", 1)]
+    again = SqliteUserDataStore(path)
+    assert again.hidden_listing_ids(ADMIN_ID) == {"a" * 64}
+    with closing(sqlite3.connect(path)) as conn:
+        assert conn.execute("SELECT module, version FROM layout_version").fetchall() == after
+        conn.execute("UPDATE layout_version SET version = 2 WHERE module = 'userdata.hidden'")
+        conn.commit()
+    with pytest.raises(RuntimeError, match="'userdata.hidden' expects layout version 1, found 2"):
+        SqliteUserDataStore(path)
+
+
+def test_hide_keeps_the_first_time_and_unhide_takes_every_post_of_the_card(path: Path) -> None:
+    """#464, #468: per user; pressing again keeps the first `hidden_at`; "בטל הסתרה" deletes the
+    marks on every post given (the card's)."""
+    store = SqliteUserDataStore(path)
+    store.create_admin(admin(), new_profile(ADMIN_ID, NOW))
+    store.hide(ADMIN_ID, "a" * 64, NOW)
+    store.hide(ADMIN_ID, "a" * 64, NOW + timedelta(hours=1))
+    store.hide(ADMIN_ID, "b" * 64, NOW)
+    with closing(sqlite3.connect(path)) as conn:
+        (doc,) = conn.execute(
+            "SELECT doc FROM hidden_posts WHERE listing_id = ?", ("a" * 64,)
+        ).fetchone()
+    assert HiddenPost.model_validate_json(doc).hidden_at == NOW
+    assert store.hidden_listing_ids(ADMIN_ID) == {"a" * 64, "b" * 64}
+    assert store.viewed_listing_ids(ADMIN_ID) == set()  # its own record, not the viewed one
+    store.unhide(ADMIN_ID, ["a" * 64, "b" * 64, "c" * 64])
+    assert store.hidden_listing_ids(ADMIN_ID) == set()
 
 
 def test_a_userdata_layout_1_is_refused_with_the_migration_command(path: Path) -> None:

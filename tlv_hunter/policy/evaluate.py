@@ -13,6 +13,7 @@ location caps the tier at the middle (#320): two or more areas not all chosen, o
 post gives a street or an area name; a post with no location at all is not capped.
 """
 
+import calendar
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
@@ -41,6 +42,8 @@ OFFERS = ("rental_offer", "sublet_offer")  # the natures of an active post (Gate
 # The fixed wanted values (#269).
 WANTED = {"broker": False, "parking": True, "balcony": True}
 OPTION_ORDER: tuple[OptionName, ...] = ("room", "whole_apartment")
+# The quick chip "מיידי": entry no later than this many calendar months from today (#458).
+IMMEDIATE_MONTHS = 3
 
 
 @dataclass(frozen=True)
@@ -221,15 +224,29 @@ def _fixed(marked: Marked[bool], level: CriterionLevel | None, wanted: bool) -> 
 def _entry_date(
     listing: Listing, criterion: DateRangeCriterion | None, today: date
 ) -> _Category | None:
-    """ "immediate" compares as `today`, the UTC date of the evaluation (#270, R2)."""
+    """ "immediate" compares as `today`, the UTC date of the evaluation (#270, R2). The chip's
+    marker (#458) is the range with no lower bound up to `today` plus `IMMEDIATE_MONTHS` calendar
+    months, re-computed at each evaluation, so a past date in a post is met."""
     if criterion is None:
         return None
     value = listing.entry_date.value
     if value is None:
         return _Category(criterion.level, "unknown", _state("unknown", listing.entry_date.state))
     when = today if value == "immediate" else value
-    outcome = _within(when, criterion.earliest, criterion.latest)
+    if criterion.immediate:
+        outcome = _within(when, None, months_on(today, IMMEDIATE_MONTHS))
+    else:
+        outcome = _within(when, criterion.earliest, criterion.latest)
     return _Category(criterion.level, outcome, _state(outcome, "written"))
+
+
+def months_on(day: date, months: int) -> date:
+    """`months` calendar months after `day`: the same day of the month, or the month's last day
+    when it has fewer (30.11 + 3 → 28.2)."""
+    index = day.year * 12 + day.month - 1 + months
+    year, month = divmod(index, 12)
+    month += 1
+    return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
 
 
 def _within[V: (int, float, date)](value: V, low: V | None, high: V | None) -> Outcome:

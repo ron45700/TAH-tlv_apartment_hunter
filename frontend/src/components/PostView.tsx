@@ -29,6 +29,7 @@ import {
 import type { CardData, Colour, Colours, PostData, ReportableField } from '../types'
 import { ActionMenu, ReportForm, type MenuItem } from './actions'
 import { Carousel } from './Carousel'
+import { hideOffer } from '../paging'
 import { COLOUR_WORDS, Fixed } from './Card'
 
 /** A signed-in user's writes on the opened post (build step 6); absent for a guest. */
@@ -42,6 +43,9 @@ export interface PostActions {
   onReported: (removed: boolean) => void
   /** A write found the post no longer in a current card (409 "gone"). */
   onGone: () => void
+  /** "הסתר" and "בטל הסתרה" (#464–#466, #468), offered as on the card. */
+  onHide: (id: string) => void
+  onUnhide: (id: string) => void
 }
 
 interface Props {
@@ -113,6 +117,18 @@ export function PostView({ id, card, now, phone, onClose, actions }: Props) {
         { label: 'דיווח על סיווג שגוי', onSelect: () => setReporting(true) },
       ]
     : []
+  // "הסתר" / "בטל הסתרה" by the list's card (the opened post carries no tier): none for a post
+  // opened by its own address, which has no card in the list.
+  const listed = post && card?.id === post.id ? card : undefined
+  const offer = actions && listed ? hideOffer(listed, viewed || listed.viewed === true) : null
+  const hideItems: MenuItem[] =
+    offer && post
+      ? [
+          offer === 'hide'
+            ? { label: 'הסתר', onSelect: () => actions?.onHide(post.id) }
+            : { label: 'בטל הסתרה', onSelect: () => actions?.onUnhide(post.id) },
+        ]
+      : []
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
@@ -142,7 +158,7 @@ export function PostView({ id, card, now, phone, onClose, actions }: Props) {
                   label="פעולות"
                   className="btn-o btn-act"
                   placement="down"
-                  items={viewed ? [{ label: 'סימון כלא נצפה', onSelect: unview }, ...items] : items}
+                  items={[...(viewed ? [{ label: 'סימון כלא נצפה', onSelect: unview }] : []), ...hideItems, ...items]}
                 />
               )}
             </>
@@ -164,6 +180,11 @@ export function PostView({ id, card, now, phone, onClose, actions }: Props) {
                       סימון כלא נצפה
                     </button>
                   )}
+                  {hideItems.map((item) => (
+                    <button key={item.label} type="button" className="btn quiet" onClick={item.onSelect}>
+                      {item.label}
+                    </button>
+                  ))}
                   <ActionMenu label="דיווח" className="btn rep" items={items} />
                 </div>
               ) : null

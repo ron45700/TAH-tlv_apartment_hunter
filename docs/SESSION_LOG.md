@@ -7245,3 +7245,41 @@ on the list (guest and signed in, mobile and desktop) and the preferences page (
 practices 100.
 
 **Next:** Ron: appendix A's points 1–19; whether round 33's changes go with §4.7's deploy or after it; then the deploy.
+
+## 2026-10-19 — Round 34: appendix A approved (#468); "מיידי" as a rolling marker and hiding built
+
+No paid call, nothing on the server, no git write, no write to Windows `data/store/` or to the development copy. A fresh
+scratch copy of the development copy (`store34`, an online backup from a read-only mount, with its photos) in this
+session's scratchpad took every write of the checks; a scratch Docker volume for the old image's check was removed.
+Network: 127.0.0.1, and npm for Lighthouse 12.8.2.
+
+**Recorded:** `DECISIONS.md` #468 (appendix A approved as recommended, every point; rounds 33 and 34 deploy with §4.7) and
+approval notes on #458, #464–#466; `SCHEMA.md` Gate C (`DateRangeCriterion.immediate`, `Profile` version 3 and its
+reading of version 2, `HiddenPost` with `hidden_posts` and `userdata.hidden`; the "Proposed in round 33" section
+removed); `BASELINE.md` §6, §8; `PHASE_4.md` appendix A's status and §4.7's deploy note; CLAUDE.md (the `userdata/`
+row, "Now"); BACKLOG item 9.
+
+**Built, A.1:** `contracts/profile.py` (`immediate`, version 3, `_version_2_as_3`: the old chip shape is a `latest` on or
+before the UTC date of `updated_at` plus one day, so no Israel time in the store, invariant 9; pydantic parses the stored
+dates); `policy/evaluate.py` (`IMMEDIATE_MONTHS`, `months_on`, the window in `_entry_date`); the page's chip as a marker
+(`bar.ts` `immediateEntry`, `currentBar` for a bar kept in the tab; `israelToday` and the `today` prop removed, unused).
+**A.2:** `contracts/hidden_post.py`; `userdata/` `hide`, `unhide`, `hidden_listing_ids`, the table and the row created
+when absent (one `_lay_out_when_absent` for Gate F's row and this one); `policy/order.py` `card_hidden`;
+`web/filters.py` `show_hidden`, `same_values`; `web/routes.py` `_hiding` (the server decides "on the saved
+preferences"), the list's `hiding`, `hidden_count`, each card's `hidden`, a later page's hidden card `gone`, `POST` and
+`DELETE /api/hidden/{id}`; the page: the pill on the photo's top-right corner (the "וידאו" chip moved to the bottom-left),
+"מוסתרת", the faded shown card, "הצגת מוסתרים" in the status line (the tab's, never saved), the count, the undo notice,
+the opened post's foot and phone menu. Tests: Python +24, front end +5.
+
+**Verified:** `uv run pytest` 2128 passed; ruff clean; `npm test` 97 passed; `npm run build` clean. On the scratch copy:
+`userdata.hidden` and `hidden_posts` created on the first open and unchanged on the second; the round-31 image
+(`tlv-hunter:local`) opens the migrated store with every opener and reads a version-2 profile, and refuses a version-3
+one (the rollback note); the admin's profile rewritten as version 2 with the old chip shape reads as `immediate`, a later
+typed date as a date. Chrome at 390 × 844, 834 × 1194, 1194 × 834, 1440 × 900, 2560 × 1440: hide (120 → 119, "· 1
+מוסתרות"), undo from the notice (back at index 47), the switch (120, the card in its own place, faded, tagged, "בטל
+הסתרה"), a temporary filter (the switch absent, the hidden card shown with its tag), back on the saved preferences (119);
+the opened post's "בטל הסתרה" → "הסתר"; on the phone the pill clears the "i" by 41 px ("הסתר") and 15 px ("בטל הסתרה");
+the undo notice gone after 8 s; no sideways scroll, no console error. Lighthouse accessibility and best practices 100 on
+the list (signed in, mobile and desktop; a guest) and the preferences page (mobile and desktop).
+
+**Next:** Ron: the commit (rounds 33 and 34 with Phase 4) and the deploy, `PHASE_4.md` §4.7 with its round-34 note.

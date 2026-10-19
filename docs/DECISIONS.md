@@ -4036,8 +4036,8 @@ the chip stored `latest` = the day it was pressed, which goes stale in saved pre
 #270's quick-chip rule** (`PHASE_3.md` 3.7, point 37's build). #270's rule for the post side stays: a post that says
 "כניסה מיידית" compares as today. 3 months are calendar months.
 *Ron's reason:* past entry dates in a post effectively mean "available now", and a rolling window never goes stale.
-**Not built:** the marker is a field change on `DateRangeCriterion` (invariant 1), proposed for Ron's approval
-(`PHASE_4.md` appendix A, points 1–5).
+The marker is a field change on `DateRangeCriterion` (invariant 1): `immediate`, **approved 2026-10-19 (#468) and built
+in round 34** (`PHASE_4.md` appendix A, points 1–7).
 
 ### 459 — Typing "מתאריך" with "עד תאריך" empty fills "עד תאריך" three months on
 Typing a "מתאריך" while "עד תאריך" is empty fills "עד תאריך" with the same date +3 calendar months, as a fixed date the
@@ -4072,17 +4072,17 @@ px on an iPad held upright (834 × 1194) and sideways (1194 × 834), 204 px at 1
 ### 464 — Per-user "hide"
 A new per-user record of hidden posts, like `ViewedPost`. Never written on the post (invariant 12). Not available to a
 guest. Deleted with its post. **A Gate C addition:** the record's name, fields and table are proposed in `SCHEMA.md`
-for Ron's approval; field names are proposals. *Ron's request.* **Not built.**
+for Ron's approval; field names are proposals. *Ron's request.* **Approved 2026-10-19 (#468); built in round 34.**
 
 ### 465 — "הצגת מוסתרים" in the filter bar; hiding applies only on the saved preferences
 A "הצגת מוסתרים" switch in the filter bar. Hiding applies **only while the bar shows the saved preferences**; in a
-temporary filter everything is shown. A hidden card that is shown has "בטל הסתרה". *Ron's request.* **Not built** (with
+temporary filter everything is shown. A hidden card that is shown has "בטל הסתרה". *Ron's request.* **Approved 2026-10-19 (#468); built in round 34** (with
 #464).
 
 ### 466 — Where "הסתר" appears: by tier
 On cards in the middle tier (`critical_met`) and the bottom tier (`unknown`) always, and in the top tier
 (`preferences_met`) only once viewed. Decided by tier, not by glow: a card with no preference has no glow. *Ron's
-rule.* **Not built** (with #464).
+rule.* **Approved 2026-10-19 (#468); built in round 34** (with #464).
 
 ### 467 — Viewed: the card looks faded and moves below the unviewed ones when the post closes
 A viewed card looks faded and stays clickable; its text stays readable (Lighthouse accessibility stays 100), the photo
@@ -4093,6 +4093,15 @@ see. Now: the photo at 40% in greyscale, the card's tint #f6f5f2, the plain text
 ring without its halo; a red or green value keeps its colour. On close the card goes to its place among the cards drawn,
 or, when more of the load is still to come, to the end of the load's order (its exact place among the viewed ones is
 the next load's); the focus goes to the card now in its old place.
+
+## Round 33's plan approved (2026-10-19, round 34)
+
+### 468 — `PHASE_4.md` appendix A approved as recommended, every point
+Ron approved appendix A (round 33's plan for #458 and #464–#466) as recommended: A.1 points 1–7 and A.2 points 8–19,
+the recommended option wherever there was an "or". `DateRangeCriterion.immediate`, `Profile` version 3 and `HiddenPost`
+(table `hidden_posts`, layout row `userdata.hidden`) move into Gate C as approved (`SCHEMA.md`). **Round 33's built
+changes and this round's are committed and deployed together with §4.7's Phase 4 deploy** (Ron's own git and deploy).
+Built in round 34. *Ron's decision.*
 ---
 
 ## Corrections to recorded facts

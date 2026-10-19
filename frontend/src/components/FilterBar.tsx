@@ -5,7 +5,9 @@
 // kind that is on, labelled with the kind's name: areas, price, rooms and "עוד", each a pill that
 // fills with its value in words. No save in the bar (#335). On a phone (point 39, option A): the three
 // switches on one row, one dense row with the status and "סינון (N)", and a full-screen sheet with
-// the same rows and "הצגת N מודעות".
+// the same rows and "הצגת N מודעות". Hiding (#465, #468, point 15): on the saved preferences, for a
+// signed-in user, the status line carries "הצגת מוסתרים" and, with it off, "· M מוסתרות"; the
+// switch is the tab's, never saved, and absent in a temporary filter, where it would change nothing.
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   OPTIONS,
@@ -35,8 +37,9 @@ interface Props {
   error: string | null
   groups: AreaGroup[]
   names: ReadonlyMap<number, string>
-  today: string
   phone: boolean
+  /** On the saved preferences only (the server's word): how many cards are hidden, the switch. */
+  hidden?: { count: number; show: boolean; onShow: (show: boolean) => void }
 }
 
 export function FilterBar(props: Props) {
@@ -110,12 +113,13 @@ export function FilterBar(props: Props) {
   )
 }
 
-function Status({ standing, count, onReset }: Props) {
+function Status({ standing, count, onReset, hidden }: Props) {
   return (
-    <p className="bar-status" aria-live="polite">
-      <span>
+    <div className="bar-status">
+      <span aria-live="polite">
         <strong>{count === null ? 'טוען מודעות…' : `${count} מודעות`}</strong>
-        {standing === 'saved' && ' · לפי ההעדפות השמורות'}
+        {standing === 'saved' && <span className="status-long"> · לפי ההעדפות השמורות</span>}
+        {hidden && !hidden.show && hidden.count > 0 && ` · ${hidden.count} מוסתרות`}
         {standing === 'changed' && (
           <>
             {' · סינון זמני'}
@@ -128,13 +132,14 @@ function Status({ standing, count, onReset }: Props) {
           ההעדפות שלי
         </button>
       )}
-    </p>
+      {hidden && <Switch label="הצגת מוסתרים" checked={hidden.show} onChange={hidden.onShow} />}
+    </div>
   )
 }
 
 type Control = 'areas' | 'price' | 'rooms' | 'more'
 
-function ValuesRow({ name, bar, onChange, groups, names, today }: Props & { name: OptionName }) {
+function ValuesRow({ name, bar, onChange, groups, names }: Props & { name: OptionName }) {
   const [open, setOpen] = useState<Control | null>(null)
   const option = bar[name]
   const change = (values: Partial<SearchOption>) => onChange(withOption(bar, name, values))
@@ -181,7 +186,7 @@ function ValuesRow({ name, bar, onChange, groups, names, today }: Props & { name
       <ValueChip label="עוד" words={more ? `עוד (${more})` : null} open={open === 'more'} onToggle={() => toggle('more')}>
         <Popover label={label('עוד')} onClose={close} wide>
           <div className="more-grid">
-            <MoreFields name={name} option={option} today={today} onChange={change} />
+            <MoreFields name={name} option={option} onChange={change} />
           </div>
         </Popover>
       </ValueChip>
@@ -228,7 +233,7 @@ function ValueChip({
 /** The phone's full-screen sheet (3.7 (e)(ii)): the kind rows, labelled as on a desktop, and
  *  "הצגת N מודעות" at its foot. The list behind it follows every change. */
 function Sheet(props: Props & { noKind: boolean; onClose: () => void }) {
-  const { bar, onChange, groups, names, today, count, onClose } = props
+  const { bar, onChange, groups, names, count, onClose } = props
   useEffect(() => {
     document.body.classList.add('locked')
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose()
@@ -261,7 +266,7 @@ function Sheet(props: Props & { noKind: boolean; onClose: () => void }) {
               </details>
               <PriceField option={option} onChange={change} />
               <RangeField title="חדרים" scale="rooms" range={option.rooms} onChange={(rooms) => change({ rooms })} />
-              <MoreFields name={name} option={option} today={today} onChange={change} />
+              <MoreFields name={name} option={option} onChange={change} />
             </section>
           )
         })}

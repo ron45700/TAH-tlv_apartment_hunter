@@ -1,6 +1,6 @@
 // A, the list in pages (#376, #377): the page's merge of later pages and its removal in place.
 import { describe, expect, it } from 'vitest'
-import { PAGE, firstLoad, nextIds, withPage, withViewedSettled, withoutCard, type Loaded } from './paging'
+import { PAGE, firstLoad, hideOffer, nextIds, withHidden, withPage, withViewedSettled, withoutCard, type Loaded } from './paging'
 import type { CardData } from './types'
 
 const card = (id: string, ...others: string[]) => ({ id, post_ids: [id, ...others] }) as unknown as CardData
@@ -113,5 +113,28 @@ describe('a viewed card takes its place when its post closes (Ron, 2026-10-18; #
     expect(withViewedSettled(list, 'nobody')).toBe(list)
     const unviewedLast = listOf(drawn.slice(0, 3), ['x'])
     expect(withViewedSettled(unviewedLast, 'c')).toBe(unviewedLast)
+  })
+})
+
+describe('hiding (#464–#466, #468)', () => {
+  type Tier = 'preferences_met' | 'critical_met' | 'unknown'
+  const card = (tier: Tier, viewed = false, hidden = false) =>
+    ({ id: 'a', post_ids: ['a', 'b'], viewed, hidden, evaluation: { tier } }) as unknown as CardData
+
+  it('"הסתר" on the middle and bottom tiers always, on the top tier once viewed; "בטל הסתרה" when hidden', () => {
+    expect(hideOffer(card('critical_met'))).toBe('hide')
+    expect(hideOffer(card('unknown'))).toBe('hide')
+    expect(hideOffer(card('preferences_met'))).toBeNull()
+    expect(hideOffer(card('preferences_met', true))).toBe('hide')
+    expect(hideOffer(card('preferences_met'), true)).toBe('hide') // viewed meanwhile, in the open post
+    expect(hideOffer(card('preferences_met', false, true))).toBe('unhide')
+  })
+
+  it('marks the card holding any of its posts, in place', () => {
+    const list: Loaded = { count: 1, order: ['a'], cards: [card('unknown')], next: 1 }
+    const after = withHidden(list, 'b', true)
+    expect(after.cards[0].hidden).toBe(true)
+    expect(after.order).toEqual(['a'])
+    expect(after.count).toBe(1)
   })
 })

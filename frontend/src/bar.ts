@@ -13,9 +13,12 @@ export interface Range {
   level: Level
 }
 
+/** The entry date: a range, or with `immediate` the chip "מיידי", no dates: entry no later than 3
+ *  calendar months from the day the server evaluates, rolling (#458, #468). */
 export interface DateRange {
   earliest: string | null
   latest: string | null
+  immediate: boolean
   level: Level
 }
 
@@ -89,6 +92,21 @@ export function barOf(profile: Bar): Bar {
   }
 }
 
+/** A bar kept in the tab before the chip became a marker (#468) has no `immediate`: it reads as
+ *  false, its dates as they were. */
+export function currentBar(bar: Bar): Bar {
+  const entry = (option: SearchOption): SearchOption =>
+    option.entry_date && option.entry_date.immediate === undefined
+      ? { ...option, entry_date: { ...option.entry_date, immediate: false } }
+      : option
+  return { ...bar, room: entry(bar.room), whole_apartment: entry(bar.whole_apartment) }
+}
+
+/** The chip "מיידי" (#458): the marker, at the range's level. */
+export function immediateEntry(range: DateRange | null): DateRange {
+  return { earliest: null, latest: null, immediate: true, level: range?.level ?? 'preference' }
+}
+
 /** Field by field, whatever the order of the keys: "changed" is computed so (3.7 (e)). */
 export function sameBar(a: Bar, b: Bar): boolean {
   return canonical(barOf(a)) === canonical(barOf(b))
@@ -146,6 +164,7 @@ export function setDateEnd(range: DateRange | null, end: 'earliest' | 'latest', 
   const next = {
     earliest: range?.earliest ?? null,
     latest: range?.latest ?? null,
+    immediate: false, // a date typed ends the chip's marker
     level: range?.level ?? 'preference',
     [end]: value || null,
   }
@@ -174,12 +193,17 @@ export function addMonths(iso: string, months: number): string {
  *  typed: 0002, 0020, 0202, 2026), and goes with it when "מתאריך" is cleared; a date the user set
  *  in "עד תאריך" is never touched. */
 export function setEarliest(range: DateRange | null, value: string): DateRange | null {
-  const before = range?.earliest ?? null
-  const latest = range?.latest ?? null
+  const before = range?.immediate ? null : (range?.earliest ?? null)
+  const latest = range?.immediate ? null : (range?.latest ?? null)
   const filled = latest === null || (before !== null && latest === addMonths(before, ENTRY_SPAN_MONTHS))
   if (!filled) return setDateEnd(range, 'earliest', value)
   if (!value) return null
-  return { earliest: value, latest: addMonths(value, ENTRY_SPAN_MONTHS), level: range?.level ?? 'preference' }
+  return {
+    earliest: value,
+    latest: addMonths(value, ENTRY_SPAN_MONTHS),
+    immediate: false,
+    level: range?.level ?? 'preference',
+  }
 }
 
 /** The controls of one option that hold a value: what "סינון (3)" counts. "Women only" counts when
@@ -256,14 +280,14 @@ export function sizeWords(size: Range | null): string | null {
 }
 
 /** The entry date in words; dates as day.month, the year never shown (#115). */
-export function entryWords(entry: DateRange | null, today: string): string | null {
+export function entryWords(entry: DateRange | null): string | null {
   if (!entry) return null
   const day = (iso: string) => {
     const [, month, date] = iso.split('-')
     return `${Number(date)}.${Number(month)}`
   }
   let text: string
-  if (entry.earliest === null && entry.latest === today) text = 'כניסה מיידית'
+  if (entry.immediate) text = 'כניסה מיידית'
   else if (entry.earliest !== null && entry.latest !== null) text = `כניסה ${day(entry.earliest)}–${day(entry.latest)}`
   else if (entry.earliest !== null) text = `כניסה מ-${day(entry.earliest)}`
   else text = `כניסה עד ${day(entry.latest as string)}`
@@ -276,34 +300,24 @@ export function featureWords(option: SearchOption, feature: Feature): string | n
 }
 
 /** Every value of one option in words, for the preferences page's summary. */
-export function optionSummary(option: SearchOption, names: ReadonlyMap<number, string>, today: string): string[] {
+export function optionSummary(option: SearchOption, names: ReadonlyMap<number, string>): string[] {
   return [
     areasWords(option.areas, names),
     priceWords(option),
     roomsWords(option.rooms),
     floorWords(option.floor),
     sizeWords(option.size_sqm),
-    entryWords(option.entry_date, today),
+    entryWords(option.entry_date),
     ...FEATURES.map((feature) => featureWords(option, feature)),
     option.hide_women_only ? null : 'כולל מודעות לנשים בלבד',
   ].filter((words): words is string => words !== null)
-}
-
-/** Today's date in Israel, YYYY-MM-DD: what "immediate" compares as (#270; invariant 9: Israel time
- *  only at display). */
-export function israelToday(now: Date): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Jerusalem',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(now)
 }
 
 // The rules a bar can break, in words (the server's 422 names the rule, never a value).
 const RULE_WORDS: [RegExp, string][] = [
   [/price_min must not exceed price_max/, 'המחיר המינימלי גבוה מהמקסימלי'],
   [/earliest must not be after latest/, 'תאריך הכניסה המוקדם מאוחר מהמאוחר'],
+  [/immediate entry date has no dates/, 'כניסה מיידית בלי תאריכים'],
   [/min must not exceed max/, 'בטווח, הערך הנמוך גבוה מהגבוה'],
   [/no sqm filter/, 'בחיפוש חדר אין סינון לפי מ״ר'],
   [/whole or half/, 'חדרים: מספר שלם או חצי'],

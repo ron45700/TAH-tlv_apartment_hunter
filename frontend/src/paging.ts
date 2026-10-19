@@ -82,6 +82,35 @@ export function withViewedSettled(list: Loaded, postId: string): Loaded {
   return { ...list, order: [...order, card.id], cards: rest, next: list.next - 1 }
 }
 
+/** What the card's pill offers a signed-in user (#466): "בטל הסתרה" on a hidden card; "הסתר" on a
+ * card in the middle or bottom tier always, and in the top tier only once viewed; by tier, not by
+ * glow, since a card with no preference has no glow. `viewed` may be newer than the card's own. */
+export function hideOffer(card: CardData, viewed = card.viewed === true): 'hide' | 'unhide' | null {
+  if (card.hidden) return 'unhide'
+  return card.evaluation.tier === 'preferences_met' && !viewed ? null : 'hide'
+}
+
+/** The card holding this post with its hidden mark changed, in place (#468, points 13 and 15). */
+export function withHidden(list: Loaded, postId: string, hidden: boolean): Loaded {
+  return {
+    ...list,
+    cards: list.cards.map((card) => (card.id === postId || card.post_ids.includes(postId) ? { ...card, hidden } : card)),
+  }
+}
+
+/** A card taken out in place comes back where it was, the count one more: "בטל הסתרה" right after
+ * hiding it on the saved preferences (#468). Nothing changes when it is already drawn. */
+export function withCardBack(list: Loaded, card: CardData, at: number): Loaded {
+  if (list.cards.some((each) => each.id === card.id)) return list
+  const i = Math.max(0, Math.min(at, list.cards.length))
+  return {
+    count: list.count + 1,
+    order: [...list.order.slice(0, i), card.id, ...list.order.slice(i).filter((id) => id !== card.id)],
+    cards: [...list.cards.slice(0, i), card, ...list.cards.slice(i)],
+    next: list.next + 1,
+  }
+}
+
 /** The item holding this post leaves the list in place (#377); an item not drawn yet leaves the
  * order. Nothing changes for an id the load does not hold. */
 export function withoutCard<T extends Item>(list: Loaded<T>, postId: string): Loaded<T> {

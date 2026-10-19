@@ -44,7 +44,7 @@ from tlv_hunter.contracts.profile import Profile
 from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import Card
 from tlv_hunter.policy.evaluate import evaluate
-from tlv_hunter.policy.order import card_viewed, ordered
+from tlv_hunter.policy.order import card_hidden, card_viewed, ordered
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.base import OpenReportExists, UserDataStore
 from tlv_hunter.web.auth import (
@@ -62,6 +62,7 @@ from tlv_hunter.web.filters import (
     cards_request,
     empty_bar,
     owned_profile,
+    same_values,
 )
 from tlv_hunter.web.grouping import Grouping
 from tlv_hunter.web.writes import REPORT_LABELS, flag_card, report_post
@@ -124,10 +125,10 @@ async def cards_for_bar(request: Request) -> Response:
     site = _site(request)
     body = await request.body()
     try:
-        profile, first = cards_request(body, site.clock())
+        profile, first, show_hidden = cards_request(body, site.clock())
     except ValueError as error:
         raise HTTPException(status_code=422, detail=_refusal(error)) from None
-    return _cards(site, profile, _list_user(request, site), first)
+    return _cards(site, profile, _list_user(request, site), first, show_hidden)
 
 
 @router.get("/cards")
@@ -146,13 +147,15 @@ async def cards_by_id(request: Request) -> Response:
     site = _site(request)
     body = await request.body()
     try:
-        profile, ids = by_id_request(body, site.clock())
+        profile, ids, show_hidden = by_id_request(body, site.clock())
     except ValueError as error:
         raise HTTPException(status_code=422, detail=_refusal(error)) from None
     user = _list_user(request, site)
     snapshot = site.grouping.current().snapshot
     now = site.clock()
     viewed_ids = site.userdata.viewed_listing_ids(user.user_id) if user is not None else set()
+    hidden_ids = site.userdata.hidden_listing_ids(user.user_id) if user is not None else set()
+    leaves_hidden = _hiding(site, user, profile) and not show_hidden
     cards, gone, given = [], [], set()
     for listing_id in ids:
         card = snapshot.card_of.get(listing_id)
@@ -160,11 +163,24 @@ async def cards_by_id(request: Request) -> Response:
         if card is None or evaluation is None or not evaluation.shown:
             gone.append(listing_id)
             continue
+        hidden = card_hidden(card, hidden_ids)
+        if hidden and leaves_hidden:  # hidden meanwhile (another tab): it leaves the load
+            gone.append(listing_id)
+            continue
         if card.shown_id in given:
             continue
         given.add(card.shown_id)
         viewed = None if user is None else card_viewed(card, viewed_ids)
-        cards.append(card_payload(card, evaluation, profile, site.area_names, viewed=viewed))
+        cards.append(
+            card_payload(
+                card,
+                evaluation,
+                profile,
+                site.area_names,
+                viewed=viewed,
+                hidden=None if user is None else hidden,
+            )
+        )
     return _json({"generation": snapshot.generation, "cards": cards, "gone": gone})
 
 
@@ -404,6 +420,32 @@ async def unmark_viewed(listing_id: str, request: Request) -> Response:
     return _json({"viewed": False})
 
 
+@router.post("/hidden/{listing_id}")
+async def hide(listing_id: str, request: Request) -> Response:
+    """ "הסתר" (#464, #468): the card's shown post, the first time kept."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    check_write(request)
+    card = _current_card(site, listing_id)
+    if card is None:
+        return _gone()
+    site.userdata.hide(_user(who).user_id, card.shown_id, site.clock())
+    return _json({"hidden": True})
+
+
+@router.delete("/hidden/{listing_id}")
+async def unhide(listing_id: str, request: Request) -> Response:
+    """ "בטל הסתרה": the user's marks on every post of the card (SCHEMA.md `HiddenPost`)."""
+    site = _site(request)
+    who = _signed_in_viewer(request, site)
+    check_write(request)
+    card = _current_card(site, listing_id)
+    if card is None:
+        return _gone()
+    site.userdata.unhide(_user(who).user_id, card.post_ids)
+    return _json({"hidden": False})
+
+
 @router.post("/flag/{listing_id}")
 async def flag(listing_id: str, request: Request) -> Response:
     """The "lied" flag on every member of the card (#300). `flagged` of `of`; `remaining` names
@@ -547,10 +589,25 @@ def _list_user(request: Request, site: Site) -> User | None:
     return None if user is None or user.must_change_password else user
 
 
-def _cards(site: Site, profile: Profile, user: User | None, first: int) -> Response:
+def _hiding(site: Site, user: User | None, profile: Profile) -> bool:
+    """Whether hiding applies to this list (#465; appendix A point 10, decided here): a signed-in
+    user whose bar holds the saved preferences, value by value. A guest, or a temporary filter,
+    sees everything."""
+    if user is None:
+        return False
+    saved = site.userdata.get_profile(user.user_id)
+    return saved is not None and same_values(profile, saved)
+
+
+def _cards(
+    site: Site, profile: Profile, user: User | None, first: int, show_hidden: bool = False
+) -> Response:
     """Every card is evaluated and ordered; `order` holds the whole order of this load (each
     card's shown id), and `cards` the first `first` of it whole (#376). `first` 0: the count alone,
-    no order (#378)."""
+    no order (#378). For a signed-in user (#464–#466, #468): `hiding` says whether the bar holds
+    the saved preferences; there, with `show_hidden` off, the hidden cards leave the list and the
+    count; `hidden_count` is how many of the shown cards are hidden; each card carries `hidden`,
+    and a hidden card that is shown keeps its place."""
     held = site.grouping.current()
     now = site.clock()
     started = time.perf_counter()
@@ -558,13 +615,19 @@ def _cards(site: Site, profile: Profile, user: User | None, first: int) -> Respo
     eval_ms = _ms_since(started)
     started = time.perf_counter()
     viewed_ids = site.userdata.viewed_listing_ids(user.user_id) if user is not None else set()
+    hidden_ids = site.userdata.hidden_listing_ids(user.user_id) if user is not None else set()
     shown = ordered(entries, viewed_ids=viewed_ids)  # unviewed before viewed (#62)
+    hiding = _hiding(site, user, profile)
+    hidden_count = sum(card_hidden(card, hidden_ids) for card, _ in shown)
+    if hiding and not show_hidden:
+        shown = [(card, ev) for card, ev in shown if not card_hidden(card, hidden_ids)]
     order_ms = _ms_since(started)
     started = time.perf_counter()
     names = site.area_names
     payload = {
         "generation": held.snapshot.generation,
         "count": len(shown),
+        **({} if user is None else {"hiding": hiding, "hidden_count": hidden_count}),
         "order": [card.shown_id for card, _ in shown] if first else [],
         "cards": [
             card_payload(
@@ -573,6 +636,7 @@ def _cards(site: Site, profile: Profile, user: User | None, first: int) -> Respo
                 profile,
                 names,
                 viewed=None if user is None else card_viewed(card, viewed_ids),
+                hidden=None if user is None else card_hidden(card, hidden_ids),
             )
             for card, evaluation in shown[:first]
         ],

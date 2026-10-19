@@ -10,6 +10,7 @@ import {
   FEATURE_NAMES,
   setDateEnd,
   setEarliest,
+  immediateEntry,
   setRangeEnd,
   toggleAreas,
   type DateRange,
@@ -308,14 +309,12 @@ export function FeaturesField({ option, onChange, tiles = false }: { option: Sea
 
 export function EntryField({
   entry,
-  today,
   onChange,
 }: {
   entry: DateRange | null
-  today: string
   onChange: (entry: DateRange | null) => void
 }) {
-  const immediate = entry !== null && entry.earliest === null && entry.latest === today
+  const immediate = entry?.immediate === true
   return (
     <Field title="תאריך כניסה" onClear={entry ? () => onChange(null) : undefined}>
       <div className="quick">
@@ -323,7 +322,7 @@ export function EntryField({
           type="button"
           className={immediate ? 'qchip is-on' : 'qchip'}
           aria-pressed={immediate}
-          onClick={() => onChange(immediate ? null : { earliest: null, latest: today, level: entry?.level ?? 'preference' })}
+          onClick={() => onChange(immediate ? null : immediateEntry(entry))}
         >
           מיידי
         </button>
@@ -370,12 +369,10 @@ export function WomenField({ option, onChange }: { option: SearchOption; onChang
 export function MoreFields({
   name,
   option,
-  today,
   onChange,
 }: {
   name: OptionName
   option: SearchOption
-  today: string
   onChange: Change
 }) {
   return (
@@ -385,7 +382,7 @@ export function MoreFields({
         <RangeField title="גודל (מ״ר)" scale="size" range={option.size_sqm} onChange={(size_sqm) => onChange({ size_sqm })} />
       )}
       <FeaturesField option={option} onChange={onChange} />
-      <EntryField entry={option.entry_date} today={today} onChange={(entry_date) => onChange({ entry_date })} />
+      <EntryField entry={option.entry_date} onChange={(entry_date) => onChange({ entry_date })} />
       <WomenField option={option} onChange={onChange} />
     </>
   )

@@ -17,23 +17,51 @@
 // 3.8: the admin's pages under /admin (screens/admin/), behind the same header.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, api } from './api'
-import { barHeldCount, barOf, emptyBar, israelToday, refusalWords, sameBar, type Bar } from './bar'
+import { barHeldCount, barOf, currentBar, emptyBar, refusalWords, sameBar, type Bar } from './bar'
 import { ConfirmFlag, NoticeBar, type Notice } from './components/actions'
 import { BackToTop } from './components/BackToTop'
 import { Card, type CardActions } from './components/Card'
 import { FilterBar, type BarStanding } from './components/FilterBar'
 import { Header } from './components/Header'
 import { PostView, type PostActions } from './components/PostView'
-import { PAGE, firstLoad, nextIds, withPage, withViewedSettled, withoutCard, type Loaded } from './paging'
+import {
+  PAGE,
+  firstLoad,
+  nextIds,
+  withCardBack,
+  withHidden,
+  withPage,
+  withViewedSettled,
+  withoutCard,
+  type Loaded,
+} from './paging'
 import { navigate, postPath, useRoute } from './route'
 import { PasswordScreen, SignIn, SignUp } from './screens/Account'
 import { Admin } from './screens/admin/Admin'
 import { Preferences } from './screens/Preferences'
-import type { FlagAnswer, Reference, SessionUser } from './types'
+import type { CardData, FlagAnswer, Reference, SessionUser } from './types'
 
 const LOADING_RETRY_MS = 2000
 const PHONE = '(max-width: 699.98px)'
 const BAR_KEY = 'tlv.bar'
+const SHOW_HIDDEN_KEY = 'tlv.showHidden'
+
+/** "הצגת מוסתרים" lives in the tab, as the bar does, and is never saved (#468, point 15). */
+function storedShowHidden(): boolean {
+  try {
+    return sessionStorage.getItem(SHOW_HIDDEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function keepShowHidden(show: boolean): void {
+  try {
+    sessionStorage.setItem(SHOW_HIDDEN_KEY, show ? '1' : '0')
+  } catch {
+    // the tab's memory only
+  }
+}
 
 /** The bar kept for this tab, if it belongs to the same viewer (a username, or a guest). */
 function storedBar(owner: string | null): Bar | null {
@@ -41,7 +69,7 @@ function storedBar(owner: string | null): Bar | null {
     const raw = sessionStorage.getItem(BAR_KEY)
     if (!raw) return null
     const kept = JSON.parse(raw) as { owner: string | null; bar: Bar }
-    return kept.owner === owner && kept.bar ? kept.bar : null
+    return kept.owner === owner && kept.bar ? currentBar(kept.bar) : null
   } catch {
     return null
   }
@@ -77,11 +105,13 @@ export function App() {
   const [flagging, setFlagging] = useState<string | null>(null)
   const [flagBusy, setFlagBusy] = useState(false)
   const [reportFor, setReportFor] = useState<string | null>(null)
+  // Hiding (#464–#466, #468): the server says whether the bar is on the saved preferences.
+  const [showHidden, setShowHidden] = useState(storedShowHidden)
+  const [hiding, setHiding] = useState<{ on: boolean; count: number } | null>(null)
   const now = useNow()
   const phone = useMedia(PHONE)
   const openedFromList = useRef(false)
   const returnFocusTo = useRef<string | null>(null)
-  const today = israelToday(now)
 
   useEffect(() => {
     api
@@ -138,9 +168,10 @@ export function App() {
     const timer = window.setTimeout(
       () => {
         api
-          .cards(bar, PAGE, controller.signal)
+          .cards(bar, PAGE, controller.signal, showHidden)
           .then((answer) => {
             setList(firstLoad(answer))
+            setHiding(answer.hiding === undefined ? null : { on: answer.hiding, count: answer.hidden_count ?? 0 })
             setFailed(false)
             setBarProblem(null)
           })
@@ -160,7 +191,9 @@ export function App() {
       window.clearTimeout(retry)
       controller.abort()
     }
-  }, [bar, reloads, onAdmin])
+  }, [bar, reloads, onAdmin, showHidden])
+
+  useEffect(() => keepShowHidden(showHidden), [showHidden])
 
   // The next page of the load as its last cards come near the view (#376): the ids come from the
   // load's own order, so nothing is skipped or drawn twice. A page that fails is asked again.
@@ -174,13 +207,13 @@ export function App() {
     paging.current = true
     const from = list.order
     api
-      .cardsById(bar, ids)
+      .cardsById(bar, ids, undefined, showHidden)
       .then((page) => setList((current) => (current && current.order === from ? withPage(current, ids, page) : current)))
       .catch(() => window.setTimeout(() => setPageRetries((n) => n + 1), LOADING_RETRY_MS))
       .finally(() => {
         paging.current = false
       })
-  }, [list, bar])
+  }, [list, bar, showHidden])
   useEffect(() => {
     const target = sentinel.current
     if (!target || !list || list.next >= list.order.length) return
@@ -300,6 +333,57 @@ export function App() {
     )
   }, [])
 
+  // "הסתר": on the saved preferences with the switch off, the card leaves the list in place, the
+  // count one less, with "בטל הסתרה" in the notice to bring it back where it was; elsewhere it stays,
+  // tagged "מוסתרת" (#468, points 13–15). From the opened post, a card that leaves closes the post.
+  const listNowForHide = useRef(list)
+  listNowForHide.current = list
+  const leavesWhenHidden = hiding?.on === true && !showHidden
+  const unhideCard = useCallback((id: string, back?: { card: CardData; at: number }) => {
+    api
+      .unhide(id)
+      .then(() => {
+        setHiding((current) => current && { ...current, count: Math.max(0, current.count - 1) })
+        if (back) {
+          setNotice(null)
+          setList((current) => current && withHidden(withCardBack(current, back.card, back.at), id, false))
+        } else setList((current) => current && withHidden(current, id, false))
+      })
+      .catch((error) => {
+        if (error instanceof ApiError && error.refusal === 'gone') setNotice({ text: 'המודעה כבר הוסרה מהרשימה בינתיים.' })
+        else setNotice({ text: 'ביטול ההסתרה לא נשמר. בדקו את החיבור ונסו שוב.' })
+      })
+  }, [])
+  const hideCard = useCallback(
+    (id: string) => {
+      const current = listNowForHide.current
+      const at = current ? current.cards.findIndex((card) => card.id === id || card.post_ids.includes(id)) : -1
+      const card = at >= 0 && current ? current.cards[at] : undefined
+      api
+        .hide(id)
+        .then(() => {
+          setHiding((was) => was && { ...was, count: was.count + 1 })
+          if (leavesWhenHidden) {
+            removeCard(id)
+            setNotice({
+              text: 'המודעה הוסתרה.',
+              undo: true,
+              retry: { label: 'בטל הסתרה', run: () => unhideCard(id, card ? { card, at } : undefined) },
+            })
+            if (openPostId) close()
+          } else setList((list) => list && withHidden(list, id, true))
+        })
+        .catch((error) => {
+          if (error instanceof ApiError && error.refusal === 'gone') {
+            setNotice({ text: 'המודעה כבר הוסרה מהרשימה בינתיים.' })
+            removeCard(id)
+            if (openPostId) close()
+          } else setNotice({ text: 'ההסתרה לא נשמרה. בדקו את החיבור ונסו שוב.', retry: { label: 'נסו שוב', run: () => hideCard(id) } })
+        })
+    },
+    [close, leavesWhenHidden, openPostId, removeCard, unhideCard],
+  )
+
   const signedInUser = user && !user.must_change_password ? user : null
   const cardActions: CardActions | undefined = useMemo(
     () =>
@@ -310,9 +394,11 @@ export function App() {
               setReportFor(id)
               open(id)
             },
+            onHide: hideCard,
+            onUnhide: (id) => unhideCard(id),
           }
         : undefined,
-    [signedInUser, open],
+    [signedInUser, open, hideCard, unhideCard],
   )
   const postActions: PostActions | undefined =
     signedInUser && reference
@@ -335,6 +421,8 @@ export function App() {
             if (openPostId) removeCard(openPostId)
             close()
           },
+          onHide: hideCard,
+          onUnhide: (id) => unhideCard(id),
         }
       : undefined
 
@@ -430,7 +518,7 @@ export function App() {
       <>
         {header}
         {user && saved && reference ? (
-          <Preferences saved={saved} onSaved={savedNow} groups={reference.area_groups} names={names} today={today} />
+          <Preferences saved={saved} onSaved={savedNow} groups={reference.area_groups} names={names} />
         ) : (
           <main className="shell screen">
             <p className="empty">טוען…</p>
@@ -459,8 +547,10 @@ export function App() {
             error={barProblem}
             groups={reference.area_groups}
             names={names}
-            today={today}
             phone={phone}
+            hidden={
+              signedInUser && hiding?.on ? { count: hiding.count, show: showHidden, onShow: setShowHidden } : undefined
+            }
           />
         ) : (
           <div className="filterbar is-waiting" aria-hidden="true" />

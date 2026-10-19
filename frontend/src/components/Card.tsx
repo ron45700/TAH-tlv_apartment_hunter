@@ -17,6 +17,7 @@ import {
   sizeClosed,
   type StatText,
 } from '../format'
+import { hideOffer } from '../paging'
 import { postPath } from '../route'
 import type { CardData, Colour, Kind } from '../types'
 import { ActionMenu } from './actions'
@@ -27,6 +28,9 @@ import { InfoButton } from './InfoButton'
 export interface CardActions {
   onFlag: (id: string) => void
   onReport: (id: string) => void
+  /** "הסתר" and "בטל הסתרה" (#464–#466, #468). */
+  onHide: (id: string) => void
+  onUnhide: (id: string) => void
 }
 
 interface Props {
@@ -55,6 +59,7 @@ export function Card({ card, now, onOpen, actions }: Props) {
   const chips = closedChips(card, card.colours)
   const reposts = publishedTimes(card.publications)
   const sizeField = kind === 'room' && card.room_size_sqm.state === 'written' ? 'room_size_sqm' : 'size_sqm'
+  const offer = actions ? hideOffer(card) : null
   const open = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
     event.preventDefault()
@@ -62,20 +67,39 @@ export function Card({ card, now, onOpen, actions }: Props) {
   }
 
   return (
-    <article className={`card ${card.glow ? `glow-${card.glow}` : 'glow-none'}${card.viewed ? ' is-viewed' : ''}`}>
+    <article
+      className={`card ${card.glow ? `glow-${card.glow}` : 'glow-none'}${card.viewed ? ' is-viewed' : ''}${card.hidden ? ' is-hidden' : ''}`}
+    >
       <a
         className="open"
         href={postPath(card.id)}
         onClick={open}
-        aria-label={`פתיחת המודעה${card.viewed ? ', נצפתה' : ''}${card.tier_label ? `. ${card.tier_label}` : ''}`}
+        aria-label={`פתיחת המודעה${card.viewed ? ', נצפתה' : ''}${card.hidden ? ', מוסתרת' : ''}${card.tier_label ? `. ${card.tier_label}` : ''}`}
       />
       <div className="media">
         <Carousel photos={card.photos} videos={card.videos} variant="card" />
         {card.tier_label && <InfoButton label={card.tier_label} />}
+        {/* "הסתר" on the photo's top-right corner, opposite the "i", so the foot stays as it is
+            (#341, #351; #468, appendix A point 12); "בטל הסתרה" in the same place */}
+        {offer && actions && (
+          <button
+            type="button"
+            className="hidepill"
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              if (offer === 'hide') actions.onHide(card.id)
+              else actions.onUnhide(card.id)
+            }}
+          >
+            {offer === 'hide' ? 'הסתר' : 'בטל הסתרה'}
+          </button>
+        )}
       </div>
       <div className="body">
         <div className="kindrow">
           <span className={line.unclear ? 'kind kind-unclear' : 'kind'}>{line.text}</span>
+          {card.hidden && <span className="seen hidden-tag">מוסתרת</span>}
           {card.viewed && <span className="seen">נצפה</span>}
         </div>
         <div className="pricerow">

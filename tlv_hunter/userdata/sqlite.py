@@ -6,6 +6,8 @@ or `group_watermarks`. Its layout version 2 adds a trigger on `corrections` that
 generation counter (#316, `store_generation.py`), whose one-row table it creates when it lays out
 a new file first. Gate F's tables (#453) have their own layout row, `userdata.telegram`, created
 when absent, as `store.listings` is in `store/`; they move no counter (no card changes with them).
+`HiddenPost`'s table (#464, #468) has its own row too, `userdata.hidden`, created when absent the
+same way; it moves no counter either (a hidden mark changes no card, only one user's list).
 A report's or a correction's `listing_id` has no foreign key: they outlive
 their post (#255). SQLite only, as `state/` is (#64).
 """
@@ -21,6 +23,7 @@ from pydantic import BaseModel
 from tlv_hunter import store_generation
 from tlv_hunter.contracts.classification_report import ClassificationReport
 from tlv_hunter.contracts.field_correction import FieldCorrection
+from tlv_hunter.contracts.hidden_post import HIDDEN_POST_SCHEMA_VERSION, HiddenPost
 from tlv_hunter.contracts.profile import Profile
 from tlv_hunter.contracts.sent_alert import SentAlert
 from tlv_hunter.contracts.session import Session
@@ -49,6 +52,9 @@ LAYOUT_VERSION = 2
 # Gate F's tables (#453): their own row, created when absent.
 TELEGRAM_LAYOUT_MODULE = "userdata.telegram"
 TELEGRAM_LAYOUT_VERSION = 1
+# `HiddenPost`'s table (#468): its own row, created when absent, as Gate F's.
+HIDDEN_LAYOUT_MODULE = "userdata.hidden"
+HIDDEN_LAYOUT_VERSION = 1
 
 _CREATE_LAYOUT_VERSION = (
     "CREATE TABLE IF NOT EXISTS layout_version (module TEXT PRIMARY KEY, version INTEGER NOT NULL)"
@@ -81,6 +87,11 @@ _CREATE_TELEGRAM_TABLES = (
     "CREATE TABLE telegram_link_codes (code_hash TEXT PRIMARY KEY, "
     "user_id TEXT NOT NULL REFERENCES users (user_id), doc TEXT NOT NULL)",
     "CREATE TABLE sent_alerts (user_id TEXT NOT NULL REFERENCES users (user_id), "
+    "listing_id TEXT NOT NULL, doc TEXT NOT NULL, PRIMARY KEY (user_id, listing_id))",
+)
+
+_CREATE_HIDDEN_TABLES = (
+    "CREATE TABLE hidden_posts (user_id TEXT NOT NULL REFERENCES users (user_id), "
     "listing_id TEXT NOT NULL, doc TEXT NOT NULL, PRIMARY KEY (user_id, listing_id))",
 )
 
@@ -123,21 +134,32 @@ class SqliteUserDataStore:
                     f"{self._path}: module {LAYOUT_MODULE!r} expects layout version "
                     f"{LAYOUT_VERSION}, found {row[0]}; no automatic migration"
                 )
-            row = conn.execute(
-                "SELECT version FROM layout_version WHERE module = ?", (TELEGRAM_LAYOUT_MODULE,)
-            ).fetchone()
-            if row is None:
-                for statement in _CREATE_TELEGRAM_TABLES:
-                    conn.execute(statement)
-                conn.execute(
-                    "INSERT INTO layout_version (module, version) VALUES (?, ?)",
-                    (TELEGRAM_LAYOUT_MODULE, TELEGRAM_LAYOUT_VERSION),
-                )
-            elif row[0] != TELEGRAM_LAYOUT_VERSION:
-                raise RuntimeError(
-                    f"{self._path}: module {TELEGRAM_LAYOUT_MODULE!r} expects layout version "
-                    f"{TELEGRAM_LAYOUT_VERSION}, found {row[0]}; no automatic migration"
-                )
+            for module, version, statements in (
+                (TELEGRAM_LAYOUT_MODULE, TELEGRAM_LAYOUT_VERSION, _CREATE_TELEGRAM_TABLES),
+                (HIDDEN_LAYOUT_MODULE, HIDDEN_LAYOUT_VERSION, _CREATE_HIDDEN_TABLES),
+            ):
+                self._lay_out_when_absent(conn, module, version, statements)
+
+    def _lay_out_when_absent(
+        self, conn: sqlite3.Connection, module: str, version: int, statements: tuple[str, ...]
+    ) -> None:
+        """A module with its own layout row (Gate F's, `HiddenPost`'s): its tables and its row are
+        created when the row is absent, in the opening transaction; a file at another version is
+        refused."""
+        row = conn.execute(
+            "SELECT version FROM layout_version WHERE module = ?", (module,)
+        ).fetchone()
+        if row is None:
+            for statement in statements:
+                conn.execute(statement)
+            conn.execute(
+                "INSERT INTO layout_version (module, version) VALUES (?, ?)", (module, version)
+            )
+        elif row[0] != version:
+            raise RuntimeError(
+                f"{self._path}: module {module!r} expects layout version "
+                f"{version}, found {row[0]}; no automatic migration"
+            )
 
     # --- users ---
 
@@ -308,6 +330,36 @@ class SqliteUserDataStore:
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT listing_id FROM viewed_posts WHERE user_id = ?", (user_id,)
+            ).fetchall()
+        return {listing_id for (listing_id,) in rows}
+
+    # --- hidden posts (#464–#466, #468) ---
+
+    def hide(self, user_id: str, listing_id: str, at: datetime) -> None:
+        record = HiddenPost(
+            schema_version=HIDDEN_POST_SCHEMA_VERSION,
+            user_id=user_id,
+            listing_id=listing_id,
+            hidden_at=at,
+        )
+        with self._transaction() as conn:
+            conn.execute(
+                "INSERT INTO hidden_posts (user_id, listing_id, doc) VALUES (?, ?, ?) "
+                "ON CONFLICT (user_id, listing_id) DO NOTHING",
+                (user_id, listing_id, record.model_dump_json()),
+            )
+
+    def unhide(self, user_id: str, listing_ids: Collection[str]) -> None:
+        with self._transaction() as conn:
+            conn.executemany(
+                "DELETE FROM hidden_posts WHERE user_id = ? AND listing_id = ?",
+                [(user_id, listing_id) for listing_id in listing_ids],
+            )
+
+    def hidden_listing_ids(self, user_id: str) -> set[str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT listing_id FROM hidden_posts WHERE user_id = ?", (user_id,)
             ).fetchall()
         return {listing_id for (listing_id,) in rows}
 

@@ -117,7 +117,7 @@ def test_it_migrates_after_a_backup_and_changes_no_record(
     assert backup.name == "tlv_hunter.2026-10-12.backup.sqlite3"
     assert sqlite_dump(backup) == dump  # the store before, row for row (#424 point 89)
     # Gate F's tables (#453) have their own row, which the migration leaves as it is.
-    telegram = {"userdata.telegram": 1}
+    telegram = {"userdata.telegram": 1, "userdata.hidden": 1}  # and HiddenPost's (#468)
     assert _layout(backup) == {
         "store": 1,
         "store.listings": 1,

@@ -32,12 +32,11 @@ interface Props {
   onSaved: (saved: Bar) => void
   groups: AreaGroup[]
   names: ReadonlyMap<number, string>
-  today: string
 }
 
 type Saving = { state: 'idle' } | { state: 'saving' } | { state: 'saved' } | { state: 'failed'; words: string }
 
-export function Preferences({ saved, onSaved, groups, names, today }: Props) {
+export function Preferences({ saved, onSaved, groups, names }: Props) {
   const [draft, setDraft] = useState<Bar>(saved)
   const [tab, setTab] = useState<OptionName>('room')
   const [count, setCount] = useState<number | null>(null)
@@ -126,7 +125,7 @@ export function Preferences({ saved, onSaved, groups, names, today }: Props) {
           <div className="pcard summary">
             <h2>סיכום</h2>
             {OPTIONS.map((name) => {
-              const lines = optionSummary(draft[name], names, today)
+              const lines = optionSummary(draft[name], names)
               return (
                 <div key={name} className="sum-kind">
                   <h3>
@@ -237,7 +236,7 @@ export function Preferences({ saved, onSaved, groups, names, today }: Props) {
               </section>
             )}
             <section className="pcard">
-              <EntryField entry={option.entry_date} today={today} onChange={(entry_date) => change(tab)({ entry_date })} />
+              <EntryField entry={option.entry_date} onChange={(entry_date) => change(tab)({ entry_date })} />
             </section>
             <section className="pcard">
               <FeaturesField option={option} onChange={change(tab)} tiles />

@@ -58,7 +58,7 @@ function card(whatsapp: string | null, viewed?: boolean): CardData {
   }
 }
 
-const signedIn: CardActions = { onFlag: () => {}, onReport: () => {} }
+const signedIn: CardActions = { onFlag: () => {}, onReport: () => {}, onHide: () => {}, onUnhide: () => {} }
 
 function acts(markup: string): string {
   const found = /<div class="acts">(.*?)<\/div><span class="reposts"/.exec(markup)
@@ -110,5 +110,36 @@ describe('build step 6: the report button and the viewed state', () => {
     const fresh = renderToStaticMarkup(<Card card={card(null, false)} now={now} onOpen={() => {}} actions={signedIn} />)
     expect(fresh).not.toContain('נצפה')
     expect(fresh).not.toContain('is-viewed')
+  })
+})
+
+describe('hiding (#464–#466, #468): the pill on the photo, the tag, the faded card', () => {
+  const now = new Date('2026-10-14T09:00:00Z')
+  const pill = (markup: string) => /<button type="button" class="hidepill">([^<]*)<\/button>/.exec(markup)?.[1] ?? null
+  const render = (data: CardData, actions?: CardActions) =>
+    renderToStaticMarkup(<Card card={data} now={now} onOpen={() => {}} actions={actions} />)
+  const tiered = (tier: 'preferences_met' | 'critical_met' | 'unknown', viewed: boolean, hidden = false): CardData => {
+    const base = card(null, viewed)
+    return { ...base, hidden, evaluation: { ...base.evaluation, tier } }
+  }
+
+  it('offers "הסתר" by tier: middle and bottom always, top once viewed; never to a guest', () => {
+    expect(pill(render(tiered('critical_met', false), signedIn))).toBe('הסתר')
+    expect(pill(render(tiered('unknown', false), signedIn))).toBe('הסתר')
+    expect(pill(render(tiered('preferences_met', false), signedIn))).toBeNull()
+    expect(pill(render(tiered('preferences_met', true), signedIn))).toBe('הסתר')
+    expect(pill(render(tiered('critical_met', false)))).toBeNull()
+  })
+
+  it('a hidden card that is shown is faded, tagged "מוסתרת", and offers "בטל הסתרה"', () => {
+    const markup = render(tiered('preferences_met', false, true), signedIn)
+    expect(pill(markup)).toBe('בטל הסתרה')
+    expect(markup).toMatch(/class="card glow-none is-hidden"/)
+    expect(markup).toContain('<span class="seen hidden-tag">מוסתרת</span>')
+    expect(markup).toMatch(/aria-label="פתיחת המודעה, מוסתרת"/)
+  })
+
+  it('leaves the foot as it was (#341, #351)', () => {
+    expect(buttons(render(tiered('critical_met', false), signedIn))).toEqual(['btn-fb', 'btn-rep'])
   })
 })

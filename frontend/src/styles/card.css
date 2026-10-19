@@ -187,10 +187,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* the video chip at the photo's bottom-left: its top-right corner is the hide pill's (#468) */
 .vchip {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  bottom: 6px;
+  left: 10px;
   padding: 2px 9px;
   border-radius: 999px;
   background: rgb(29 35 43 / 0.75);
@@ -251,6 +252,31 @@
 .info:focus-visible .tip,
 .info.is-open .tip {
   display: block;
+}
+
+/* "הסתר" / "בטל הסתרה" (#464–#466, #468, appendix A point 12): a small pill on the photo's
+   top-right corner, opposite the "i", in words; nearly opaque, so its words keep their contrast over
+   any photo */
+.hidepill {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  right: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgb(255 255 255 / 0.75);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+  backdrop-filter: blur(3px);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.hidepill:hover {
+  background: #ffffff;
 }
 
 /* the body: every slot keeps its height whatever it holds (#341) */
@@ -627,6 +653,16 @@
     max-width: min(260px, calc(100vw - 128px));
   }
 
+  /* beside the "i" on the 118 px photo: smaller, so "בטל הסתרה" keeps a gap to the "i" */
+  .hidepill {
+    top: 6px;
+    right: 4px;
+    height: 26px;
+    padding: 0 5px;
+    font-size: 0.66rem;
+    letter-spacing: -0.01em;
+  }
+
   .kindrow {
     grid-column: 2;
     grid-row: 1;
@@ -733,6 +769,12 @@
     content: '';
     position: absolute;
     inset: -9px;
+  }
+
+  .hidepill::after {
+    content: '';
+    position: absolute;
+    inset: -9px -3px;
   }
 
   /* the photo's arrows, 34 px: 44 px to touch (#372) */

@@ -11,7 +11,8 @@ import {
   entryWords,
   floorWords,
   heldCount,
-  israelToday,
+  immediateEntry,
+  currentBar,
   optionSummary,
   priceWords,
   refusalWords,
@@ -38,7 +39,7 @@ function filled(): Bar {
       price_max: 4000,
       rooms: { min: 3, max: 4, level: 'critical' },
       broker: 'preference',
-      entry_date: { earliest: null, latest: '2026-11-01', level: 'preference' },
+      entry_date: { earliest: null, latest: '2026-11-01', immediate: false, level: 'preference' },
       hide_women_only: false,
     },
     whole_apartment: {
@@ -105,8 +106,8 @@ describe('values as the profile keeps them', () => {
     expect(setRangeEnd(null, 'min', 2)).toEqual({ min: 2, max: null, level: 'preference' })
     expect(setRangeEnd({ min: 2, max: null, level: 'critical' }, 'max', 3)).toEqual({ min: 2, max: 3, level: 'critical' })
     expect(setRangeEnd({ min: 2, max: null, level: 'critical' }, 'min', null)).toBeNull()
-    expect(setDateEnd(null, 'latest', '2026-11-01')).toEqual({ earliest: null, latest: '2026-11-01', level: 'preference' })
-    expect(setDateEnd({ earliest: null, latest: '2026-11-01', level: 'preference' }, 'latest', '')).toBeNull()
+    expect(setDateEnd(null, 'latest', '2026-11-01')).toEqual({ earliest: null, latest: '2026-11-01', immediate: false, level: 'preference' })
+    expect(setDateEnd({ earliest: null, latest: '2026-11-01', immediate: false, level: 'preference' }, 'latest', '')).toBeNull()
   })
 
   it('three calendar months on: the same day, or the last day of a shorter month', () => {
@@ -118,22 +119,22 @@ describe('values as the profile keeps them', () => {
   })
 
   it('"מתאריך" with "עד תאריך" empty fills it three months on; a set "עד תאריך" is kept (Ron, 2026-10-18)', () => {
-    expect(setEarliest(null, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', level: 'preference' })
-    const critical = { earliest: null, latest: null, level: 'critical' as const }
-    expect(setEarliest(critical, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', level: 'critical' })
-    const typed = { earliest: null, latest: '2026-12-15', level: 'preference' as const }
-    expect(setEarliest(typed, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2026-12-15', level: 'preference' })
-    const changed = { earliest: '2026-11-01', latest: '2027-01-10', level: 'preference' as const }
-    expect(setEarliest(changed, '2026-11-05')).toEqual({ earliest: '2026-11-05', latest: '2027-01-10', level: 'preference' })
+    expect(setEarliest(null, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', immediate: false, level: 'preference' })
+    const critical = { earliest: null, latest: null, immediate: false, level: 'critical' as const }
+    expect(setEarliest(critical, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', immediate: false, level: 'critical' })
+    const typed = { earliest: null, latest: '2026-12-15', immediate: false, level: 'preference' as const }
+    expect(setEarliest(typed, '2026-11-01')).toEqual({ earliest: '2026-11-01', latest: '2026-12-15', immediate: false, level: 'preference' })
+    const changed = { earliest: '2026-11-01', latest: '2027-01-10', immediate: false, level: 'preference' as const }
+    expect(setEarliest(changed, '2026-11-05')).toEqual({ earliest: '2026-11-05', latest: '2027-01-10', immediate: false, level: 'preference' })
   })
 
   it('the filled date follows the year as it is typed, and goes when "מתאריך" is cleared', () => {
     let entry = setEarliest(null, '0002-11-01')
     for (const year of ['0020', '0202', '2026']) entry = setEarliest(entry, `${year}-11-01`)
-    expect(entry).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', level: 'preference' })
+    expect(entry).toEqual({ earliest: '2026-11-01', latest: '2027-02-01', immediate: false, level: 'preference' })
     expect(setEarliest(entry, '')).toBeNull()
-    const typed = { earliest: '2026-11-01', latest: '2026-12-15', level: 'preference' as const }
-    expect(setEarliest(typed, '')).toEqual({ earliest: null, latest: '2026-12-15', level: 'preference' })
+    const typed = { earliest: '2026-11-01', latest: '2026-12-15', immediate: false, level: 'preference' as const }
+    expect(setEarliest(typed, '')).toEqual({ earliest: null, latest: '2026-12-15', immediate: false, level: 'preference' })
   })
 
   it("a new bar is #268's: both on, nothing set, sublets off, women only hidden", () => {
@@ -162,16 +163,16 @@ describe('the values in words', () => {
     expect(floorWords({ min: -1, max: 0, level: 'preference' })).toBe('קומה מרתף–קרקע')
   })
 
-  it('the entry date: "immediate" is until today; no year (#115)', () => {
-    const today = '2026-10-14'
-    expect(entryWords({ earliest: null, latest: today, level: 'preference' }, today)).toBe('כניסה מיידית')
-    expect(entryWords({ earliest: '2026-11-01', latest: '2026-12-15', level: 'critical' }, today)).toBe(
+  it('the entry date: the chip is a marker in words; no year (#115, #458)', () => {
+    expect(entryWords(immediateEntry(null))).toBe('כניסה מיידית')
+    expect(entryWords({ earliest: null, latest: '2026-10-14', immediate: false, level: 'preference' })).toBe('כניסה עד 14.10')
+    expect(entryWords({ earliest: '2026-11-01', latest: '2026-12-15', immediate: false, level: 'critical' })).toBe(
       'כניסה 1.11–15.12, חובה',
     )
   })
 
   it('the summary lists every value of an option', () => {
-    expect(optionSummary(filled().room, names, '2026-10-14')).toEqual([
+    expect(optionSummary(filled().room, names)).toEqual([
       '2 אזורים',
       'מחיר עד ₪4,000',
       'חדרים 3–4, חובה',
@@ -179,14 +180,34 @@ describe('the values in words', () => {
       'ללא תיווך',
       'כולל מודעות לנשים בלבד',
     ])
-    expect(optionSummary({ ...emptyOption(), areas: [30] }, names, '2026-10-14')).toEqual(['הצפון הישן - צפון'])
+    expect(optionSummary({ ...emptyOption(), areas: [30] }, names)).toEqual(['הצפון הישן - צפון'])
   })
 })
 
-describe('Israel\'s date for "immediate" (#270)', () => {
-  it('is the date in Israel, not in UTC', () => {
-    expect(israelToday(new Date('2026-10-13T21:30:00Z'))).toBe('2026-10-14') // 00:30 in Israel
-    expect(israelToday(new Date('2026-01-14T21:59:00Z'))).toBe('2026-01-14') // 23:59 in winter
+describe('the chip "מיידי" is a marker, never dates (#458, #468)', () => {
+  it('keeps the level; a date typed ends it; "מתאריך" after it fills "עד תאריך"', () => {
+    const chip = immediateEntry({ earliest: '2026-11-01', latest: null, immediate: false, level: 'critical' })
+    expect(chip).toEqual({ earliest: null, latest: null, immediate: true, level: 'critical' })
+    expect(setDateEnd(chip, 'latest', '2026-12-01')).toEqual({
+      earliest: null,
+      latest: '2026-12-01',
+      immediate: false,
+      level: 'critical',
+    })
+    expect(setEarliest(chip, '2026-11-01')).toEqual({
+      earliest: '2026-11-01',
+      latest: '2027-02-01',
+      immediate: false,
+      level: 'critical',
+    })
+  })
+
+  it('a bar kept in the tab before the marker reads with it false', () => {
+    const old = emptyBar()
+    const kept = { ...old, room: { ...old.room, entry_date: { earliest: null, latest: '2026-10-14', level: 'preference' } } }
+    const read = currentBar(kept as unknown as Bar)
+    expect(read.room.entry_date).toEqual({ earliest: null, latest: '2026-10-14', immediate: false, level: 'preference' })
+    expect(read.whole_apartment.entry_date).toBeNull()
   })
 })
 

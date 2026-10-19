@@ -65,11 +65,11 @@ export const api = {
   reference: (signal?: AbortSignal) => call<Reference>('GET', '/api/reference', undefined, signal),
   /** The cards for what the bar holds (#314, #315): a read; the bar is never saved. `first`: how
    * many come whole with the order (#376); 0, the count alone (#378). */
-  cards: (bar: Bar, first: number, signal?: AbortSignal) =>
-    call<CardsResponse>('POST', '/api/cards', { ...bar, first }, signal),
+  cards: (bar: Bar, first: number, signal?: AbortSignal, showHidden = false) =>
+    call<CardsResponse>('POST', '/api/cards', { ...bar, first, show_hidden: showHidden }, signal),
   /** A later page of a load: the cards of these ids, against the same bar (#376). */
-  cardsById: (bar: Bar, ids: string[], signal?: AbortSignal) =>
-    call<CardsPage>('POST', '/api/cards/by-id', { bar, ids }, signal),
+  cardsById: (bar: Bar, ids: string[], signal?: AbortSignal, showHidden = false) =>
+    call<CardsPage>('POST', '/api/cards/by-id', { bar, ids, show_hidden: showHidden }, signal),
   post: (id: string, signal?: AbortSignal) =>
     call<PostData>('GET', `/api/posts/${encodeURIComponent(id)}`, undefined, signal),
   session: () => call<{ user: SessionUser | null }>('GET', '/api/session'),
@@ -92,6 +92,9 @@ export const api = {
   /** Opening a post marks its card viewed (#253). */
   markViewed: (id: string) => call<{ viewed: true }>('POST', `/api/viewed/${encodeURIComponent(id)}`, {}),
   unmarkViewed: (id: string) => call<{ viewed: false }>('DELETE', `/api/viewed/${encodeURIComponent(id)}`, {}),
+  /** "הסתר" (#464, #468): the card's shown post; "בטל הסתרה": every post of the card. */
+  hide: (id: string) => call<{ hidden: true }>('POST', `/api/hidden/${encodeURIComponent(id)}`, {}),
+  unhide: (id: string) => call<{ hidden: false }>('DELETE', `/api/hidden/${encodeURIComponent(id)}`, {}),
   /** "המודעה משקרת": every publication of the card (#300). */
   flag: (id: string) => call<FlagAnswer>('POST', `/api/flag/${encodeURIComponent(id)}`, {}),
   /** "סיווג שגוי": the shown post only (#300); `removed` false when the admin will handle it. */

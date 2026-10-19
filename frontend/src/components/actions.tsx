@@ -255,13 +255,15 @@ export function reportProblem(error: unknown): string {
 export interface Notice {
   text: string
   retry?: { label: string; run: () => void }
+  /** An undo, not a retry of a failure: it leaves by itself as a plain notice does (#468). */
+  undo?: boolean
 }
 
 /** What a write did, in words, at the foot of the screen. It leaves by itself after a while,
- *  unless it offers a retry. */
+ *  unless it offers a retry of a failed write. */
 export function NoticeBar({ notice, onDismiss }: { notice: Notice | null; onDismiss: () => void }) {
   useEffect(() => {
-    if (!notice || notice.retry) return
+    if (!notice || (notice.retry && !notice.undo)) return
     const timer = window.setTimeout(onDismiss, 7000)
     return () => window.clearTimeout(timer)
   }, [notice, onDismiss])

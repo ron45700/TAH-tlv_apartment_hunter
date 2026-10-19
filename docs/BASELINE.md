@@ -303,8 +303,9 @@ location line. The opened post shows every chip in its colour (green, orange, gr
 
 **A viewed card** (#467, 2026-10-18) looks faded and stays clickable: the photo faded most, the plain text in a muted ink
 that keeps its contrast, a red or green value in its colour, the glow's ring without its halo, and the word "נצפה". A
-hidden card that is shown (§8, #465) has "בטל הסתרה"; where "הסתר" and "בטל הסתרה" sit is proposed in `PHASE_4.md`
-appendix A.
+hidden card that is shown (§8, #465) is faded the same way, tagged "מוסתרת", and has "בטל הסתרה". "הסתר" and "בטל הסתרה"
+are a small pill on the photo's top-right corner, opposite the "i", so the foot does not change (#341, #351); in the
+opened post they sit in the foot beside "סימון כלא נצפה" (#468, `PHASE_4.md` appendix A, point 12).
 
 ---
 
@@ -361,7 +362,8 @@ of the evaluation (#270). **The quick chip "מיידי"** (#458, 2026-10-18, rep
 than 3 calendar months from today, with no lower bound, rolling**: re-computed each day at evaluation, saved in the profile
 as an "immediate" marker, never as fixed dates (Ron: past entry dates in a post effectively mean "available now", and a
 rolling window never goes stale). *Until 2026-10-18 the chip saved "until the day it was pressed", which went stale in the
-saved preferences and the alerts.* The marker is a field change, proposed and not built (`PHASE_4.md` appendix A).
+saved preferences and the alerts.* The marker is `DateRangeCriterion.immediate` (approved 2026-10-19, #468; a stored
+profile with the old chip shape reads as the marker).
 Typing "מתאריך" while "עד תאריך" is empty fills "עד תאריך" three calendar months on, a fixed date the user can change
 (#459; the page only).
 
@@ -416,12 +418,16 @@ open card has "mark as not viewed". A card stays viewed when a further publicati
 key (#253). **A viewed card moves below the unviewed ones when its post is closed** (#467, 2026-10-18; until then only at
 the next load of the list).
 
-**Hidden posts** (#464–#466, 2026-10-18; approved in content, the record proposed and not built): a signed-in user can
+**Hidden posts** (#464–#466, 2026-10-18; the record `HiddenPost` approved 2026-10-19, #468): a signed-in user can
 hide a post. It is a per-user record like the viewed one, never written on the post (invariant 12), not available to a
 guest, deleted with its post. **Hiding applies only while the bar shows the saved preferences**; in a temporary filter
 everything is shown. A "הצגת מוסתרים" switch in the bar shows the hidden ones, and a hidden card that is shown has "בטל
 הסתרה". "הסתר" is offered on a card in the middle and bottom tiers always, and in the top tier only once viewed: by tier,
-not by glow, since a card with no preference has no glow.
+not by glow, since a card with no preference has no glow. The server decides whether the bar is on the saved preferences.
+A hidden card stays hidden when a further publication is grouped into it (as viewed, #253). On the saved preferences with
+the switch off the count leaves the hidden cards out and the bar says how many are hidden; the switch shows only there,
+and is never saved. In a temporary filter "הסתר" is still offered: the card stays in place, marked "מוסתרת". A hidden card
+that is shown keeps its place, faded as a viewed card, with the tag "מוסתרת".
 
 ---
 

@@ -14,6 +14,13 @@ def card_viewed(card: Card, viewed_ids: Collection[str]) -> bool:
     return any(listing_id in viewed_ids for listing_id in card.post_ids)
 
 
+def card_hidden(card: Card, hidden_ids: Collection[str]) -> bool:
+    """Hidden when any post of the card has the user's mark, so a later publication grouped into
+    it keeps it hidden, as viewed (#253; #468, appendix A point 11). Not an order: a hidden card
+    that is shown keeps its place (point 14)."""
+    return any(listing_id in hidden_ids for listing_id in card.post_ids)
+
+
 def ordered(
     entries: Iterable[tuple[Card, Evaluation]], viewed_ids: Collection[str]
 ) -> list[tuple[Card, Evaluation]]:

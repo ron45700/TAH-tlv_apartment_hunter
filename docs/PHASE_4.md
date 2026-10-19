@@ -327,6 +327,13 @@ site (points 7 and 9), not built.
 
 ## 4.7 The deploy to the server (after the commit; nothing that runs there now is stopped)
 
+**Rounds 33 and 34 ride with this deploy (#468).** Before step 4 (the new image's first start), with the old image still
+running: `docker compose run --rm jobs python -m tlv_hunter.jobs.export_backup --no-photos` (a fresh dated backup). The
+new image's first opener of the store (the site, the bot or a job) then creates the table `hidden_posts` and the layout row
+`userdata.hidden` by itself; no command. From the first profile saved on the site, profiles are version 3 (`immediate`),
+which the previous image cannot read: **a rollback to the previous image needs that backup restored** (its other tables
+and the new row are harmless to it: checked in round 34 on a scratch copy).
+
 1. Ron commits and pushes both repos; the TLV repo's Action builds and publishes the image (`latest`).
 2. On `homeserver`: `cd ~/homelab && git pull`, then `cd stacks/tlv-hunter`.
 3. In `.env` add `SITE_URL=https://tlvapthunter.<tailnet>.ts.net` (`TELEGRAM_BOT_TOKEN` is there, #444); the
@@ -349,7 +356,9 @@ site (points 7 and 9), not built.
 
 ## Appendix A — Round 33's plan for #458 and #464–#466 (for Ron's approval; not part of §4.7's deploy)
 
-**Status: a plan, no code.** Items 2–6 and 10 of the same round are built (`DECISIONS.md` #459–#463, #467). The
+**Status: approved by Ron on 2026-10-19, every point as recommended (`DECISIONS.md` #468); built in round 34.** Point 3's
+rule is kept in UTC (invariant 9): the old chip shape is a `latest` on or before the UTC date of `updated_at` plus one day,
+which covers every Israel date the chip could have saved. Items 2–6 and 10 of the same round are built (`DECISIONS.md` #459–#463, #467). The
 proposed fields and record are in `SCHEMA.md`, "Proposed in round 33". Each point has a recommendation; "or" is the
 other option.
 

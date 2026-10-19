@@ -74,6 +74,8 @@ export interface CardData extends ListingFields {
   publications: number
   /** A signed-in user's only (#62, #253); absent for a guest. */
   viewed?: boolean
+  /** A signed-in user's only (#464, #468): any post of the card hidden by the user. */
+  hidden?: boolean
 }
 
 /** A list's first answer (#376): the count, the whole order of this load (each card's id) and its
@@ -81,6 +83,11 @@ export interface CardData extends ListingFields {
 export interface CardsResponse {
   generation: number
   count: number
+  /** A signed-in user's only (#465, #468): the bar holds the saved preferences, decided by the
+   * server; there, with "הצגת מוסתרים" off, the hidden cards are not in the list or the count. */
+  hiding?: boolean
+  /** How many of the cards the bar shows are hidden. */
+  hidden_count?: number
   order: string[]
   cards: CardData[]
 }

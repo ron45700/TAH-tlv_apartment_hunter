@@ -113,6 +113,16 @@ class UserDataStore(Protocol):
 
     def viewed_listing_ids(self, user_id: str) -> set[str]: ...
 
+    def hide(self, user_id: str, listing_id: str, at: datetime) -> None:
+        """ "הסתר" (#464, #468): inserted only if absent, so pressing again keeps the first time."""
+        ...
+
+    def unhide(self, user_id: str, listing_ids: Collection[str]) -> None:
+        """ "בטל הסתרה": the user's marks on every post of the card."""
+        ...
+
+    def hidden_listing_ids(self, user_id: str) -> set[str]: ...
+
     def add_report(self, report: ClassificationReport) -> ClassificationReport:
         """An open report. `OpenReportExists` if the reporter has one open on the post (#278)."""
         ...

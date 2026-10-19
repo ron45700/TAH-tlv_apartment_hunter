@@ -6,7 +6,7 @@ Cards built in memory (`dedup/stage_b`); users and sent-alert records in a tempo
 
 import sqlite3
 from contextlib import closing
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +16,7 @@ from tests.conftest import make_listing
 from tests.test_gate_d import make_post, written
 from tests.test_userdata_store import ADMIN_ID, admin, friend
 from tlv_hunter.contracts.post_lifecycle import PostImage
-from tlv_hunter.contracts.profile import Profile, RangeCriterion, new_profile
+from tlv_hunter.contracts.profile import DateRangeCriterion, Profile, RangeCriterion, new_profile
 from tlv_hunter.dedup.stage_b import Card, KeyInputs, KeyPost, TiedPair, cards, derive_cards
 from tlv_hunter.jobs.common import SQLITE_FILENAME
 from tlv_hunter.notify.alert import (
@@ -148,6 +148,19 @@ def test_a_post_failing_a_critical_condition_or_an_option_off_never_alerts() -> 
     )
     assert reason(key_post(3), off) == "not_shown"
     assert reason(key_post(4, post_nature="sublet_offer")) == "not_shown"  # sublets off (#268)
+
+
+def test_the_chip_alerts_through_the_same_rolling_window() -> None:
+    """#458: the alert reads the same evaluation, with its own `now`; the window moves by itself."""
+    wanted = profile(
+        entry_date=DateRangeCriterion(earliest=None, latest=None, immediate=True, level="critical")
+    )
+    soon = key_post(1, entry_date=written(date(2026, 12, 1)))
+    later = key_post(2, entry_date=written(date(2027, 2, 1)))  # NOW is 2026-10-13
+    assert reason(soon, wanted) is None
+    assert reason(later, wanted) == "not_shown"
+    evaluation = evaluate(later.seen, wanted, NOW + timedelta(days=31))
+    assert no_alert_reason(later.seen, evaluation) is None
 
 
 def test_several_areas_alert_when_one_is_chosen_with_the_area_orange() -> None:

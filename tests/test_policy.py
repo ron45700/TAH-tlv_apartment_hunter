@@ -21,7 +21,7 @@ from tlv_hunter.contracts.profile import (
 )
 from tlv_hunter.dedup.stage_b import Card, PhotoHashes, derive_cards, load_key_posts
 from tlv_hunter.policy.base import CATEGORIES, Evaluation
-from tlv_hunter.policy.evaluate import evaluate
+from tlv_hunter.policy.evaluate import evaluate, months_on
 from tlv_hunter.policy.order import card_viewed, ordered
 from tlv_hunter.postmodel.seen import SeenListing, seen_listing
 from tlv_hunter.store.base import Repository
@@ -71,7 +71,7 @@ def span(low: Any, high: Any, level: str = "preference") -> RangeCriterion[Any]:
 
 
 def dates(low: date | None, high: date | None, level: str = "preference") -> DateRangeCriterion:
-    return DateRangeCriterion(earliest=low, latest=high, level=level)
+    return DateRangeCriterion(earliest=low, latest=high, immediate=False, level=level)
 
 
 # --- 5. the evaluation ---
@@ -278,6 +278,42 @@ def test_immediate_compares_as_the_utc_date_of_the_evaluation() -> None:
     assert evaluate(dated, next_day, late).fields["entry_date"] == "match"
     with pytest.raises(ValueError):
         evaluate(post, on_the_day, datetime(2026, 10, 11, 22, 30))  # not tz-aware
+
+
+def chip(level: str = "preference") -> DateRangeCriterion:
+    return DateRangeCriterion(earliest=None, latest=None, immediate=True, level=level)
+
+
+def test_the_chip_is_a_rolling_window_of_three_calendar_months() -> None:
+    """#458: no lower bound; up to today plus 3 calendar months, today being the evaluation's UTC
+    date (R2), so the window moves each day by itself."""
+    wanted = profile(whole={"entry_date": chip()})
+    outcome = lambda when, now=NOW: evaluate(  # noqa: E731
+        seen(entry_date=written(when)), wanted, now
+    ).fields["entry_date"]
+    assert outcome(date(2027, 1, 11)) == "match"  # NOW is 2026-10-11
+    assert outcome(date(2027, 1, 12)) == "mismatch"
+    assert outcome(date(2026, 9, 1)) == "match"  # a past date in a post means "available now"
+    assert outcome("immediate") == "match"
+    assert outcome(date(2027, 1, 12), datetime(2026, 10, 12, 9, 0, tzinfo=UTC)) == "match"
+
+
+def test_the_window_ends_on_the_months_last_day_when_it_is_shorter() -> None:
+    assert months_on(date(2026, 11, 30), 3) == date(2027, 2, 28)
+    assert months_on(date(2027, 11, 30), 3) == date(2028, 2, 29)
+    assert months_on(date(2026, 12, 31), 3) == date(2027, 3, 31)
+    wanted = profile(whole={"entry_date": chip()})
+    late_month = datetime(2026, 11, 30, 9, 0, tzinfo=UTC)
+    last = evaluate(seen(entry_date=written(date(2027, 2, 28))), wanted, late_month)
+    assert last.fields["entry_date"] == "match"
+    after = evaluate(seen(entry_date=written(date(2027, 3, 1))), wanted, late_month)
+    assert after.fields["entry_date"] == "mismatch"
+
+
+def test_the_chip_as_critical_hides_a_later_entry() -> None:
+    wanted = profile(whole={"entry_date": chip("critical")})
+    assert not evaluate(seen(entry_date=written(date(2027, 3, 1))), wanted, NOW).shown
+    assert evaluate(seen(entry_date=written(date(2026, 12, 1))), wanted, NOW).shown
 
 
 def test_a_corrected_field_is_read_instead_of_the_models() -> None:

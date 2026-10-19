@@ -699,7 +699,8 @@ Whether the schema pydantic derives passes them is the spike's first question.
 
 **Approved:** 2026-10-10 · **Reasons:** `DECISIONS.md` #242–#257 (content), #262–#287 (round 1's open points), #288
 (names and types, points R1–R9, the Gate E amendments) · **Amended 2026-10-12:** #317 (one sublet switch per
-profile) · **Schema version:** 1 on every record but `Profile`, which is 2 (#317)
+profile) · **Amended 2026-10-19:** #468 (`DateRangeCriterion.immediate`, #458; `HiddenPost`, #464) · **Schema version:** 1
+on every record but `Profile`, which is 3 (#317, #468)
 
 Telegram's fields (account linking, sent alerts) are Gate F's, below (#453). The Gate E amendments this gate needs
 are written into Gate E (amended 2026-10-10).
@@ -791,7 +792,7 @@ alerts (`BASELINE.md` §8).
 
 | Field | Type | Rule |
 |---|---|---|
-| `schema_version` | `int` | 2 since 2026-10-12 (#317). A stored version-1 profile reads as version 2: its two per-option `include_sublets` become the profile's one, `True` when either was (read-time only; written as version 2 at its next save) |
+| `schema_version` | `int` | 3 since 2026-10-19 (#468; 2 since 2026-10-12, #317). A stored version-1 profile reads as version 2: its two per-option `include_sublets` become the profile's one, `True` when either was. A stored version-2 (or 1) profile reads as version 3: every `entry_date` gains `immediate` `False`, except the old chip shape (`earliest` `None`, `latest` on or before the UTC date of `updated_at` plus one day), which reads as `immediate` `True` with no dates (#458, #468, point 3). Read-time only; written as version 3 at its next save |
 | `user_id` | `str` | The user it belongs to, and the key |
 | `room` | `SearchOption` | The "room in a shared flat" search: posts whose `apartment_kind` is `"room"` (#245) |
 | `whole_apartment` | `SearchOption` | The "empty apartment" search: posts whose `apartment_kind` is `"whole_apartment"` (#245). The name follows Gate B's value |
@@ -820,12 +821,15 @@ profile's `include_sublets` `False` (#317).
 | `broker` | `CriterionLevel` / `None` | `None` is "don't care". The wanted value is fixed: no broker (#269) |
 | `parking` | `CriterionLevel` / `None` | The wanted value is fixed: has parking (#269) |
 | `balcony` | `CriterionLevel` / `None` | The wanted value is fixed: has a balcony (#269) |
-| `entry_date` | `DateRangeCriterion` / `None` | Compared with `Listing.entry_date`; `"immediate"` compares as the date of the evaluation (#270): the UTC calendar date of the evaluation's moment (R2) |
+| `entry_date` | `DateRangeCriterion` / `None` | Compared with `Listing.entry_date`; `"immediate"` compares as the date of the evaluation (#270): the UTC calendar date of the evaluation's moment (R2). With `immediate` (#458): met when the post's date is on or before that date plus 3 calendar months, no lower bound |
 
 **`CriterionLevel`:** `"preference"` / `"critical"`; a category that is turned on starts at `"preference"` (§8).
 **`RangeCriterion[T]`:** `min: T / None`, `max: T / None` (at least one set; `min` ≤ `max` when both), `level:
-CriterionLevel`. **`DateRangeCriterion`:** `earliest: date / None`, `latest: date / None` (at least one set, #270;
-`earliest` ≤ `latest` when both), `level: CriterionLevel`.
+CriterionLevel`. **`DateRangeCriterion`:** `earliest: date / None`, `latest: date / None`, `immediate: bool` (#458,
+#468), `level: CriterionLevel`. With `immediate` `False`, at least one end is set (#270) and `earliest` ≤ `latest` when
+both; with `immediate` `True` (the quick chip "מיידי"), both ends are `None`: entry no later than 3 calendar months from
+the date of the evaluation, no lower bound, rolling. The 3 is a constant in `policy/`, not a field. A day the target month
+lacks becomes its last (30.11 → 28.2).
 
 **Rules with no field of their own.**
 - **Which option evaluates a post:** the one its `apartment_kind` names (`"room"` or `"whole_apartment"`); a sublet through
@@ -852,6 +856,24 @@ Which posts a user has viewed (#62, #253). Key: (`user_id`, `listing_id`).
 duplicates, and the posts the Gate D key ties to it, #231) has a record for that user, so a further publication grouped
 into the card leaves it viewed (#253). "Mark as not viewed" deletes that user's records for every post of the card. A
 record is deleted with its post (#62). Kept for a disabled user (#265).
+
+## `HiddenPost` (#464–#466, approved 2026-10-19, #468)
+
+Which posts a user has hidden. Key: (`user_id`, `listing_id`). Table `hidden_posts`, the same shape as `viewed_posts`,
+with its own layout row `userdata.hidden` (version 1), created when absent, as Gate F's `userdata.telegram`.
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1 |
+| `user_id` | `str` | A signed-in user; a guest has none |
+| `listing_id` | `str` | The post the card shows (as #276 for viewed) |
+| `hidden_at` | `datetime` UTC | Written when the user presses "הסתר"; pressing again keeps the first time |
+
+**Rules.** A card is hidden, for a user, when any post the card stands for has a record (as `ViewedPost`, #253), so a later
+publication grouped into it stays hidden; "בטל הסתרה" deletes that user's records for every post of the card. Hiding applies
+only while the bar shows the saved preferences, decided by the server (#465; `PHASE_4.md` appendix A, point 10). Never
+written on the post (invariant 12). Deleted with its post, by Phase 5's retention job (with `ViewedPost` and
+`SentAlert`). Kept for a disabled user.
 
 ## `ClassificationReport`
 
@@ -918,7 +940,7 @@ calls in a fixed order, the disable first, then the sessions ended (amended 2026
 user is already invalid, so a failure between the two leaves the user locked out); R8 the admin cannot be disabled;
 R9 sessions are not deleted in Phase 3.
 
-## Every name and type (approved 2026-10-10, #288; `include_sublets` moved to `Profile` on 2026-10-12, #317)
+## Every name and type (approved 2026-10-10, #288; `include_sublets` moved to `Profile` on 2026-10-12, #317; `immediate` and `HiddenPost` added 2026-10-19, #468)
 
 Every record, field and type above, in one table. The rules are in each record's table.
 
@@ -975,12 +997,17 @@ Every record, field and type above, in one table. The rules are in each record's
 | | `level` | `CriterionLevel` |
 | `DateRangeCriterion` | `earliest` | `date` / `None` |
 | | `latest` | `date` / `None` |
+| | `immediate` | `bool` (#468) |
 | | `level` | `CriterionLevel` |
 | `CriterionLevel` | (a value) | `"preference"` / `"critical"` |
 | `ViewedPost` | `schema_version` | `int` |
 | | `user_id` | `str` |
 | | `listing_id` | `str` |
 | | `viewed_at` | `datetime` UTC |
+| `HiddenPost` (#468) | `schema_version` | `int` |
+| | `user_id` | `str` |
+| | `listing_id` | `str` |
+| | `hidden_at` | `datetime` UTC |
 | `ClassificationReport` | `schema_version` | `int` |
 | | `report_id` | `str` |
 | | `listing_id` | `str` |
@@ -1056,36 +1083,3 @@ retention job.
 
 **Not stored:** the alert's tier or colours (an `Evaluation` is never stored), the message's id, the chat's history.
 
----
-
-# PROPOSED in round 33 (2026-10-18) — **not approved; nothing built**
-
-For Ron's approval (`DECISIONS.md` #458, #464–#466; the plan and its points: `PHASE_4.md` appendix A). Every name below
-is a proposal. Until Ron approves, the records above stand unchanged.
-
-## `DateRangeCriterion` gains `immediate` (#458); `Profile` to version 3
-
-| Field | Type | Rule |
-|---|---|---|
-| `immediate` | `bool` | **Proposed.** `True`: the quick chip "מיידי", entry no later than 3 calendar months from the date of the evaluation, no lower bound, rolling; `earliest` and `latest` are then both `None`. `False`: the range as today (at least one end, `earliest` ≤ `latest`) |
-
-The 3 months are a constant in `policy/`, not a field (Ron fixed them). A date the target month lacks becomes its last
-day (30.11 → 28.2). `Profile.schema_version` 3; a stored version-2 (or 1) profile reads as version 3 at read time only
-(as #317), written as 3 at its next save; how the old chip shape reads: appendix A, point 3.
-
-## `HiddenPost` (#464)
-
-Which posts a user has hidden. Key: (`user_id`, `listing_id`). Table `hidden_posts`, the same shape as `viewed_posts`,
-with its own layout row `userdata.hidden` (version 1), created when absent, as Gate F's `userdata.telegram`.
-
-| Field | Type | Rule |
-|---|---|---|
-| `schema_version` | `int` | Starts at 1 |
-| `user_id` | `str` | A signed-in user; a guest has none |
-| `listing_id` | `str` | The post the card shows (as #276 for viewed) |
-| `hidden_at` | `datetime` UTC | Written when the user presses "הסתר"; pressing again keeps the first time |
-
-**Rules (proposed).** A card is hidden, for a user, when any post the card stands for has a record (as `ViewedPost`, #253);
-"בטל הסתרה" deletes that user's records for every post of the card. Hiding applies only while the bar shows the saved
-preferences (#465). Never written on the post (invariant 12). Deleted with its post, by Phase 5's retention job (with
-`ViewedPost` and `SentAlert`). Kept for a disabled user.

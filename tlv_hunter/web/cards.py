@@ -110,13 +110,17 @@ def card_payload(
     area_names: Mapping[int, str],
     *,
     viewed: bool | None = None,
+    hidden: bool | None = None,
 ) -> dict:
     """A closed card (3.7 (c)): the shown post's summary, its evaluation, its colours and glow.
-    `viewed` for a signed-in user only (#62, #253); a guest's card has no such field."""
+    `viewed` and `hidden` for a signed-in user only (#62, #253; #464, #468); a guest's card has no
+    such fields."""
     shown = card.shown
     listing = shown.seen.listing
     mobiles = whatsapp_links(shown)
     seen = {} if viewed is None else {"viewed": viewed}
+    if hidden is not None:
+        seen["hidden"] = hidden
     return {
         **seen,
         "id": card.shown_id,

@@ -764,6 +764,16 @@
   height: 34px;
 }
 
+/* "הצגת מוסתרים" in the status line (#465, #468): never cut; on a phone, smaller beside the count */
+.bar-status .switch {
+  flex: none;
+}
+
+.filterbar.is-phone .bar-status .switch {
+  font-size: 0.8rem;
+  gap: 5px;
+}
+
 /* the changed bar's long words: the reset button beside them says the rest on a phone */
 .filterbar.is-phone .status-long {
   display: none;

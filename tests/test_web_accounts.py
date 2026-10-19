@@ -402,7 +402,26 @@ def test_a_user_reads_and_saves_the_profile(client: TestClient, store: Store) ->
     assert stored is not None and stored.room.price_max == 4500 and stored.include_sublets
 
 
+def test_the_chip_is_saved_as_the_marker_and_read_back(client: TestClient, store: Store) -> None:
+    """#458, #468: "מיידי" is saved as `immediate`, no dates; the profile is version 3."""
+    sign_in(client)
+    chip = {"earliest": None, "latest": None, "immediate": True, "level": "critical"}
+    saved = write(client, "PUT", "/api/profile", bar(room__entry_date=chip))
+    assert saved.status_code == 200 and saved.json()["room"]["entry_date"] == chip
+    ron = store.userdata.find_user_by_username("ron")
+    assert ron is not None
+    stored = store.userdata.get_profile(ron.user_id)
+    assert stored is not None and stored.schema_version == 3 and stored.room.entry_date.immediate
+
+
 SQM_IN_ROOM = RangeCriterion[float](min=10.0, max=None, level="preference").model_dump(mode="json")
+CHIP_WITH_A_DATE = {
+    "earliest": None,
+    "latest": "2026-11-01",
+    "immediate": True,
+    "level": "critical",
+}
+NO_MARKER = {"earliest": None, "latest": "2026-11-01", "level": "critical"}
 
 
 @pytest.mark.parametrize(
@@ -411,6 +430,8 @@ SQM_IN_ROOM = RangeCriterion[float](min=10.0, max=None, level="preference").mode
         bar(room__size_sqm=SQM_IN_ROOM),
         bar(room__price_min=6000, room__price_max=5000),
         {**bar(), "user_id": "b" * 32},
+        bar(room__entry_date=CHIP_WITH_A_DATE),
+        bar(room__entry_date=NO_MARKER),
     ],
 )
 def test_an_invalid_profile_is_422_and_nothing_is_saved(client: TestClient, body: dict) -> None:

@@ -11,6 +11,7 @@ from pydantic import BaseModel, ValidationError
 
 from tlv_hunter.contracts.classification_report import ClassificationReport, ReportableField
 from tlv_hunter.contracts.field_correction import FieldCorrection
+from tlv_hunter.contracts.hidden_post import HiddenPost
 from tlv_hunter.contracts.listing import Listing, Marked
 from tlv_hunter.contracts.profile import (
     DateRangeCriterion,
@@ -142,8 +143,9 @@ def round_trip[M: BaseModel](record: M) -> M:
             "enabled areas price_min price_max hide_women_only rooms "
             "floor size_sqm broker parking balcony entry_date",
         ),
-        (DateRangeCriterion, "earliest latest level"),
+        (DateRangeCriterion, "earliest latest immediate level"),  # #468
         (ViewedPost, "schema_version user_id listing_id viewed_at"),
+        (HiddenPost, "schema_version user_id listing_id hidden_at"),  # #468
         (
             ClassificationReport,
             "schema_version report_id listing_id reported_by reported_at "
@@ -278,7 +280,7 @@ def test_a_session_holds_only_a_hash() -> None:
 
 def test_a_new_profile_has_both_options_on_and_nothing_set() -> None:
     profile = round_trip(new_profile(USER_ID, NOW))
-    assert profile.schema_version == 2 and not profile.include_sublets  # one switch (#317)
+    assert profile.schema_version == 3 and not profile.include_sublets  # one switch (#317)
     for searched in (profile.room, profile.whole_apartment):
         assert searched.enabled and searched.hide_women_only
         assert searched.areas == [] and searched.price_min is None and searched.rooms is None
@@ -296,7 +298,9 @@ def test_a_full_option_round_trips() -> None:
         broker="critical",
         parking="preference",
         balcony="preference",
-        entry_date=DateRangeCriterion(earliest=date(2026, 11, 1), latest=None, level="critical"),
+        entry_date=DateRangeCriterion(
+            earliest=date(2026, 11, 1), latest=None, immediate=False, level="critical"
+        ),
     )
     profile = new_profile(USER_ID, NOW).model_copy(update={"whole_apartment": full})
     round_trip(Profile.model_validate(profile.model_dump()))
@@ -317,20 +321,21 @@ def version_1_doc(room_sublets: bool, whole_sublets: bool) -> str:
     ("room_sublets", "whole_sublets", "switched"),
     [(False, False, False), (True, False, True), (False, True, True), (True, True, True)],
 )
-def test_a_stored_version_1_profile_reads_as_version_2(
+def test_a_stored_version_1_profile_reads_as_version_2_then_3(
     room_sublets: bool, whole_sublets: bool, switched: bool
 ) -> None:
     """#317: read-time only, as `PostLifecycle.from_stored_json`; on when either option's
     switch was on. Ron's stored profile has both off."""
     read = Profile.from_stored_json(version_1_doc(room_sublets, whole_sublets))
     assert read == new_profile(USER_ID, NOW).model_copy(update={"include_sublets": switched})
-    assert read.schema_version == 2
+    assert read.schema_version == 3  # through 2 (#317), then 3 (#468)
     assert "include_sublets" not in read.room.model_dump()
     round_trip(read)
 
 
 def test_a_version_2_profile_with_a_per_option_switch_is_refused() -> None:
     data = json.loads(new_profile(USER_ID, NOW).model_dump_json())
+    data["schema_version"] = 2
     data["room"]["include_sublets"] = True
     with pytest.raises(ValidationError):
         Profile.from_stored_json(json.dumps(data))
@@ -351,7 +356,7 @@ def test_plain_model_validate_json_converts_nothing() -> None:
     assert "model_validate_json" not in Profile.__dict__
 
 
-@pytest.mark.parametrize("version", [0, 3])
+@pytest.mark.parametrize("version", [0, 4])
 def test_an_unknown_profile_version_is_refused(version: int) -> None:
     data = json.loads(new_profile(USER_ID, NOW).model_dump_json())
     data["schema_version"] = version
@@ -387,9 +392,64 @@ def test_a_range_has_an_end_and_its_ends_in_order() -> None:
     with pytest.raises(ValidationError, match="exceed"):
         RangeCriterion[float](min=4, max=3, level="preference")
     with pytest.raises(ValidationError, match="at least one end"):
-        DateRangeCriterion(earliest=None, latest=None, level="preference")
+        DateRangeCriterion(earliest=None, latest=None, immediate=False, level="preference")
     with pytest.raises(ValidationError, match="after"):
-        DateRangeCriterion(earliest=date(2026, 12, 1), latest=date(2026, 11, 1), level="critical")
+        DateRangeCriterion(
+            earliest=date(2026, 12, 1), latest=date(2026, 11, 1), immediate=False, level="critical"
+        )
+
+
+def test_the_immediate_marker_has_no_dates() -> None:
+    """#458, #468: the chip "מיידי" is a marker, never fixed dates."""
+    DateRangeCriterion(earliest=None, latest=None, immediate=True, level="preference")
+    for earliest, latest in ((date(2026, 11, 1), None), (None, date(2026, 11, 1))):
+        with pytest.raises(ValidationError, match="no dates"):
+            DateRangeCriterion(earliest=earliest, latest=latest, immediate=True, level="critical")
+
+
+def version_2_doc(updated_at: str, **entries: dict | None) -> str:
+    """A profile as version 2 stored it: entry dates with no `immediate`."""
+    data = new_profile(USER_ID, NOW).model_dump(mode="json")
+    data["schema_version"] = 2
+    data["updated_at"] = updated_at
+    for name, entry in entries.items():
+        data[name]["entry_date"] = entry
+    return json.dumps(data)
+
+
+def test_a_version_2_profile_reads_as_version_3_the_old_chip_as_the_marker() -> None:
+    """#468, appendix A point 3: the chip saved `latest` as the day it was pressed (Israel's
+    date, at most a day after the save's UTC date) and no `earliest`; it reads as the marker. A
+    later `latest`, or a range with an `earliest`, reads as it was, `immediate` false."""
+    chip = {"earliest": None, "latest": "2026-10-15", "level": "critical"}
+    typed = {"earliest": None, "latest": "2026-12-01", "level": "preference"}
+    read = Profile.from_stored_json(
+        version_2_doc("2026-10-14T22:30:00Z", room=chip, whole_apartment=typed)
+    )
+    assert read.schema_version == 3
+    assert read.room.entry_date == DateRangeCriterion(
+        earliest=None, latest=None, immediate=True, level="critical"
+    )
+    assert read.whole_apartment.entry_date == DateRangeCriterion(
+        earliest=None, latest=date(2026, 12, 1), immediate=False, level="preference"
+    )
+    later = {"earliest": None, "latest": "2026-10-16", "level": "preference"}
+    ranged = {"earliest": "2026-10-01", "latest": "2026-10-10", "level": "preference"}
+    read = Profile.from_stored_json(
+        version_2_doc("2026-10-14T22:30:00Z", room=later, whole_apartment=ranged)
+    )
+    assert not read.room.entry_date.immediate and read.room.entry_date.latest == date(2026, 10, 16)
+    assert not read.whole_apartment.entry_date.immediate
+    assert read.whole_apartment.entry_date.earliest == date(2026, 10, 1)
+    none = Profile.from_stored_json(version_2_doc("2026-10-14T22:30:00Z"))
+    assert none.room.entry_date is None and none.schema_version == 3
+    round_trip(read)
+
+
+def test_a_version_2_entry_date_with_immediate_is_refused() -> None:
+    entry = {"earliest": None, "latest": None, "immediate": True, "level": "critical"}
+    with pytest.raises(ValueError, match="version-2"):
+        Profile.from_stored_json(version_2_doc("2026-10-14T10:00:00Z", room=entry))
 
 
 def test_price_min_does_not_exceed_price_max() -> None:

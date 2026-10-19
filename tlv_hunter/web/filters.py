@@ -42,9 +42,10 @@ MOST_BY_ID = 96
 
 class CardsRequest(Bar):
     """`POST /api/cards`: the bar, and how many cards come whole with the order (#376); 0 asks
-    the count alone (#378)."""
+    the count alone (#378). `show_hidden`: the bar's "הצגת מוסתרים" (#465), never saved."""
 
     first: int = Field(default=FIRST_CARDS, ge=0, le=MOST_BY_ID)
+    show_hidden: bool = False
 
 
 class ByIdRequest(BaseModel):
@@ -54,6 +55,7 @@ class ByIdRequest(BaseModel):
 
     bar: Bar
     ids: list[str] = Field(min_length=1, max_length=MOST_BY_ID)
+    show_hidden: bool = False
 
 
 def transient_profile(body: bytes, now: datetime) -> Profile:
@@ -63,16 +65,23 @@ def transient_profile(body: bytes, now: datetime) -> Profile:
     return owned_profile(body, GUEST_USER_ID, now)
 
 
-def cards_request(body: bytes, now: datetime) -> tuple[Profile, int]:
-    """A list request: the transient profile and `first`; the same refusals as the bar."""
+def cards_request(body: bytes, now: datetime) -> tuple[Profile, int, bool]:
+    """A list request: the transient profile, `first` and `show_hidden`; the same refusals as the
+    bar."""
     request = CardsRequest.model_validate_json(body)
-    return _profile(request, GUEST_USER_ID, now), request.first
+    return _profile(request, GUEST_USER_ID, now), request.first, request.show_hidden
 
 
-def by_id_request(body: bytes, now: datetime) -> tuple[Profile, list[str]]:
-    """A later page's request: the transient profile and the ids asked."""
+def by_id_request(body: bytes, now: datetime) -> tuple[Profile, list[str], bool]:
+    """A later page's request: the transient profile, the ids asked and `show_hidden`."""
     request = ByIdRequest.model_validate_json(body)
-    return _profile(request.bar, GUEST_USER_ID, now), request.ids
+    return _profile(request.bar, GUEST_USER_ID, now), request.ids, request.show_hidden
+
+
+def same_values(bar: Profile, saved: Profile) -> bool:
+    """Whether the bar holds the saved preferences, value by value (the page's "changed", 3.7 (e)):
+    where hiding applies (#465; appendix A point 10, decided here, by the server)."""
+    return bar_json(bar) == bar_json(saved)
 
 
 def owned_profile(body: bytes, user_id: str, now: datetime) -> Profile:
