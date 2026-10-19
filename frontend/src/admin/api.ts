@@ -14,6 +14,7 @@ import type {
   RowsAnswer,
   RestoreResult,
   RowsPage,
+  ScheduleAnswer,
   Summary,
 } from './types'
 
@@ -61,4 +62,9 @@ export const adminApi = {
     call<AdminUser>('POST', `/api/admin/users/${enc(username)}/password`, { temporary_password: temporary }),
   disable: (username: string) => call<AdminUser>('POST', `/api/admin/users/${enc(username)}/disable`, {}),
   enable: (username: string) => call<AdminUser>('POST', `/api/admin/users/${enc(username)}/enable`, {}),
+  // Phase 5 (#61, #471): the scheduler reads the settings at every pass and starts the runs.
+  schedule: (signal?: AbortSignal) => call<ScheduleAnswer>('GET', '/api/admin/schedule', undefined, signal),
+  saveSchedule: (body: { interval_minutes: number; quiet_from: string; quiet_until: string; version: string }) =>
+    call<ScheduleAnswer>('POST', '/api/admin/schedule', body),
+  runNow: () => call<ScheduleAnswer>('POST', '/api/admin/schedule/run-now', {}),
 }

@@ -14,7 +14,8 @@ from tests.conftest import CONFIG_ROOT, load_spike_1_1a
 from tests.test_thedoor_fetch import RUN_START, TOKEN, Clock, FakeApify
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.images.download import ImageResponse
-from tlv_hunter.jobs.run_once import BOOTSTRAP_WINDOW, SQLITE_FILENAME, main
+from tlv_hunter.jobs.run_once import ABANDONED, BOOTSTRAP_WINDOW, SQLITE_FILENAME, main
+from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.state.sqlite import SqliteWatermarkStore
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.textnorm.phones import extract_phones
@@ -176,3 +177,62 @@ def test_the_log_carries_no_post_text_or_phone_numbers(
     assert texts and phones
     assert not any(json.dumps(item_text, ensure_ascii=False)[1:-1] in text for item_text in texts)
     assert not any(phone in text.replace("-", "") for phone in phones)
+
+
+# --- the run's record (Gate G, DECISIONS.md #472) ---
+
+
+@pytest.mark.raw_fixtures
+def test_a_run_writes_its_record_with_what_the_provider_learned(
+    tmp_path: Path, apify: FakeApify, clock: Clock
+) -> None:
+    code, lines, _ = _main(tmp_path, apify, clock, "--bootstrap")
+
+    assert code == 0
+    (record,) = SqliteRunStore(tmp_path / STORE_ROOT / SQLITE_FILENAME).recent_runs()
+    assert record.run_id == lines[0]["run_id"]
+    assert (record.trigger, record.status, record.failure_kind) == ("manual", "succeeded", None)
+    assert record.apify_run_id == apify.run["id"]
+    assert record.rows_fetched == len(apify.items) and record.rows_skipped == 0
+    assert record.charged_events == apify.run["chargedEventCounts"]  # end of run: preliminary
+    assert record.window_since == RUN_START - BOOTSTRAP_WINDOW
+    assert record.started_at == RUN_START and record.finished_at is not None
+    assert record.window_capped is False  # point 12 B: never capped
+    assert record.cost_usd is None and record.cost_settled_at is None  # settle_costs' job
+
+
+@pytest.mark.raw_fixtures
+def test_a_failed_run_records_its_reason_and_the_scheduler_s_trigger(
+    tmp_path: Path, apify: FakeApify, clock: Clock
+) -> None:
+    apify.statuses = ["FAILED"]
+    code, _, _ = _main(tmp_path, apify, clock, "--bootstrap", "--trigger", "scheduled")
+
+    assert code == 1
+    (record,) = SqliteRunStore(tmp_path / STORE_ROOT / SQLITE_FILENAME).recent_runs()
+    assert (record.trigger, record.status) == ("scheduled", "failed")
+    assert record.failure_kind is not None
+    assert record.failure_kind.startswith(f"ProviderRunError: apify_run {apify.run['id']} ended")
+    assert record.apify_run_id == apify.run["id"] and record.rows_fetched is None
+    assert record.window_since is None
+
+
+@pytest.mark.raw_fixtures
+def test_a_record_left_running_is_closed_as_abandoned_when_the_next_run_starts(
+    tmp_path: Path, apify: FakeApify, clock: Clock
+) -> None:
+    _main(tmp_path, apify, clock, "--bootstrap")
+    database = tmp_path / STORE_ROOT / SQLITE_FILENAME
+    store = SqliteRunStore(database)
+    (first,) = store.recent_runs()
+    died = first.model_copy(update={"run_id": "died", "status": "running", "finished_at": None})
+    store.add_run(died)
+    clock.now += timedelta(minutes=40)
+    code, _, _ = _main(tmp_path, apify, clock)
+
+    assert code == 0
+    newest, closed, oldest = store.recent_runs()
+    assert newest.status == "succeeded" and oldest == first
+    assert (closed.run_id, closed.status, closed.failure_kind) == ("died", "failed", ABANDONED)
+    assert newest.started_at == clock.now  # closed when the next run started
+    assert closed.finished_at == newest.started_at

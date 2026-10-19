@@ -162,6 +162,34 @@ export interface ReportsAnswer {
   groups: { field: string; label: string; posts: ReportEntry[] }[]
 }
 
+/** A collection run's record (Gate G, #472), as the schedule page lists it. */
+export interface RunRow {
+  run_id: string
+  trigger: 'scheduled' | 'manual'
+  status: 'running' | 'succeeded' | 'failed'
+  started_at: string
+  finished_at: string | null
+  rows_fetched: number | null
+  failure_kind: string | null
+  cost_usd: number | null
+}
+
+/** The schedule page (Phase 5, #61, #471 points 8 and 11). */
+export interface ScheduleAnswer {
+  stored: boolean
+  version: string
+  interval_minutes: number
+  quiet_from: string
+  quiet_until: string
+  updated_at: string | null
+  updated_by: string | null
+  in_quiet_hours: boolean
+  running: RunRow | null
+  next_run: string | null
+  run_now_waiting: boolean
+  runs: RunRow[]
+}
+
 export interface Key {
   key_id: string
   label: string

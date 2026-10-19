@@ -15,6 +15,7 @@ typed by hand (point 5). What a user writes (a note) is never logged. Every call
 ever sent to Telegram (invariant 15): the bot's own words, and the chat's id, only.
 """
 
+import html
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -36,6 +37,8 @@ from tlv_hunter.telegram import callbacks
 from tlv_hunter.telegram.alerts import AlertPass
 from tlv_hunter.telegram.callbacks import Callback
 from tlv_hunter.telegram.client import BOT_USERNAME, Button, Keyboard, TelegramClient, TelegramError
+from tlv_hunter.telegram.digest import digest_due, digest_messages, window_start
+from tlv_hunter.telegram.watch import Watch
 from tlv_hunter.userdata.base import OpenReportExists, UserDataStore
 from tlv_hunter.web.grouping import Grouping
 from tlv_hunter.web.writes import REPORT_LABELS, flag_card, report_post
@@ -75,6 +78,7 @@ CHAT_ELSEWHERE = (
 UNLINKED = "הקישור בוטל. לא יישלחו לכאן עוד התראות. אפשר לקשר שוב מעמוד ההעדפות באתר."
 HELP = "התראות על מודעות חדשות יגיעו לכאן. /site לאתר, /stop לביטול הקישור."
 SITE_WORDS = "האתר:"
+FAILURE_HEAD = "⚠️ <b>התראת תקלה באיסוף</b>"
 BUTTON_TO_SITE = "לאתר"
 
 CHOOSE = "מה לא בסדר במודעה?"
@@ -125,8 +129,12 @@ class Bot:
         store_root: Path,
         clock: Callable[[], datetime],
         sleep: Callable[[float], None],
+        watch: Watch | None = None,
     ) -> None:
         self._client = client
+        self._watch = watch
+        self._problems_sent: set[str] = set()
+        self._last_digest: datetime | None = None
         self._posts = posts
         self._userdata = userdata
         self._grouping = grouping
@@ -167,6 +175,7 @@ class Bot:
         while not should_stop():
             self.sync_menus()
             self.alert_if_moved(should_stop)
+            self.watch_collection()
             if should_stop():
                 break
             try:
@@ -220,6 +229,36 @@ class Bot:
             self._menu_chats.add(chat_id)
         else:
             self._menu_chats.discard(chat_id)
+
+    def watch_collection(self) -> None:
+        """Phase 5 (points 7, 10; #471): the failure alert, once per problem until it clears, and
+        the daily digest at 08:00 Israel time, both to the admin's chat only. A failed send is
+        tried again at the next poll."""
+        if self._watch is None:
+            return
+        try:
+            now = self._clock()
+            chat = self._watch.admin_chat()
+            found = self._watch.problems(now)
+            standing = {problem.key for problem in found}
+            self._problems_sent &= standing  # a problem that cleared alerts again if it returns
+            new = [problem for problem in found if problem.key not in self._problems_sent]
+            if new and chat is not None:
+                lines = [FAILURE_HEAD, *(f"• {html.escape(problem.text)}" for problem in new)]
+                self._say(chat, "\n".join(lines))
+                self._problems_sent |= {problem.key for problem in new}
+                logger.info("failure alert sent: %s", ", ".join(p.key for p in new))
+            settings = self._watch.settings()
+            last = self._last_digest if settings is None else settings.last_digest_at
+            if chat is not None and digest_due(last, now, self._watch.zone):
+                digest = self._watch.digest(window_start(last, now), now)
+                for text in digest_messages(digest, self._watch.zone):
+                    self._say(chat, text)
+                self._last_digest = now
+                self._watch.runs.set_last_digest(now)
+                logger.info("digest sent")
+        except Exception as error:
+            logger.error("collection watch failed: %s", describe(error))
 
     def alert_if_moved(self, should_stop: Callable[[], bool] = lambda: False) -> None:
         """The alert pass, when the store changed since the last one that finished."""

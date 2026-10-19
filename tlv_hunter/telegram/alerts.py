@@ -11,6 +11,8 @@ A card alerts a linked user when all of these hold:
   before anyone is linked (`BASELINE.md` §4, #357).
 - **Nothing of the card was alerted to the user:** no `SentAlert` on any of its posts (#453 point 4:
   a card whose members include an alerted post does not alert again).
+- **Its shown post was published within 24 hours of the pass** (`policy.alert.PUBLISHED_WINDOW`,
+  point 12 B, #473): after a pause the run brings older posts, which are stored but never alert.
 - **Its classification is recent:** `Listing.classified_at` within `ALERT_WINDOW` of the pass. The
   pass looks at "the posts classified since its last pass" (point 3) without a record of its own:
   after a restart it catches up on the window, and an old post a later profile change would admit
@@ -33,7 +35,7 @@ from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import Card
 from tlv_hunter.notify.alert import build_alert
 from tlv_hunter.notify.base import Notifier
-from tlv_hunter.policy.alert import no_alert_reason
+from tlv_hunter.policy.alert import no_alert_reason, published_too_long_ago
 from tlv_hunter.policy.base import Evaluation
 from tlv_hunter.policy.evaluate import evaluate
 from tlv_hunter.telegram.client import TelegramError
@@ -66,6 +68,8 @@ def due_alerts(
         if shown.post.fetched_at <= linked_at:
             continue
         if shown.seen.listing.classified_at < now - ALERT_WINDOW:
+            continue
+        if published_too_long_ago(shown.post.posted_at, now):
             continue
         if card.post_ids & sent_ids:
             continue

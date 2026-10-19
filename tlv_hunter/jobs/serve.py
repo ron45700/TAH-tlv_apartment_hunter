@@ -39,7 +39,14 @@ from typing import TextIO
 import uvicorn
 
 from tlv_hunter.config.yaml_config import YamlConfig
-from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, SQLITE_FILENAME, describe, online_copy
+from tlv_hunter.jobs.common import (
+    CONFIG_ROOT,
+    REPO_ROOT,
+    SQLITE_FILENAME,
+    describe,
+    job_logging,
+    online_copy,
+)
 from tlv_hunter.web.app import create_app, site_over
 
 EXIT_DONE, EXIT_FAILED = 0, 1
@@ -95,9 +102,11 @@ def main(
         site = site_over(
             served, store_root, pages=pages if built else None, clock=clock, background=True
         )
-        site.grouping.start()  # the first grouping begins now, before any visitor (#380)
-        app = create_app(site)
-        run(app, host=args.host, port=args.port)
+        # The package's own log lines (the measurements of point 13, #471) as JSON on stderr.
+        with job_logging():
+            site.grouping.start()  # the first grouping begins now, before any visitor (#380)
+            app = create_app(site)
+            run(app, host=args.host, port=args.port)
         return EXIT_DONE
     except Refused as refusal:
         print(f"refused: {refusal}", file=out)

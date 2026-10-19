@@ -35,6 +35,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from tlv_hunter.accounts.passwords import PRODUCTION_HASHER
 from tlv_hunter.areas.reference import load_area_groups, load_areas
+from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.sqlite import SqliteUserDataStore
 from tlv_hunter.web.admin import router as admin_router
@@ -165,4 +166,5 @@ def site_over(
         clock=clock,
         userdata=userdata,
         hasher=hasher,
+        runs=SqliteRunStore(store_copy),
     )

@@ -7,6 +7,7 @@ import urllib.parse
 import urllib.request
 from collections import Counter
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
@@ -38,6 +39,84 @@ logger = logging.getLogger(__name__)
 
 class ApifyApiError(RuntimeError):
     """An Apify API call answered with an HTTP error."""
+
+
+class UnpricedEvent(ValueError):
+    """A charged event with no flat `eventPriceUsd` in the run's pricing (a tiered price, say)."""
+
+
+@dataclass(frozen=True)
+class ApifyRun:
+    """What the last `fetch` learned of its Apify run, for the run's record (Gate G, #472): read by
+    `jobs/run_once.py` after `fetch` returns or raises; `None` fields were not reached."""
+
+    apify_run_id: str
+    rows: int | None = None
+    skipped: int | None = None
+    charged_events: dict[str, int] | None = None
+
+
+@dataclass(frozen=True)
+class RunCharges:
+    """A run's charges as the run object states them (`PHASE_5.md` §5.1, #450)."""
+
+    status: str | None
+    finished_at: str | None
+    charged_events: dict[str, int]
+    prices: dict[str, float]
+    cost_usd: float
+    usage_total_usd: float | None
+    pricing_model: str | None
+    platform_usage_billing_model: str | None
+
+
+def charged_events(run: dict[str, Any]) -> dict[str, int] | None:
+    """The run's `chargedEventCounts`, or `None` when absent or not a map of counts."""
+    counts = run.get("chargedEventCounts")
+    if not isinstance(counts, dict):
+        return None
+    if not all(isinstance(k, str) and type(v) is int and v >= 0 for k, v in counts.items()):
+        return None
+    return dict(counts)
+
+
+def run_charges(run: dict[str, Any]) -> RunCharges:
+    """The cost of a run: Σ `chargedEventCounts` × each event's `eventPriceUsd` from the same run's
+    `pricingInfo.pricingPerEvent.actorChargeEvents` (#450; VERIFIED on 2026-10-19 against the
+    documentation and two saved runs). `usageTotalUsd` is returned beside it as the cross-check,
+    never used as the cost. An event with no flat price raises `UnpricedEvent`."""
+    counts = charged_events(run) or {}
+    pricing = run.get("pricingInfo") or {}
+    events = (pricing.get("pricingPerEvent") or {}).get("actorChargeEvents") or {}
+    prices: dict[str, float] = {}
+    cost = 0.0
+    for name, count in counts.items():
+        price = (events.get(name) or {}).get("eventPriceUsd")
+        if isinstance(price, bool) or not isinstance(price, int | float):
+            raise UnpricedEvent(f"no flat price for the charged event {name!r}")
+        prices[name] = float(price)
+        cost += count * float(price)
+    usage = run.get("usageTotalUsd")
+    return RunCharges(
+        status=run.get("status"),
+        finished_at=run.get("finishedAt"),
+        charged_events=counts,
+        prices=prices,
+        cost_usd=round(cost, 6),
+        usage_total_usd=float(usage) if isinstance(usage, int | float) else None,
+        pricing_model=pricing.get("pricingModel"),
+        platform_usage_billing_model=run.get("platformUsageBillingModel"),
+    )
+
+
+def get_run(token: str, apify_run_id: str, transport: "Transport | None" = None) -> dict[str, Any]:
+    """One free read of a run object, `GET /v2/actor-runs/{runId}` (the token in the header)."""
+    if not token:
+        raise ValueError("Apify token is empty")
+    call = urllib_transport if transport is None else transport
+    path = f"/actor-runs/{urllib.parse.quote(apify_run_id, safe='')}"
+    answer = call("GET", f"{API_BASE}{path}", token=token, body=None, timeout=HTTP_SLACK_SECS)
+    return answer["data"]
 
 
 class ProviderRunError(RuntimeError):
@@ -110,18 +189,23 @@ class ThedoorProvider:
         self._token = token
         self._transport = transport
         self._clock = clock
+        self.last_run: ApifyRun | None = None
 
     def fetch(self, group_ids: Sequence[str], since: datetime) -> list[RawPost]:
+        self.last_run = None
         started = self._clock()
         run_input = build_actor_input(self._config, group_ids, since, started)
         query = urllib.parse.urlencode({"maxTotalChargeUsd": self._config.max_total_charge_usd})
         run = self._call("POST", f"/actors/{ACTOR_ID}/runs?{query}", body=run_input)["data"]
+        self.last_run = ApifyRun(run["id"])
         run = self._wait(run, deadline=started + timedelta(seconds=self._config.run_timeout_secs))
         run_id = run["id"]
+        self.last_run = ApifyRun(run_id, charged_events=charged_events(run))
         if run["status"] != "SUCCEEDED":
             raise ProviderRunError(f"apify_run {run_id} ended {run['status']}")
 
         items = self._call("GET", f"/datasets/{run['defaultDatasetId']}/items?format=json")
+        self.last_run = replace(self.last_run, rows=len(items))
         max_items = run["options"]["maxItems"]
         if len(items) >= max_items:
             raise ProviderRunError(
@@ -190,6 +274,8 @@ class ThedoorProvider:
                 skipped += 1
 
         considered = len(items) - dropped
+        if self.last_run is not None:
+            self.last_run = replace(self.last_run, skipped=skipped)
         if skipped >= MIN_SKIPPED_TO_FAIL and skipped * 2 > considered:
             raise ProviderRunError(
                 f"apify_run {run_id}: {skipped} of {considered} rows failed to map; "

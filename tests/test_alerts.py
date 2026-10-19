@@ -27,7 +27,13 @@ from tlv_hunter.notify.alert import (
     first_photo,
     visible_length,
 )
-from tlv_hunter.policy.alert import missing_critical, no_alert_reason, set_categories
+from tlv_hunter.policy.alert import (
+    PUBLISHED_WINDOW,
+    missing_critical,
+    no_alert_reason,
+    published_too_long_ago,
+    set_categories,
+)
 from tlv_hunter.policy.evaluate import evaluate
 from tlv_hunter.postmodel.rejects import classified_lifecycle
 from tlv_hunter.postmodel.seen import seen_listing
@@ -369,6 +375,17 @@ def test_an_unlinked_or_disabled_user_is_alerted_nothing() -> None:
         update={"telegram_chat_id": 7, "telegram_linked_at": LINKED_AT, "disabled_at": NOW}
     )
     assert due(key_post(1), user=disabled) == []
+
+
+def test_a_post_published_more_than_24_hours_before_the_pass_never_alerts() -> None:
+    """Point 12 B (#473): after a pause the run brings older posts; they are collected, classified
+    and stored after linking, and still never alert."""
+    old = key_post(1, posted=NOW - PUBLISHED_WINDOW - timedelta(minutes=1))
+    recent = key_post(2, posted=NOW - PUBLISHED_WINDOW + timedelta(minutes=1))
+    assert due(old, recent) == [recent.listing_id]
+    assert published_too_long_ago(old.post.posted_at, NOW)
+    assert not published_too_long_ago(recent.post.posted_at, NOW)
+    assert PUBLISHED_WINDOW == timedelta(hours=24)
 
 
 def test_the_due_alerts_come_in_publication_order() -> None:

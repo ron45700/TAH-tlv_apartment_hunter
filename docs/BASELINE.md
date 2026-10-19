@@ -46,6 +46,9 @@ volume and the measured working day at the deployment step; "first friend connec
 Amended 2026-10-18 (round 30): §12 (the server deployment row marked done, `DECISIONS.md` #451).
 Amended again 2026-10-18 (round 31, Ron's answers on `PHASE_4.md`): §9 (alerted only on posts first stored after linking
 Telegram, #452 point 10), §4 (quiet hours 00:00–07:00, #442; the bridge scheduler, #454), §12 (Phase 4 built).
+Amended 2026-10-19 (round 36, Phase 5 approved, `DECISIONS.md` #471–#474): §4 (the schedule is the admin's, rolling;
+no cap after a pause, old posts never alert), §5 (retention's details), §11 (the schedule page; the quiet hours moved
+from "later"), §12 (Phase 5 built; Phase 6 no longer holds the quiet hours).
 Amended again 2026-10-17 (round 28): §3 (the same image, not the same compose file, #433; the server's store in
 `./appdata/store/`, #432) and §12 (the deployment row: a fresh store, the first friend as a procedure, the new "done
 means", `DECISIONS.md` #436–#440).
@@ -132,14 +135,18 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   model, as `"pending"`; the model updates the stored post later.
 - **Schedule:** every 30 minutes by default. No scheduled runs between **00:00** and 07:00 Israel
   time (#442; *until 2026-10-18: 01:00*). The 07:00 run covers the whole night: its window starts at the last successful
-  run. **From Phase 4 a simple `scheduler` service runs on the server** (#454): the interval and the hours from the
-  stack's `.env`, read at its start; later they are editable by the admin from the dashboard (Phase 5).
+  run. **From Phase 4 a `scheduler` service runs on the server** (#454); **from Phase 5 the interval and the quiet
+  hours are the admin's, set on the site's schedule page** (Gate G's `ScheduleSettings`, #472, #474) and read by the
+  scheduler at every pass; its `.env` values only write the first row. **After a pause** a run looks back over the
+  whole gap, bounded by `max_posts` per group, and a post published more than 24 hours before the alert pass never
+  alerts (#473, replacing #443).
 - **Interval and manual run** (`DECISIONS.md` #61, phase 5): the interval is an admin setting, and
   a change takes effect at once — the next run is the last run's start plus the new interval. The
   admin can start a run now, also during the quiet hours. A manual run is an ordinary run; when it
   succeeds, the next scheduled run is its start plus the interval, and when it fails the timer is
   not reset. One run at a time: a manual request during a run is refused or waits, and two runs
-  never overlap.
+  never overlap. *Built in round 36 (#471): a request during a run is refused on the page; one older than 15 minutes
+  is not started.*
 - **Watermark:** per group, the highest post time seen, never moving backwards. The run's window
   starts at the last successful run's start minus a 15-minute overlap, the same for every group;
   all groups advance together, only on a successful run (`DECISIONS.md` #78).
@@ -195,6 +202,12 @@ it was active; rejected, with the same reason, if the model rejected it or a use
 pending if it was never classified, or if it was rejected for having no images and the repost has
 media (`DECISIONS.md` #72.5, #74). A repost extends a post's life; it does not change what is known
 about it.
+
+**The retention job** (Phase 5, #471; `PHASE_5.md` points 1–4): once a night inside the quiet hours. A duplicate
+follows its canonical's clock and is deleted before it. Deleting a post deletes its lifecycle record, its `Listing`,
+its photos and the users' viewed, hidden and sent-alert marks on it; reports and corrections stay. A post flagged,
+reported, left out, or with an open report is never deleted; its photos still go at archive. Photo files no record
+names are swept after 24 hours. It runs as a dry run until Ron allows `--apply` (`RETENTION_APPLY`).
 
 ### Rejection reasons
 
@@ -484,8 +497,9 @@ repost, never alerts; a post whose kind is unclear or not written never alerts (
 - Daily digest: collected / deduplicated / classified / rejected / alerted, per group; silent-group
   detection; failures. Admin only.
 - Key issuing, the key list and cancelling (#243); users: password reset, disable and enable (#262, #265)
-- Run interval, 30 minutes by default, and a "run now" button (phase 5, `DECISIONS.md` #61)
-- Schedule hours (later)
+- The schedule page: the run interval (30 minutes by default) and the quiet hours (00:00–07:00 by default), a "run now"
+  button, the last runs with their Apify cost (phase 5, `DECISIONS.md` #61, #471, #474; the quiet hours moved here from
+  "later")
 - `max_posts` (later, phase 6): one value for all groups; a value where groups × `max_posts`
   reaches the charge cap's `maxItems` is refused on save
 
@@ -504,8 +518,8 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 | **3. Dashboard** | **Gate C** (filter rules, and the user, key, session, profile, viewed-post, report and correction records) · users and keys · profile with two search options and filters · cards · viewed posts · rejected list · flagging · "wrong classification" reports and the admin's corrections · the admin lists · the same-listing grouping, derived by the Gate D key (#231) · **the polished UI** (#257) | Ron filters and sees real apartments in a browser, from the site in Docker on his laptop, over a copy of the store in its volume (#428) |
 | **Server deployment** (between 3 and 4, #426) — **DONE 2026-10-18 (#441, #451)** | After Phase 3, taken from Phase 5: the image on `homeserver`, published from git by the repo's GitHub Action and pulled by homelab's `stacks/tlv-hunter/` (#420, #433) · the site's own tailnet machine `tlvapthunter`, a Tailscale container with Serve (#419) · a fresh store: `run_once --bootstrap` (30 posts per group, #437), then `create_admin`; the Windows store is not moved (#436) · the `Host`/`Origin` probe through Serve and a real sign-in (#422) · the measured working day, Phase 3's DoD 6 (#428) · "Adding the first friend" as a written procedure, run when Ron adds one: the sharing rule, DoD 2 and 5 on the real store (#438, #440). Planned in `docs/DEPLOY.md` | The site is reached at `tlvapthunter.<tailnet>.ts.net`, the probe passes, and Ron signs in as the admin on the server (#440) |
 | **4. Telegram** — **DONE 2026-10-19 (#469)** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike, against `tlvapthunter` (#426) · a bridge `scheduler` for continuous collection on the server (#454) · the `web_app` menu button on every linked chat (#470) | A real alert arrives according to Ron's profile |
-| **5. Server** (draft: `docs/PHASE_5.md`) | The home server already runs the system from the deployment step (#426); Phase 5 adds the scheduler with quiet hours, admin-set interval and a manual "run now" · archive and deletion job · digest, including native-price vs model-price mismatches · failure alert to the admin · silent-group detection | Two days unattended (#427) |
-| **6. Later** | memo23 failover · editing the quiet hours, the group list and `max_posts` from the dashboard · Yad2 | |
+| **5. Server** (`docs/PHASE_5.md`) — **built 2026-10-19 (round 36, #471–#474)**, the deploy and the two days pending | The home server already runs the system from the deployment step (#426); Phase 5 adds the scheduler with the admin-set interval and quiet hours (#474) and a manual "run now" · the run and schedule records (Gate G, #472) · archive and deletion job · digest, including native-price vs model-price mismatches and the real Apify cost (#450) · failure alert to the admin · silent-group detection · no burst of alerts after a pause (#473) | Two days unattended (#427) |
+| **6. Later** | memo23 failover · editing the group list and `max_posts` from the dashboard · Yad2 | |
 
 Phases 1–4 are developed on Ron's personal laptop in Docker, **for development only (#417)**: no one but Ron uses the
 system before it runs on the home server, from the server deployment step (#426), which comes after Phase 3 and before

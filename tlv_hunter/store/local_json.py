@@ -132,6 +132,18 @@ class LocalJsonRepository:
             return []
         return [_read(path) for path in sorted(self._posts_dir.glob("*.json"))]
 
+    def delete_post(self, listing_id: str, *, expected: PostLifecycle) -> None:
+        """Three file deletions, not one transaction (a test store, as the class says)."""
+        if not self._post_path(listing_id).exists():
+            raise KeyError(listing_id)
+        self._require_expected(listing_id, expected)
+        for path in (
+            self._listing_path(listing_id),
+            self._lifecycle_path(listing_id),
+            self._post_path(listing_id),
+        ):
+            path.unlink(missing_ok=True)
+
     def _post_path(self, listing_id: str) -> Path:
         return self._posts_dir / f"{listing_id}.json"
 

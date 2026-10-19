@@ -65,7 +65,11 @@ export function Waiting<T>({ load, children }: { load: Load<T>; children: (data:
   if (load.state === 'failed') {
     return (
       <p className="adm-empty">
-        {load.status === 403 ? 'הדף הזה למנהל בלבד.' : 'הטעינה נכשלה. בדקו שהאתר פועל ורעננו את הדף.'}
+        {load.status === 403
+          ? 'הדף הזה למנהל בלבד.'
+          : load.status === 404
+            ? 'לא נמצא: המודעה כבר לא שמורה (מודעה נמחקת 40 יום אחרי הפרסום האחרון).'
+            : 'הטעינה נכשלה. בדקו שהאתר פועל ורעננו את הדף.'}
       </p>
     )
   }

@@ -31,7 +31,7 @@ from tlv_hunter.contracts.signup_key import SignupKey
 from tlv_hunter.contracts.telegram_link_code import TelegramLinkCode
 from tlv_hunter.contracts.user import User
 from tlv_hunter.contracts.viewed_post import VIEWED_POST_SCHEMA_VERSION, ViewedPost
-from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS
+from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS, begin_immediate
 from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.userdata.base import (
     AdminExists,
@@ -538,6 +538,22 @@ class SqliteUserDataStore:
             ).fetchall()
         return {listing_id for (listing_id,) in rows}
 
+    def list_sent_alerts(self) -> list[SentAlert]:
+        return self._all(SentAlert, "SELECT doc FROM sent_alerts ORDER BY rowid")
+
+    # --- retention (Phase 5, #62) ---
+
+    def delete_for_listings(self, listing_ids: Collection[str]) -> int:
+        deleted = 0
+        with self._transaction() as conn:
+            for table in ("viewed_posts", "sent_alerts", "hidden_posts"):
+                cursor = conn.executemany(
+                    f"DELETE FROM {table} WHERE listing_id = ?",  # noqa: S608
+                    [(listing_id,) for listing_id in listing_ids],
+                )
+                deleted += max(cursor.rowcount, 0)
+        return deleted
+
     # --- plumbing ---
 
     def _get[M: BaseModel](self, model: type[M], sql: str, params: tuple[object, ...]) -> M | None:
@@ -564,7 +580,7 @@ class SqliteUserDataStore:
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
         with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, LAYOUT_MODULE)
             try:
                 yield conn
             except BaseException:

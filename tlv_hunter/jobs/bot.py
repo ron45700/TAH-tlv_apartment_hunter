@@ -26,13 +26,18 @@ from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TextIO
+from zoneinfo import ZoneInfo
 
 from tlv_hunter.areas.reference import load_areas
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, SQLITE_FILENAME, job_logging, log_failure
+from tlv_hunter.schedule import ZONE
+from tlv_hunter.state.runs import SqliteRunStore
+from tlv_hunter.state.sqlite import SqliteWatermarkStore
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.telegram.bot import Bot, site_url_or_refusal
 from tlv_hunter.telegram.client import TelegramClient, Transport, urllib_transport
+from tlv_hunter.telegram.watch import Watch
 from tlv_hunter.userdata.sqlite import SqliteUserDataStore
 from tlv_hunter.web.grouping import Grouping
 
@@ -69,6 +74,23 @@ def store_paths(config_root: Path, repo_root: Path) -> tuple[Path, Path]:
     return store_root, database
 
 
+def watch_over(
+    database: Path,
+    grouping: Grouping,
+    userdata: SqliteUserDataStore,
+    clock: Callable[[], datetime],
+) -> Watch:
+    """The digest's and the failure alert's reads (Phase 5, #471), over the bot's own grouping."""
+    return Watch(
+        SqliteRunStore(database),
+        SqliteWatermarkStore(database),
+        grouping,
+        userdata,
+        clock=clock,
+        zone=ZoneInfo(ZONE),
+    )
+
+
 def main(
     argv: Sequence[str] | None = None,
     *,
@@ -88,20 +110,20 @@ def main(
             store_root, database = store_paths(config_root, repo_root)
             client = TelegramClient(token, transport=transport, sleep=sleep)
             userdata = SqliteUserDataStore(database)
+            grouping = Grouping(
+                SqliteRepository(database, read_only=True), userdata.find_corrections, store_root
+            )
             bot = Bot(
                 client,
                 SqliteRepository(database),
                 userdata,
-                Grouping(
-                    SqliteRepository(database, read_only=True),
-                    userdata.find_corrections,
-                    store_root,
-                ),
+                grouping,
                 {area.number: area.display_name for area in load_areas()},
                 site_url=site_url,
                 store_root=store_root,
                 clock=clock,
                 sleep=sleep,
+                watch=watch_over(database, grouping, userdata, clock),
             )
             bot.start()
             stopping = threading.Event() if stop is None else stop

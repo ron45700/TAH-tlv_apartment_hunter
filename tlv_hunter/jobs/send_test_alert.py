@@ -33,7 +33,7 @@ from tlv_hunter.jobs.bot import Refused, store_paths, telegram_settings
 from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, describe
 from tlv_hunter.notify.alert import build_alert
 from tlv_hunter.notify.telegram import TelegramNotifier
-from tlv_hunter.policy.alert import no_alert_reason
+from tlv_hunter.policy.alert import no_alert_reason, published_too_long_ago
 from tlv_hunter.policy.evaluate import evaluate
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.telegram.client import TelegramClient, Transport, urllib_transport
@@ -77,7 +77,9 @@ def main(
         card = _card(snapshot.card_of, prefix)
         now = clock()
         evaluation = evaluate(card.shown.seen, profile, now)
-        reason = no_alert_reason(card.shown.seen, evaluation)
+        reason: str | None = no_alert_reason(card.shown.seen, evaluation)
+        if reason is None and published_too_long_ago(card.shown.post.posted_at, now):
+            reason = "published_more_than_24_hours_ago"
         print(f"post {card.shown_id} ({len(card.post_ids)} posts in its card)", file=out)
         print(
             "a real alert would be sent to this user"

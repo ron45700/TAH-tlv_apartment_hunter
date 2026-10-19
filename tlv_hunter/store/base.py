@@ -66,3 +66,10 @@ class Repository(Protocol):
     def find_by_phone(self, phone: str) -> list[RawPost]: ...
 
     def query(self) -> list[RawPost]: ...
+
+    def delete_post(self, listing_id: str, *, expected: PostLifecycle) -> None:
+        """The retention job's delete, the only one (invariant 3; `PHASE_5.md` point 2): the post,
+        its lifecycle record and its Listing, together, written only if the stored record equals
+        `expected` (compare and set, #260); otherwise `StaleRecordError` and nothing is deleted.
+        KeyError if the post is not stored."""
+        ...

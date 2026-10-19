@@ -1,9 +1,10 @@
 # Phase 5 — The server, unattended
 
-**Status (2026-10-19, round 35): DRAFT, for Ron. Nothing is decided and nothing is built.** Points 1–13 below each have
-options and a recommendation. Two need Ron's explicit word because they touch a rule: **point 5** (two new records, a Gate
-G: invariant 1) and **point 12** (a deliberate skip of a window against invariant 2). Written under the
-`external-contract-verification` skill for the Apify cost (§5.1); no call was made, nothing paid.
+**Status (2026-10-19, round 36): APPROVED and BUILT; the deploy and the two days wait for Ron.** Ron approved points
+1–13 as recommended (`DECISIONS.md` #471), **Gate G** (#472), **point 12 as option B** (#473, replacing #443; invariant
+2 unchanged), and the quiet hours' editing in this phase (#474). Built: 5.1–5.6 (§5.5). Next: the deploy (§5.6), then
+DoD 1's two days. *Round 35's draft follows unchanged up to §5.4; where it says "recommended", Ron approved it, and point
+12 is B.*
 **Owner:** Ron
 **Parent:** `BASELINE.md` §4 (schedule), §5 (lifecycle), §11 (admin), §12 (the Phase 5 row) · **After:** Phase 4 (closed,
 `DECISIONS.md` #469) · **Schema:** `SCHEMA.md` (a Gate G is proposed in point 5 below, not written there)
@@ -290,3 +291,69 @@ classified within 24 hours of the pass alerts, whatever its age), not the collec
 - W4's run-log detection; groups × `max_posts` and a new group's watermark (Phase 6).
 - Friends, sharing, `max_posts` editing, memo23 failover (Phase 6 / written procedures).
 - Restic and the server's own backups: homelab's, already in place (#447).
+
+---
+
+## 5.5 What was built (round 36)
+
+| Piece | Where | What it does |
+|---|---|---|
+| Gate G's records (#472) | `contracts/run_record.py`, `contracts/schedule_settings.py`; `state/runs.py` (`SqliteRunStore`) | Their own tables and layout row `store.runs` 1, created when absent (no migration command; an older image still opens the file); runs listed newest first; compare and set; `set_last_digest` (the bot's one write) |
+| The run's record (points 5, 6) | `jobs/run_once.py` (`--trigger`), `providers/thedoor.py` (`last_run`, `run_charges`, `get_run`) | A `RunRecord` at the start and the end, with the Apify run id, the rows returned and skipped, the end-of-run charged events, the reason of a failure; a record left `running` closed as "abandoned" by the next run |
+| The real cost (point 6, #450) | `jobs/settle_costs.py` | Every run ended 15 minutes ago or more: the run object read again (free), cost = Σ charged events × their flat prices, stored by compare and set; `usageTotalUsd` logged when it differs by more than half a cent; `--show <id>` prints one run and writes nothing |
+| Retention (points 1–4) | `tlv_hunter/retention.py` (the rule), `jobs/retention.py`; `Repository.delete_post` (both stores); `UserDataStore.delete_for_listings` | Dry run by default (writes nothing; `--as-of` to see a later day; `--database` for a copy); `--apply` after a dated backup: archive (state, photos and their entries; never a file another record names), delete (duplicates first, with the users' marks and the photo folder), the orphan sweep (older than 24 hours); every write by compare and set |
+| The rhythm and the scheduler (points 1, 8, 11) | `tlv_hunter/schedule.py` (pure); `jobs/scheduler.py` | The settings read from the store at every pass, the first row from the `.env`; rolling (#61); "run now" within 15 minutes of the request, once; each run: `run_once --trigger`, `classify_pending --cap 0.05`, `settle_costs`; `retention` once a night at the first pass inside the quiet hours, `--apply` only with `RETENTION_APPLY=yes` |
+| The schedule page (points 8, 11) | `web/admin.py` (`GET`/`POST /api/admin/schedule`, `POST /api/admin/schedule/run-now`); `frontend/src/screens/admin/Schedule.tsx` ("תזמון") | Now (running, the next run, a request waiting), the interval and the quiet hours (saved against the version shown; 422 out of range), "הרצה עכשיו" with a confirmation, the last 12 runs with their cost; refreshed every 15 s |
+| A deleted post on the admin's pages (point 3) | `Reports.tsx`, `ui.tsx` | A correction of a deleted post is listed as such (it was hidden); the post's page answers "המודעה כבר לא שמורה" (the reports page already did) |
+| Health (points 9 B, 10 A) | `telegram/health.py` (pure) | The thresholds (longest active silence × 1.5, at least 48) and the four problems with their keys |
+| The digest (point 7) | `telegram/digest.py` (pure), `telegram/watch.py` (the reads), `telegram/bot.py` (`watch_collection`) | At 08:00 Israel time once a local day, to the admin's chat only, `last_digest_at` recorded; the failure alert once per problem until it clears; split under 4,096 characters, every value escaped |
+| `send_test_digest` | `jobs/send_test_digest.py` | The digest now (`--hours N`, or since the last one), to the admin's chat, printed too; writes nothing |
+| Point 12 B (#473) | `policy/alert.py` (`PUBLISHED_WINDOW`, `published_too_long_ago`), `telegram/alerts.py`, `send_test_alert` | A card whose shown post was published more than 24 hours before the pass never alerts; `send_test_alert` names it |
+| Point 13's two lines | `sqlite_busy.begin_immediate` (every write transaction), `web/grouping.py`; `jobs/serve.py` logs the package's lines | "sqlite write lock: waited N s" over 1 s, "database is locked" on a lock never obtained; "grouping recomputed in N ms: generation G, P canonical posts, C cards" |
+| The stack | homelab's `stacks/tlv-hunter/compose.yaml` | `RETENTION_APPLY=${RETENTION_APPLY:-no}` to the scheduler |
+
+**Decided in the build:** listed in `DECISIONS.md` #471. **Not built, for Ron:** the digest's "retention's last
+numbers" (no record holds them; a field would be a Gate G change).
+
+## 5.6 The deploy (Ron's; nothing here has run)
+
+0. **Commit and push both repos** (this one and homelab: the stack's `RETENTION_APPLY` line). The Action builds `latest`.
+1. On `homeserver`: `cd ~/homelab && git pull && cd stacks/tlv-hunter`. **Nothing to create:** no folder, no owner (the
+   scheduler's log folder exists since Phase 4); the store's new tables and the row `store.runs` are created by the
+   first opener. **`.env`: add nothing** (`RETENTION_APPLY` absent means a dry run).
+2. A fresh backup first (free; the rollback point):
+   `docker compose run --rm jobs python -m tlv_hunter.jobs.export_backup --no-photos`.
+3. **Dockge "Update" when no run is in progress:** `docker logs --tail 3 tlv-hunter-scheduler` ends with a command's
+   `exit` line or the quiet hours' line, not `--- run_once, started`. The update pulls and recreates every service;
+   the scheduler's stop waits for a running command (40 minutes at most). Then:
+   - `docker logs --tail 5 tlv-hunter-scheduler`: `scheduler started … every 30 minutes from the last run's start …
+     retention dry run only`. **With no run record yet the first run starts at once** (outside the quiet hours).
+   - `docker logs --tail 20 tlv-hunter-bot`: `bot started`, and the menu button on every linked chat (#470).
+   - On the site, the admin's pages → "תזמון": the settings (written by the scheduler from its `.env`), the next run,
+     the first run with its rows; its cost "עוד לא סופית" until 15 minutes after it ends.
+4. **Remove the three lines** `RUN_INTERVAL_MINUTES`, `QUIET_FROM`, `QUIET_UNTIL` from the stack's `.env` if they are
+   there: from now on the page sets them (they were read once, to write the first row).
+5. **`send_test_digest`** (free, writes nothing):
+   `docker compose run --rm bot python -m tlv_hunter.jobs.send_test_digest --hours 24`. Ron reads the Hebrew on his
+   phone; the real one comes at 08:00.
+6. **The free Apify read (#449's two points; writes nothing, the scheduler may run):** an Apify run id of the measured
+   day, from its log, then the read:
+   - `grep -o 'apify_run [A-Za-z0-9]*: SUCCEEDED' appdata/measure/2026-10-17.log | head -3`
+   - `docker compose run --rm jobs python -m tlv_hunter.jobs.settle_costs --show <the id>`
+
+   Look for: `chargedEventCounts` with `"apify-actor-start": 1` (the start fee is still charged, #449 point 2); the
+   cost by the events against the `usageTotalUsd` the log line recorded at the end of that run (the same now: the
+   logged one was preliminary, P19; still lower: Ron's reading, #449 point 1).
+7. **Retention's dry run over a dated copy** (free, writes nothing in the store; #471 C):
+   - `docker compose run --rm jobs python -m tlv_hunter.jobs.export_backup --no-photos`
+   - `ls appdata/store_exports/` (the newest `tlv_hunter.<date>….backup.sqlite3`)
+   - `docker compose run --rm jobs python -m tlv_hunter.jobs.retention --database /app/data/store_exports/<that file> --as-of 2026-11-30`
+
+   The store is from 2026-10-17, so **today nothing is due** (the first archive about 2026-11-11, the first delete
+   about 2026-11-26): `--as-of` shows a later day. Look for: the ARCHIVE and DELETE counts by state; every flagged or
+   reported post under KEPT, never under DELETE; the duplicates going with their canonical; "photo entries removed"
+   (the copy has no photos, so "files on disk" is 0 there). `--as-of 2026-11-15` shows the archive alone. A dry run
+   over the live store (no `--database`) is read-only too and counts the real photo files and the orphans.
+8. **Only after reading it:** `RETENTION_APPLY=yes` in the stack's `.env`, then `docker compose up -d scheduler`
+   (when no run is in progress). Until then the nightly retention only logs its dry run.
+9. **DoD 1:** two days with no manual command; the digest each morning.

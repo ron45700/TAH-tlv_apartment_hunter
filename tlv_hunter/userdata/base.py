@@ -175,3 +175,15 @@ class UserDataStore(Protocol):
         ...
 
     def sent_listing_ids(self, user_id: str) -> set[str]: ...
+
+    def list_sent_alerts(self) -> list[SentAlert]:
+        """Every user's, oldest first (the digest's "alerted" count)."""
+        ...
+
+    # --- retention (Phase 5, #62) ---
+
+    def delete_for_listings(self, listing_ids: Collection[str]) -> int:
+        """The marks of deleted posts, in one transaction: every user's `ViewedPost`, `SentAlert`
+        and `HiddenPost` on those posts (#62, #453, #464). Reports and corrections are never
+        deleted (#255). Called by the retention job only; returns the rows deleted."""
+        ...

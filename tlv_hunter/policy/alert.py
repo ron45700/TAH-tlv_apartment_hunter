@@ -10,6 +10,7 @@ it (`missing_critical`).
 """
 
 from collections.abc import Mapping
+from datetime import datetime, timedelta
 from typing import Literal
 
 from tlv_hunter.contracts.profile import Profile
@@ -18,6 +19,17 @@ from tlv_hunter.policy.colours import level_of, option_of
 from tlv_hunter.postmodel.seen import SeenListing
 
 NoAlert = Literal["not_shown", "kind_unclear", "no_price", "no_location"]
+
+# Point 12 B of `PHASE_5.md` (DECISIONS.md #473, replacing #443): after a pause collection is never
+# capped, and a post published longer ago than this before the alert pass never alerts.
+PUBLISHED_WINDOW = timedelta(hours=24)
+
+
+def published_too_long_ago(posted_at: datetime, now: datetime) -> bool:
+    """The card's shown post (its earliest publication) is older than `PUBLISHED_WINDOW` at the
+    alert pass: no alert, however recently it was collected or classified (no burst after a
+    pause). The post is stored and on the site as always."""
+    return posted_at < now - PUBLISHED_WINDOW
 
 
 def no_alert_reason(seen: SeenListing, evaluation: Evaluation) -> NoAlert | None:

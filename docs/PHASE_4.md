@@ -365,7 +365,8 @@ and the new row are harmless to it: checked in round 34 on a scratch copy).
 
 **Open, none blocking:** (a) the deploy of round 35's image (`Dockerfile` unchanged; the bot service restarts on the new
 image and sets the button for every linked chat by itself: Dockge "Update" when no run is in progress, since the
-scheduler's stop waits for a running command, `stop_grace_period` 40 minutes); (b) BotFather's `/setjoingroups` (T7);
+scheduler's stop waits for a running command, `stop_grace_period` 40 minutes); (b) ~~BotFather's `/setjoingroups`
+(T7)~~ already disabled by Ron on 2026-10-18 (#475);
 (c) #449's two open points, moved to Phase 5 (`PHASE_5.md` point 6); (d) "Adding the first friend" (`DEPLOY.md` §6), when
 Ron has a friend; (e) whether rounds 33–34 reached the server with Phase 4's image (the repo shows them committed;
 `BACKLOG.md` item 9 waits for Ron's word).

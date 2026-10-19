@@ -151,6 +151,7 @@ class Grouping:
             held = self._snapshot
             if held is not None and held.generation == generation:
                 return held
+            started = time.perf_counter()
             inputs = load_key_posts(
                 self._repository, self._corrections(), self._store_root, self._photos
             )
@@ -171,6 +172,14 @@ class Grouping:
                 if stale:
                     self._overlay_version += 1
             self.recomputes += 1
+            # Point 13 (#471): the recompute's time against the store's size, one line each.
+            logger.info(
+                "grouping recomputed in %.0f ms: generation %d, %d canonical posts, %d cards",
+                _ms_since(started),
+                generation,
+                len(inputs.members) + len(inputs.others),
+                len(cards),
+            )
             return snapshot
 
     def _start_recompute(self) -> None:

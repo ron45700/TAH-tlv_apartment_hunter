@@ -7,7 +7,7 @@ from tlv_hunter import store_generation
 from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
-from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS
+from tlv_hunter.sqlite_busy import BUSY_TIMEOUT_SECONDS, begin_immediate
 from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.textnorm.phones import canonical_phone
 
@@ -255,6 +255,17 @@ class SqliteRepository:
     def query(self) -> list[RawPost]:
         return self._select_posts("SELECT doc FROM raw_posts ORDER BY listing_id")
 
+    def delete_post(self, listing_id: str, *, expected: PostLifecycle) -> None:
+        with self._transaction() as conn:
+            exists = conn.execute(
+                "SELECT 1 FROM raw_posts WHERE listing_id = ?", (listing_id,)
+            ).fetchone()
+            if exists is None:
+                raise KeyError(listing_id)
+            _require_expected(conn, listing_id, expected)
+            for table in ("listings", "post_lifecycle", "raw_posts"):
+                conn.execute(f"DELETE FROM {table} WHERE listing_id = ?", (listing_id,))  # noqa: S608
+
     def _select_posts(self, sql: str, params: tuple[str, ...] = ()) -> list[RawPost]:
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
@@ -277,7 +288,7 @@ class SqliteRepository:
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
         with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
+            begin_immediate(conn, LAYOUT_MODULE)
             try:
                 yield conn
             except BaseException:

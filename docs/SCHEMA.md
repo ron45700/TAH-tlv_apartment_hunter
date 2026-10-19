@@ -1083,3 +1083,53 @@ retention job.
 
 **Not stored:** the alert's tier or colours (an `Evaluation` is never stored), the message's id, the chat's history.
 
+---
+
+# GATE G — collection runs and the schedule
+
+**Approved:** 2026-10-19 (`DECISIONS.md` #472; the content, `PHASE_5.md` point 5, approved with every point as
+recommended, #471). **Schema version:** 1 on both.
+
+Stored by `SqliteRunStore` (`state/runs.py`) in the same SQLite file, in their own tables (`run_records`,
+`schedule_settings`) with their own layout row (`store.runs`, version 1, created when absent, as `userdata.telegram`):
+no migration command, and an older image still opens the file. Datetimes tz-aware UTC. Neither record moves the store
+generation counter. Nothing per user and nothing about a post (invariant 12).
+
+## `RunRecord`
+
+One per collection run, keyed by `run_id`; listed in the order the runs started. Written by `run_once` when the run
+starts and when it ends; its cost by `settle_costs` later (#450). Never deleted.
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1 |
+| `run_id` | `str` | The run's `run_id` in its log lines; not empty |
+| `trigger` | `"scheduled"` / `"manual"` | The scheduler's runs are `scheduled`; "run now" and a run by hand `manual` |
+| `started_at` | `datetime` UTC | When the run started |
+| `finished_at` | `datetime` UTC / `None` | `None` exactly while `running`; not before `started_at` |
+| `status` | `"running"` / `"succeeded"` / `"failed"` | A record left `running` is closed `failed` when the next run starts ("abandoned") |
+| `failure_kind` | `str` / `None` | Set exactly when `failed`: the error's kind and message (at most 300 characters; no post content) |
+| `rows_fetched` | `int` / `None` | The rows the Apify dataset returned (what is billed); `None` until known; not negative |
+| `rows_skipped` | `int` / `None` | The rows that failed to map (#71 D); `None` until known; not negative |
+| `window_since` | `datetime` UTC / `None` | The run's `since`; `None` when the run failed before it was used |
+| `window_capped` | `bool` | Always `false`: collection is never capped after a pause (#473, point 12 B) |
+| `apify_run_id` | `str` / `None` | The Apify run's id; `None` when no Apify run started |
+| `charged_events` | map `str` → `int` / `None` | The run's `chargedEventCounts`: the end-of-run (preliminary) map, then the settled one |
+| `cost_usd` | `float` / `None` | Σ `charged_events` × each event's `eventPriceUsd` (#450), set by `settle_costs` 15 minutes or more after the run; not negative; never on a running run |
+| `cost_settled_at` | `datetime` UTC / `None` | When `cost_usd` was set; set together with it |
+
+## `ScheduleSettings`
+
+One row. Written by the admin's schedule page (the settings, "run now"), the bot (`last_digest_at` only) and, once, the
+scheduler (the first row, from its `.env`). Read by the scheduler at every pass (#61).
+
+| Field | Type | Rule |
+|---|---|---|
+| `schema_version` | `int` | Starts at 1 |
+| `interval_minutes` | `int` | 5 to 1440. The next scheduled run starts this long after the start of the last run that was scheduled, or manual and succeeded (#61) |
+| `quiet_from` | `str` `HH:MM` | Israel local time (converted by the schedule only, invariant 9) |
+| `quiet_until` | `str` `HH:MM` | Israel local time; equal to `quiet_from`: no quiet hours; across midnight when earlier |
+| `run_now_requested_at` | `datetime` UTC / `None` | The admin's last "run now"; started by the scheduler within 15 minutes, once |
+| `last_digest_at` | `datetime` UTC / `None` | When the bot last sent the daily digest |
+| `updated_by` | `str` / `None` | The admin's `user_id` who last changed the settings; `None` for the scheduler's first row |
+| `updated_at` | `datetime` UTC | When the settings were last changed |

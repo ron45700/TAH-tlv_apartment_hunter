@@ -12,6 +12,7 @@ import { Keys, Users } from './Accounts'
 import { AdminPost } from './AdminPost'
 import { PostRows } from './PostRows'
 import { Corrections, Reports } from './Reports'
+import { Schedule } from './Schedule'
 import { Link, useLoad } from './ui'
 
 type ListedPage = (typeof ADMIN_PAGES)[number]
@@ -26,6 +27,7 @@ const TITLES: Record<ListedPage, string> = {
   archive: 'ארכיון',
   keys: 'קודי הזמנה',
   users: 'משתמשים',
+  schedule: 'תזמון',
 }
 
 function railCount(page: ListedPage, summary: Summary | null): number | null {
@@ -115,6 +117,7 @@ function Desk({ page, id, names, groups, now }: Omit<Props, 'user'>) {
             {current === 'corrections' && <Corrections names={names} now={now} />}
             {current === 'keys' && <Keys onChanged={recount} />}
             {current === 'users' && <Users onChanged={recount} />}
+            {current === 'schedule' && <Schedule now={now} />}
           </>
         )}
       </main>

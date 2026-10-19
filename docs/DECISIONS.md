@@ -3881,7 +3881,7 @@ so `ASSUMPTIONS.md` I25 is VERIFIED and the separate probe is not needed.** The 
 `BASELINE.md` said 01:00–07:00. **`BASELINE.md` §4 and the configuration's default are amended when the Phase 5 scheduler
 is built** (no scheduler exists yet). Round 29's measuring script already uses 00:00–07:00. *Ron's decision.*
 
-### 443 — For Phase 5: a run after a pause looks back at most X hours
+### 443 — For Phase 5: a run after a pause looks back at most X hours (SUPERSEDED by #473)
 After a pause (the stack stopped for days), the next run's window spans the whole gap, bounded only by `max_posts` per
 group. Ron wants a rule that a run after a pause looks back at most X hours; X and the rule are decided when the scheduler
 is planned. *Ron's request.*
@@ -4108,7 +4108,8 @@ Built in round 34. *Ron's decision.*
 ### 469 — Phase 4's DoD 1 is met; Phase 4 is closed
 Real alerts arrived on Ron's phone from the server on 2026-10-18 and 19, from the `scheduler` service's collection runs
 (`PHASE_4.md` DoD 1; `BASELINE.md` §12). **Still open from Phase 4's DoD, none blocking:** BotFather's `/setjoingroups`
-(T7: `can_join_groups` is true; the bot ignores every chat that is not private); the Mini App is not adopted beyond the
+(T7: `can_join_groups` is true; the bot ignores every chat that is not private; **corrected by #475: already disabled
+on 2026-10-18**); the Mini App is not adopted beyond the
 menu button (no `initData` validation, #452 point 9); #449's two open points, which move to Phase 5 (`PHASE_5.md`
 point 6). *Ron's report; the other DoD points rest on the laptop's real-bot test (#457) and the tests, not on a report
 from the server.*
@@ -4124,6 +4125,57 @@ unlink, which has no token**) gets Telegram's default back. A refused call is tr
 (invariant 1: no new field), so a chat unlinked on the site *while the bot is down* keeps the button, which opens the site
 and does nothing else; `telegram_menu --default` fixes one by hand. `jobs/telegram_menu.py` stays for one chat and uses
 the same button. *Ron's request; the details decided by Claude Code.*
+
+## Phase 5 approved and built (2026-10-19, round 36)
+
+### 471 — `PHASE_5.md`'s points 1–13 approved as recommended
+1. Retention is one job command, `retention`: a dry run by default, `--apply` after a dated backup; the scheduler runs
+   it once a night inside the quiet hours (A).
+2. Archive at 25 days, delete at 40, from the last publication, as `PHASE_5.md` point 2 writes it; no new field.
+3. A duplicate follows its canonical's clock, duplicates deleted first (A); a `UserDataStore` method deletes the users'
+   `ViewedPost`, `SentAlert` and `HiddenPost` with their post; reports and corrections stay; the admin's pages show a
+   deleted post as such.
+4. The orphan-image sweep is inside the retention job, files older than 24 hours (A).
+5. Gate G's two records (A): approved as a gate, #472.
+6. The Apify cost is settled by a free job command, `settle_costs`, from the charged events, 15 minutes or more after
+   a run; `usageTotalUsd` is the check only (A).
+7. The bot sends the daily digest at 08:00 Israel time to the admin, with the counts of point 7 (A).
+8. The rhythm is rolling, as #61 says; "run now" from the site through the scheduler; the `.env` values only seed the
+   first row (A). Editing the quiet hours moves into this phase (#474).
+9. Silent groups: a per-group threshold from the group's own stored silences, × 1.5, at least 48 counted runs (B).
+10. The failure alert: the four triggers of point 10, once per episode, from the bot (A).
+11. Only the admin changes the schedule; out-of-range values refused (as written).
+12. **Option B** (#473): no cap on collection; the alert rule ignores old posts.
+13. WAL: measure first (A): a wait over 1 s for the write lock and a `database is locked` logged; one log line per
+    grouping recompute; decide after the two days.
+*Ron's approval, 2026-10-19.* **Built in round 36** (`PHASE_5.md` §5.5), with these details decided by the build:
+the run store in `state/runs.py`; the rhythm in a pure `tlv_hunter/schedule.py` shared by the scheduler, the site and
+the bot; the retention rule in `tlv_hunter/retention.py`, a left-out post (still `misclassified`) exempt like a
+reported one (deletion cannot be undone); a duplicate's photos removed with its canonical's at archive, its record
+otherwise unchanged; `RETENTION_APPLY` (stack `.env`, read at the scheduler's start) gates `--apply`; a "run now" older
+than 15 minutes is not started; a run record left `running` is closed as "abandoned" by the next run; the digest's
+"retention's last numbers" not built (no record holds them, and no field outside Gate G is added: for Ron).
+
+### 472 — Gate G approved: `RunRecord` and `ScheduleSettings`
+Approved with the fields as written in `PHASE_5.md` point 5. If building shows a field must change, the build stops
+and asks. Written into `SCHEMA.md` (Gate G). **Built without a field changed;** the nullability point 5 left open was
+decided by the build and is in `SCHEMA.md` (`rows_fetched`, `rows_skipped`, `window_since`, `apify_run_id`,
+`charged_events` may be `None`; `updated_by` is `None` for the scheduler's first row). `window_capped` is always false
+under #473. *Ron's approval.*
+
+### 473 — Point 12, option B: no cap on collection after a pause; a post published more than 24 hours before the alert pass never alerts
+**Replaces #443 as Ron stated it.** A run after a pause looks back over the whole gap, bounded only by `max_posts` per
+group, as today; `policy/alert.py`'s `PUBLISHED_WINDOW` (24 hours) keeps such posts from alerting. **Invariant 2 is
+unchanged.** *Ron's reason:* the cap saves no money, since `max_posts` already bounds a run, and would lose posts.
+
+### 474 — Editing the quiet hours moves from Phase 6 into Phase 5
+Point 8: the admin's schedule page sets the interval and the quiet hours; `BASELINE.md` §11 and §12 amended. *Ron's
+approval.*
+
+### 475 — Corrections to round 35
+**BotFather's `/setjoingroups` is already disabled** (Ron, 2026-10-18): not open (#469, `PHASE_4.md` §4.8 corrected).
+**Rounds 33–34 and 35 reach the server with Ron's next Dockge Update;** `BACKLOG.md` item 9 closes when he confirms.
+*Ron's report.*
 ---
 
 ## Corrections to recorded facts
@@ -4143,4 +4195,5 @@ so the corrections are visible in one place.
 | The actor page's "from $1.00" is the price | It is a tiered floor. The working rate is $1.50 | 2026-09-14 |
 | Near-duplicate matching might be required | It is not. 3/3 pairs collided on hash, no false collisions, no near-misses above 0.90 | Task 1.2, 2026-09-14 |
 | The bot's "joining groups is disabled" (#356) | `getMe` answers `can_join_groups: true` (2026-10-18, `ASSUMPTIONS.md` T7). The bot ignores every chat that is not private, so nothing depends on it; BotFather's `/setjoingroups` turns it off | Round 31, the contract check |
+| BotFather's `/setjoingroups` still open after Phase 4 (#469) | Ron disabled it on 2026-10-18 (#475) | Round 36 |
 | The `usageTotalUsd` each run logs is the run's Apify cost (`measure_day.sh`'s totals report it as such) | It under-reports: the measured day's 34 runs summed to $0.302, while the bill for the day and the bootstrap is $0.90, about the rows charged at $1.50 / 1,000 ($0.87). The cause is open (#449 point 1: platform usage only, or the preliminary end-of-run figure of P19); the real cost comes from the charged events or the pricing (#450) | The measured day, 2026-10-18 |

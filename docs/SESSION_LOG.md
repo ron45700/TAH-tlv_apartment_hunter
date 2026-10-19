@@ -7327,3 +7327,55 @@ raw_fixtures"` 1253 passed (880 deselected); ruff check and format clean. The fu
 button for every linked chat; check with `docker logs tlv-hunter-bot` and the menu on the phone); (2) answers on
 `PHASE_5.md`, above all **point 5 (Gate G: two new records)** and **point 12 (the pause rule against invariant 2)**;
 (3) whether rounds 33–34 are on the server.
+
+## 2026-10-19 (continued) — Round 36: Phase 5 approved (#471–#475) and built (5.1–5.6)
+
+No paid call, nothing on the server, no git write, no write to Windows `data/store/` or to the development copy; the
+Apify read of point 6 is Ron's (no call made). Network: none but npm (`npx` fetched ESLint once by mistake; the project
+has no ESLint config, nothing kept). Homelab's stack file edited (one line).
+
+**Recorded (A):** `DECISIONS.md` #471 (points 1–13 as recommended, one line each, and what the build decided), #472
+(Gate G), #473 (point 12 B, replacing #443; invariant 2 unchanged; #443 marked superseded), #474 (the quiet hours'
+editing into Phase 5), #475 (round 35 corrected: `/setjoingroups` already disabled; rounds 33–35 reach the server with
+the next Dockge Update; #469 annotated, "Corrections to recorded facts" row); `SCHEMA.md` Gate G; `PHASE_5.md` status,
+§5.5 (built), §5.6 (the deploy); `BASELINE.md` §4, §5, §11, §12 and the amendments note; `PHASE_4.md` §4.8 (b);
+`BACKLOG.md` (items 6, 9, 10; the done Phase 5 rows removed: #77 D4b, #46, #61, #254–#256's exemption, the failure
+reason, the skipped rows, the orphan sweep, the duplicate's clock, the thresholds, the cost, the pause, the colours, the
+scheduler's open choice; the WAL choice added); CLAUDE.md ("Now", the commands, the seams, the Phase 5 paragraph).
+
+**Built (B):**
+- **5.1 Gate G:** `contracts/run_record.py`, `contracts/schedule_settings.py`, `state/runs.py` (`store.runs` 1, created
+  when absent). `run_once --trigger` writes the `RunRecord` at the start and the end (the provider's `last_run`: Apify
+  run id, rows, skipped, end-of-run charged events; the failure's kind); a record left `running` is closed
+  "abandoned". `settle_costs` (free): runs ended 15 minutes ago or more, cost = Σ charged events × flat prices
+  (`providers/thedoor.run_charges`), `usageTotalUsd` the check; `--show` writes nothing.
+- **5.2 retention:** `tlv_hunter/retention.py` (the rule), `jobs/retention.py` (dry run, `--as-of`, `--database`;
+  `--apply` after a backup: archive, delete with the users' marks and the photo folder, the orphan sweep; compare and
+  set throughout), `Repository.delete_post` (both stores, the contract tests), `UserDataStore.delete_for_listings`,
+  `list_sent_alerts`; the admin's corrections list shows a deleted post's correction, the post page says it is gone.
+- **5.3 the scheduler:** `tlv_hunter/schedule.py` (pure: the rolling rhythm, quiet hours, "run now" pending, the run
+  in progress); `jobs/scheduler.py` rewritten (the settings from the store at every pass, the first row from the
+  `.env`; `settle_costs` after each classification; retention once a night, dry unless `RETENTION_APPLY=yes`);
+  homelab's stack passes `RETENTION_APPLY` (default `no`). The admin's "תזמון" page (`web/admin.py` three endpoints,
+  `Schedule.tsx`).
+- **5.4 the watch on the bot:** `telegram/health.py`, `telegram/digest.py`, `telegram/watch.py`, `Bot.watch_collection`
+  (the failure alert once per problem, the digest at 08:00 Israel time once a local day, `last_digest_at`),
+  `jobs/send_test_digest.py`.
+- **5.5 point 12 B:** `policy/alert.PUBLISHED_WINDOW` in the alert pass and in `send_test_alert`'s reasons.
+- **5.6 point 13:** `sqlite_busy.begin_immediate` in every write transaction; the grouping's recompute line; `serve`
+  now emits the package's log lines.
+
+**Found and fixed in the build:** a digest line longer than a Telegram message (the thresholds' footer, with many
+groups) would have been cut: the footer now goes 8 groups to a line. **Decided by me:** in #471's last paragraph.
+
+**Verified:** `uv run pytest` (with the raw fixtures) 2217 passed and 2 failed: `test_stubs.py`'s two Phase 1 guards
+"the Repository has no delete" (invariant 3). Narrowed, not dropped: the Repository has exactly one delete,
+`delete_post`, called only by `jobs/retention.py`, and the watermark store none; then 6 passed, so 2219 in all; ruff check and format clean; `npm test` and `npm run build` clean; `tsc` clean.
+New tests: `test_gate_g.py` (29), `test_schedule.py`, `test_scheduler.py` (rewritten, 37 with the rhythm),
+`test_settle_costs.py` (8), `test_retention.py` (11), `test_web_schedule.py` (6), `test_watch.py` (15),
+`test_run_once_job.py` +3, `test_alerts.py` +1. The front end's schedule page was type-checked and built, not opened in
+a browser.
+
+**Next:** Ron: the deploy and the reads in `PHASE_5.md` §5.6 (in order: commit and push both repos; `export_backup`;
+Dockge Update; the three `.env` lines out; `send_test_digest`; `settle_costs --show`; retention's dry run over a copy;
+then `RETENTION_APPLY=yes`); then DoD 1's two days; then the WAL decision.

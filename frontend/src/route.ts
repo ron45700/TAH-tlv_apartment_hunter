@@ -26,6 +26,7 @@ export const ADMIN_PAGES = [
   'archive',
   'keys',
   'users',
+  'schedule',
 ] as const
 export type AdminPage = (typeof ADMIN_PAGES)[number] | 'post'
 

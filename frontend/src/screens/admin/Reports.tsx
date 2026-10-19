@@ -138,7 +138,12 @@ export function Corrections({ names, now }: { names: ReadonlyMap<number, string>
                       </span>
                     </p>
                   </PostRow>
-                ) : null,
+                ) : (
+                  <li key={c.correction_id} className="arow arow-gone">
+                    המודעה כבר לא שמורה (נמחקה בשמירת הנתונים). <strong>{c.label}</strong>:{' '}
+                    {valueWords(c.model_value, names, c.field)} ← {valueWords(c.corrected_value, names, c.field)}
+                  </li>
+                ),
               )}
             </ul>
           )

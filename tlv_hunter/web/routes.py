@@ -45,6 +45,7 @@ from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import Card
 from tlv_hunter.policy.evaluate import evaluate
 from tlv_hunter.policy.order import card_hidden, card_viewed, ordered
+from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.userdata.base import OpenReportExists, UserDataStore
 from tlv_hunter.web.auth import (
@@ -86,6 +87,9 @@ class Site:
     """The front end's build (`frontend/dist`), served beside the API; `None`: the API only."""
     hasher: PasswordHasher = PRODUCTION_HASHER
     """Tests pass `argon2.profiles.CHEAPEST`'s hasher, never the production one."""
+    runs: SqliteRunStore | None = None
+    """Gate G's records (#472): the admin's schedule page reads the runs and writes the settings
+    and "run now"; `None`: no schedule page."""
 
     @property
     def area_names(self) -> Mapping[int, str]:

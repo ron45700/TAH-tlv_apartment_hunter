@@ -28,10 +28,13 @@ background recompute. Never a `RawPost` or a `Listing`.
 **Until 3.9 every write lands in the site's dated copy (#331, #400).**
 """
 
+import hashlib
 import json
 from collections import Counter, defaultdict
 from collections.abc import Callable, Mapping
+from datetime import datetime
 from typing import Annotated, Any, Literal, get_args
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
@@ -39,10 +42,27 @@ from pydantic import Field
 
 from tlv_hunter.accounts import actions
 from tlv_hunter.contracts.classification_report import ClassificationReport, ReportableField
+from tlv_hunter.contracts.run_record import RunRecord
+from tlv_hunter.contracts.schedule_settings import (
+    SCHEDULE_SETTINGS_SCHEMA_VERSION,
+    ScheduleSettings,
+)
 from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import OtherPost
 from tlv_hunter.postmodel.rejects import ReportMark, report_marks, restored_lifecycle
 from tlv_hunter.postmodel.seen import seen_listing
+from tlv_hunter.schedule import (
+    DEFAULT_INTERVAL_MINUTES,
+    DEFAULT_QUIET,
+    ZONE,
+    in_quiet_hours,
+    next_run,
+    rhythm_of,
+    run_now_pending,
+    running,
+    timer_base,
+)
+from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.store.base import StaleRecordError
 from tlv_hunter.web import admin_writes
 from tlv_hunter.web.admin_rows import (
@@ -75,6 +95,8 @@ Reason = Literal[
     "misclassified",
 ]
 ReportStatus = Literal["open", "left_out", "restored"]
+RECENT_RUNS = 50  # what the timer and "in progress" are read from
+RUNS_SHOWN = 12  # the last runs the schedule page lists
 
 # The account actions' refusals as the admin's page reads them: the HTTP status of each name.
 REFUSALS: Mapping[str, int] = {
@@ -541,6 +563,163 @@ async def enable_user(username: str, request: Request) -> Response:
     return _user_action(
         site, target, lambda: actions.enable_user(site.userdata, token, target.user_id, now)
     )
+
+
+# --- the schedule (Phase 5, #61, #471 points 8 and 11; Gate G, #472) ---
+
+
+class ScheduleBody(_Body):
+    interval_minutes: int
+    quiet_from: str
+    quiet_until: str
+    version: str
+
+
+@router.get("/schedule")
+def schedule(request: Request) -> Response:
+    """The settings, the run in progress, the next run and the last runs. The site has no Apify
+    key: the scheduler reads the settings at every pass and starts the runs."""
+    site = _site(request)
+    _admin(request, site)
+    runs, stored = _schedule_of(site)
+    return _json(_schedule_json(site, runs, stored))
+
+
+@router.post("/schedule")
+async def save_schedule(request: Request) -> Response:
+    """The interval and the quiet hours, against the `version` the page showed (409 `changed`);
+    a value out of range 422 (point 11). Applies at the scheduler's next pass."""
+    site = _site(request)
+    admin, _ = _admin(request, site)
+    body = await _body(request, ScheduleBody)
+    runs, stored = _schedule_of(site)
+    if body.version != schedule_version(stored):
+        return _refused_json("changed", 409)
+    now = site.clock()
+    base = stored or default_schedule(now)
+    try:
+        updated = ScheduleSettings.model_validate(
+            {
+                **base.model_dump(),
+                "interval_minutes": body.interval_minutes,
+                "quiet_from": body.quiet_from,
+                "quiet_until": body.quiet_until,
+                "updated_by": admin.user_id,
+                "updated_at": now,
+            }
+        )
+    except ValueError:
+        return _refused_json("invalid_schedule", 422)
+    try:
+        runs.save_settings(updated, expected=stored)
+    except StaleRecordError:
+        return _refused_json("changed", 409)
+    return _json(_schedule_json(site, runs, updated))
+
+
+@router.post("/schedule/run-now")
+async def run_now(request: Request) -> Response:
+    """ "Run now" (#61): refused while a run is in progress or another request waits; otherwise
+    the request is written for the scheduler, which starts the run within seconds, also in the
+    quiet hours."""
+    site = _site(request)
+    _admin(request, site)
+    await _body(request, _Body)
+    runs, _ = _schedule_of(site)
+    now = site.clock()
+    for _ in range(3):
+        stored = runs.get_settings()
+        recent = runs.recent_runs(RECENT_RUNS)
+        if running(recent) is not None:
+            return _refused_json("run_in_progress", 409)
+        settings = stored or default_schedule(now)
+        if run_now_pending(settings, recent, None, now):
+            return _refused_json("already_asked", 409)
+        asked = ScheduleSettings.model_validate(
+            {**settings.model_dump(), "run_now_requested_at": now}
+        )
+        try:
+            runs.save_settings(asked, expected=stored)
+        except StaleRecordError:
+            continue
+        return _json(_schedule_json(site, runs, asked))
+    return _refused_json("changed", 409)
+
+
+def default_schedule(now: datetime) -> ScheduleSettings:
+    """What the scheduler uses before any row exists (its `.env` defaults)."""
+    return ScheduleSettings(
+        schema_version=SCHEDULE_SETTINGS_SCHEMA_VERSION,
+        interval_minutes=DEFAULT_INTERVAL_MINUTES,
+        quiet_from=DEFAULT_QUIET[0],
+        quiet_until=DEFAULT_QUIET[1],
+        run_now_requested_at=None,
+        last_digest_at=None,
+        updated_by=None,
+        updated_at=now,
+    )
+
+
+def schedule_version(settings: ScheduleSettings | None) -> str:
+    """What a save is checked against: the admin's fields only, so the bot's digest time or a
+    "run now" never makes the form stale."""
+    if settings is None:
+        return "none"
+    key = "|".join(
+        (
+            str(settings.interval_minutes),
+            settings.quiet_from,
+            settings.quiet_until,
+            settings.updated_at.isoformat(),
+        )
+    )
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+
+def _schedule_of(site: Site) -> tuple[SqliteRunStore, ScheduleSettings | None]:
+    if site.runs is None:
+        raise HTTPException(status_code=404)
+    return site.runs, site.runs.get_settings()
+
+
+def _schedule_json(
+    site: Site, runs: SqliteRunStore, stored: ScheduleSettings | None
+) -> dict[str, object]:
+    now = site.clock()
+    settings = stored or default_schedule(now)
+    recent = runs.recent_runs(RECENT_RUNS)
+    in_progress = running(recent)
+    zone = ZoneInfo(ZONE)
+    rhythm = rhythm_of(settings)
+    upcoming = None if in_progress else next_run(timer_base(recent), rhythm, zone, now)
+    usernames = _usernames(site)
+    return {
+        "stored": stored is not None,
+        "version": schedule_version(stored),
+        "interval_minutes": settings.interval_minutes,
+        "quiet_from": settings.quiet_from,
+        "quiet_until": settings.quiet_until,
+        "updated_at": None if stored is None else settings.updated_at.isoformat(),
+        "updated_by": usernames.get(settings.updated_by or ""),
+        "in_quiet_hours": in_quiet_hours(now, rhythm, zone),
+        "running": None if in_progress is None else _run_json(in_progress),
+        "next_run": None if upcoming is None else upcoming.isoformat(),
+        "run_now_waiting": run_now_pending(settings, recent, None, now),
+        "runs": [_run_json(run) for run in recent[:RUNS_SHOWN]],
+    }
+
+
+def _run_json(run: RunRecord) -> dict[str, object]:
+    return {
+        "run_id": run.run_id,
+        "trigger": run.trigger,
+        "status": run.status,
+        "started_at": run.started_at.isoformat(),
+        "finished_at": None if run.finished_at is None else run.finished_at.isoformat(),
+        "rows_fetched": run.rows_fetched,
+        "failure_kind": run.failure_kind,
+        "cost_usd": run.cost_usd,
+    }
 
 
 # --- helpers ---

@@ -33,9 +33,21 @@ def test_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
     assert isinstance(TelegramNotifier(client), Notifier)
 
 
-def test_repository_has_no_delete() -> None:
-    assert not any("delete" in name or "remove" in name for name in dir(Repository))
-    assert not any("delete" in name or "remove" in name for name in dir(LocalJsonRepository))
+def deletes(cls: type) -> set[str]:
+    return {name for name in dir(cls) if "delete" in name or "remove" in name}
+
+
+def test_the_repository_has_one_delete_and_only_retention_calls_it() -> None:
+    """Invariant 3: a stored post is removed only by the retention job (DECISIONS.md #471)."""
+    for cls in (Repository, LocalJsonRepository, SqliteRepository):
+        assert deletes(cls) == {"delete_post"}
+    package = Path(__file__).resolve().parent.parent / "tlv_hunter"
+    callers = {
+        path.relative_to(package).as_posix()
+        for path in package.rglob("*.py")
+        if ".delete_post(" in path.read_text(encoding="utf-8")
+    }
+    assert callers == {"jobs/retention.py"}
 
 
 def test_sqlite_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
@@ -44,9 +56,9 @@ def test_sqlite_implementations_satisfy_their_protocols(tmp_path: Path) -> None:
     assert isinstance(SqliteWatermarkStore(path), WatermarkStore)
 
 
-def test_sqlite_store_and_watermark_store_have_no_delete() -> None:
-    for cls in (SqliteRepository, WatermarkStore, SqliteWatermarkStore):
-        assert not any("delete" in name or "remove" in name for name in dir(cls))
+def test_the_watermark_store_has_no_delete() -> None:
+    for cls in (WatermarkStore, SqliteWatermarkStore):
+        assert deletes(cls) == set()
 
 
 @pytest.mark.raw_fixtures
