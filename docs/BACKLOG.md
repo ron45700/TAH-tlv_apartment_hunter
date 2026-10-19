@@ -195,7 +195,7 @@ Left open on purpose until their phase is planned (`DECISIONS.md` #23).
 | A restore of a post rejected by the model through a correction and a re-derivation of its state (`DECISIONS.md` #396, point 66's other option) | Needs a Gate E amendment first (a new lifecycle rule; with #394's other option, a removal re-deriving too). Ron decides after using the admin's pages |
 | Favourites (a heart on a card) | `DECISIONS.md` #310: not built in 3.7; a later feature that needs its own record (Gate C has none), approved separately |
 | memo23 failover | `BASELINE.md` §12, phase 6 |
-| Editing the schedule and the group list from the dashboard | `BASELINE.md` §12, phase 6 |
+| Editing the group list from the dashboard | `BASELINE.md` §12, phase 6. The schedule's editing was built in Phase 5 (the schedule page, #471–#474) |
 | `max_posts` editable by the admin | `BASELINE.md` §11, §12 phase 6. Approved by Ron, 2026-10-04; recorded, not built. One value for all groups (the actor takes one `maxPosts` per run). On save, the system refuses a value where groups × `max_posts` reaches the charge cap's `maxItems`. Open, decided when planned: whether the charge cap itself is editable |
 | A street table as an aid to the model's area (`DECISIONS.md` #169) | Only if the regression set shows the model weak on posts that give a street and no area. The superseded plan is in `PHASE_2.md`'s appendix; the sources in `RESEARCH.md` §12, §14 |
 | Gemini's free tier as the model provider | A possible later switch, not planned (`DECISIONS.md` #126; `RESEARCH.md` §13). A free-tier run would need a separate Google project with no billing |

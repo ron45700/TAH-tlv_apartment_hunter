@@ -7379,3 +7379,45 @@ a browser.
 **Next:** Ron: the deploy and the reads in `PHASE_5.md` §5.6 (in order: commit and push both repos; `export_backup`;
 Dockge Update; the three `.env` lines out; `send_test_digest`; `settle_costs --show`; retention's dry run over a copy;
 then `RETENTION_APPLY=yes`); then DoD 1's two days; then the WAL decision.
+
+## 2026-10-19 (continued) — Round 37: a public README with screenshots from synthetic data
+
+Docs and throwaway tooling only. No paid call, no OpenAI, Apify or Telegram call, nothing on the server, no git write.
+**Never opened:** Windows `data/store/`, the `tlv-hunter-store` volume, anything on the server. Network: PyPI only
+(`uv run --with pillow`, for the scratch script; nothing added to the project).
+
+**Written:** `README.md` (the system as designed, from `BASELINE.md` and the seams; no phase, round, decision, gate or
+date numbers, no changing counts, costs or timings, no hostname or tailnet name; the static badges and the live
+`docker` workflow badge; a Mermaid diagram; the environment variables by name). `docs/images/`: `board-desktop.png`
+(1440 wide, full page: green, orange and red glows), `post-opened.png` (1440 × 900: the fields, the original text, the
+phone, "posted 2 times"), `board-phone.png` (390 × 844 at 2×), `preferences.png` (1440 × 900: the two searches,
+critical/preference, the grouped areas, the summary, Telegram linking); about 0.9 MB in all. A fifth, the Telegram
+alert, is an HTML comment in the README with instructions for Ron (invisible on GitHub until replaced). CLAUDE.md: a row
+for `README.md` / `docs/images/`.
+
+**How the screenshots were made:** `scratch/readme_demo.py` (gitignored) built `data/readme_demo/` through the store's
+own contracts (`SqliteRepository`, `SqliteUserDataStore`, the tests' `make_post` / `make_listing`): 11 invented Hebrew
+posts (one a reworded repost of another, so one card shows two publications), phones 050-0000101…110, links under a
+fake group, photos drawn with Pillow, an admin "demo" with a saved profile. Served with `site_over` + `create_app` on
+127.0.0.1:8765 (not `serve`, which reads the configured store root), photographed in Chrome, each PNG checked at full
+size for anything real. **Then the server was stopped and `data/readme_demo/` deleted** (port free, folder gone).
+`frontend/dist` was rebuilt (`npm run build`, gitignored).
+
+**Decided by me:** the demo store through the tests' helpers and `site_over`; port 8765; the four shots; the Telegram
+placeholder as an HTML comment; **no `.env.example`** (`.gitignore`'s `.env.*` ignores it, and changing `.gitignore` is
+outside this round), the variables listed in the README instead; Tailscale's badge kept (it is in the deployment, homelab's
+stack and `DEPLOY.md`, not in this repo's code).
+
+**For Ron:** `BACKLOG.md`'s "Future" still lists "Editing the schedule … from the dashboard", built in round 36 (the
+schedule page): the README leaves it out of the extensions and describes the schedule page; the row is stale. The repo
+has no LICENSE (Ron's decision). The Action's `paths-ignore` (`**.md`, `docs/**`) covers `README.md` and `docs/images/`,
+so committing them does not rebuild the image. `BACKLOG.md` not touched (the brief allowed only this entry and the
+CLAUDE.md row).
+
+**Next:** Ron: read the README, commit it with `docs/images/`; optionally the Telegram alert image; then round 36's
+deploy as before (`PHASE_5.md` §5.6).
+
+**Fixes (same round):** README's deployment overview no longer claims off-machine backups (restic on the server is not
+set up yet). The badge path `ron45700/TAH-tlv_apartment_hunter` checked against `git remote -v` (read-only): it
+matches, unchanged. `BACKLOG.md` "Future": the stale row reworded to the group list only. **License: Ron chose MIT;
+he adds `LICENSE` through GitHub's template.**
