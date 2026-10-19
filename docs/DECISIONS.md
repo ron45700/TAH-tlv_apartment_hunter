@@ -4102,6 +4102,28 @@ the recommended option wherever there was an "or". `DateRangeCriterion.immediate
 (table `hidden_posts`, layout row `userdata.hidden`) move into Gate C as approved (`SCHEMA.md`). **Round 33's built
 changes and this round's are committed and deployed together with §4.7's Phase 4 deploy** (Ron's own git and deploy).
 Built in round 34. *Ron's decision.*
+
+## Phase 4 closed; the menu button for every linked user (2026-10-19, round 35)
+
+### 469 — Phase 4's DoD 1 is met; Phase 4 is closed
+Real alerts arrived on Ron's phone from the server on 2026-10-18 and 19, from the `scheduler` service's collection runs
+(`PHASE_4.md` DoD 1; `BASELINE.md` §12). **Still open from Phase 4's DoD, none blocking:** BotFather's `/setjoingroups`
+(T7: `can_join_groups` is true; the bot ignores every chat that is not private); the Mini App is not adopted beyond the
+menu button (no `initData` validation, #452 point 9); #449's two open points, which move to Phase 5 (`PHASE_5.md`
+point 6). *Ron's report; the other DoD points rest on the laptop's real-bot test (#457) and the tests, not on a report
+from the server.*
+
+### 470 — Every linked chat gets the `web_app` menu button "האתר"; unlinking puts the default back
+**Approved by Ron, 2026-10-19 (round 35)**; the spike's result (T5, #457) is the reason. The button opens `SITE_URL` as a
+Web App, on every chat linked to a user, replacing the commands menu on that chat. **Built:** the `bot` service's
+`Bot.sync_menus`, before every poll: a linked chat not yet given the button gets it (so a chat linked through the bot
+shows it within one poll, and **the first pass after a start sets it for every chat already linked**: the "once now" for
+existing users is the bot's restart); a chat this process gave it that is no longer linked (`/stop`, **or the site's
+unlink, which has no token**) gets Telegram's default back. A refused call is tried again in an hour, not at every poll.
+**A limit, decided by the build:** the set of chats that have the button is this process's memory, not a record
+(invariant 1: no new field), so a chat unlinked on the site *while the bot is down* keeps the button, which opens the site
+and does nothing else; `telegram_menu --default` fixes one by hand. `jobs/telegram_menu.py` stays for one chat and uses
+the same button. *Ron's request; the details decided by Claude Code.*
 ---
 
 ## Corrections to recorded facts

@@ -1,12 +1,12 @@
 # Phase 4 — Telegram
 
-**Status (2026-10-18, round 31): APPROVED and BUILT; the real-bot test and the deploy wait for Ron.** Ron answered
-points 1–14 (`DECISIONS.md` #452–#456): 1–11 and 13 as recommended, **Gate F approved** (#453), point 12 replaced by a
-`scheduler` service (#454), point 14: the token in the laptop's `.env` for this round's tests (#455), and a
-`send_test_alert` command (#456). Built: 4.1–4.8 and the scheduler, with tests (§4.5 below). **The real-bot test ran
-(round 32, #457): passed by Ron's report, T5 VERIFIED; the check found steps 5–7's writes not as reported (§4.6's
-result), and Ron confirmed the copy reflects what he did: no defect).** Next: the deploy (§4.7), DoD 1's real alert
-(4.9), and the menu button for every linked user (Ron's step).
+**Status (2026-10-19, round 35): CLOSED.** DoD 1 is met: real alerts arrived on Ron's phone from the server, from the
+scheduler's runs, on 2026-10-18 and 19 (`DECISIONS.md` #469). History: Ron answered points 1–14 (#452–#456): 1–11 and
+13 as recommended, **Gate F approved** (#453), point 12 replaced by a `scheduler` service (#454), point 14: the token in
+the laptop's `.env` for the tests (#455), and a `send_test_alert` command (#456). Built: 4.1–4.8 and the scheduler (§4.5).
+The real-bot test (round 32, #457) passed, T5 VERIFIED (§4.6's result). **Round 35:** the `web_app` menu button "האתר" for
+every linked chat, and the default back on unlinking, built (#470, §4.8 below). **What the DoD still leaves open** is
+listed in §4.8. Next: Phase 5, drafted in `PHASE_5.md`.
 *Round 30's draft follows unchanged up to §4.4; where it says "recommended", Ron approved it.*
 **Owner:** Ron
 **Parent:** `BASELINE.md` §9 (alerts), §10 (linking), §12 (the Phase 4 row) · **Schema:** `SCHEMA.md` (Gates A–E; Gate C
@@ -351,6 +351,24 @@ and the new row are harmless to it: checked in round 34 on a scratch copy).
    at the next :00 or :30 outside the quiet hours, the first slot.
 10. **DoD 1:** the first real alert that matches Ron's profile arrives; nothing is alerted twice.
 11. From then on: `docker compose stop scheduler` before any manual job command (homelab's README).
+
+## 4.8 Closed (round 35): the DoD, and what it leaves open
+
+| DoD | State |
+|---|---|
+| 1. A real alert, on the server, from a real run | **Met** (Ron's report, 2026-10-18/19, #469) |
+| 2. Linking and #358's message | Passed on the laptop's real bot (#457); on the server Ron linked through `tlvapthunter` (§4.7 step 8): his report names only DoD 1, so the server's linking message is not separately reported |
+| 3. Nothing alerted twice; a tied post, a bootstrap's post, an unclear kind never alerts | Pinned by tests (`tests/test_alerts.py`, `tests/test_telegram_bot.py`); not separately reported from the server |
+| 4. The report from the alert writes as the linked user | Passed on the laptop (#457; the check found Ron's own steps differed from what he reported, no defect) |
+| 5. The menu button opens the site; T5 recorded | T5 VERIFIED (#457); **the button for every linked user is built (#470)** and reaches the server with the image |
+| 6. Tests pin invariants 12, 14, 15 and the token | In the suite |
+
+**Open, none blocking:** (a) the deploy of round 35's image (`Dockerfile` unchanged; the bot service restarts on the new
+image and sets the button for every linked chat by itself: Dockge "Update" when no run is in progress, since the
+scheduler's stop waits for a running command, `stop_grace_period` 40 minutes); (b) BotFather's `/setjoingroups` (T7);
+(c) #449's two open points, moved to Phase 5 (`PHASE_5.md` point 6); (d) "Adding the first friend" (`DEPLOY.md` §6), when
+Ron has a friend; (e) whether rounds 33–34 reached the server with Phase 4's image (the repo shows them committed;
+`BACKLOG.md` item 9 waits for Ron's word).
 
 ---
 

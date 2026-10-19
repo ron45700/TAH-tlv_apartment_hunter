@@ -346,6 +346,83 @@ def test_the_loop_reads_updates_with_the_offset_and_backs_off(harness: Harness) 
     assert harness.sleeps == [5]
 
 
+# --- the menu button follows the link (round 35, #470) ---
+
+WEB_APP = {"type": "web_app", "text": "האתר", "web_app": {"url": f"{SITE}/"}}
+
+
+def menu_calls(harness: Harness) -> list[dict[str, Any]]:
+    return harness.fake.of("setChatMenuButton")
+
+
+def test_a_linked_chat_gets_the_site_button_once_and_an_unlinked_one_gets_nothing(
+    harness: Harness,
+) -> None:
+    harness.bot.sync_menus()
+    assert harness.fake.calls == []
+    harness.link()
+    harness.bot.sync_menus()
+    harness.bot.sync_menus()
+    assert menu_calls(harness) == [{"chat_id": CHAT, "menu_button": WEB_APP}]
+
+
+def test_the_loop_sets_the_button_for_a_chat_already_linked_before_its_first_poll(
+    harness: Harness,
+) -> None:
+    linking.link_chat(harness.store.userdata, a_code(harness.store), CHAT, NOW)
+    harness.bot.run(lambda: len(harness.fake.of("getUpdates")) >= 1)
+    assert harness.fake.methods()[:2] == ["setChatMenuButton", "getUpdates"]
+    assert menu_calls(harness) == [{"chat_id": CHAT, "menu_button": WEB_APP}]
+
+
+def test_stop_and_the_sites_unlink_put_the_default_menu_back(harness: Harness) -> None:
+    harness.link()
+    harness.bot.sync_menus()
+    harness.say("/stop")
+    harness.bot.sync_menus()
+    harness.bot.sync_menus()
+    assert [call["menu_button"] for call in menu_calls(harness)] == [WEB_APP, {"type": "default"}]
+    harness.link()  # the site's unlink below: the bot is told nothing, the store has no chat
+    harness.bot.sync_menus()
+    linking.unlink(harness.store.userdata, harness.ron().user_id)
+    harness.bot.sync_menus()
+    assert [call["menu_button"] for call in menu_calls(harness)][2:] == [
+        WEB_APP,
+        {"type": "default"},
+    ]
+    assert {call["chat_id"] for call in menu_calls(harness)} == {CHAT}
+
+
+def test_a_refused_menu_call_is_tried_again_in_an_hour_not_at_every_poll(
+    harness: Harness,
+) -> None:
+    harness.link()
+    blocked = {"ok": False, "error_code": 403, "description": "Forbidden: bot was blocked"}
+    harness.fake.queue("setChatMenuButton", 403, blocked)
+    harness.bot.sync_menus()
+    harness.clock.now = NOW + timedelta(minutes=59)
+    harness.bot.sync_menus()
+    assert len(menu_calls(harness)) == 1
+    harness.clock.now = NOW + timedelta(hours=1)
+    harness.bot.sync_menus()
+    harness.bot.sync_menus()
+    assert [call["menu_button"] for call in menu_calls(harness)] == [WEB_APP, WEB_APP]
+
+
+def test_the_menu_button_request_carries_the_chat_and_the_sites_address_only(
+    harness: Harness,
+) -> None:
+    harness.link()
+    harness.bot.sync_menus()
+    (body,) = [
+        sent
+        for sent, call in zip(harness.fake.bodies, harness.fake.calls, strict=True)
+        if call[0] == "setChatMenuButton"
+    ]
+    assert json.loads(body) == {"chat_id": CHAT, "menu_button": WEB_APP}
+    assert harness.fake.urls[-1].endswith("/setChatMenuButton")
+
+
 # --- the report button (point 11 A, #364) ---
 
 

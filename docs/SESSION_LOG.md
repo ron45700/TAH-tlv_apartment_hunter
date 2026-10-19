@@ -7283,3 +7283,47 @@ the undo notice gone after 8 s; no sideways scroll, no console error. Lighthouse
 the list (signed in, mobile and desktop; a guest) and the preferences page (mobile and desktop).
 
 **Next:** Ron: the commit (rounds 33 and 34 with Phase 4) and the deploy, `PHASE_4.md` §4.7 with its round-34 note.
+
+## 2026-10-19 (continued) — Round 35: Phase 4 closed (#469); the menu button for every linked chat (#470); `PHASE_5.md` drafted
+
+No paid call, nothing on the server, no git write, no write to Windows `data/store/` or to the development copy. Network:
+Apify's and SQLite's documentation pages (read only). Ron's brief called this "Round 33"; rounds 33 and 34 already exist,
+so it is round 35.
+
+**Recorded (A):** `DECISIONS.md` #469 (DoD 1 met: real alerts from the server on 2026-10-18/19, Ron's report) and #470;
+`PHASE_4.md` status "CLOSED" and §4.8 (each DoD point and what stays open); `BASELINE.md` §12 (Phase 4 done, Phase 5
+row points at the draft); `BACKLOG.md` (item 6 rewritten, item 10 for Phase 5, three rows pointing at `PHASE_5.md`, item 9
+reworded, **and the round-33 line that round 34's line had been inserted into the middle of, joined again**);
+`ASSUMPTIONS.md` P19 (what the documentation and the saved runs show); CLAUDE.md ("Now", the bot paragraph, the docs
+table). **Open from the DoD:** BotFather's `/setjoingroups`, #449's two points (moved to `PHASE_5.md` point 6), "Adding the
+first friend". **Not reported by Ron from the server:** DoD 2 (the linking message), 3 (no double alert), 4 (the report
+button); they rest on the laptop's real-bot test (#457) and the tests, and §4.8 says so. Whether rounds 33–34 reached the
+server with Phase 4's image is unknown to me (the repo was clean, so they are committed): item 9 waits for Ron.
+
+**Built (B), #470:** `Bot.sync_menus` (`telegram/bot.py`), called before every poll in `run`: a linked chat (any `User` with
+a `telegram_chat_id`) not yet given the button gets `setChatMenuButton` with a `web_app` button "האתר" opening `SITE_URL/`;
+a chat this process gave it that is no longer linked gets `{"type": "default"}`. The first pass after a start sets it for
+every chat already linked, so **"once now for existing users" is the bot's restart; no command is needed.** The site has
+no token, so its unlink is seen through the store, not pushed. A refused call (a 403 for a user who blocked the bot) is
+tried again after an hour, not at every poll. `site_menu_button` and `DEFAULT_MENU` are one definition, now used by
+`jobs/telegram_menu.py` too. **Decided by me:** the chats-with-the-button set is this process's memory, not a record
+(invariant 1); so a chat unlinked on the site while the bot is down keeps the button (it opens the site, nothing else;
+`telegram_menu --default` fixes one by hand). Tests, `tests/test_telegram_bot.py` +5: set once and nothing for no one;
+the loop sets it before its first `getUpdates`; `/stop` and the site's unlink put the default back; a refused call waits
+an hour; the request carries the chat and the site's address only.
+
+**Drafted (C):** `docs/PHASE_5.md`: DoD, anchors, order of work, what was read (§5.1), what I could not verify (§5.2), and
+13 points with options and a recommendation each; no code. **Verified under the skill (documentation + the two saved real
+runs of 2026-10-04, no call):** a run's cost is Σ `chargedEventCounts` × the run's own `eventPriceUsd` (`apify-default-
+dataset-item` 0.0015, `apify-actor-start` 0.005); in both saved runs `usageTotalUsd` equals that sum and `usageUsd` is
+null, so Ron's "platform usage only" reading is not what the saved runs show and P19's "preliminary at the end of the
+run" fits; **not proved for the measured day**, and the start fee's present state is unknown until one free read of a
+settled run on the server. SQLite's WAL page read for point 13.
+
+**Verified:** `uv run pytest tests/test_telegram_bot.py tests/test_telegram_client.py` 70 passed; `uv run pytest -m "not
+raw_fixtures"` 1253 passed (880 deselected); ruff check and format clean. The full `uv run pytest` (with the raw fixtures): 2133 passed (2128 before this round, +5).
+
+**Next:** Ron: (1) the deploy of round 35's image (Dockge "Update" when no run is in progress; the bot's restart sets the
+button for every linked chat; check with `docker logs tlv-hunter-bot` and the menu on the phone); (2) answers on
+`PHASE_5.md`, above all **point 5 (Gate G: two new records)** and **point 12 (the pause rule against invariant 2)**;
+(3) whether rounds 33–34 are on the server.

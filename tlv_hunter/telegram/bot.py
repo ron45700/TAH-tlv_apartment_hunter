@@ -45,6 +45,15 @@ logger = logging.getLogger(__name__)
 POLL_SECONDS = 25
 NOTE_WAIT = timedelta(minutes=15)
 BACKOFF_SECONDS = (5, 15, 60)
+MENU_RETRY = timedelta(hours=1)
+MENU_TEXT = "האתר"
+DEFAULT_MENU: dict[str, Any] = {"type": "default"}
+
+
+def site_menu_button(site_url: str) -> dict[str, Any]:
+    """The Web App menu button every linked chat carries (the spike's, T5, #457)."""
+    return {"type": "web_app", "text": MENU_TEXT, "web_app": {"url": site_url.rstrip("/") + "/"}}
+
 
 COMMANDS = (
     ("site", "פתיחת האתר"),
@@ -137,6 +146,8 @@ class Bot:
         self._pending: dict[int, PendingNote] = {}
         self._offset: int | None = None
         self._alerted_generation: int | None = None
+        self._menu_chats: set[int] = set()
+        self._menu_retry_at: dict[int, datetime] = {}
 
     # --- the service ---
 
@@ -154,6 +165,7 @@ class Bot:
     def run(self, should_stop: Callable[[], bool]) -> None:
         failures = 0
         while not should_stop():
+            self.sync_menus()
             self.alert_if_moved(should_stop)
             if should_stop():
                 break
@@ -170,6 +182,44 @@ class Bot:
                 self._offset = int(update["update_id"]) + 1
                 self.handle(update)
         logger.info("bot stopped")
+
+    def sync_menus(self) -> None:
+        """The menu button follows the link. A linked chat gets the site's Web App button; a chat
+        this process gave it that is no longer linked (`/stop`, or the site's unlink, which has no
+        token) gets Telegram's default back. Run before each poll, so the first pass after a start
+        sets it for every chat already linked, and a link shows it within one poll. The state is
+        this process's only (no record, invariant 1): a chat unlinked on the site while the bot was
+        down keeps the button, which opens the site and does nothing else. A failed call is tried
+        again in an hour, not at every poll (a user who blocked the bot answers 403 for ever)."""
+        now = self._clock()
+        try:
+            linked = {
+                user.telegram_chat_id
+                for user in self._userdata.list_users()
+                if user.telegram_chat_id is not None
+            }
+        except Exception as error:
+            logger.error("menu sync failed: %s", describe(error))
+            return
+        for chat_id in sorted(linked - self._menu_chats):
+            self._set_menu(chat_id, site_menu_button(self._site_url), now, True)
+        for chat_id in sorted(self._menu_chats - linked):
+            self._set_menu(chat_id, DEFAULT_MENU, now, False)
+
+    def _set_menu(self, chat_id: int, button: Mapping[str, Any], now: datetime, site: bool) -> None:
+        if self._menu_retry_at.get(chat_id, now) > now:
+            return
+        try:
+            self._client.set_chat_menu_button(chat_id, button)
+        except TelegramError as error:
+            self._menu_retry_at[chat_id] = now + MENU_RETRY
+            logger.warning("menu button not set: %s", error)
+            return
+        self._menu_retry_at.pop(chat_id, None)
+        if site:
+            self._menu_chats.add(chat_id)
+        else:
+            self._menu_chats.discard(chat_id)
 
     def alert_if_moved(self, should_stop: Callable[[], bool] = lambda: False) -> None:
         """The alert pass, when the store changed since the last one that finished."""
