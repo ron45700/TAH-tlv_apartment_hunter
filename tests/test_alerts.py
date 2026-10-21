@@ -4,7 +4,6 @@
 Cards built in memory (`dedup/stage_b`); users and sent-alert records in a temporary SQLite store.
 """
 
-import re
 import sqlite3
 from contextlib import closing
 from datetime import UTC, date, datetime, timedelta
@@ -22,6 +21,7 @@ from tlv_hunter.dedup.stage_b import Card, KeyInputs, KeyPost, TiedPair, cards, 
 from tlv_hunter.jobs.common import SQLITE_FILENAME
 from tlv_hunter.notify.alert import (
     CAPTION_LIMIT,
+    RLM,
     Alert,
     alert_keyboard,
     build_alert,
@@ -210,8 +210,20 @@ def alert_of(member: KeyPost, wanted: Profile | None = None, root: Path = Path("
     )
 
 
+def raw_blocks(member: KeyPost, wanted: Profile | None = None) -> list[list[str]]:
+    """The blocks, every line's opening right-to-left mark removed (#487)."""
+    text = alert_of(member, wanted).text
+    return [[line.removeprefix(RLM) for line in block.split("\n")] for block in text.split("\n\n")]
+
+
+def excerpt_of(member: KeyPost, wanted: Profile | None = None) -> list[str]:
+    """The poster's text, the first block (#487); every test post has one."""
+    return raw_blocks(member, wanted)[0]
+
+
 def blocks_of(member: KeyPost, wanted: Profile | None = None) -> list[list[str]]:
-    return [block.split("\n") for block in alert_of(member, wanted).text.split("\n\n")]
+    """The blocks after the poster's text."""
+    return raw_blocks(member, wanted)[1:]
 
 
 def test_the_blocks_type_location_values_and_time() -> None:
@@ -239,11 +251,27 @@ def test_the_blocks_type_location_values_and_time() -> None:
         "- חדרים: 3.5",
         "- קומה: 3/4",
     ]
-    assert blocks[2] == ["<blockquote>שורה ראשונה</blockquote>"]
     # 10:40 UTC on 13.10 is 13:40 Israel time (IDT, +3).
     assert blocks[-1] == ["- פורסם: לפני 20 דקות (13.10, 13:40)"]
-    every = [line for block in blocks for line in block if not line.startswith("<blockquote>")]
-    assert all(line.startswith("- ") for line in every)
+    assert all(line.startswith("- ") for block in blocks for line in block)
+
+
+def test_the_posters_text_comes_first_as_plain_text_then_a_blank_line() -> None:
+    """#487: the text before the kind line, no <blockquote>."""
+    text = alert_of(key_post(1, text="שורה ראשונה")).text
+    assert text.startswith(f"{RLM}שורה ראשונה\n\n{RLM}- <b>דירה שלמה</b>")
+    assert "blockquote" not in text
+
+
+def test_every_line_opens_with_a_right_to_left_mark_and_it_counts() -> None:
+    """#487: U+200F before every non-empty line; blank lines stay empty; the caption limit counts
+    the marks (one character each)."""
+    member = key_post(1, text="אחת\nשתיים", balcony=written(True), arnona=written(450))
+    lines = alert_of(member).text.split("\n")
+    assert all(line.startswith(RLM) for line in lines if line)
+    assert all(line == "" for line in lines if not line.startswith(RLM))
+    assert sum(line.count(RLM) for line in lines) == len([line for line in lines if line])
+    assert visible_length(f"{RLM}<b>a</b>") == 2
 
 
 @pytest.mark.parametrize(
@@ -352,11 +380,9 @@ def test_the_colour_block_ignores_the_profile_then_women_only_and_missing() -> N
 
 def test_the_text_its_first_three_lines_verbatim_escaped_and_cut() -> None:
     member = key_post(1, text="\n  שותף/ה <דחוף> & מהר  \n\nשנייה\nשלישית\nרביעית")
-    quote = blocks_of(member)[-2]
-    assert quote == ["<blockquote>שותף/ה &lt;דחוף&gt; &amp; מהר", "שנייה", "שלישית…</blockquote>"]
-    long = alert_of(key_post(2, text="א" * 500)).text
-    (inside,) = re.findall(r"<blockquote>(.*)</blockquote>", long)
-    assert len(inside) == 200 and inside.endswith("…")
+    assert excerpt_of(member) == ["שותף/ה &lt;דחוף&gt; &amp; מהר", "שנייה", "שלישית…"]
+    (long,) = excerpt_of(key_post(2, text="א" * 500))
+    assert len(long) == 200 and long.endswith("…")
 
 
 def test_every_written_value_is_html_escaped() -> None:

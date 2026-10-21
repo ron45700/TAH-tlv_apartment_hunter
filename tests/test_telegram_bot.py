@@ -540,7 +540,7 @@ def test_a_new_matching_post_alerts_the_linked_user_once(harness: Harness) -> No
     harness.clock.now = NOW + timedelta(minutes=10)
     harness.bot.alert_if_moved()
     (sent,) = harness.fake.of("sendMessage")[1:]
-    assert sent["chat_id"] == CHAT and sent["text"].startswith("- <b>דירה שלמה</b>")
+    assert sent["chat_id"] == CHAT and "\n\n\u200f- <b>דירה שלמה</b>" in sent["text"]
     assert store.userdata.sent_listing_ids(ADMIN_ID) == {fresh}
     harness.bot.alert_if_moved()
     new_post(store, 22, NOW - timedelta(days=1))  # stored before the link: never alerted

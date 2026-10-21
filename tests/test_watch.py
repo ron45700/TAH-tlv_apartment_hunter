@@ -29,7 +29,7 @@ from tests.test_telegram_client import TOKEN, FakeTelegram
 from tlv_hunter.contracts.group_watermark import GroupWatermark
 from tlv_hunter.jobs import send_test_digest
 from tlv_hunter.jobs.bot import watch_over
-from tlv_hunter.notify.alert import reference_area_words
+from tlv_hunter.notify.alert import RLM, reference_area_words
 from tlv_hunter.schedule import Rhythm
 from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.state.sqlite import SqliteWatermarkStore
@@ -38,6 +38,8 @@ from tlv_hunter.telegram.bot import FAILURE_HEAD, Bot
 from tlv_hunter.telegram.client import TelegramClient
 from tlv_hunter.telegram.digest import (
     MESSAGE_LIMIT,
+    Digest,
+    GroupCounts,
     build_digest,
     digest_due,
     digest_messages,
@@ -181,18 +183,76 @@ def test_the_digest_counts_the_window_and_names_failures_and_silences(store: Tie
     assert digest.rows_fetched == 36  # three runs in the window, 12 rows each
     assert digest.matches is not None and digest.matches >= 1
     messages = digest_messages(digest, ZONE)
-    text = "\n".join(messages)
+    lines = digest_lines(messages)
+    text = "\n".join(lines)
     assert text.startswith("📊 <b>סיכום יומי</b>")
     assert "&lt;boom &amp; co&gt;" in text and "<boom" not in text
     assert "⚠️ g1 שקטה כבר 30 ריצות" in text and "סף" not in text
-    lines = text.split("\n")
-    cost = lines.index("<b>עלות</b>")
-    assert lines[cost + 1 : cost + 4] == ["$0.0230 ב-Apify", "1 ריצות סופיות", "2 עוד לא סופיות"]
-    runs = lines.index("<b>ריצות איסוף</b>")
-    assert lines[runs + 1 : runs + 5] == ["3 ריצות", "1 נכשלו", "36 שורות", "0 דולגו"]
-    posts = lines.index("<b>מודעות</b>")
-    assert lines[posts + 1 : posts + 6] == ["7 נאספו", "1 כפולות", "0 סווגו", "1 נדחו", "0 התראות"]
-    assert "0 מחיר בפייסבוק שונה מהטקסט" in lines
+    cost = lines.index("<b>-עלות-</b>")
+    assert lines[cost + 1 : cost + 4] == [
+        "• $0.0230 ב-Apify",
+        "• 1 ריצות סופיות",
+        "• 2 עוד לא סופיות",
+    ]
+    runs = lines.index("<b>-ריצות איסוף-</b>")
+    assert lines[runs + 1 : runs + 5] == ["• 3 ריצות", "• 1 נכשלו", "• 36 שורות", "• 0 דולגו"]
+    posts = lines.index("<b>-מודעות-</b>")
+    assert lines[posts + 1 : posts + 6] == [
+        "• 7 נאספו",
+        "• 1 כפולות",
+        "• 0 סווגו",
+        "• 1 נדחו",
+        "• 0 התראות",
+    ]
+    green, orange = digest.colours.get("green", 0), digest.colours.get("orange", 0)
+    assert lines[posts + 6 : posts + 10] == [
+        f"🟢 {green} פעילות, מחיר, מיקום וסוג ברורים",
+        f"🟠 {orange} פעילות, חסר מחיר, מיקום או סוג",
+        "🔴 1 נדחו",
+        "• 1 ממתינות לסיווג",
+    ]
+    assert "• 0 מחיר בפייסבוק שונה מהטקסט" in lines
+    assert lines.index("<b>-ריצות שנכשלו-</b>") > 0
+
+
+def digest_lines(messages: list[str]) -> list[str]:
+    """The digest's lines, each one's opening right-to-left mark checked and removed (#488)."""
+    lines = "\n".join(messages).split("\n")
+    assert all(line.startswith(RLM) for line in lines if line)
+    return [line.removeprefix(RLM) for line in lines]
+
+
+def test_each_group_is_its_own_block_with_a_dashed_bold_name_and_bullets() -> None:
+    """#488: a blank line between one group's block and the next."""
+    digest = Digest(
+        start=T0,
+        end=T0,
+        runs=0,
+        failed=(),
+        rows_fetched=0,
+        rows_skipped=0,
+        cost_usd=0.0,
+        settled=0,
+        unsettled=0,
+        by_group={"g1": GroupCounts(89, 23, 50, 25, 2), "g2": GroupCounts(4, 0, 4, 1, 0)},
+        colours={},
+        matches=None,
+        price_mismatches=0,
+        silences=(),
+        problems=(),
+        group_names={"g1": 'דירות בת"א', "g2": "שותפים"},
+    )
+    lines = digest_lines(digest_messages(digest, ZONE))
+    at = lines.index("<b>-לפי קבוצה-</b>")
+    assert lines[at + 1 :] == [
+        '<b>-דירות בת"א-</b>',
+        "• 89 נאספו | 50 סווגו",
+        "• 23 כפולות | 25 נדחו | 2 התראות",
+        "",
+        "<b>-שותפים-</b>",
+        "• 4 נאספו | 4 סווגו",
+        "• 0 כפולות | 1 נדחו | 0 התראות",
+    ]
 
 
 def test_the_digest_names_each_group_from_the_config_in_its_order(store: TiedStore) -> None:  # noqa: F811
@@ -207,12 +267,12 @@ def test_the_digest_names_each_group_from_the_config_in_its_order(store: TiedSto
         T0 + timedelta(hours=1),
         group_names={"g1": 'דירות בת"א'},
     )
-    lines = "\n".join(digest_messages(digest, ZONE)).split("\n")
-    at = lines.index("<b>לפי קבוצה</b>")
+    lines = digest_lines(digest_messages(digest, ZONE))
+    at = lines.index("<b>-לפי קבוצה-</b>")
     assert lines[at + 1 : at + 4] == [
-        '<b>דירות בת"א</b>',
-        "7 נאספו | 0 סווגו",
-        "1 כפולות | 1 נדחו | 0 התראות",
+        '<b>-דירות בת"א-</b>',
+        "• 7 נאספו | 0 סווגו",
+        "• 1 כפולות | 1 נדחו | 0 התראות",
     ]
     # Only a suspect group (half its threshold) or a silent one; the id when it has no name.
     assert "⚠️ g2 שקטה כבר 30 ריצות" in lines
@@ -364,7 +424,7 @@ def test_send_test_digest_sends_to_the_admin_and_writes_nothing(store: TiedStore
     assert code == 0, out
     (sent,) = fake.of("sendMessage")
     assert sent["chat_id"] == CHAT and "סיכום יומי" in sent["text"]
-    assert "<b>g1</b>" in sent["text"] and "7 נאספו | 0 סווגו" in sent["text"]
+    assert "<b>-g1-</b>" in sent["text"] and "• 7 נאספו | 0 סווגו" in sent["text"]
     assert "שקטה" not in sent["text"]  # 3 of 48: not suspect
     assert Path(store.db).read_bytes() == before
     assert TOKEN not in out

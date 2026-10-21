@@ -7538,3 +7538,44 @@ content of "ניתוח מידע" (item 13).
   no digit beside them; the letter is not looked for in the text; a dropped number is not counted in the dropped-names
   report (the street is kept).
 
+## 2026-10-21 (continued) — Round 39: the alert and the digest for the iPhone (#487, #488)
+
+No paid call, nothing on the server, no store write, no git write. Network: none (the Bot API page read in round 38,
+saved in the scratchpad, was searched again).
+
+**Recorded:** `DECISIONS.md` #487 (amends #481) and #488 (amends #482), both headings annotated; `BACKLOG.md` item 11
+(rounds 38 and 39, #481–#488, the iPhone check) and the round line.
+
+**Built, the alert (#487), `notify/alert.py`:** the poster's text is the first block, plain and escaped (no
+`<blockquote>`), the same cut, then a blank line and the kind line; `rtl_lines` opens every non-empty line with U+200F
+(`RLM`, written as an escape in the source), blank lines left empty. **The limit:** the mark is one character after
+entities parsing (and one UTF-16 unit); `visible_length` counts it, so the 1,024 check stays right. **The Bot API
+(10.3):** nothing on direction for captions or messages and nothing on blockquote rendering by platform; the one
+direction setting is `is_rtl`, on the new rich messages only (`RichMessage`, `InputRichMessage`), not usable here.
+
+**Built, the digest (#488), `telegram/digest.py`:** `_heading` ("<b>-…-</b>", escaped) for the sections ("ריצות
+איסוף", "עלות", "מודעות", "לפי קבוצה", "ריצות שנכשלו", "⚠️ בעיות פתוחות") and every group's name; "• " (`BULLET`) on
+every value line, the groups' two lines included; a blank line between groups; the colours four lines with their
+meaning; `notify.alert.rtl_lines` over the whole text before the 4,096 split (one implementation).
+
+**Tests:** `test_alerts.py`: the helpers read the blocks with the mark removed (`raw_blocks`, `excerpt_of`, `blocks_of`
+the body); new: the text first, plain, then a blank line; every line opens with the mark, blank lines empty, and the
+marks count. `test_watch.py`: `digest_lines` checks the mark on every line and removes it; the sections' dashed
+headings, the bullets and the four colour lines asserted; new: two groups, each its own block with a blank line between.
+`test_telegram_bot.py`: the alert's kind line now follows the text. **Found, not changed:** `tests/test_postmodel_rejects.py`
+already held a literal U+200F (a test of such text), from before this round.
+
+**Verified:** `uv run pytest` **2245 passed** (2242 + 3); ruff check and format clean. No front-end change.
+
+**Decided by me:** blank lines carry no mark; the source writes the mark as `"‏"`, never the invisible character;
+"ריצות שנכשלו" and "בעיות פתוחות" dashed like the other headings; the title and time line unchanged; the three
+colour lines open with their circle (as Ron wrote them), the pending line with "• "; the silent-group lines keep "⚠️";
+`rtl_lines` lives in `notify/alert.py` and the digest imports it.
+
+**Next: Ron's deploy (`BACKLOG.md` item 11):**
+1. Commit and push (rounds 38 and 39 together, the 40 deleted `frontend/src/**/*.js` files included).
+2. `docker compose run --rm jobs python -m tlv_hunter.jobs.export_backup --no-photos`
+3. Dockge "Update" when no run is in progress (`docker logs --tail 3 tlv-hunter-scheduler` ends with an `exit` line or
+   the quiet hours' line).
+4. On the server, then on the iPhone: `docker compose run --rm bot python -m tlv_hunter.jobs.send_test_alert --listing
+   <prefix>` and `docker compose run --rm bot python -m tlv_hunter.jobs.send_test_digest --hours 24`.

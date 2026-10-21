@@ -1,9 +1,11 @@
 """The alert itself: its lines and its buttons (`PHASE_4.md` §4.2; DECISIONS.md #321, #452 point 13;
-the layout of #481, which replaces #363's "no post text" and the categories' per-profile colours).
-Pure but for one read: whether the shown post's first stored photo can be sent.
+the layout of #481, which replaces #363's "no post text" and the categories' per-profile colours,
+as amended by #487). Pure but for one read: whether the shown post's first stored photo can be sent.
 
-HTML-escaped (only `<`, `>` and `&` need it outside a tag, Bot API "HTML style"); every line starts
-with "- " but the quoted text; blocks apart by a blank line; no icon but the colour circles:
+HTML-escaped (only `<`, `>` and `&` need it outside a tag, Bot API "HTML style"); every non-empty
+line opened by U+200F (#487); every line after the text starts with "- "; blocks apart by a blank
+line; no icon but the colour circles:
+0. the first lines of the poster's text, verbatim, as plain text (#487: no `<blockquote>`);
 1. the kind (and sublet), then the card's tier circle, the site's glow (`policy.colours.glow`);
 2. the location (one area: its region heading, its label, the street; two or more and a street:
    the street alone, "(מיקום מדויק לא ודאי)" unless it holds a house number; two or more and no
@@ -13,8 +15,7 @@ with "- " but the quoted text; blocks apart by a blank line; no icon but the col
 4. balcony, parking, elevator, air conditioning, broker by the post's own value (🟢 yes, 🔴 no,
    🟠 unclear, no line when not written); 🔴 "נשים בלבד" when that filter is off; "חסר: …" for a
    critical category not written (§9);
-5. the first lines of the poster's text, verbatim, in a `<blockquote>`;
-6. the relative time of the last publication, with its day, month and Israel time.
+5. the relative time of the last publication, with its day, month and Israel time.
 The caption's limit is checked. Buttons: the site's post page inside the Mini App (`web_app`),
 Facebook, WhatsApp (with a mobile number only), report.
 
@@ -51,6 +52,7 @@ PHOTO_RATIO = 20  # "width and height ratio must be at most 20"
 PHOTO_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 EXCERPT_LINES = 3
 EXCERPT_CHARS = 200
+RLM = "\u200f"  # RIGHT-TO-LEFT MARK, opening every line (#487)
 
 KIND_WORDS = {"room": "חדר בדירת שותפים", "whole_apartment": "דירה שלמה"}
 NOT_STATED = "לא צוין"
@@ -150,6 +152,7 @@ def build_alert(
     local = published.astimezone(zone or ZoneInfo(ZONE))
     stamp = f"{local.day}.{local.month}, {local:%H:%M}"
     blocks = [
+        [_e(line) for line in excerpt.split("\n")] if excerpt else [],
         [f"- <b>{_e(_kind_words(listing))}</b>" + (f" {circle}" if circle else "")],
         [
             *location_lines(listing, areas),
@@ -160,10 +163,9 @@ def build_alert(
         ],
         fee_lines(listing),
         colours,
-        [f"<blockquote>{_e(excerpt)}</blockquote>"] if excerpt else [],
         [_line("פורסם", f"{relative_words(published, now)} ({stamp})")],
     ]
-    text = "\n\n".join("\n".join(block) for block in blocks if block)
+    text = rtl_lines("\n\n".join("\n".join(block) for block in blocks if block))
     photo = first_photo(card, store_root)
     limit = CAPTION_LIMIT if photo is not None else TEXT_LIMIT
     if visible_length(text) > limit:
@@ -217,8 +219,15 @@ def first_photo(card: Card, store_root: Path) -> Photo | None:
 
 
 def visible_length(text: str) -> int:
-    """The length after entities parsing: the tags gone, the entities one character each."""
+    """The length after entities parsing: the tags gone, the entities one character each. A
+    right-to-left mark is a character and counts."""
     return len(html.unescape(re.sub(r"<[^>]+>", "", text)))
+
+
+def rtl_lines(text: str) -> str:
+    """Every non-empty line opened by U+200F, so its direction is explicit (#487: an iPhone set a
+    line that starts with "- " or a digit as left-to-right). Blank lines stay empty."""
+    return "\n".join(RLM + line if line else line for line in text.split("\n"))
 
 
 # --- the blocks ---

@@ -17,8 +17,10 @@ The window is from the last digest to now (24 hours with none). Counted from the
 - the silent groups: only a suspect one or one over its threshold (point 9 B; the thresholds are
   not printed, #482), and the problems that stand.
 
-The layout (#482): bold section headings, one value a line, number first; per group its name from
-the config (an id with no name, the id), bold, then two lines of counts.
+The layout (#482, amended by #488): section headings bold and between dashes ("<b>-עלות-</b>"),
+one value a line, number first, opened by "• "; the colours four lines with their meaning (#359);
+per group its name from the config (an id with no name, the id), as a heading, then two lines of
+counts, a blank line before the next group; every non-empty line opened by U+200F.
 
 Not in it (#471, a field outside Gate G): retention's last numbers, which no record holds.
 """
@@ -36,6 +38,7 @@ from tlv_hunter.contracts.profile import Profile
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.contracts.run_record import RunRecord
 from tlv_hunter.contracts.sent_alert import SentAlert
+from tlv_hunter.notify.alert import rtl_lines
 from tlv_hunter.policy.evaluate import evaluate
 from tlv_hunter.postmodel.seen import SeenListing
 from tlv_hunter.telegram.health import GroupSilence, Problem
@@ -45,6 +48,7 @@ DIGEST_AT = day_time(8, 0)
 DEFAULT_WINDOW = timedelta(hours=24)
 MESSAGE_LIMIT = 4096
 FAILED_LISTED = 10
+BULLET = "• "  # every value line inside a section (#488)
 
 
 @dataclass
@@ -184,49 +188,54 @@ def digest_messages(digest: Digest, zone: ZoneInfo) -> list[str]:
         "📊 <b>סיכום יומי</b>",
         f"{when(digest.start)} – {when(digest.end)}",
         "",
-        "<b>ריצות איסוף</b>",
-        f"{digest.runs} ריצות",
-        f"{len(digest.failed)} נכשלו",
-        f"{digest.rows_fetched} שורות",
-        f"{digest.rows_skipped} דולגו",
+        _heading("ריצות איסוף"),
+        f"{BULLET}{digest.runs} ריצות",
+        f"{BULLET}{len(digest.failed)} נכשלו",
+        f"{BULLET}{digest.rows_fetched} שורות",
+        f"{BULLET}{digest.rows_skipped} דולגו",
         "",
-        "<b>עלות</b>",
-        f"${digest.cost_usd:.4f} ב-Apify",
-        f"{digest.settled} ריצות סופיות",
+        _heading("עלות"),
+        f"{BULLET}${digest.cost_usd:.4f} ב-Apify",
+        f"{BULLET}{digest.settled} ריצות סופיות",
     ]
     if digest.unsettled:
-        lines.append(f"{digest.unsettled} עוד לא סופיות")
+        lines.append(f"{BULLET}{digest.unsettled} עוד לא סופיות")
     lines += [
         "",
-        "<b>מודעות</b>",
-        f"{total.collected} נאספו",
-        f"{total.duplicates} כפולות",
-        f"{total.classified} סווגו",
-        f"{total.rejected} נדחו",
-        f"{digest.alerted} התראות",
-        f"🟢 {colours.get('green', 0)} · 🟠 {colours.get('orange', 0)} · 🔴 "
-        f"{colours.get('red', 0)} · ממתינות {colours.get('pending', 0)}",
+        _heading("מודעות"),
+        f"{BULLET}{total.collected} נאספו",
+        f"{BULLET}{total.duplicates} כפולות",
+        f"{BULLET}{total.classified} סווגו",
+        f"{BULLET}{total.rejected} נדחו",
+        f"{BULLET}{digest.alerted} התראות",
+        # #359's three colours, each with its meaning (#488); the circle opens the line.
+        f"🟢 {colours.get('green', 0)} פעילות, מחיר, מיקום וסוג ברורים",
+        f"🟠 {colours.get('orange', 0)} פעילות, חסר מחיר, מיקום או סוג",
+        f"🔴 {colours.get('red', 0)} נדחו",
+        f"{BULLET}{colours.get('pending', 0)} ממתינות לסיווג",
     ]
     if digest.matches is not None:
-        lines.append(f"{digest.matches} תואמות להעדפות שלך")
-    lines.append(f"{digest.price_mismatches} מחיר בפייסבוק שונה מהטקסט")
+        lines.append(f"{BULLET}{digest.matches} תואמות להעדפות שלך")
+    lines.append(f"{BULLET}{digest.price_mismatches} מחיר בפייסבוק שונה מהטקסט")
     if digest.by_group:
-        lines += ["", "<b>לפי קבוצה</b>"]
-        for group_id in _group_order(digest):
+        lines += ["", _heading("לפי קבוצה")]
+        for at, group_id in enumerate(_group_order(digest)):
             counts = digest.by_group[group_id]
+            lines += [""] if at else []
             lines += [
-                f"<b>{html.escape(_name(digest, group_id), quote=False)}</b>",
-                f"{counts.collected} נאספו | {counts.classified} סווגו",
-                f"{counts.duplicates} כפולות | {counts.rejected} נדחו | {counts.alerted} התראות",
+                _heading(_name(digest, group_id)),
+                f"{BULLET}{counts.collected} נאספו | {counts.classified} סווגו",
+                f"{BULLET}{counts.duplicates} כפולות | {counts.rejected} נדחו | "
+                f"{counts.alerted} התראות",
             ]
     if digest.failed:
-        lines += ["", "<b>ריצות שנכשלו</b>"]
+        lines += ["", _heading("ריצות שנכשלו")]
         for run in digest.failed[:FAILED_LISTED]:
             lines.append(
-                f"• {when(run.started_at, '%H:%M')} · {html.escape(run.failure_kind or '')}"
+                f"{BULLET}{when(run.started_at, '%H:%M')} · {html.escape(run.failure_kind or '')}"
             )
         if len(digest.failed) > FAILED_LISTED:
-            lines.append(f"• ועוד {len(digest.failed) - FAILED_LISTED}")
+            lines.append(f"{BULLET}ועוד {len(digest.failed) - FAILED_LISTED}")
     quiet = [g for g in digest.silences if g.suspect]
     if quiet:
         lines.append("")
@@ -234,9 +243,15 @@ def digest_messages(digest: Digest, zone: ZoneInfo) -> list[str]:
             name = html.escape(group.name or _name(digest, group.group_id), quote=False)
             lines.append(f"⚠️ {name} שקטה כבר {group.runs} ריצות")
     if digest.problems:
-        lines += ["", "<b>⚠️ בעיות פתוחות</b>"]
-        lines += [f"• {html.escape(problem.text)}" for problem in digest.problems]
-    return _split(lines)
+        lines += ["", "⚠️ " + _heading("בעיות פתוחות")]
+        lines += [f"{BULLET}{html.escape(problem.text)}" for problem in digest.problems]
+    return _split(rtl_lines("\n".join(lines)).split("\n"))
+
+
+def _heading(words: str) -> str:
+    """A section's heading, or a group's name: bold, and between dashes for a screen that shows no
+    bold (#488)."""
+    return f"<b>-{html.escape(words, quote=False)}-</b>"
 
 
 def _name(digest: Digest, group_id: str) -> str:

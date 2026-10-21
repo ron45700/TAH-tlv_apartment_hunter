@@ -4210,7 +4210,7 @@ write lock" line ever appears.** Closes #259's open choice. *Ron's decision.*
 Verified by the reviewer from `jobs/retention.py` (a deleted post's `images/<listing_id>` folder is removed, its
 duplicates' too, then the orphan sweep) and `test_apply_archives_deletes_and_sweeps_after_a_backup`. No code change.
 
-### 481 — The Telegram alert's new layout
+### 481 — The Telegram alert's new layout *(amended by #487)*
 **Replaces #363's "no post text" and the colour meaning of the category lines** (#363's 🟢 met / 🔴 not met / 🟠 unclear
 / ⚪ not stated against the user's profile). No icon but the colour circles; every line starts with "- "; blocks apart
 by a blank line; Hebrew. (1) The kind ("· סאבלט" for a sublet), then one circle for the card's tier, the site's glow
@@ -4227,7 +4227,7 @@ text, verbatim, at most 200 characters, cut with "…", in a `<blockquote>`. (6)
 holds a house number (the instructions copy a street "without the house number"; 0 of 120 stored posts with a street on
 the laptop's store had a digit), so the suffix appears on every multi-area street line.
 
-### 482 — The groups' names; the digest's layout
+### 482 — The groups' names; the digest's layout *(amended by #488)*
 The six Hebrew names live in `config/collection.yaml` (`group_names`, by id), read through the config interface
 (`CollectionConfig.group_name`: an id with no name falls back to the id; a name of an unconfigured group or a blank one
 is refused). They replace the id in the digest and the failure alert (the admin's pages show no group id). The digest:
@@ -4271,6 +4271,28 @@ names and other cities as before. Built in `classify/complete.py` (`_streets_in_
 **Decided in the build:** a house number is the street's trailing digits, then at most one Hebrew letter ("12א"); "as
 a number" means the digits with no digit next to them (83 is not found in 183 or 830); the letter itself is not looked
 for; a dropped number is not counted in the dropped-names report (the street is kept).
+
+## The alert and the digest for the iPhone (2026-10-21, round 39)
+
+### 487 — The alert: the poster's text first, plain; every line opened by U+200F (amends #481)
+On Ron's iPhone the caption rendered shifted to the middle with odd widths (fine on desktop); suspected: the
+`<blockquote>` and lines opening with a neutral "- ". (1) **The text excerpt moves to the top**, before the kind line,
+as plain escaped text with **no `<blockquote>`**, the same cut (3 non-empty lines, about 200 characters, "…"), then a
+blank line. (2) **Every non-empty line opens with U+200F (RIGHT-TO-LEFT MARK)**, so each line's direction is explicit;
+blank lines stay empty. The mark is one character after entities parsing, so it counts in the caption's 1,024 and
+`visible_length` counts it. **Read in the Bot API (10.3):** nothing on text direction for captions or messages, and
+nothing on blockquote rendering by platform; the only direction setting is `is_rtl` on the new *rich messages*
+(`RichMessage`, `InputRichMessage`), another message type, not used. *Ron's decision, 2026-10-21.*
+
+### 488 — The digest for a screen that shows no bold (amends #482)
+(3) Each section heading, and each group name under "לפי קבוצה", is bold **and between dashes**:
+`<b>-ריצות איסוף-</b>`. (4) Every value line inside a section opens with "• ", the two lines of each group included.
+(5) A blank line between one group's block and the next. (6) The colour line becomes four lines with their meaning
+(#359): "🟢 N פעילות, מחיר, מיקום וסוג ברורים", "🟠 N פעילות, חסר מחיר, מיקום או סוג", "🔴 N נדחו", "• N ממתינות לסיווג".
+(7) Every non-empty line opens with U+200F, as in the alert (one implementation, `notify.alert.rtl_lines`).
+*Ron's decision, 2026-10-21.* **Decided in the build:** the headings "ריצות שנכשלו" and "בעיות פתוחות" take the same
+dashes (the latter after its "⚠️"); the digest's title "📊 סיכום יומי" and its time line stay as they were; the colour
+lines open with their circle, not a bullet, as Ron wrote them; the silent-group lines keep their "⚠️".
 
 ---
 
