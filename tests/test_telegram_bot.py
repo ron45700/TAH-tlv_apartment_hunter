@@ -35,7 +35,6 @@ from tests.test_web_writes import (  # noqa: F401  (fixtures)
 )
 from tlv_hunter.accounts import actions, linking
 from tlv_hunter.accounts.tokens import secret_hash
-from tlv_hunter.areas.reference import load_areas
 from tlv_hunter.contracts.profile import new_profile
 from tlv_hunter.contracts.sent_alert import SENT_ALERT_SCHEMA_VERSION, SentAlert
 from tlv_hunter.contracts.telegram_link_code import (
@@ -48,6 +47,7 @@ from tlv_hunter.gate_d.candidates import Member
 from tlv_hunter.jobs import bot as bot_job
 from tlv_hunter.jobs import send_test_alert, telegram_menu
 from tlv_hunter.jobs.common import SQLITE_FILENAME
+from tlv_hunter.notify.alert import reference_area_words
 from tlv_hunter.store.sqlite import SqliteRepository
 from tlv_hunter.telegram import bot as bot_module
 from tlv_hunter.telegram.bot import ANSWERS, Bot, fields_keyboard, site_url_or_refusal
@@ -98,7 +98,7 @@ class Harness:
             SqliteRepository(store.db),
             store.userdata,
             grouping,
-            {area.number: area.display_name for area in load_areas()},
+            reference_area_words(),
             site_url=SITE,
             store_root=store.root,
             clock=now,
@@ -540,7 +540,7 @@ def test_a_new_matching_post_alerts_the_linked_user_once(harness: Harness) -> No
     harness.clock.now = NOW + timedelta(minutes=10)
     harness.bot.alert_if_moved()
     (sent,) = harness.fake.of("sendMessage")[1:]
-    assert sent["chat_id"] == CHAT and sent["text"].startswith("🏠 <b>דירה שלמה</b>")
+    assert sent["chat_id"] == CHAT and sent["text"].startswith("- <b>דירה שלמה</b>")
     assert store.userdata.sent_listing_ids(ADMIN_ID) == {fresh}
     harness.bot.alert_if_moved()
     new_post(store, 22, NOW - timedelta(days=1))  # stored before the link: never alerted

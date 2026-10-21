@@ -1,10 +1,8 @@
 # Phase 5 — The server, unattended
 
-**Status (2026-10-19, round 36): APPROVED and BUILT; the deploy and the two days wait for Ron.** Ron approved points
-1–13 as recommended (`DECISIONS.md` #471), **Gate G** (#472), **point 12 as option B** (#473, replacing #443; invariant
-2 unchanged), and the quiet hours' editing in this phase (#474). Built: 5.1–5.6 (§5.5). Next: the deploy (§5.6), then
-DoD 1's two days. *Round 35's draft follows unchanged up to §5.4; where it says "recommended", Ron approved it, and point
-12 is B.*
+**Status (2026-10-21, round 38): CLOSED.** Deployed by Ron and run unattended on the server; every DoD
+point met or decided (§5.7, `DECISIONS.md` #476). Approved in round 36 (#471–#474) and built there (§5.5); the deploy as
+§5.6. *Round 35's draft follows unchanged up to §5.4; where it says "recommended", Ron approved it, and point 12 is B.*
 **Owner:** Ron
 **Parent:** `BASELINE.md` §4 (schedule), §5 (lifecycle), §11 (admin), §12 (the Phase 5 row) · **After:** Phase 4 (closed,
 `DECISIONS.md` #469) · **Schema:** `SCHEMA.md` (a Gate G is proposed in point 5 below, not written there)
@@ -357,3 +355,15 @@ numbers" (no record holds them; a field would be a Gate G change).
 8. **Only after reading it:** `RETENTION_APPLY=yes` in the stack's `.env`, then `docker compose up -d scheduler`
    (when no run is in progress). Until then the nightly retention only logs its dry run.
 9. **DoD 1:** two days with no manual command; the digest each morning.
+
+## 5.7 The DoD's verdict (round 38, 2026-10-21; `DECISIONS.md` #476)
+
+| DoD point | Verdict | Evidence |
+|---|---|---|
+| 1. Two days unattended | **Met** | The digest every morning for several days; no manual command needed (Ron) |
+| 2. The settings from the site; "run now" | **Met** on the server, 2026-10-21 | The interval 30 → 45 → 30 from the page, no restart; "run now" started a run; a second request blocked while it ran; after it succeeded the next run was its start + 30 minutes |
+| 3. Retention | **Met** by the dry run over a dated copy (`--as-of`) and the tests | `RETENTION_APPLY=yes` set (#478); the first real archive, about 2026-11-11, read by Ron when it comes (`BACKLOG.md`); a deleted post's photos verified from the code and its test (#480) |
+| 4. The failure alert once | **Met** for the scheduler; the silent group **accepted on the tests** | The scheduler stopped about an hour on 2026-10-21: one alert, then restarted; `test_watch.py` for a silent group |
+| 5. The cost line against the bill | **Met** | #449's two points answered (#477): the start fee is charged; the logged figure is preliminary, the settled one equals the charged events; about $24–25 a month |
+| 6. WAL and the recompute | **Decided**: the rollback journal stays (#479) | No "sqlite write lock" line in about 20 hours of the site and the bot and three days of the scheduler; the recompute 0.66–1.06 s at 640 canonical posts (3.6 s once, during the nightly backup); store 14.8 MB, photos 398 MB |
+| 7. The tests' pins | **Met** | Round 36's tests (`test_retention.py`, `test_stubs.py`, `test_gate_g.py`, `test_scheduler.py`) |

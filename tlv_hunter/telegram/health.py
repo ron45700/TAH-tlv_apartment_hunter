@@ -46,6 +46,13 @@ class GroupSilence:
     group_id: str
     runs: int
     threshold: int
+    name: str | None = None
+    """The group's name from the config, when it has one."""
+
+    @property
+    def label(self) -> str:
+        """What Ron reads: the name, else the id."""
+        return self.name or self.group_id
 
     @property
     def silent(self) -> bool:
@@ -73,12 +80,14 @@ def silences(
     posted_by_group: Mapping[str, Sequence[datetime]],
     rhythm: Rhythm,
     zone: ZoneInfo,
+    names: Mapping[str, str] | None = None,
 ) -> list[GroupSilence]:
     return [
         GroupSilence(
             group_id=record.group_id,
             runs=record.consecutive_failures,
             threshold=silent_threshold(posted_by_group.get(record.group_id, ()), rhythm, zone),
+            name=(names or {}).get(record.group_id),
         )
         for record in sorted(watermarks, key=lambda r: r.group_id)
     ]
@@ -124,7 +133,7 @@ def problems(
             found.append(
                 Problem(
                     f"silent:{group.group_id}",
-                    f"הקבוצה {group.group_id} לא החזירה אף פוסט ב-{group.runs} ריצות "
+                    f"הקבוצה {group.label} לא החזירה אף פוסט ב-{group.runs} ריצות "
                     f"(הסף {group.threshold}).",
                 )
             )

@@ -7421,3 +7421,120 @@ deploy as before (`PHASE_5.md` §5.6).
 set up yet). The badge path `ron45700/TAH-tlv_apartment_hunter` checked against `git remote -v` (read-only): it
 matches, unchanged. `BACKLOG.md` "Future": the stale row reworded to the group list only. **License: Ron chose MIT;
 he adds `LICENSE` through GitHub's template.**
+
+## 2026-10-21 — Round 38: Phase 5 closed (#476–#480); the new alert (#481), the digest with group names (#482), the admin's three sections (#483)
+
+No paid call, nothing on the server, no git write (read-only git only), no write to Windows `data/store/` (its file's MD5
+checked before and after the browser check: unchanged). Network: Telegram's Bot API page (read only). The brief did not
+number the round; the last entry is round 37, so this is round 38.
+
+**Recorded (A):** `DECISIONS.md` #476 (Phase 5 closed, the DoD verdicts), #477 (#449's two points: the start fee is
+charged, the logged `usageTotalUsd` is preliminary and settles to the charged events; about $24–25 a month), #478
+(retention applied), #479 (WAL not adopted, the measurements), #480 (a deleted post's photos verified), #481–#483 (Parts
+B–D); #259 and #363 annotated; the "Corrections" row on `usageTotalUsd` settled. `PHASE_5.md`: status CLOSED and §5.7
+(the verdicts). `BASELINE.md` §12 (Phase 5 DONE 2026-10-21) and §11 (group names, the three sections). `ASSUMPTIONS.md`:
+P19 confirmed; T12 (`web_app` inline button) and T13 (`<blockquote>`) added as documented, not yet seen. CLAUDE.md "Now".
+`BACKLOG.md`: items 6, 9, 10 removed; items 4 and 8 say they concern the laptop's store only; the recompute row points at
+#479; #259 left "Decisions pending implementation"; WAL left "Open technical choices"; items 11–13 added.
+
+**Built (B), the alert (#481), `notify/alert.py`:** six blocks as specified; the tier circle from `policy.colours.glow`
+(the site's glow, no second rule); the region headings from `reference/area_groups.yaml` through a new `AreaWords`
+(`reference_area_words()`), which replaces the `area_names` mapping in `build_alert`, `AlertPass`, `Bot`, `jobs/bot.py`
+and `send_test_alert`; the colour block by the post's own value; the quoted text; the time line with day, month and Israel
+time; "פתיחה באתר" a `web_app` button (`Button(web_app_url=…)`, already in the client). **Verified first under
+`external-contract-verification`:** Bot API 10.3 (2026-08-24): `InlineKeyboardButton.web_app` "Available only in private
+chats between a user and the bot" (alerts go to private chats only); `<blockquote>` is an HTML-style tag. Both documented,
+neither seen in a real message yet (T12, T13): Ron's `send_test_alert` settles them. **What `Listing.streets` holds:** no
+house number. The instructions say "copied as written without the house number", and on the laptop's store 0 of the 120
+posts with a street have a digit in any street. So on a multi-area post the street line always carries
+" (מיקום מדויק לא ודאי)" in practice; the code still drops it for a street written with a number.
+
+**Built (C), the digest (#482):** `group_names` in `config/collection.yaml` (a map id → name beside `group_ids`), read by
+`CollectionConfig` (`group_name()` falls back to the id; a name of an unconfigured group or a blank one is refused); the
+names reach `Watch` (`watch_over(…, group_names)`, from the bot and `send_test_digest`), the digest and the failure alert
+(`GroupSilence.name`, `label`). The layout as specified; the thresholds' footer removed (`THRESHOLDS_PER_LINE` gone);
+"⚠️ <name> שקטה כבר N ריצות" only for a suspect or silent group. **The admin's pages show no group id** (checked: none in
+`web/` or `frontend/src`), so nothing changed there.
+
+**Built (D), the admin's pages (#483):** `route.ts` (`analysis` page, `ADMIN_SECTIONS`, `sectionOf`);
+`screens/admin/AdminNav.tsx` (the section rail on the header's tint, the section's pages with their counts beside it;
+`ScrollRow`: ‹ › only while a row overflows, the wheel scrolls it sideways while it can move, the current item revealed
+again when the counts arrive); `Admin.tsx` (the nav, the "בקרוב" page, the stale lead about the dated copy removed);
+`Schedule.tsx` (the line under a disabled "הרצה עכשיו", tied by `aria-describedby`; running or waiting variant);
+`admin.css` (the nav; the top bar below 900 px). Stale wording: the pending list's lead ("the next `classify_pending`")
+now says the scheduler classifies after every run; `Accounts.tsx`'s comment on the dated copy fixed.
+
+**Found and fixed:**
+- **40 stray `frontend/src/**/*.js` files were tracked in git** (added in round 36's commit 358f09b, almost certainly the
+  `npx tsc` round 36 mentions: without `--noEmit` it writes a `.js` beside each source). Vite resolves `.js` before `.ts`,
+  so `npm run build` bundled the stale `.js`: this round's admin pages were missing from `dist/` ("בקרוב" absent) and
+  Vitest ran each test file twice. Each had a `.ts`/`.tsx` source beside it; **deleted from the working tree** (recoverable
+  from git). After that the build carries the sources and Vitest counts 100 tests, not 197. **Whether the deployed site
+  already differed from round 36's sources I could not tell cheaply.** The next build uses the sources.
+  **For Ron:** commit the deletions; a `.gitignore` line for `frontend/src/**/*.js` would stop it recurring (not added:
+  outside this round).
+- **The schedule's settings form** (round 36, never opened in a browser) ran its labels and fields inline: now each label
+  above its field (`.schedform`).
+
+**Verified:** `uv run pytest` (with the raw fixtures) **2232 passed** (2219 in round 36; the alert section of `test_alerts.py` rewritten, 16 tests, plus `test_config.py` +4 and `test_watch.py` +1); `ruff check` and `ruff format --check` clean; `npm test` 100 passed (with the new `route.test.ts`, 3); `tsc --noEmit` and `npm run build` clean. In Chrome, over a scratch copy of the laptop's store in the scratchpad (SQLite
+online backup from a read-only connection; the admin's password set in the copy only; served by `site_over` on
+127.0.0.1:8766; afterwards the server stopped and the copy deleted): at 1440 × 900 the two columns, no arrows, no sideways
+page scroll; at 390 × 844 (emulated) two rows, the sections row without arrows, the pages row with both, the current page
+in view, the wheel and both arrows move the row, the page 390 wide; "run now" on the copy showed the waiting variant;
+Lighthouse accessibility **100** on the reports, schedule and rejected pages (phone and desktop).
+
+**Decided by me:** `AreaWords` as one object for the alert's area words; a post with no area (it never alerts, §9) shows
+the street, or "שכונה: לא צוין"; several region headings joined by ", " in the area filter's order; the circle after the
+kind, the kind kept bold; the quoted text's lines stripped of surrounding spaces, "…" also when a fourth line exists, its
+lines not prefixed with "- " (verbatim wins); the colour block's words: מרפסת, חניה, מעלית, מזגן; a broker unclear reads
+🟠 "תיווך"; the "חסר" and "נשים בלבד" lines at the end of block 4; `group_names` as a separate map, the digest's groups in
+the config's order; the digest's cost lines "$X ב-Apify", "N ריצות סופיות", "N עוד לא סופיות"; a blank line before the
+silent groups, no heading; "ניהול מערכת" has its own second column too (three pages); the top bar from 900 px down (two
+columns plus the page do not fit a tablet); the arrows' names "הקודמים/הבאים ב…"; the waiting variant's words "ריצה
+ידנית כבר מחכה למתזמן. אפשר להפעיל שוב כשהיא תסתיים."; deleting the stray `.js` files.
+
+**Next:** Ron (`BACKLOG.md` item 11): commit and push (with the deleted `.js` files); `export_backup --no-photos`; Dockge
+Update when no run is in progress; on the server `send_test_alert --listing <prefix>` and `send_test_digest --hours 24`,
+to judge the Hebrew on his phone; then around 2026-11-11 the first applied retention's log line (item 12); then the
+content of "ניתוח מידע" (item 13).
+
+**Follow-up (same day, Ron's approval):** same rules; no paid call, nothing on the server, no store write, no git write.
+- **Instructions version 6 (#484):** `instructions.txt` copies a street with its house number when the post gives one
+  ("בן יהודה 83"); nothing else changed but the line's wrap. `PROMPT_VERSION` "6" and `PROMPT_FINGERPRINT`
+  `4ddc39c5…` together (#179). No regression run (Ron's decision: he judges it on the next real alerts, `BACKLOG.md`
+  item 14); no reclassify: stored posts keep their version-5 streets. **What reads `Listing.streets`:** the alert (the
+  suffix rule, its comment updated), the card's location and the opened post (display only), `policy/evaluate.py` and
+  `policy/colours.py` (only whether any is written), the admin's correction form (a label); the Gate D key never reads it;
+  the labelling compares none (#177). None assumes no digits. **One interaction:** `classify/complete.py` keeps a street
+  only if it occurs exactly in the text (#162): "בן יהודה 83" stays when written so, and the whole street is dropped
+  (and counted) when the model joins a number written apart. A test pins both.
+- **Compiled twins can no longer return:** `"noEmit": true` in `frontend/tsconfig.json` (a bare `npx tsc -p .` now
+  writes nothing, checked) and `frontend/src/**/*.js` in `.gitignore` (checked with `git check-ignore`). No real `.js`
+  source lives under `frontend/src` (none in the tree; the only tracked ones were the 40 deleted twins).
+- **The doubled "כניסה" (#485):** `notify/alert.without_entry_word` and `format.ts`'s `withoutEntryWord` drop a leading
+  whole word "כניסה" (then spaces, a colon or a dash) for display only: the alert reads "- כניסה: מיידית". **The site had the
+  same doubling** on the card's "כניסה" stat and the opened post's "תאריך כניסה" row: both use it now; the card's
+  phone line already avoided it (unchanged). The stored text stays verbatim (#96), and a test checks it.
+- **Recorded:** `DECISIONS.md` #484, #485; `BACKLOG.md` item 14, item 11 (#481–#485), item 4 (version 6 from this deploy),
+  the round line.
+- **Verified:** `uv run pytest` **2239 passed** (2232 + 7: the street test, the entry word's six cases); ruff check and
+  format clean; `npm test` 101 passed (+1, the six cases in one test); `tsc --noEmit` and `npm run build` clean.
+- **Decided by me:** the instruction's wording and its example; the entry word dropped only as a whole word (so
+  "כניסתך מיידית" stays) and kept when nothing would follow it; the site's opened post treated like the card (its label
+  "תאריך כניסה" says it too); `formatEntry` itself unchanged, the helper applied where a label stands beside it.
+- **Next:** unchanged, Ron's deploy (item 11); after it, item 14 on the real alerts.
+
+**Follow-up 2 (same day, Ron's approval):** same rules; no paid call, nothing on the server, no store write, no git write.
+- **#486 amends #162 for streets:** `classify/complete._streets_in_text` keeps a street that occurs in the text exactly
+  (as before); one ending in a house number is kept whole when its name occurs exactly and the number occurs anywhere in
+  the text as a number ("בן יהודה, מספר 83" keeps "בן יהודה 83"); the name alone when the number is not there; dropped and
+  counted when the name is not there. Area names and other cities keep `_in_text`, unchanged. #162 and #484 annotated;
+  `BACKLOG.md` item 14 (and item 11, #481–#486) updated.
+- **Tests** (`test_classify_complete.py`): the joined-number test split; new: name and number apart (also "12א" against
+  "בית מספר 12"), the number not in the text (183 and 830 do not count as 83: the name kept), the name not in the text
+  (dropped with its number). The existing "a name not in the text is dropped" test unchanged and passing.
+- **Verified:** `uv run pytest` **2242 passed** (2239 + 3); ruff check and format clean. No front-end change.
+- **Decided by me:** a house number is the trailing digits plus at most one Hebrew letter; "as a number" is the digits with
+  no digit beside them; the letter is not looked for in the text; a dropped number is not counted in the dropped-names
+  report (the street is kept).
+

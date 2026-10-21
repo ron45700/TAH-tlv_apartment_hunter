@@ -103,7 +103,8 @@ for both (שותף/ה) is "no_restriction". A preference worded for both sexes (
 
 LOCATION
 streets: the streets the post gives for the apartment's location, in order of appearance, each
-copied as written without the house number; [] when none. "דיזנגוף פינת בן יהודה" gives both.
+copied as written, with the house number when the post gives one ("בן יהודה 83"); [] when none.
+"דיזנגוף פינת בן יהודה" gives both.
 
 stated_area_names: the neighbourhood or area names the post itself gives as the apartment's
 location, copied as written (בצפון הישן, פלורנטין, לב העיר); [] when none. A place given only as a

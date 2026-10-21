@@ -28,9 +28,9 @@ from pathlib import Path
 from typing import TextIO
 from zoneinfo import ZoneInfo
 
-from tlv_hunter.areas.reference import load_areas
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, SQLITE_FILENAME, job_logging, log_failure
+from tlv_hunter.notify.alert import reference_area_words
 from tlv_hunter.schedule import ZONE
 from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.state.sqlite import SqliteWatermarkStore
@@ -79,8 +79,10 @@ def watch_over(
     grouping: Grouping,
     userdata: SqliteUserDataStore,
     clock: Callable[[], datetime],
+    group_names: Mapping[str, str] | None = None,
 ) -> Watch:
-    """The digest's and the failure alert's reads (Phase 5, #471), over the bot's own grouping."""
+    """The digest's and the failure alert's reads (Phase 5, #471), over the bot's own grouping;
+    the groups named as the config names them (#482)."""
     return Watch(
         SqliteRunStore(database),
         SqliteWatermarkStore(database),
@@ -88,6 +90,7 @@ def watch_over(
         userdata,
         clock=clock,
         zone=ZoneInfo(ZONE),
+        group_names=group_names,
     )
 
 
@@ -118,12 +121,18 @@ def main(
                 SqliteRepository(database),
                 userdata,
                 grouping,
-                {area.number: area.display_name for area in load_areas()},
+                reference_area_words(),
                 site_url=site_url,
                 store_root=store_root,
                 clock=clock,
                 sleep=sleep,
-                watch=watch_over(database, grouping, userdata, clock),
+                watch=watch_over(
+                    database,
+                    grouping,
+                    userdata,
+                    clock,
+                    YamlConfig(config_root).collection().group_names,
+                ),
             )
             bot.start()
             stopping = threading.Event() if stop is None else stop

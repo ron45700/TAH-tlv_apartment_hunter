@@ -7,6 +7,7 @@ import type { MouseEvent } from 'react'
 import {
   closedChips,
   formatEntry,
+  withoutEntryWord,
   formatFloor,
   formatPrice,
   kindLine,
@@ -137,7 +138,7 @@ export function Card({ card, now, onOpen, actions }: Props) {
               {entry === null ? (
                 <span className="missing sm">אין תאריך כניסה</span>
               ) : (
-                <span className={`one c-${card.colours.entry_date}`}>{entry}</span>
+                <span className={`one c-${card.colours.entry_date}`}>{withoutEntryWord(entry)}</span>
               )}
               {corrected.has('entry_date') && <Fixed />}
             </dd>

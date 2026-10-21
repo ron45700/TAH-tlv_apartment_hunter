@@ -24,7 +24,7 @@ leaves no record: the next pass tries again. Disabled users get nothing.
 """
 
 import logging
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -33,7 +33,7 @@ from tlv_hunter.contracts.profile import Profile
 from tlv_hunter.contracts.sent_alert import SENT_ALERT_SCHEMA_VERSION, SentAlert
 from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import Card
-from tlv_hunter.notify.alert import build_alert
+from tlv_hunter.notify.alert import AreaWords, build_alert
 from tlv_hunter.notify.base import Notifier
 from tlv_hunter.policy.alert import no_alert_reason, published_too_long_ago
 from tlv_hunter.policy.base import Evaluation
@@ -90,7 +90,7 @@ class AlertPass:
         self,
         userdata: UserDataStore,
         notifier: Notifier,
-        area_names: Mapping[int, str],
+        areas: AreaWords,
         *,
         site_url: str,
         store_root: Path,
@@ -99,7 +99,7 @@ class AlertPass:
     ) -> None:
         self._userdata = userdata
         self._notifier = notifier
-        self._area_names = area_names
+        self._areas = areas
         self._site_url = site_url
         self._store_root = Path(store_root)
         self._clock = clock
@@ -137,7 +137,7 @@ class AlertPass:
             card,
             evaluation,
             profile,
-            self._area_names,
+            self._areas,
             site_url=self._site_url,
             store_root=self._store_root,
             now=self._clock(),

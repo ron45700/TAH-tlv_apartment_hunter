@@ -29,7 +29,7 @@ from tlv_hunter.contracts.classification_report import NOTE_LIMIT
 from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import Card
 from tlv_hunter.jobs.common import describe
-from tlv_hunter.notify.alert import alert_keyboard
+from tlv_hunter.notify.alert import AreaWords, alert_keyboard
 from tlv_hunter.notify.telegram import TelegramNotifier
 from tlv_hunter.policy.evaluate import evaluate
 from tlv_hunter.store.sqlite import SqliteRepository
@@ -123,7 +123,7 @@ class Bot:
         posts: SqliteRepository,
         userdata: UserDataStore,
         grouping: Grouping,
-        area_names: Mapping[int, str],
+        areas: AreaWords,
         *,
         site_url: str,
         store_root: Path,
@@ -144,7 +144,7 @@ class Bot:
         self._alerts = AlertPass(
             userdata,
             TelegramNotifier(client),
-            area_names,
+            areas,
             site_url=site_url,
             store_root=store_root,
             clock=clock,

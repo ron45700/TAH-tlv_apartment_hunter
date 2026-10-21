@@ -1,12 +1,13 @@
-// The admin's pages (PHASE_3.md 3.8 (a), (c)): a rail of the lists with their counts at the right
-// (on a phone, a strip of tabs under the header), and the page beside it. The admin only: a user who
-// is not the admin reads that the pages are the admin's. The rail's counts come from
+// The admin's pages (PHASE_3.md 3.8 (a), (c)): the nav at the right, three sections and the current
+// section's pages with their counts (#483; `AdminNav`), and the page beside it. The admin only: a
+// user who is not the admin reads that the pages are the admin's. The counts come from
 // /api/admin/summary, asked again when the page changes.
 import type { ReactNode } from 'react'
 import { adminApi } from '../../admin/api'
 import type { Summary } from '../../admin/types'
 import { REASON_FAMILY, REASON_NAMES, REASON_ORDER } from '../../admin/words'
 import { ADMIN_PAGES, adminPath, type AdminPage } from '../../route'
+import { AdminNav } from './AdminNav'
 import type { AreaGroup, SessionUser } from '../../types'
 import { Keys, Users } from './Accounts'
 import { AdminPost } from './AdminPost'
@@ -25,6 +26,7 @@ const TITLES: Record<ListedPage, string> = {
   reports: 'דיווחים',
   corrections: 'תיקונים',
   archive: 'ארכיון',
+  analysis: 'ניתוח מידע',
   keys: 'קודי הזמנה',
   users: 'משתמשים',
   schedule: 'תזמון',
@@ -80,22 +82,7 @@ function Desk({ page, id, names, groups, now }: Omit<Props, 'user'>) {
   const current: ListedPage = page === 'post' ? 'overview' : page
   return (
     <div className="shell adm">
-      <nav className="rail" aria-label="דפי המנהל">
-        <ul>
-          {ADMIN_PAGES.map((name) => {
-            const count = railCount(name, counts)
-            const on = page !== 'post' && name === current
-            return (
-              <li key={name}>
-                <Link to={adminPath(name)} className={`rail-link${on ? ' is-on' : ''}`} current={on}>
-                  <span>{TITLES[name]}</span>
-                  {count !== null && <span className="rail-count">{count}</span>}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+      <AdminNav page={page} titles={TITLES} count={(name) => railCount(name, counts)} />
       <main className="adm-main">
         {page === 'post' && id ? (
           <>
@@ -118,6 +105,7 @@ function Desk({ page, id, names, groups, now }: Omit<Props, 'user'>) {
             {current === 'keys' && <Keys onChanged={recount} />}
             {current === 'users' && <Users onChanged={recount} />}
             {current === 'schedule' && <Schedule now={now} />}
+            {current === 'analysis' && <p className="adm-empty">בקרוב</p>}
           </>
         )}
       </main>
@@ -179,9 +167,6 @@ function Overview({ summary }: { summary: Summary | null }) {
   ]
   return (
     <>
-      <p className="adm-lead">
-        עד שהאתר יוגש מהמאגר עצמו (שלב 3.9), כל מה שנעשה כאן נשמר רק בעותק המתוארך שהאתר מגיש, ונעלם בעותק הבא.
-      </p>
       <ul className="ov">
         {lines
           .filter((line) => line.alert === undefined || line.alert > 0)

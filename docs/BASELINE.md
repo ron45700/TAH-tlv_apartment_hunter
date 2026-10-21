@@ -494,8 +494,10 @@ repost, never alerts; a post whose kind is unclear or not written never alerts (
 - "Wrong classification" reports grouped by field: restore, correct by hand, or leave out; the corrections in force,
   and their removal (#173, #254–#256)
 - Archive
-- Daily digest: collected / deduplicated / classified / rejected / alerted, per group; silent-group
-  detection; failures. Admin only.
+- Daily digest: collected / deduplicated / classified / rejected / alerted, per group (by its name from the config,
+  #482); silent-group detection; failures. Admin only.
+- The pages in three sections (#483): posts review (the lists above), data analysis (a placeholder, planned after
+  Phase 5), system management (the schedule, keys, users)
 - Key issuing, the key list and cancelling (#243); users: password reset, disable and enable (#262, #265)
 - The schedule page: the run interval (30 minutes by default) and the quiet hours (00:00–07:00 by default), a "run now"
   button, the last runs with their Apify cost (phase 5, `DECISIONS.md` #61, #471, #474; the quiet hours moved here from
@@ -518,7 +520,7 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 | **3. Dashboard** | **Gate C** (filter rules, and the user, key, session, profile, viewed-post, report and correction records) · users and keys · profile with two search options and filters · cards · viewed posts · rejected list · flagging · "wrong classification" reports and the admin's corrections · the admin lists · the same-listing grouping, derived by the Gate D key (#231) · **the polished UI** (#257) | Ron filters and sees real apartments in a browser, from the site in Docker on his laptop, over a copy of the store in its volume (#428) |
 | **Server deployment** (between 3 and 4, #426) — **DONE 2026-10-18 (#441, #451)** | After Phase 3, taken from Phase 5: the image on `homeserver`, published from git by the repo's GitHub Action and pulled by homelab's `stacks/tlv-hunter/` (#420, #433) · the site's own tailnet machine `tlvapthunter`, a Tailscale container with Serve (#419) · a fresh store: `run_once --bootstrap` (30 posts per group, #437), then `create_admin`; the Windows store is not moved (#436) · the `Host`/`Origin` probe through Serve and a real sign-in (#422) · the measured working day, Phase 3's DoD 6 (#428) · "Adding the first friend" as a written procedure, run when Ron adds one: the sharing rule, DoD 2 and 5 on the real store (#438, #440). Planned in `docs/DEPLOY.md` | The site is reached at `tlvapthunter.<tailnet>.ts.net`, the probe passes, and Ron signs in as the admin on the server (#440) |
 | **4. Telegram** — **DONE 2026-10-19 (#469)** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike, against `tlvapthunter` (#426) · a bridge `scheduler` for continuous collection on the server (#454) · the `web_app` menu button on every linked chat (#470) | A real alert arrives according to Ron's profile |
-| **5. Server** (`docs/PHASE_5.md`) — **built 2026-10-19 (round 36, #471–#474)**, the deploy and the two days pending | The home server already runs the system from the deployment step (#426); Phase 5 adds the scheduler with the admin-set interval and quiet hours (#474) and a manual "run now" · the run and schedule records (Gate G, #472) · archive and deletion job · digest, including native-price vs model-price mismatches and the real Apify cost (#450) · failure alert to the admin · silent-group detection · no burst of alerts after a pause (#473) | Two days unattended (#427) |
+| **5. Server** (`docs/PHASE_5.md`) — **DONE 2026-10-21 (#476)**; built in round 36 (#471–#474) | The home server already runs the system from the deployment step (#426); Phase 5 adds the scheduler with the admin-set interval and quiet hours (#474) and a manual "run now" · the run and schedule records (Gate G, #472) · archive and deletion job · digest, including native-price vs model-price mismatches and the real Apify cost (#450) · failure alert to the admin · silent-group detection · no burst of alerts after a pause (#473) | Two days unattended (#427) |
 | **6. Later** | memo23 failover · editing the group list and `max_posts` from the dashboard · Yad2 | |
 
 Phases 1–4 are developed on Ron's personal laptop in Docker, **for development only (#417)**: no one but Ron uses the

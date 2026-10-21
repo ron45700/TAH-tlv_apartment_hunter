@@ -24,11 +24,25 @@ export const ADMIN_PAGES = [
   'reports',
   'corrections',
   'archive',
+  'analysis',
+  'schedule',
   'keys',
   'users',
-  'schedule',
 ] as const
 export type AdminPage = (typeof ADMIN_PAGES)[number] | 'post'
+type ListedPage = (typeof ADMIN_PAGES)[number]
+
+/** The admin's three sections and their pages, in the nav's order (#483). A post's page is the
+ *  first section's. */
+export const ADMIN_SECTIONS: readonly { name: string; pages: readonly ListedPage[] }[] = [
+  { name: 'posts', pages: ['overview', 'rejected', 'pending', 'flags', 'reports', 'corrections', 'archive'] },
+  { name: 'analysis', pages: ['analysis'] },
+  { name: 'system', pages: ['schedule', 'keys', 'users'] },
+]
+
+export function sectionOf(page: AdminPage): (typeof ADMIN_SECTIONS)[number] {
+  return ADMIN_SECTIONS.find((section) => page !== 'post' && section.pages.includes(page)) ?? ADMIN_SECTIONS[0]
+}
 
 const SCREENS = ['sign-in', 'sign-up', 'password', 'preferences'] as const
 

@@ -105,6 +105,13 @@ export function formatEntry(fields: Pick<ListingFields, 'entry_date' | 'entry_da
   return entry.value ? dayAndMonth(entry.value) : null
 }
 
+/** The entry date beside a label that already says "כניסה": a leading word "כניסה" dropped
+ *  ("כניסה מיידית" reads "מיידית"; #485). Display only: the stored text stays verbatim (#96). */
+export function withoutEntryWord(text: string): string {
+  const rest = text.replace(/^\s*כניסה(?=[\s:\-–]|$)[\s:\-–]*/, '')
+  return rest.trim() ? rest : text
+}
+
 /** "2026-11-01" as "1.11": day and month, never the year (#115). */
 export function dayAndMonth(isoDate: string): string {
   const [, month, day] = isoDate.split('-').map(Number)

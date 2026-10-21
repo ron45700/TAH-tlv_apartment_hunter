@@ -1786,7 +1786,7 @@ included". **Refines #101.** No reason recorded.
 room. Ron's rule, **an explicit exception to #106** (a value not written is never filled in). No
 reason recorded.
 
-### 162 — A name the post does not contain is dropped; the model never computes
+### 162 — A name the post does not contain is dropped; the model never computes *(for streets with a house number, amended by #486)*
 A check in code: a street or area name the model returns that does not appear in the post's text
 is dropped from the `Listing` and counted in the report. The prompt says the model never computes
 a value (the spike once turned "3.50*3.50" into 12.25 sqm). **Extends #106 and invariant 11.** No
@@ -2711,7 +2711,7 @@ projects. Nothing is installed until a task's plan is approved. **Settles the "D
 (#23).**
 *Ron approved the reviewer's recommendation.* No reason recorded.
 
-### 259 — SQLite journal mode: the rollback journal with an explicit busy timeout in Phase 3
+### 259 — SQLite journal mode: the rollback journal with an explicit busy timeout in Phase 3 *(WAL not adopted after Phase 5's measurement: #479)*
 **Settles #65's open choice for Phase 3.** The default rollback journal stays; every connection sets an explicit busy
 timeout. WAL is reconsidered in Phase 5 if waits are seen on the measured working day (DoD 4).
 *Ron approved the reviewer's recommendation.* No reason recorded.
@@ -3425,7 +3425,7 @@ usage metadata gives $0.1957: the spike $0.0273; 2026-10-06 $0.1440 (four regres
 2026-10-08 $0.0244 (the version 4 regression run and reclassify `dcb4c0cb4b24`). O2 is VERIFIED; `BACKLOG.md` item 2 is
 closed. **I3 stays open:** it closes with the measured working day (3.10, #225, #228). *Ron's check.*
 
-### 363 — The alert's layout (Phase 4)
+### 363 — The alert's layout (Phase 4) *(its "no post text" and the categories' colours replaced by #481)*
 Approved by Ron. The exact template and Telegram's caption limits are verified when Phase 4 is planned, under the
 `external-contract-verification` skill. The alert holds: the post's first photo; lines for the kind (and sublet), the price,
 the neighbourhood, the street (only when written), the rooms ("1/2.5" on a room post), the entry date; then **only the
@@ -4176,6 +4176,102 @@ approval.*
 **BotFather's `/setjoingroups` is already disabled** (Ron, 2026-10-18): not open (#469, `PHASE_4.md` §4.8 corrected).
 **Rounds 33–34 and 35 reach the server with Ron's next Dockge Update;** `BACKLOG.md` item 9 closes when he confirms.
 *Ron's report.*
+## Phase 5 closed; the alert, the digest and the admin's pages reworked (2026-10-21, round 38)
+
+### 476 — Phase 5 is closed: the DoD verdicts
+Ron's reads on the server, 2026-10-18 to 2026-10-21. 1 **met**: the digest every morning for several days, no manual
+command needed. 2 **met** on the server on 2026-10-21: the interval changed 30 → 45 → 30 from the page without a restart;
+"run now" started a run; a second request was blocked while it ran; after it succeeded the next run was its start + 30
+minutes. 3 **met** by the dry run over a dated copy with `--as-of` and the tests; the first real archive (about
+2026-11-11) is read by Ron when it comes (#478), not a blocker. 4 **met** for the scheduler (stopped for about an hour on
+2026-10-21; one alert arrived; restarted); the silent-group half **accepted on the tests** (`test_watch.py`). 5 **met**
+(#477). 6 **decided** (#479). 7 **met** (round 36's tests). `BASELINE.md` §12: Phase 5 done 2026-10-21. *Ron's
+verdicts.*
+
+### 477 — #449's two open points answered
+Read by Ron on the server with `settle_costs --show`: **the Apify start fee is still charged** ($0.005 a run, one
+`apify-actor-start` event); **the `usageTotalUsd` logged at a run's end is preliminary** (P19); once settled it equals the
+sum of the charged events (run `BjO1Xp0uQd6JEHjmu`: $0.053). So #449 point 1 was the preliminary figure, not "platform
+usage only"; #450's formula stands. **Running cost estimate: about $24–25 a month.** *Ron's read.*
+
+### 478 — Retention runs for real
+The dry run over a dated copy passed on 2026-10-21 and **`RETENTION_APPLY=yes` is set** in the server's stack. The first
+real archive is due around 2026-11-11 (the store started on 2026-10-17); Ron reads its log line then (`BACKLOG.md`).
+*Ron's report.*
+
+### 479 — WAL is not adopted: the rollback journal stays (#259, #471 point 13 A)
+Measured by Ron: about 20 hours of the site's and the bot's logs (from 2026-10-20 18:06 Israel time) and the scheduler's
+logs of 2026-10-18 to 2026-10-20. **Zero "sqlite write lock" lines** (no wait over 1 s, no "database is locked") in the
+site, the bot and the scheduler. The grouping's recompute took 0.66–1.06 s at 640 canonical posts / 361 cards, once 3.6 s
+at 05:00 Israel time, during the nightly backup. The store is 14.8 MB, the photos 398 MB. **Revisit only if a "sqlite
+write lock" line ever appears.** Closes #259's open choice. *Ron's decision.*
+
+### 480 — A deleted post's photos: verified, no change
+Verified by the reviewer from `jobs/retention.py` (a deleted post's `images/<listing_id>` folder is removed, its
+duplicates' too, then the orphan sweep) and `test_apply_archives_deletes_and_sweeps_after_a_backup`. No code change.
+
+### 481 — The Telegram alert's new layout
+**Replaces #363's "no post text" and the colour meaning of the category lines** (#363's 🟢 met / 🔴 not met / 🟠 unclear
+/ ⚪ not stated against the user's profile). No icon but the colour circles; every line starts with "- "; blocks apart
+by a blank line; Hebrew. (1) The kind ("· סאבלט" for a sublet), then one circle for the card's tier, the site's glow
+(🟢 first, 🟠 middle, 🔴 bottom; none where the site shows no glow), from `policy.colours.glow`. (2) The location:
+one area, its region heading in the area filter (#261), its label, the street when written; two or more areas and a
+street, the street alone, with " (מיקום מדויק לא ודאי)" when it has no house number; two or more and no street, the
+region headings and "שכונה: לא ודאי"; then the price, the entry date, the rooms, the floor ("3/4" only with the
+building's floors written), each "לא צוין" when not written. (3) Arnona, the house committee, the furniture, only when
+written ("לא ברור" when unclear; no furniture, no line). (4) Balcony, parking, elevator, air conditioning, broker **by the
+post's own value**: 🟢 yes ("ללא תיווך" for no broker), 🔴 an explicit no ("תיווך" for a broker), 🟠 unclear, no line
+when not written; then 🔴 "נשים בלבד" (the filter off) and "חסר: …" (§9). (5) The first 3 non-empty lines of the poster's
+text, verbatim, at most 200 characters, cut with "…", in a `<blockquote>`. (6) "פורסם: לפני 17 דקות (21.10, 20:44)".
+"פתיחה באתר" becomes a `web_app` button (the post inside the Mini App). *Ron's spec.* **Found:** `Listing.streets` never
+holds a house number (the instructions copy a street "without the house number"; 0 of 120 stored posts with a street on
+the laptop's store had a digit), so the suffix appears on every multi-area street line.
+
+### 482 — The groups' names; the digest's layout
+The six Hebrew names live in `config/collection.yaml` (`group_names`, by id), read through the config interface
+(`CollectionConfig.group_name`: an id with no name falls back to the id; a name of an unconfigured group or a blank one
+is refused). They replace the id in the digest and the failure alert (the admin's pages show no group id). The digest:
+bold sections "ריצות איסוף", "עלות", "מודעות", "לפי קבוצה", one value a line, number first; "מחיר בפייסבוק שונה
+מהטקסט"; per group its name in bold and two lines ("89 נאספו | 50 סווגו", "23 כפולות | 25 נדחו | 2 התראות"); the
+thresholds' footer removed; a group listed only when suspect or over its threshold: "⚠️ <name> שקטה כבר N ריצות". The
+thresholds and the failure alert's rules unchanged. *Ron's spec.*
+
+### 483 — The admin's pages in three sections
+"סקירת מודעות" (סקירה, נדחו, ממתינות לסיווג, סומנו כמשקרות, דיווחים, תיקונים, ארכיון), "ניתוח מידע" (a placeholder page,
+"בקרוב"; no data, no endpoint; its content planned after round 38), "ניהול מערכת" (תזמון, קודי הזמנה, משתמשים). A second
+column of the section's pages; on a narrow screen two rows, ‹ › only when a row overflows, the wheel scrolls it sideways.
+The schedule page says why "הרצה עכשיו" is disabled. The overview's lead about the dated copy (stale since 3.9) removed.
+*Ron's spec.*
+
+### 484 — Instructions version 6: a street with its house number
+`classify/instructions.txt`: a street is copied as written **including the house number when the post gives one**
+("בן יהודה 83"); without a number, as before. Nothing else in the instructions changes. `PROMPT_VERSION` "6" with its
+`PROMPT_FINGERPRINT` (#179). **No regression run for this change: Ron judges it on the next real alerts** (`BACKLOG.md`).
+**Stored posts keep their version-5 streets: no reclassify.** Why: the alert's location rule (#481) marks a multi-area
+street " (מיקום מדויק לא ודאי)" when it has no house number, and version 5 never kept one. **Checked:** nothing else
+assumes a street without digits (the card and the opened post only show them, the evaluation and the colours only test
+whether any is written, the Gate D key never reads them, the labelling compares none, #177). **One interaction:** #162
+kept a street only if it occurred in the text exactly, which would drop "בן יהודה 83" composed from a number written apart;
+**settled by #486.** *Ron's decision, 2026-10-21.*
+
+### 485 — The entry date beside its own label: a leading "כניסה" not shown twice
+In the alert's "- כניסה: …" line, and on the site where the value sits beside a label that already says it (the card's
+"כניסה" stat, the opened post's "תאריך כניסה" row), a leading word "כניסה" of `entry_date_written` is dropped **for display
+only** ("כניסה מיידית" reads "מיידית"). The stored text stays verbatim (#96). The word is dropped only as a whole word
+followed by a space, colon or dash, and never when nothing would be left. The card's phone line already avoided it (it
+adds "כניסה:" only when the text lacks it): unchanged. *Ron's decision, 2026-10-21.*
+
+### 486 — #162 relaxed for a street's house number (amends #162)
+A street the model returns is kept when **its name, without the trailing house number, appears in the post's text as
+#162 matches today** (exactly, no normalization, invariant 8) **and the house number, if any, also appears in the text
+as a number**, not necessarily next to the name: "בן יהודה, מספר 83" keeps "בן יהודה 83". **The name matches and the
+number is not in the text:** the name alone is kept, the number dropped. **The name does not match:** the street is dropped
+and counted, as today. A street that occurs in the text exactly is kept as before. Nothing else in #162 changes: area
+names and other cities as before. Built in `classify/complete.py` (`_streets_in_text`). *Ron's decision, 2026-10-21.*
+**Decided in the build:** a house number is the street's trailing digits, then at most one Hebrew letter ("12א"); "as
+a number" means the digits with no digit next to them (83 is not found in 183 or 830); the letter itself is not looked
+for; a dropped number is not counted in the dropped-names report (the street is kept).
+
 ---
 
 ## Corrections to recorded facts
@@ -4196,4 +4292,4 @@ so the corrections are visible in one place.
 | Near-duplicate matching might be required | It is not. 3/3 pairs collided on hash, no false collisions, no near-misses above 0.90 | Task 1.2, 2026-09-14 |
 | The bot's "joining groups is disabled" (#356) | `getMe` answers `can_join_groups: true` (2026-10-18, `ASSUMPTIONS.md` T7). The bot ignores every chat that is not private, so nothing depends on it; BotFather's `/setjoingroups` turns it off | Round 31, the contract check |
 | BotFather's `/setjoingroups` still open after Phase 4 (#469) | Ron disabled it on 2026-10-18 (#475) | Round 36 |
-| The `usageTotalUsd` each run logs is the run's Apify cost (`measure_day.sh`'s totals report it as such) | It under-reports: the measured day's 34 runs summed to $0.302, while the bill for the day and the bootstrap is $0.90, about the rows charged at $1.50 / 1,000 ($0.87). The cause is open (#449 point 1: platform usage only, or the preliminary end-of-run figure of P19); the real cost comes from the charged events or the pricing (#450) | The measured day, 2026-10-18 |
+| The `usageTotalUsd` each run logs is the run's Apify cost (`measure_day.sh`'s totals report it as such) | It under-reports: the measured day's 34 runs summed to $0.302, while the bill for the day and the bootstrap is $0.90, about the rows charged at $1.50 / 1,000 ($0.87). The cause: the end-of-run figure is preliminary (P19); settled, it equals the charged events (#477); the real cost comes from the charged events (#450) | The measured day, 2026-10-18 |

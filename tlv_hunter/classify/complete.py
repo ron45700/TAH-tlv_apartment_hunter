@@ -1,7 +1,9 @@
 """The model's answer completed into a `Listing` (`PHASE_2.md` 2.4, step 3). Pure: no call, no
-storage. The rules: DECISIONS.md #95, #105, #114, #115, #162, #167, #178, #179, #180.
+storage. The rules: DECISIONS.md #95, #105, #114, #115, #162 (for streets as amended by #486), #167,
+#178, #179, #180.
 """
 
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Literal
@@ -71,7 +73,7 @@ def complete(extraction: ListingExtraction, post: RawPost, provenance: Provenanc
     if any(number not in AREA_NUMBERS for number in extraction.areas):
         raise AnswerError("areas are municipal numbers 1-71")
     price, price_source = price_with_fallback(extraction.price, post.native_price)
-    streets, dropped_streets = _in_text(extraction.streets, post.text)
+    streets, dropped_streets = _streets_in_text(extraction.streets, post.text)
     area_names, dropped_area_names = _in_text(extraction.stated_area_names, post.text)
     other_city, dropped_other_city = _other_city(extraction.other_city, post.text)
     listing = Listing(
@@ -133,6 +135,36 @@ def entry_date_from_parts(parts: Marked[EntryDateParts], published: date) -> _En
         # An impossible date (31.11, 29.2 of a written non-leap year) is unclear (#179).
         return _EntryDate(state="unclear", value=None)
     return _EntryDate(state="written", value=found)
+
+
+# A house number at a street's end (version 6, #484): digits, then at most one Hebrew letter
+# ("12א").
+_HOUSE_NUMBER = re.compile(r"(?P<name>.*\S)\s+(?P<number>\d+)[א-ת]?")
+
+
+def _streets_in_text(streets: list[str], text: str) -> tuple[list[str], list[str]]:
+    """#162 for streets, as amended by #486. A street that occurs in the text exactly is kept. One
+    that ends in a house number is kept whole when its name occurs in the text exactly and the
+    number occurs in it as a number, anywhere ("בן יהודה, מספר 83" keeps "בן יהודה 83");
+    its name alone when the number does not. A street whose name the text does not contain is
+    dropped and returned."""
+    kept: list[str] = []
+    dropped: list[str] = []
+    for street in streets:
+        stripped = street.strip()
+        if not stripped:
+            continue
+        if stripped in text:
+            kept.append(stripped)
+            continue
+        numbered = _HOUSE_NUMBER.fullmatch(stripped)
+        if numbered is None or numbered["name"] not in text:
+            dropped.append(stripped)
+        elif re.search(rf"(?<!\d){numbered['number']}(?!\d)", text):
+            kept.append(stripped)
+        else:
+            kept.append(numbered["name"])
+    return kept, dropped
 
 
 def _in_text(names: list[str], text: str) -> tuple[list[str], list[str]]:

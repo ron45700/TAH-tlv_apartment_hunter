@@ -14,6 +14,7 @@ import { api, ApiError } from '../api'
 import {
   featureChips,
   formatEntry,
+  withoutEntryWord,
   formatFee,
   formatFloor,
   formatPrice,
@@ -308,7 +309,7 @@ function Body({
               {entry === null ? (
                 <span className="missing sm">אין תאריך כניסה</span>
               ) : (
-                <span className={`c-${colours.entry_date}`}>{entry}</span>
+                <span className={`c-${colours.entry_date}`}>{withoutEntryWord(entry)}</span>
               )}
               {corrected.has('entry_date') && <Fixed long />}
             </dd>

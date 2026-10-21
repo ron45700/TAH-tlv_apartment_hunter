@@ -176,6 +176,39 @@ def test_streets_and_area_names_in_the_text_are_kept_with_prefix_letters(post: R
     assert (completed.dropped_streets, completed.dropped_area_names) == ((), ())
 
 
+STREET = "בן יהודה 83"
+
+
+def test_a_street_with_its_house_number_written_together_is_kept(post: RawPost) -> None:
+    """Version 6 (#484): the model copies the house number when the post gives one."""
+    together = post_with_text(post, "דירה ברחוב בן יהודה 83, קומה 2")
+    kept = complete(extraction(streets=[STREET]), together, PROVENANCE)
+    assert kept.listing.streets == [STREET] and kept.dropped_streets == ()
+
+
+def test_a_street_whose_name_and_number_are_written_apart_is_kept_whole(post: RawPost) -> None:
+    """#486 amends #162: the name as #162 matches it, and the number anywhere as a number."""
+    apart = post_with_text(post, "דירה ברחוב בן יהודה, מספר 83")
+    kept = complete(extraction(streets=[STREET]), apart, PROVENANCE)
+    assert kept.listing.streets == [STREET] and kept.dropped_streets == ()
+    with_letter = post_with_text(post, "בן יהודה, בית מספר 12")
+    lettered = complete(extraction(streets=["בן יהודה 12א"]), with_letter, PROVENANCE)
+    assert lettered.listing.streets == ["בן יהודה 12א"]
+
+
+def test_a_house_number_not_in_the_text_is_dropped_and_the_name_kept(post: RawPost) -> None:
+    # "183" and "830" hold 83 but not as the number 83.
+    no_number = post_with_text(post, "דירה בן יהודה, 183 מ״ר מעל 830 ש״ח")
+    named = complete(extraction(streets=[STREET]), no_number, PROVENANCE)
+    assert named.listing.streets == ["בן יהודה"] and named.dropped_streets == ()
+
+
+def test_a_street_whose_name_is_not_in_the_text_is_dropped_with_its_number(post: RawPost) -> None:
+    other = post_with_text(post, "דירה בדיזנגוף, מספר 83")
+    dropped = complete(extraction(streets=[STREET]), other, PROVENANCE)
+    assert dropped.listing.streets == [] and dropped.dropped_streets == (STREET,)
+
+
 def test_names_not_in_the_text_are_dropped_and_returned(post: RawPost) -> None:
     completed = complete(
         extraction(

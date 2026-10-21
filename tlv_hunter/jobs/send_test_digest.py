@@ -17,6 +17,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TextIO
 
+from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.jobs.bot import Refused, store_paths, telegram_settings, watch_over
 from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, describe
 from tlv_hunter.store.sqlite import SqliteRepository
@@ -51,7 +52,9 @@ def main(
         grouping = Grouping(
             SqliteRepository(database, read_only=True), userdata.find_corrections, store_root
         )
-        watch = watch_over(database, grouping, userdata, clock)
+        watch = watch_over(
+            database, grouping, userdata, clock, YamlConfig(config_root).collection().group_names
+        )
         chat = watch.admin_chat()
         if chat is None:
             raise Refused("the admin is not linked to Telegram")

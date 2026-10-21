@@ -5,7 +5,7 @@ pure `health.py` and `digest.py`. It writes nothing: the bot sends, and records 
 """
 
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -46,8 +46,10 @@ class Watch:
         *,
         clock: Callable[[], datetime],
         zone: ZoneInfo,
+        group_names: Mapping[str, str] | None = None,
     ) -> None:
         self.runs = runs
+        self.group_names = dict(group_names or {})
         self._watermarks = watermarks
         self._grouping = grouping
         self._userdata = userdata
@@ -78,14 +80,21 @@ class Watch:
             posted: dict[str, list[datetime]] = defaultdict(list)
             for post in _posts(snapshot):
                 posted[post.group_id].append(post.posted_at)
-            measured = silences(self._watermarks.get_all(), posted, rhythm, self.zone)
+            measured = silences(
+                self._watermarks.get_all(), posted, rhythm, self.zone, self.group_names
+            )
             self._silences = (now, measured)
             return measured
         counters = {
             record.group_id: record.consecutive_failures for record in self._watermarks.get_all()
         }
         return [
-            GroupSilence(group.group_id, counters.get(group.group_id, group.runs), group.threshold)
+            GroupSilence(
+                group.group_id,
+                counters.get(group.group_id, group.runs),
+                group.threshold,
+                group.name,
+            )
             for group in held[1]
         ]
 
@@ -119,6 +128,7 @@ class Watch:
             self.problems(end),
             start,
             end,
+            group_names=self.group_names,
         )
 
 

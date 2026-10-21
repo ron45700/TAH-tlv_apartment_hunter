@@ -27,6 +27,8 @@ build/
 
 # The front end (task 3.7): its packages; its build is dist/ above
 node_modules/
+# Compiled twins of the TypeScript sources (a `tsc` without --noEmit, round 38): Vite would bundle them
+frontend/src/**/*.js
 
 # Editors / OS
 .vscode/

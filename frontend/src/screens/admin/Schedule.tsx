@@ -120,12 +120,27 @@ function Desk({ answer, now, reload }: { answer: ScheduleAnswer; now: Date; relo
             </button>
           </div>
         ) : (
-          <button type="button" className="barbtn" onClick={() => setConfirming(true)} disabled={busy || blocked}>
-            הרצה עכשיו
-          </button>
+          <>
+            <button
+              type="button"
+              className="barbtn"
+              onClick={() => setConfirming(true)}
+              disabled={busy || blocked}
+              aria-describedby={blocked ? 'sched-blocked' : undefined}
+            >
+              הרצה עכשיו
+            </button>
+            {blocked && (
+              <p id="sched-blocked" className="facts-sub">
+                {answer.running
+                  ? 'ריצה רצה עכשיו. אפשר להפעיל שוב כשהיא תסתיים.'
+                  : 'ריצה ידנית כבר מחכה למתזמן. אפשר להפעיל שוב כשהיא תסתיים.'}
+              </p>
+            )}
+          </>
         )}
       </section>
-      <form className="apanel" onSubmit={save} aria-labelledby="sched-settings">
+      <form className="apanel schedform" onSubmit={save} aria-labelledby="sched-settings">
         <h2 id="sched-settings">הגדרות</h2>
         {!answer.stored && <p className="facts-sub">המתזמן עוד לא שמר הגדרות: אלה ברירות המחדל שלו.</p>}
         <label htmlFor="sched-interval">מרווח בין ריצות (דקות, 5 עד 1440)</label>

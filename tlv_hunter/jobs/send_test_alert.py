@@ -26,12 +26,11 @@ from pathlib import Path
 from typing import TextIO
 
 from tlv_hunter.accounts.actions import find_admin
-from tlv_hunter.areas.reference import load_areas
 from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import Card
 from tlv_hunter.jobs.bot import Refused, store_paths, telegram_settings
 from tlv_hunter.jobs.common import CONFIG_ROOT, REPO_ROOT, describe
-from tlv_hunter.notify.alert import build_alert
+from tlv_hunter.notify.alert import build_alert, reference_area_words
 from tlv_hunter.notify.telegram import TelegramNotifier
 from tlv_hunter.policy.alert import no_alert_reason, published_too_long_ago
 from tlv_hunter.policy.evaluate import evaluate
@@ -91,7 +90,7 @@ def main(
             card,
             evaluation,
             profile,
-            {area.number: area.display_name for area in load_areas()},
+            reference_area_words(),
             site_url=site_url,
             store_root=store_root,
             now=now,

@@ -20,8 +20,8 @@ from openai.lib._parsing._responses import type_to_text_format_param
 from tlv_hunter.areas.reference import Area, KnownPlace, load_areas, load_known_places
 from tlv_hunter.contracts.listing_extraction import ListingExtraction
 
-PROMPT_VERSION = "5"
-PROMPT_FINGERPRINT = "1b1e59fbf51a01125bf16d7b844c4948f796407c4f5a494a3fc432dfe3fe954e"
+PROMPT_VERSION = "6"
+PROMPT_FINGERPRINT = "4ddc39c5f4b45b5f5c4828887702f055a82341c64f515c3950ca5786669b3687"
 
 TEMPLATE_FILE = Path(__file__).with_name("instructions.txt")
 AREAS_MARKER = "<<AREAS>>"

@@ -1,7 +1,7 @@
 // Keys ("קודי הזמנה", the sign-up form's own word) and users (3.8 (c); build step 3): issue a key with a label and see it once (#266), cancel an
 // unused one (#243); reset a user's password to a temporary one (#262, #263), disable and enable a
-// user (#265). The admin's own row takes none of them (R8). Until 3.9 all of it lands in the site's
-// dated copy (#400).
+// user (#265). The admin's own row takes none of them (R8). Written to the store the site serves
+// (3.9, #424 point 88).
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../../api'
 import { adminApi } from '../../admin/api'

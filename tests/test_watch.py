@@ -26,10 +26,10 @@ from tests.test_telegram_bot import (  # noqa: F401  (fixtures)
     store,
 )
 from tests.test_telegram_client import TOKEN, FakeTelegram
-from tlv_hunter.areas.reference import load_areas
 from tlv_hunter.contracts.group_watermark import GroupWatermark
 from tlv_hunter.jobs import send_test_digest
 from tlv_hunter.jobs.bot import watch_over
+from tlv_hunter.notify.alert import reference_area_words
 from tlv_hunter.schedule import Rhythm
 from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.state.sqlite import SqliteWatermarkStore
@@ -135,6 +135,8 @@ def test_pending_posts_older_than_two_hours_and_a_silent_group_are_problems() ->
         [GroupSilence("101", 50, 48), GroupSilence("202", 30, 48)],
     )
     assert keys(found) == ["pending", "silent:101"]
+    named = problems([], RHYTHM, ZONE, now, [], [GroupSilence("101", 50, 48, "דירות בתל אביב")])
+    assert named[0].text.startswith("הקבוצה דירות בתל אביב לא החזירה")
     assert found[0].text.startswith("1 מודעות ממתינות")
 
 
@@ -182,8 +184,40 @@ def test_the_digest_counts_the_window_and_names_failures_and_silences(store: Tie
     text = "\n".join(messages)
     assert text.startswith("📊 <b>סיכום יומי</b>")
     assert "&lt;boom &amp; co&gt;" in text and "<boom" not in text
-    assert "g1: 30 ריצות בלי פוסט (סף 48) · חשודה" in text
-    assert "עלות Apify: $0.0230 ב-1 ריצות סופיות · 2 עוד לא סופיות" in text
+    assert "⚠️ g1 שקטה כבר 30 ריצות" in text and "סף" not in text
+    lines = text.split("\n")
+    cost = lines.index("<b>עלות</b>")
+    assert lines[cost + 1 : cost + 4] == ["$0.0230 ב-Apify", "1 ריצות סופיות", "2 עוד לא סופיות"]
+    runs = lines.index("<b>ריצות איסוף</b>")
+    assert lines[runs + 1 : runs + 5] == ["3 ריצות", "1 נכשלו", "36 שורות", "0 דולגו"]
+    posts = lines.index("<b>מודעות</b>")
+    assert lines[posts + 1 : posts + 6] == ["7 נאספו", "1 כפולות", "0 סווגו", "1 נדחו", "0 התראות"]
+    assert "0 מחיר בפייסבוק שונה מהטקסט" in lines
+
+
+def test_the_digest_names_each_group_from_the_config_in_its_order(store: TiedStore) -> None:  # noqa: F811
+    digest = build_digest(
+        snapshot_of(store),
+        [],
+        [],
+        None,
+        [GroupSilence("g1", 10, 48, 'דירות בת"א'), GroupSilence("g2", 30, 48)],
+        [],
+        T0 - timedelta(hours=1),
+        T0 + timedelta(hours=1),
+        group_names={"g1": 'דירות בת"א'},
+    )
+    lines = "\n".join(digest_messages(digest, ZONE)).split("\n")
+    at = lines.index("<b>לפי קבוצה</b>")
+    assert lines[at + 1 : at + 4] == [
+        '<b>דירות בת"א</b>',
+        "7 נאספו | 0 סווגו",
+        "1 כפולות | 1 נדחו | 0 התראות",
+    ]
+    # Only a suspect group (half its threshold) or a silent one; the id when it has no name.
+    assert "⚠️ g2 שקטה כבר 30 ריצות" in lines
+    assert not any("דירות בת" in line and "שקטה" in line for line in lines)
+    assert not any(line.startswith("ספי שקט") for line in lines)
 
 
 def test_a_long_digest_is_split_at_line_ends_under_the_limit(store: TiedStore) -> None:  # noqa: F811
@@ -191,7 +225,7 @@ def test_a_long_digest_is_split_at_line_ends_under_the_limit(store: TiedStore) -
     digest = build_digest(snapshot_of(store), [], [], None, many, [], T0, T0)
     messages = digest_messages(digest, ZONE)
     assert len(messages) >= 2 and all(len(m) <= MESSAGE_LIMIT for m in messages)
-    assert "\n".join(messages).count("group0119") == 2  # its line and its threshold
+    assert "\n".join(messages).count("group0119") == 1  # its silence line; no thresholds
 
 
 def test_the_digest_is_due_at_08_00_israel_time_once_a_local_day() -> None:
@@ -216,7 +250,7 @@ def watching_bot(store: TiedStore, clock) -> tuple[Bot, FakeTelegram]:  # noqa: 
         SqliteRepository(store.db),
         store.userdata,
         grouping,
-        {area.number: area.display_name for area in load_areas()},
+        reference_area_words(),
         site_url=SITE,
         store_root=store.root,
         clock=clock,
@@ -330,7 +364,8 @@ def test_send_test_digest_sends_to_the_admin_and_writes_nothing(store: TiedStore
     assert code == 0, out
     (sent,) = fake.of("sendMessage")
     assert sent["chat_id"] == CHAT and "סיכום יומי" in sent["text"]
-    assert "נאספו 7" in sent["text"] and "ספי שקט בריצות: g1 48" in sent["text"]
+    assert "<b>g1</b>" in sent["text"] and "7 נאספו | 0 סווגו" in sent["text"]
+    assert "שקטה" not in sent["text"]  # 3 of 48: not suspect
     assert Path(store.db).read_bytes() == before
     assert TOKEN not in out
     assert run_send(store, "--hours", "0")[1] == "refused: --hours must be from 1 to 336\n"

@@ -5,6 +5,7 @@ import {
   dayAndMonth,
   featureChips,
   formatEntry,
+  withoutEntryWord,
   formatFee,
   formatFloor,
   formatPrice,
@@ -181,5 +182,16 @@ describe('the chips', () => {
       furnished: 'plain',
     }
     expect(closedChips(fields, colours).map((chip) => chip.field)).toEqual(['broker', 'balcony'])
+  })
+})
+
+describe('withoutEntryWord (#485)', () => {
+  it('drops a leading word "כניסה" for display, and only the word itself', () => {
+    expect(withoutEntryWord('כניסה מיידית')).toBe('מיידית')
+    expect(withoutEntryWord('כניסה: 1.11')).toBe('1.11')
+    expect(withoutEntryWord('כניסה ב18.10')).toBe('ב18.10')
+    expect(withoutEntryWord('1.11 גמיש')).toBe('1.11 גמיש')
+    expect(withoutEntryWord('כניסה')).toBe('כניסה')
+    expect(withoutEntryWord('כניסתך מיידית')).toBe('כניסתך מיידית')
   })
 })

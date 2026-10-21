@@ -14,7 +14,11 @@ The window is from the last digest to now (24 hours with none). Counted from the
 - the price mismatches: a native price that is not among the text's prices;
 - the runs: how many, the failed ones with their reason, the rows fetched and skipped (#71 D);
 - the Apify cost (#450): the runs settled by `settle_costs`, and how many are not yet;
-- the silent groups' state and every group's threshold (point 9 B), and the problems that stand.
+- the silent groups: only a suspect one or one over its threshold (point 9 B; the thresholds are
+  not printed, #482), and the problems that stand.
+
+The layout (#482): bold section headings, one value a line, number first; per group its name from
+the config (an id with no name, the id), bold, then two lines of counts.
 
 Not in it (#471, a field outside Gate G): retention's last numbers, which no record holds.
 """
@@ -41,7 +45,6 @@ DIGEST_AT = day_time(8, 0)
 DEFAULT_WINDOW = timedelta(hours=24)
 MESSAGE_LIMIT = 4096
 FAILED_LISTED = 10
-THRESHOLDS_PER_LINE = 8  # so no single line nears a message's limit
 
 
 @dataclass
@@ -71,6 +74,7 @@ class Digest:
     silences: tuple[GroupSilence, ...]
     problems: tuple[Problem, ...]
     alerted: int = field(default=0)
+    group_names: Mapping[str, str] = field(default_factory=dict)
 
 
 def digest_due(last: datetime | None, now: datetime, zone: ZoneInfo) -> bool:
@@ -94,6 +98,8 @@ def build_digest(
     problems: Sequence[Problem],
     start: datetime,
     end: datetime,
+    *,
+    group_names: Mapping[str, str] | None = None,
 ) -> Digest:
     def within(moment: datetime) -> bool:
         return start <= moment < end
@@ -158,6 +164,7 @@ def build_digest(
         silences=tuple(silences),
         problems=tuple(problems),
         alerted=alerted,
+        group_names=dict(group_names or {}),
     )
 
 
@@ -177,26 +184,41 @@ def digest_messages(digest: Digest, zone: ZoneInfo) -> list[str]:
         "📊 <b>סיכום יומי</b>",
         f"{when(digest.start)} – {when(digest.end)}",
         "",
-        f"ריצות איסוף: {digest.runs}, נכשלו {len(digest.failed)} · שורות {digest.rows_fetched}"
-        f", דולגו {digest.rows_skipped}",
-        f"עלות Apify: ${digest.cost_usd:.4f} ב-{digest.settled} ריצות סופיות"
-        + (f" · {digest.unsettled} עוד לא סופיות" if digest.unsettled else ""),
-        f"מודעות שנאספו: {total.collected} (כפולות {total.duplicates}) · סווגו "
-        f"{total.classified} · נדחו {total.rejected} · התראות {digest.alerted}",
+        "<b>ריצות איסוף</b>",
+        f"{digest.runs} ריצות",
+        f"{len(digest.failed)} נכשלו",
+        f"{digest.rows_fetched} שורות",
+        f"{digest.rows_skipped} דולגו",
+        "",
+        "<b>עלות</b>",
+        f"${digest.cost_usd:.4f} ב-Apify",
+        f"{digest.settled} ריצות סופיות",
+    ]
+    if digest.unsettled:
+        lines.append(f"{digest.unsettled} עוד לא סופיות")
+    lines += [
+        "",
+        "<b>מודעות</b>",
+        f"{total.collected} נאספו",
+        f"{total.duplicates} כפולות",
+        f"{total.classified} סווגו",
+        f"{total.rejected} נדחו",
+        f"{digest.alerted} התראות",
         f"🟢 {colours.get('green', 0)} · 🟠 {colours.get('orange', 0)} · 🔴 "
         f"{colours.get('red', 0)} · ממתינות {colours.get('pending', 0)}",
     ]
     if digest.matches is not None:
-        lines.append(f"תואמות להעדפות שלך: {digest.matches}")
-    lines.append(f"מחיר בפייסבוק שאינו בין מחירי הטקסט: {digest.price_mismatches}")
+        lines.append(f"{digest.matches} תואמות להעדפות שלך")
+    lines.append(f"{digest.price_mismatches} מחיר בפייסבוק שונה מהטקסט")
     if digest.by_group:
         lines += ["", "<b>לפי קבוצה</b>"]
-        for group_id, counts in digest.by_group.items():
-            lines.append(
-                f"• {html.escape(group_id)}: נאספו {counts.collected} · כפולות "
-                f"{counts.duplicates} · סווגו {counts.classified} · נדחו {counts.rejected} · "
-                f"התראות {counts.alerted}"
-            )
+        for group_id in _group_order(digest):
+            counts = digest.by_group[group_id]
+            lines += [
+                f"<b>{html.escape(_name(digest, group_id), quote=False)}</b>",
+                f"{counts.collected} נאספו | {counts.classified} סווגו",
+                f"{counts.duplicates} כפולות | {counts.rejected} נדחו | {counts.alerted} התראות",
+            ]
     if digest.failed:
         lines += ["", "<b>ריצות שנכשלו</b>"]
         for run in digest.failed[:FAILED_LISTED]:
@@ -207,22 +229,24 @@ def digest_messages(digest: Digest, zone: ZoneInfo) -> list[str]:
             lines.append(f"• ועוד {len(digest.failed) - FAILED_LISTED}")
     quiet = [g for g in digest.silences if g.suspect]
     if quiet:
-        lines += ["", "<b>קבוצות שקטות</b>"]
+        lines.append("")
         for group in quiet:
-            state = "שקטה מדי" if group.silent else "חשודה"
-            lines.append(
-                f"• {html.escape(group.group_id)}: {group.runs} ריצות בלי פוסט "
-                f"(סף {group.threshold}) · {state}"
-            )
+            name = html.escape(group.name or _name(digest, group.group_id), quote=False)
+            lines.append(f"⚠️ {name} שקטה כבר {group.runs} ריצות")
     if digest.problems:
         lines += ["", "<b>⚠️ בעיות פתוחות</b>"]
         lines += [f"• {html.escape(problem.text)}" for problem in digest.problems]
-    if digest.silences:
-        entries = [f"{html.escape(g.group_id)} {g.threshold}" for g in digest.silences]
-        lines += ["", "ספי שקט בריצות: " + " · ".join(entries[:THRESHOLDS_PER_LINE])]
-        for at in range(THRESHOLDS_PER_LINE, len(entries), THRESHOLDS_PER_LINE):
-            lines.append(" · ".join(entries[at : at + THRESHOLDS_PER_LINE]))
     return _split(lines)
+
+
+def _name(digest: Digest, group_id: str) -> str:
+    return digest.group_names.get(group_id, group_id)
+
+
+def _group_order(digest: Digest) -> list[str]:
+    """The groups in the config's order; any other (a group no longer configured) after, by id."""
+    named = [group_id for group_id in digest.group_names if group_id in digest.by_group]
+    return named + [group_id for group_id in digest.by_group if group_id not in named]
 
 
 def _clear(listing: Listing) -> bool:

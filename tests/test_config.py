@@ -124,3 +124,28 @@ def test_no_module_outside_config_reads_yaml_directly() -> None:
         ):
             offenders.append(path.relative_to(REPO_ROOT))
     assert offenders == []
+
+
+def test_every_configured_group_has_its_hebrew_name() -> None:
+    """#482: the names Ron reads in the digest and the failure alert, beside their ids."""
+    collection = YamlConfig(CONFIG_ROOT).collection()
+    assert list(collection.group_names) == HANDOFF_GROUP_IDS
+    assert collection.group_name("35819517694") == 'דירות מפה לאוזן בת"א'
+    assert collection.group_name("295395253832427") == "דירות בתל אביב"
+
+
+def test_a_group_with_no_name_is_shown_by_its_id(tmp_path: Path) -> None:
+    collection = _config_dir(tmp_path, VALID_COLLECTION).collection()
+    assert collection.group_names == {}
+    assert collection.group_name("35819517694") == "35819517694"
+
+
+@pytest.mark.parametrize(
+    "names",
+    ['group_names: {"999": "x"}\n', 'group_names: {"35819517694": " "}\n'],
+)
+def test_a_name_of_an_unconfigured_group_or_a_blank_name_is_rejected(
+    tmp_path: Path, names: str
+) -> None:
+    with pytest.raises(ValidationError):
+        _config_dir(tmp_path, VALID_COLLECTION + names).collection()
