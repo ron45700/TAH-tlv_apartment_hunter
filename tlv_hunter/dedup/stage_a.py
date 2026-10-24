@@ -2,6 +2,10 @@
 
 Reads the Repository and writes nothing (DECISIONS.md #75 F1); the store step is task 1.14.
 Layer 3, the phone, produces nothing here (#75 C).
+
+Layer 2 never crosses sources: a Facebook post and a Yad2 listing are never duplicates (#500). A
+Yad2 agency listing is never deduplicated by its text hash, neither as a new post nor as a stored
+match (#508): agencies reuse short boilerplate.
 """
 
 import logging
@@ -12,8 +16,10 @@ from typing import Any
 
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
+from tlv_hunter.parsing.ids import YAD2_SOURCE
 from tlv_hunter.premodel.rejects import initial_lifecycle, recheck
 from tlv_hunter.store.base import Repository
+from tlv_hunter.yad2.mapping import is_agency
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +51,16 @@ def dedup_a(batch: Sequence[RawPost], repository: Repository) -> DedupResult:
             assigned[post.listing_id] = post.with_changes(
                 is_canonical=before.is_canonical, duplicate_of=before.duplicate_of
             )
-        elif post.no_text:
+        elif post.no_text or is_agency(post):
             assigned[post.listing_id] = post.with_changes(is_canonical=True, duplicate_of=None)
         else:
             fresh.append(post)
 
-    for text_hash in sorted({post.text_hash for post in fresh}):
-        members = [post for post in fresh if post.text_hash == text_hash]
+    for yad2, text_hash in sorted({(_is_yad2(post), post.text_hash) for post in fresh}):
+        members = [p for p in fresh if p.text_hash == text_hash and _is_yad2(p) == yad2]
         known = [reader.checked(post) for post in reader.find_by_hash(text_hash)]
         known += [post for post in assigned.values() if post.text_hash == text_hash]
+        known = [post for post in known if _is_yad2(post) == yad2 and not is_agency(post)]
         canonicals = {
             canonical.listing_id: canonical
             for canonical in (reader.canonical_of(post) for post in known)
@@ -216,6 +223,10 @@ class _Reader:
         if post.is_canonical is None:
             raise ValueError(f"stored post {post.listing_id} has no dedup result (#75 D5)")
         return post
+
+
+def _is_yad2(post: RawPost) -> bool:
+    return post.source == YAD2_SOURCE
 
 
 def _age(post: RawPost) -> tuple[datetime, str]:

@@ -4449,6 +4449,48 @@ Facebook's rule is unchanged. Ron may revisit it if it brings noise. *Approved b
 Point 13: the regression run on the existing set (paid, cap $0.10) for prompt version 7. **No Yad2 labelled set:** Ron
 judges Yad2's classification on the real cards after the bootstrap. *Approved by Ron, 2026-10-24.*
 
+## Yad2: `PHASE_6.md` §6.14 and §6.8 answered (2026-10-24, round 44)
+
+### 512 — A Yad2 photo's `media_id` is its URL; `page_url` is the listing's permalink
+§6.14 C1 as proposed: no type change to Gate A's `Media`. A Yad2 photo (`d.metaData.images[]`) and the video
+(`d.metaData.video`) map as Gate A's Yad2 table says, with `media_id` the item's own URL and `page_url` the listing's
+permalink. *Approved by Ron, 2026-10-24.*
+
+### 513 — The Yad2 seam: `yad2/`, `Yad2Collector.collect(known, *, bootstrap)`
+§6.14 C2 as proposed (`PHASE_6.md` §6.5; CLAUDE.md's seam table). *Approved by Ron, 2026-10-24.*
+
+### 514 — Yad2's paging and rhythm (amends #492's stop rule; #504's cap)
+§6.14 C3 and §6.8, with two amendments by Ron: **every 60 minutes; runs start between 07:00 and 23:00 Israel time;
+at least 3 and at most 10 list pages a run; only private listings decide whether a page "holds a new token"** (the
+minimum of 3 pages covers the agency listings at the bottom of pages 2–3); **a bump check only when the stored
+`last_published_at` is over 3 hours old, at most 10 bump-check pages a run** (amended: not 30); **added: a pause
+between page loads, list and listing pages alike**, to keep the load on Yad2 low: a fixed pause plus a small random
+part, nothing beyond that (#490). The values chosen are in `PHASE_6.md` §6.8. *Approved by Ron, 2026-10-24.*
+
+### 515 — The Yad2 rhythm's field names
+§6.14 C4 as proposed: `yad2_interval_minutes`, `yad2_hours_from`, `yad2_hours_until` on `ScheduleSettings` (as built
+in round 43). *Approved by Ron, 2026-10-24.*
+
+### 516 — An old listing bumped, with a token never seen, is a new post
+§6.14 C5 accepted: in the first weeks, a long-listed apartment bumped today whose token was never seen is a new post:
+a card, and an alert when it passes a profile (#492). Ron may revisit it if alerts are too many. *Approved by Ron,
+2026-10-24.*
+
+### 517 — The form's street and neighbourhood are `"form"` in `field_sources`
+§6.14 C6 as proposed: a street or neighbourhood the form gives makes the field `"form"`, also when the model adds more
+names after it (#502 point 8). *Approved by Ron, 2026-10-24.*
+
+### 518 — A Yad2 listing with nothing for the model is rejected `no_text`
+A Yad2 listing with no description **and** no line for the labelled block (no property kind, neighbourhood, street,
+"suitable for roommates" or furniture text) is rejected `no_text` before the model: the one case where Facebook's rule
+holds for Yad2 (narrows #509). *Ron's decision, 2026-10-24, round 44.*
+
+### 519 — The block's request shape is checked by a small paid call
+The block goes as a second `input_text` part after the description (OpenAI's API reference: a message's content is "a
+list of one or many input items"); not yet seen in a real response, and the regression run sends Facebook posts only.
+**With the regression run's go:** a check of 3 calls on the saved Yad2 pages, cap $0.01, the responses saved to
+`data/raw/`, nothing stored. *Ron's decision, 2026-10-24, round 44.*
+
 ---
 
 ## Corrections to recorded facts

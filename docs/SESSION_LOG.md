@@ -7924,3 +7924,48 @@ values as plain dicts; the autumn change's repeated hour read as summer time; `m
 contract proposed (§6.5).
 
 **Next:** Ron answers `PHASE_6.md` §6.14 (C1–C6) and §6.8's numbers; then build step 2 (Yad2's rules around the model).
+
+## 2026-10-24 (continued) — Round 44: §6.14 and §6.8 answered (#512–#519); Yad2's build step 2; version 7 written
+
+No paid call, no model call, no store write, nothing on the server, no Docker, no browser, no git write (Ron committed
+round 43 himself as `d21e719`; read-only git only). Network: OpenAI's API reference page (the Responses API's
+`input`), read only.
+
+**Recorded:** `DECISIONS.md` #512 (a Yad2 item's `media_id` is its URL, `page_url` the permalink), #513 (the seam
+`yad2/`), #514 (the paging and rhythm with Ron's two amendments: 10 bump checks, a pause between page loads), #515 (the
+rhythm's names), #516 (old listings bumped are new posts), #517 (`"form"` for the form's names), and, from Ron's two
+answers before any code, #518 (nothing for the model: `no_text`) and #519 (the block checked by 3 paid calls, cap
+$0.01, with the regression run's go). `PHASE_6.md`: status, build steps, the media row, §6.4 (the block built; the
+regression run's and the block check's plans), §6.8 approved with the pause (4 s plus a random 0–2 s), §6.14 answered
+and **C7 added**, §6.13b. `SCHEMA.md`: the media row, #518 in Gate E's Yad2 rules, the names approved. CLAUDE.md: the
+`yad2/` row no longer "proposed"; "Now/Next". `BASELINE.md` §4: #518 and the key within a source. `BACKLOG.md` item 15
+and the pending row.
+
+**Presented before code:** what step 2 needs that the docs did not state. Decided by me (they follow from #500, #508,
+#502): dedup A and the Gate D key never cross sources (a description copied into a Facebook group, or a shared phone,
+would otherwise join the two); an agency listing never deduplicated either way; a Yad2 `not_listing` by kind is a
+pre-model reason, re-checked only for that kind (a model's `not_listing` is a verdict); the merge in `classify/complete.py`;
+a model name equal to the form's merged, not counted as dropped; the block as a second `input_text` part, never an
+empty part. Asked Ron: an empty description with an empty block (answered: `no_text`, #518); how the block's shape is
+verified (answered: a small paid check, #519). Found and written as **C7, open**: a Yad2 bump keeps its `listing_id`,
+and the repost log is derived from duplicate records, so #492's "repost line" has no carrier.
+
+**Built:** the media (#512); `yad2.mapping.model_block`, `is_agency`; `premodel/rejects.py` (Yad2's rules,
+`rejected_before_model`); `dedup/stage_a.py` (within a source; agency excluded); `dedup/stage_b.py` (`pair_rules` within a
+source); `classify/complete.py` (the form merged, `field_sources`); `classify/openai_classifier.py` (the request's
+parts); `classify/instructions.txt` version 7 ("YAD2 LISTINGS", 1,272 characters), `PROMPT_VERSION` "7",
+`PROMPT_FINGERPRINT` `1dada328…`. Tests: `tests/test_yad2_rules.py` (40), `tests/test_yad2_mapping.py` (the media
+and the block on the saved pages, replacing round 43's "media are `[]`" test); `test_classify_instructions.py`'s pinned
+version "6" → "7".
+
+**Verified:** `uv run pytest`: **2,331 passed** (2,290 before). ruff check and format clean. OpenAI's API reference
+says a message's content is "a list of one or many input items" (`input_text` among them); nothing on empty text;
+not seen in a real response yet (#519: ASSUMED until the block check).
+
+**Decided by me:** the pause's values (4 s + 0–2 s); the block's English labels and line order; the furniture text
+kept with its own line breaks; the block check's 3 pages; the YAD2 LISTINGS section placed after the opening
+paragraph; `is_agency` on the `RawPost`; the C7 options and the recommendation (A).
+
+**Next:** Ron's go for the regression run (cap $0.10) and the block check (cap $0.01; its command first); Ron's answer
+on C7; then build step 4. **This round's code should not be deployed before the regression run is read**: version 7
+would classify the server's new Facebook posts.

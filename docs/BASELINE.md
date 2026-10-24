@@ -203,8 +203,9 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   street, property kind, "suitable for roommates" and furniture text (#498, #503); Yad2's own form fields
   win wherever they cover a field, and the source of each value is recorded (#495). Non-apartments are
   rejected by their property kind before the model, with no call (#491, #501, #502). A listing with no
-  description is classified from the form and the block, and one with no photo shows without one: neither
-  is rejected (#509, #510). No dedup across sources for now (#500), and none for agency listings (#508).
+  description is classified from the form and the block (with an empty block too it is `no_text`, #518),
+  and one with no photo shows without one (#509, #510). No dedup across sources for now, in dedup A or the
+  same-listing key (#500), and none for agency listings (#508).
   New instructions are checked by a regression run on the existing set; Yad2's classification is judged
   on the real cards (#511). A block raises the failure alert (#490).
 

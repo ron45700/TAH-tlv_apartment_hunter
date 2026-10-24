@@ -91,13 +91,37 @@ def test_a_tel_aviv_listing_s_city_is_the_one_the_city_rule_reads() -> None:
         assert mapping.to_raw_post(_data(name), fetched_at).native_location == "תל אביב יפו"
 
 
-def test_media_wait_for_ron_and_the_photos_stay_in_raw() -> None:
-    """§6.2's media row contradicts Gate A's `Media` types: not mapped until Ron decides."""
+def test_each_photo_is_a_media_item_keyed_by_its_url() -> None:
+    """#512: a photo's `media_id` is its own URL, `page_url` the listing's permalink; Yad2 gives no
+    width or height. The pages saved hold no video."""
     for d, fetched_at in _all():
-        assert mapping.to_raw_post(d, fetched_at).media == []
-        urls = mapping.photo_urls(d)
-        assert urls == d["metaData"]["images"] and urls
-        assert all(url.startswith("https://img.yad2.co.il/") for url in urls)
+        post = mapping.to_raw_post(d, fetched_at)
+        urls = d["metaData"]["images"]
+        assert urls and all(url.startswith("https://img.yad2.co.il/") for url in urls)
+        assert [item.uri for item in post.media] == urls == mapping.photo_urls(d)
+        for item in post.media:
+            assert (item.type, item.media_id, item.page_url) == ("Photo", item.uri, post.permalink)
+            assert (item.width, item.height) == (None, None)
+        assert len({item.media_id for item in post.media}) == len(urls)
+        assert "video" not in d["metaData"]
+
+
+def test_the_block_reads_the_form_s_values_verbatim() -> None:
+    """#498, #503: the kind, the neighbourhood, the street with its number, roommates when Yad2
+    says so, the furniture text; never the description."""
+    for d, _ in _all():
+        block = mapping.model_block(d)
+        assert block is not None
+        lines = block.split("\n")
+        assert lines[0] == "[Yad2 listing form — not the poster's text]"
+        assert f"property kind: {d['additionalDetails']['property']['text']}" in lines
+        assert f"neighbourhood: {d['address']['neighborhood']['text']}" in lines
+        assert any(line.startswith(f"street: {d['address']['street']['text']}") for line in lines)
+        roommates = bool(d["inProperty"].get("isForPartners"))
+        assert ("suitable for roommates: yes" in lines) == roommates
+        if "furnitureInfo" in d:  # verbatim, its own line breaks included
+            assert block.endswith(f"\nfurniture: {d['furnitureInfo']}")
+        assert d["metaData"]["description"] not in block
 
 
 def test_raw_is_the_page_data_whole_and_a_copy() -> None:

@@ -1,16 +1,22 @@
 """The model's answer completed into a `Listing` (`PHASE_2.md` 2.4, step 3). Pure: no call, no
 storage. The rules: DECISIONS.md #95, #105, #114, #115, #162 (for streets as amended by #486), #167,
 #178, #179, #180.
+
+A Yad2 listing (#495, #502, #517): Yad2's form wins wherever it gives a value (`yad2.mapping.
+form_fields`); the form's street and neighbourhood lead `streets` and `stated_area_names`, exempt
+from #162, the model's own names from the description after them (a model name equal to the form's
+is merged, not counted as dropped); `field_sources` names the source of every field.
 """
 
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from tlv_hunter.contracts.listing import (
     AREA_NUMBERS,
     LISTING_SCHEMA_VERSION,
+    SOURCED_FIELDS,
     Listing,
     Marked,
     PhoneName,
@@ -18,8 +24,10 @@ from tlv_hunter.contracts.listing import (
 from tlv_hunter.contracts.listing_extraction import EntryDateParts, ListingExtraction, PhoneNamePair
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.parsing.datetimes import nearest_occurrence
+from tlv_hunter.parsing.ids import YAD2_SOURCE
 from tlv_hunter.parsing.prices import native_price_fallback
 from tlv_hunter.textnorm.phones import canonical_phone
+from tlv_hunter.yad2.mapping import form_fields
 
 # The fields with the same name and type in the answer and in `Listing` (#137).
 _COPIED = (
@@ -72,25 +80,46 @@ def complete(extraction: ListingExtraction, post: RawPost, provenance: Provenanc
         raise ValueError("phones is None: textnorm must run before classification")
     if any(number not in AREA_NUMBERS for number in extraction.areas):
         raise AnswerError("areas are municipal numbers 1-71")
+    form = form_fields(post.raw) if post.source == YAD2_SOURCE else {}
+    form_streets = form.get("streets", [])
+    form_area_names = form.get("stated_area_names", [])
     price, price_source = price_with_fallback(extraction.price, post.native_price)
-    streets, dropped_streets = _streets_in_text(extraction.streets, post.text)
-    area_names, dropped_area_names = _in_text(extraction.stated_area_names, post.text)
+    streets, dropped_streets = _streets_in_text(
+        [name for name in extraction.streets if name.strip() not in form_streets], post.text
+    )
+    area_names, dropped_area_names = _in_text(
+        [name for name in extraction.stated_area_names if name.strip() not in form_area_names],
+        post.text,
+    )
     other_city, dropped_other_city = _other_city(extraction.other_city, post.text)
+    values: dict[str, Any] = {
+        **{field: getattr(extraction, field) for field in _COPIED},
+        "price": price,
+        "price_source": price_source,
+        "entry_date": entry_date_from_parts(extraction.entry_date_parts, post.posted_at.date()),
+        "streets": streets,
+        "stated_area_names": area_names,
+        "areas": sorted(set(extraction.areas)),
+        "other_city": other_city,
+        "phone_names": _phone_names(extraction.phone_name_pairs, post.phones),
+    }
+    field_sources: dict[str, str] = {}
+    if post.source == YAD2_SOURCE:
+        values.update(form)
+        values["streets"] = [*form_streets, *(name for name in streets if name not in form_streets)]
+        values["stated_area_names"] = [
+            *form_area_names,
+            *(name for name in area_names if name not in form_area_names),
+        ]
+        field_sources = {name: "form" if name in form else "model" for name in SOURCED_FIELDS}
     listing = Listing(
         schema_version=LISTING_SCHEMA_VERSION,
         listing_id=post.listing_id,
         model_name=provenance.model_name,
         prompt_version=provenance.prompt_version,
         classified_at=provenance.classified_at,
-        **{field: getattr(extraction, field) for field in _COPIED},
-        price=price,
-        price_source=price_source,
-        entry_date=entry_date_from_parts(extraction.entry_date_parts, post.posted_at.date()),
-        streets=streets,
-        stated_area_names=area_names,
-        areas=sorted(set(extraction.areas)),
-        other_city=other_city,
-        phone_names=_phone_names(extraction.phone_name_pairs, post.phones),
+        **values,
+        field_sources=field_sources,
     )
     return Completed(
         listing=listing,

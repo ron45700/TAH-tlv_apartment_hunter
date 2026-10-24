@@ -24,6 +24,7 @@ from tlv_hunter.contracts.field_correction import FieldCorrection
 from tlv_hunter.contracts.post_lifecycle import PostLifecycle
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.gate_d.candidates import MATCHABLE, WINDOW, Member, agent_numbers, matched_fields
+from tlv_hunter.parsing.ids import YAD2_SOURCE
 from tlv_hunter.postmodel.seen import SeenListing, seen_listing
 from tlv_hunter.store.base import Repository
 
@@ -200,7 +201,10 @@ def key_agent_numbers(members: Iterable[KeyPost]) -> frozenset[str]:
 def pair_rules(first: KeyPost, second: KeyPost, agents: frozenset[str]) -> tuple[Rule, ...]:
     """The rules of the key that tie two compared posts; `()` when nothing ties them. Different
     text hashes, `posted_at` at most 72 hours apart; rule 1, a shared phone that is not an agent
-    number and the fields rule; rule 2, a shared photo and one of those two. Nothing else ties."""
+    number and the fields rule; rule 2, a shared photo and one of those two. Nothing else ties.
+    A Facebook post and a Yad2 listing never tie (#500)."""
+    if (first.post.source == YAD2_SOURCE) != (second.post.source == YAD2_SOURCE):
+        return ()
     if first.post.text_hash == second.post.text_hash:
         return ()
     if abs(first.post.posted_at - second.post.posted_at) > WINDOW:

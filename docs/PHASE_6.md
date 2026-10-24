@@ -1,12 +1,12 @@
 # Phase 6 — Yad2
 
-**Status (2026-10-24, round 43): APPROVED by Ron (§6.12, all 25 points; `DECISIONS.md` #502–#511).** The schema is
-written into `SCHEMA.md` (Gates A, B, E, G for Yad2). **Build step 1 is built** (the contracts and the mapping, §6.13).
-**Open for Ron:** the contradictions and names met in round 43 (§6.14) and the numbers proposed from the measured
-volume (§6.8). Nothing after step 1 is built.
+**Status (2026-10-24, round 44): APPROVED by Ron** (§6.12, all 25 points, #502–#511; §6.14 and §6.8, #512–#519). The
+schema is in `SCHEMA.md` (Gates A, B, E, G for Yad2). **Build steps 1 and 2 are built, and instructions version 7 is
+written** (§6.13, §6.13b). **Waiting for Ron's go:** the regression run and the block check (§6.4, paid, not run).
+**Open for Ron:** the repost-log gap (§6.14 C7), before step 4.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §1, §4, §12 (the phase 6 row), §13 · **After:** Phase 5 (closed, #476) · **Evidence:**
-`docs/SPIKE_YAD2_2026-10-22.md` (spike 1, §1–§10; spike 2, §S2.1–§S2.6) · **Decisions:** #489–#511 · **Schema:**
+`docs/SPIKE_YAD2_2026-10-22.md` (spike 1, §1–§10; spike 2, §S2.1–§S2.6) · **Decisions:** #489–#519 · **Schema:**
 `SCHEMA.md` Gates A, B, E, G
 
 **Phase goal:** Yad2's Tel Aviv-Yafo rental listings reach the same site and the same alerts as the Facebook posts,
@@ -45,9 +45,9 @@ taken as they are, each card showing its source, and a block reported to the adm
 
 | Step | What | State |
 |---|---|---|
-| 1 | **The contracts and the mapping** (no Docker, no browser): `RawPost`'s third source and Yad2's `listing_id`; `Listing.field_sources`, version 2; `RunRecord.source` and `ScheduleSettings`' Yad2 rhythm, version 2, stored rows read with defaults; a listing page's `data` to `RawPost` and to the form's part of `Listing`; the 22 kinds; `updatedAt` → UTC; tests on the spikes' pages read in place | **Built, round 43** (§6.13). Media wait for §6.14 C1 |
-| 2 | **Yad2's rules around the model**: the pre-model `not_listing` by kind, no call (#502 point 11); no `no_text` and no `no_images` rejection for Yad2 (#509, #510); dedup A skipped for agency listings (#508); the merge of the form and the model's answer with `field_sources` (§6.3), the form's `streets` and `stated_area_names` exempt from #162 (#502 point 8); the city by `native_location` (#214). Tests with a fake classifier, no model call | Next |
-| 3 | **The block and instructions version 7** (#498, #503): the block as a second input item, the instructions' paragraph, `PROMPT_VERSION` "7" with its fingerprint; then **the regression run on the existing set** (paid, cap $0.10, on Ron's go, #511) | After 2 |
+| 1 | **The contracts and the mapping** (no Docker, no browser): `RawPost`'s third source and Yad2's `listing_id`; `Listing.field_sources`, version 2; `RunRecord.source` and `ScheduleSettings`' Yad2 rhythm, version 2, stored rows read with defaults; a listing page's `data` to `RawPost` and to the form's part of `Listing`; the 22 kinds; `updatedAt` → UTC; tests on the spikes' pages read in place | **Built, round 43**; the media (#512) in round 44 (§6.13) |
+| 2 | **Yad2's rules around the model**: the pre-model `not_listing` by kind, no call (#502 point 11); no `no_text` and no `no_images` rejection for Yad2 (#509, #510); dedup A skipped for agency listings (#508); the merge of the form and the model's answer with `field_sources` (§6.3), the form's `streets` and `stated_area_names` exempt from #162 (#502 point 8); the city by `native_location` (#214); dedup A and the Gate D key never across sources (#500); `no_text` when nothing is left for the model (#518). Tests with a fake classifier, no model call | **Built, round 44** (§6.13b) |
+| 3 | **The block and instructions version 7** (#498, #503): the block as a second input item, the instructions' paragraph, `PROMPT_VERSION` "7" with its fingerprint; then **the regression run on the existing set and the block check** (paid, on Ron's go, #511, #519; §6.4) | **Version 7 written, round 44**; the two paid runs wait for Ron's go (the block check needs a small command first) |
 | 4 | **The Yad2 seam** (#507, §6.5): the list pages in both shapes, paging (§6.8's numbers), the new tokens' pages, the bump checks (#504), block detection (§6.6), all tested on saved HTML; the browser wrapper (Playwright) the only part not run in tests; the run's store write at the end (#502 point 18); its `RunRecord` (`source` `"yad2"`) and the `GroupWatermark` `yad2-tel-aviv` | After 2; needs §6.8's numbers |
 | 5 | **The job, the scheduler, the image** (#506): the Yad2 run command; the scheduler reading Yad2's rhythm and running both sources one at a time; the second image, the scheduler moved to it, the GitHub Action building both; the profile's folder; the digest's Yad2 line and the schedule page's Yad2 fields | After 4 |
 | 6 | **The card and the alert**: the source badge, "open on Yad2", no WhatsApp, Yad2's neighbourhood and street; the photos (after §6.14 C1) | After 2 |
@@ -91,7 +91,7 @@ taken as they are, each card showing its source, and a block reported to the adm
 | `text` | `d.metaData.description` | `""` when absent |
 | `text_source` | `"text"`, or `"none"` when there is no description | |
 | `post_type` | `"yad2_listing"` | A constant; Facebook's values unchanged |
-| `media[]` | `d.metaData.images[]` → `{type: "Photo", uri, width: None, height: None, media_id: None, page_url: None}`; `d.metaData.video` → one `{type: "Video", uri, …}` | **Contradicts Gate A's types: §6.14 C1.** Not built: `media` is `[]` until Ron decides |
+| `media[]` | `d.metaData.images[]` → `{type: "Photo", uri, width: None, height: None, media_id: uri, page_url: permalink}`; `d.metaData.video` → one `{type: "Video", …}` the same way | #512 (§6.14 C1): no type change. Built |
 | `native_price` | `d.price` when > 0, else `None` | #501: 0 means no price; above 20,000 kept |
 | `native_price_raw` | `str(d.price)` when > 0, else `None` | |
 | `native_currency` | `"ILS"` when there is a price | Stated, not parsed from a symbol (#502 point 3) |
@@ -198,9 +198,25 @@ both (decided in round 43, §6.13).
   #498), and for `apartment_kind` and `furnished`; never copy it into `streets` or `stated_area_names` (code fills those
   from the form, §6.3).
 - **`PROMPT_VERSION` "6" → "7" and `PROMPT_FINGERPRINT` together** (#179): the instructions change for every post.
-- **The regression run on the existing set** (paid, cap $0.10, on Ron's go; round 15's run was 108 calls, $0.024),
-  compared with version 6 (#511). **No Yad2 labelled set:** Ron judges Yad2's classification on the real cards after
-  the bootstrap (#511).
+- **Built (round 44):** the block (`yad2.mapping.model_block`: the lines above, values verbatim, the furniture
+  text with its own line breaks); the request sends the description, when not blank, then the block as a second
+  `input_text` part; the block alone when there is no description (#509); a post with neither is refused (#518
+  rejects it before the model). Facebook's request is unchanged. Instructions version 7: a "YAD2 LISTINGS" section
+  after the opening paragraph (1,272 characters); `PROMPT_VERSION` "7", `PROMPT_FINGERPRINT` `1dada328…`.
+- **The regression run — the plan, for Ron's go (not run):** `docker compose run --rm jobs python -m
+  tlv_hunter.jobs.regression_run --check` (free), then `docker compose run --rm jobs python -m
+  tlv_hunter.jobs.regression_run` (two passes, **cap $0.10**). **The calculation:** version 5's run (round 15) was
+  108 calls, two passes over the set, for $0.024295: about $0.000223 a call (`PHASE_2.md`, "Round 15"). Version 7
+  adds 1,272 characters, about 400 tokens, to the instructions, cached after the first call: about 108 × 400 cached
+  tokens, under $0.001 more. **Expected about $0.025; the cap is four times that.** Compared with version 6 (#511).
+  Facebook posts never get the block: the run shows that the new section changes nothing for them. **No Yad2
+  labelled set** (#511).
+- **The block check (#519) — the plan, for Ron's go (not run):** 3 calls on the saved pages
+  `yad2_listing_private_1`, `yad2_listing_private_3` and `yad2_listing_agency_1`, **cap $0.01**. The calculation: a
+  call is about $0.000223 with the instructions cached; the first call writes them (about 4,000 tokens), so 3 calls
+  stay well under $0.002. The responses are saved to `data/raw/` with a dated name; nothing is stored. **It needs a
+  small command first**: `regression_run` reads only the labelled set; the command is built with step 3's remainder,
+  on Ron's word.
 
 ## 6.5 The collector (#490, #506, #507): the browser, its image, and the Yad2 seam
 
@@ -270,7 +286,15 @@ does. Headless is never used (it is blocked, spike 1's run 4).
   line; the group "יד2 · תל אביב-יפו" among the groups, its silence counted as any group's (#496). Step 5.
 - **The schedule page:** Yad2's interval and hours beside Facebook's. Step 5.
 
-## 6.8 The paging numbers and the rhythm — PROPOSED, for Ron (from §S2.3)
+## 6.8 The paging numbers and the rhythm — APPROVED (#514), with Ron's two amendments
+
+**Approved:** every 60 minutes; runs start between 07:00 and 23:00 Israel time; at least 3 and at most 10 list pages;
+only private listings decide whether a page holds a new token (the minimum of 3 covers the agency listings at the
+bottom of pages 2–3); a bump check only when the stored `last_published_at` is over 3 hours old, **at most 10
+bump-check pages a run** (Ron: not 30). **Added by Ron: a pause between page loads. Chosen (round 44): 4 seconds plus a
+random 0–2 seconds** before every page load after a run's first, list and listing pages alike; nothing beyond that
+(#490). With up to 10 list pages and about 40–60 listing pages, the pauses add about 4–6 minutes: a run of about
+15–20 minutes. The proposal as it stood before Ron's answer:
 
 **What was measured** (§S2.3, one Saturday's midday, the laptop's shape, 20 private listings a page): private listings
 are updated (new or bumped) at **37–48 an hour**; all 60 on pages 1–3 turned over in 98 minutes; the agency list is not
@@ -284,7 +308,7 @@ the measured rate, about 100 an hour**, for a weekday.
 | N3 | **The minimum of list pages** | **3** | 60 private listings: 75–95 minutes of updates at the measured rate, more than one interval, so a quiet hour still reaches the last run's listings; in the mixed shape 3 pages hold 36 agency listings, for the fixed pattern #492 names; the same 3 pages as the bootstrap (#493) |
 | N4 | **The cap of list pages** | **10** | The largest expected need: the 07:00 run after 8 night hours (at a third of the day's rate, about 15 an hour: about 120 updates, 6 pages); a failed run doubling the gap (2 × 48 ≈ 100, 5 pages); a weekday hour at 100 (5 pages). 10 pages (200 private) covers each with room; at the spike's 19–63 s a page, 3–10 minutes |
 | N5 | **"A page holds a new token" counts private listings only** | **Yes** (refines #492: §6.14 C3) | Measured: the agency list moves up and down regardless of date, and unseen agency tokens stand at the bottom of pages 2–3 (§S2.3). Counted on every token, the paging would run to the cap on most runs until the whole agency stock (about 1,300) is seen; counted on the private list (newest first), it stops when the private listings are known. Agency tokens on the pages read are still collected when new |
-| N6 | **The cap of bump-check pages** | **30 a run, private tokens first** | Once the stock is seen, nearly every private update on the pages read is a bump of a known token: 37–48 an hour, about 40 a run. With the new tokens' pages (falling as bumps rise) a run then opens about 40–60 listing pages; 30 bump checks keep it near that and leave the rest to later runs while they stay on the pages read. Private first because their position means a recent update; a known agency token's position does not (it would fill the cap every run) |
+| N6 | **The cap of bump-check pages** | **30 a run, private tokens first** (approved as **10**, #514) | Once the stock is seen, nearly every private update on the pages read is a bump of a known token: 37–48 an hour, about 40 a run. With the new tokens' pages (falling as bumps rise) a run then opens about 40–60 listing pages; 30 bump checks keep it near that and leave the rest to later runs while they stay on the pages read. Private first because their position means a recent update; a known agency token's position does not (it would fill the cap every run) |
 | N7 | **The bump threshold** (§6.5) | **`last_published_at` older than 3 hours** | Pages 1–3 hold 75–95 minutes of private updates at the measured rate: a known private token there whose stored time is over 3 hours old has been bumped, with a margin for slower hours. A false check costs one page and finds the same `updatedAt` (no repost) |
 
 **A run's time, estimated** (not measured unattended): 3–10 list pages at 20–60 s, plus 40–60 listing pages at about
@@ -390,7 +414,7 @@ schedule page.
 - **A stored version-1 `Listing` reads as version 2** (as the earlier gates read their records), so reclassify's
   triple (#217) does not select every stored Facebook `Listing` for the added field alone.
 
-## 6.14 Open for Ron (round 43): contradictions and names
+## 6.14 Contradictions and names: C1–C6 answered (round 44, #512–#517); C7 open
 
 | # | What | Options | Proposed |
 |---|---|---|---|
@@ -400,6 +424,23 @@ schedule page.
 | C4 | **`ScheduleSettings`' Yad2 field names** (#502 point 19 approved the fields, not their names) | `yad2_interval_minutes`, `yad2_hours_from`, `yad2_hours_until` (Israel time, `HH:MM`, from before until; runs start inside; all three `None` = no Yad2 runs), as built | As built |
 | C5 | **Old listings bumped look new in the first weeks** (§S2.3): a token never seen is new (#492), so a long-listed apartment bumped today becomes a card and can alert | Accept; or a later rule on `createdAt` (a filter change, not proposed) | Accept; watch the first week |
 | C6 | **`field_sources` for `streets` and `stated_area_names`** when the form gives one and the model adds more (#502 point 8) | `"form"` when the form gave a value; or `"model"` | `"form"` (the form's value leads the list) |
+| C7 | **A bump has no carrier for its repost line (open, for step 4).** #492: a bump "updates `last_published_at` and the repost log gets a line". The repost log is derived from the duplicate records pointing at the post (Gate E, "Repost log"; not stored); a Yad2 bump keeps its token, so its `listing_id` (#496): no record holds the second publication. `last_published_at` can move; the repost line has nowhere to come from | **A.** No repost line for a Yad2 bump: the card's time moves, nothing else (amends #492). **B.** A stored record of each bump (a new record or field: a Gate E change). **C.** Each bump stored as a duplicate `RawPost` with its own id (breaks #496's `listing_id`) | A, the simplest; B if Ron wants the history |
+
+**Answers (round 44):** C1 option A (#512); C2 as proposed (#513); C3 private only (#514); C4 as built (#515); C5
+accepted (#516); C6 `"form"` (#517). Also #518 (nothing for the model: `no_text`) and #519 (the block check).
+
+## 6.13b Build step 2 and version 7 (round 44): what is built
+
+- `yad2/mapping.py`: the media (#512); `model_block` (#503); `is_agency` (#508).
+- `premodel/rejects.py`: Yad2's pre-model rules (`not_listing` by kind; `no_text` only with nothing for the block,
+  #518; never `no_images`); `rejected_before_model`, so a model's `not_listing` is never re-checked back to pending.
+- `dedup/stage_a.py`: text hashes match only within one source; an agency listing is never grouped, as a new post
+  or as a stored match. `dedup/stage_b.py`: `pair_rules` never ties a Facebook post and a Yad2 listing (#500).
+- `classify/complete.py`: the form merged over the model's answer, `field_sources` for every field, the form's names
+  first and exempt from #162, a model name equal to the form's merged, not counted as dropped.
+  `classify/openai_classifier.py`: the request's parts (§6.4). `classify/instructions.txt`: version 7.
+- Tests: `tests/test_yad2_rules.py` (40, no fixture); `tests/test_yad2_mapping.py` (the media and the block on the
+  saved pages). Facebook's tests unchanged but for `test_classify_instructions.py`'s pinned version ("6" → "7").
 
 ## 6.15 Out of this plan
 

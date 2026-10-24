@@ -10,7 +10,8 @@ code, prompts, and other documents reference it, never restate it.
 `field_sources`, `Listing` version 2 (a stored version-1 `Listing` reads as 2 with `{}`), and the Yad2 mapping with the
 22 kinds; Gate E's three Yad2 rules (`not_listing` by kind before the model; no `no_text`, no `no_images` rejection);
 Gate G's `RunRecord.source` and `ScheduleSettings`' Yad2 rhythm, version 2 on each (stored version-1 rows read with
-defaults). **Two items wait for Ron** (`PHASE_6.md` §6.14): the media row (C1) and the rhythm's field names (C4).
+defaults). Round 44 (#512, #515, #518): the media row (a Yad2 item's `media_id` is its URL, `page_url` the
+permalink); the rhythm's names approved; a Yad2 listing with nothing for the model is `no_text`.
 Before that, 2026-10-18 (round 31) — **Gate F approved by Ron (`DECISIONS.md` #453):** `telegram_chat_id` and `telegram_linked_at` on `User` (schema version 2; a stored version-1 user reads as 2), `TelegramLinkCode` and `SentAlert`; the Phase 0 stub contracts removed. Before that, 2026-10-12 (round 8) — **a field moved, approved explicitly by Ron (`DECISIONS.md` #317):**
 `include_sublets` is now one switch on `Profile` (schema version 2), no longer one per `SearchOption`; a stored version-1
 profile reads as version 2. Before that, 2026-10-11 (round 6) — rule text only, approved by Ron: a correction of `other_city` in force
@@ -337,7 +338,7 @@ unchanged. `d` is the listing page's `data` (`__NEXT_DATA__` → the dehydrated 
 | `text` | `d.metaData.description`; `""` when absent |
 | `text_source` | `"text"`; `"none"` when there is no description |
 | `post_type` | `"yad2_listing"` |
-| `media[]` | `d.metaData.images[]` as `Photo` items, `d.metaData.video` as one `Video` item, `width` and `height` `None`. **The approved row gives `media_id` and `page_url` `None`, which `Media`'s types (`str`) do not allow: waits for Ron (`PHASE_6.md` §6.14 C1); built as `[]` until then** |
+| `media[]` | `d.metaData.images[]` as `Photo` items, then `d.metaData.video` as one `Video` item; `uri` and **`media_id` the item's own URL**, **`page_url` the listing's permalink**, `width` and `height` `None` (#512; no type change) |
 | `native_price`, `native_price_raw` | `d.price` and its text when above 0, else `None` (0 means no price; above 20,000 kept, #501) |
 | `native_currency` | `"ILS"` when there is a price: **stated, not parsed from a symbol** (#502 point 3) |
 | `native_title` | `None` |
@@ -435,7 +436,8 @@ Exactly one of `local_path` and `error` is set.
 - **Yad2's rejections** (2026-10-24; no field changed): a listing whose property kind maps to `not_listing`
   (`PHASE_6.md` §6.3.1; Gate B, "Yad2") is stored and **rejected `not_listing` before the model**, with no call
   (#502 point 11). **A Yad2 listing with no description is not rejected `no_text`**: the form fills its fields and the
-  model receives Yad2's labelled block only (#509). **A Yad2 listing with no photo is not rejected `no_images`**: it
+  model receives Yad2's labelled block only (#509); **unless the block has no line either** (no property kind,
+  neighbourhood, street, "suitable for roommates" or furniture text): then it is rejected `no_text` (#518). **A Yad2 listing with no photo is not rejected `no_images`**: it
   shows without a photo (#510). Facebook's rules are unchanged.
 - **Images (download):** photos are downloaded for every canonical post that has photos, whatever
   its state, a `no_text` post included (`DECISIONS.md` #76). Photos only, no video or reels (a
@@ -1241,5 +1243,5 @@ scheduler (the first row, from its `.env`). Read by the scheduler at every pass 
 | `yad2_hours_from` | `str` `HH:MM` / `None` | Israel local time: Yad2's runs start from it, daytime only (#490) |
 | `yad2_hours_until` | `str` `HH:MM` / `None` | Israel local time: Yad2's runs start before it; later than `yad2_hours_from` (no wrap past midnight) |
 
-The three Yad2 fields are set together or all `None`; all `None` (a version-1 row) means no Yad2 runs. **Their names
-are proposed and built; Ron's word on them is pending** (`PHASE_6.md` §6.14 C4).
+The three Yad2 fields are set together or all `None`; all `None` (a version-1 row) means no Yad2 runs. Names approved
+by Ron (#515).

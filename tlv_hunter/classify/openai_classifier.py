@@ -24,6 +24,9 @@ from tlv_hunter.contracts.listing import Listing
 from tlv_hunter.contracts.listing_extraction import ListingExtraction
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.parsing.datetimes import require_utc
+from tlv_hunter.parsing.ids import YAD2_SOURCE
+from tlv_hunter.textnorm.blank import is_blank
+from tlv_hunter.yad2.mapping import model_block
 
 
 class OpenAIClassifier:
@@ -47,8 +50,18 @@ class OpenAIClassifier:
 
     def request(self, post: RawPost) -> dict[str, Any]:
         """The instructions end at the cache breakpoint; the post follows, verbatim and alone
-        (invariant 8, DECISIONS.md #147, #150, #157)."""
+        (invariant 8, DECISIONS.md #147, #150, #157). A Yad2 listing's labelled block follows the
+        text as a second part, never inside it (#498, #503); with no description, the block
+        alone: an empty text is never sent (#509, #519)."""
         prompt = self._prompt
+        user_content = [{"type": "input_text", "text": post.text}]
+        if post.source == YAD2_SOURCE:
+            block = model_block(post.raw)
+            user_content = [part for part in user_content if not is_blank(part["text"])]
+            if block is not None:
+                user_content.append({"type": "input_text", "text": block})
+            if not user_content:
+                raise ValueError(f"{post.listing_id}: nothing to send (#518 rejects it no_text)")
         request = {
             "model": prompt.model,
             "input": [
@@ -62,7 +75,7 @@ class OpenAIClassifier:
                         }
                     ],
                 },
-                {"role": "user", "content": [{"type": "input_text", "text": post.text}]},
+                {"role": "user", "content": user_content},
             ],
             "text": {"format": prompt.text_format},
             "store": False,

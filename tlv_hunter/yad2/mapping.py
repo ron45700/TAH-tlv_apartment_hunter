@@ -7,17 +7,18 @@ time with no zone: converted by the one datetime module (invariant 9). The descr
 verbatim (invariants 8, 14). The phone is never read: the page holds none, and Yad2's phone
 response is never fetched (#497).
 
-**Media are not mapped yet** (`PHASE_6.md` §6.2, the contradiction for Ron): Gate A's `Media` has
-`media_id` and `page_url` as `str`, the photo download keys on `media_id`, and the approved table
-gives Yad2 `None` for both. Until Ron decides, `media` is `[]`; the photos stay in `raw`
-(`photo_urls` reads them).
+Media (#512): each photo and the video keep their own URL as `media_id` (unique, unsigned) and the
+listing's permalink as `page_url`; Yad2 gives no width or height.
+
+The labelled block (#498, #503) is built here too: the form's values the model reads beside the
+description, verbatim, never inside it (invariants 8, 14).
 """
 
 import copy
 from datetime import datetime
 from typing import Any
 
-from tlv_hunter.contracts.raw_post import RAW_POST_SCHEMA_VERSION, RawPost
+from tlv_hunter.contracts.raw_post import RAW_POST_SCHEMA_VERSION, Media, RawPost
 from tlv_hunter.parsing.datetimes import parse_israel_local_utc, parse_local_date
 from tlv_hunter.parsing.ids import YAD2_SOURCE, compute_listing_id
 from tlv_hunter.textnorm.blank import is_blank
@@ -29,10 +30,13 @@ POST_TYPE = "yad2_listing"
 CURRENCY = "ILS"
 PERMALINK = "https://www.yad2.co.il/realestate/item/tel-aviv-area/{token}"
 _BROKER_BY_AD_TYPE = {"commercial": True, "private": False}
+AGENCY_AD_TYPE = "commercial"
+BLOCK_TITLE = "[Yad2 listing form — not the poster's text]"
 
 
 def to_raw_post(d: dict[str, Any], fetched_at: datetime) -> RawPost:
     token = d["token"]
+    permalink = PERMALINK.format(token=token)
     description = _get(d, "metaData", "description")
     text = description if isinstance(description, str) else ""
     price = d.get("price")
@@ -45,14 +49,14 @@ def to_raw_post(d: dict[str, Any], fetched_at: datetime) -> RawPost:
         listing_id=compute_listing_id(token, source=YAD2_SOURCE),
         group_id=GROUP_ID,
         group_title=GROUP_TITLE,
-        permalink=PERMALINK.format(token=token),
+        permalink=permalink,
         posted_at=parse_israel_local_utc(d["dates"]["updatedAt"]),
         fetched_at=fetched_at,
         raw=copy.deepcopy(d),
         text=text,
         text_source="none" if is_blank(text) else "text",
         post_type=POST_TYPE,
-        media=[],
+        media=_media(d, permalink),
         native_price=native_price,
         native_price_raw=None if native_price is None else str(native_price),
         native_currency=None if native_price is None else CURRENCY,
@@ -66,6 +70,42 @@ def to_raw_post(d: dict[str, Any], fetched_at: datetime) -> RawPost:
         comments_count=None,
         shares_count=None,
     )
+
+
+def _media(d: dict[str, Any], permalink: str) -> list[Media]:
+    items = [("Photo", url) for url in photo_urls(d)]
+    video = _get(d, "metaData", "video")
+    if isinstance(video, str) and not is_blank(video):
+        items.append(("Video", video))
+    return [
+        Media(type=kind, uri=url, width=None, height=None, media_id=url, page_url=permalink)
+        for kind, url in items
+    ]
+
+
+def is_agency(post: RawPost) -> bool:
+    """A Yad2 agency listing (`adType` `commercial`): never deduplicated by the text hash (#508)."""
+    return post.source == YAD2_SOURCE and post.raw.get("adType") == AGENCY_AD_TYPE
+
+
+def model_block(d: dict[str, Any]) -> str | None:
+    """The labelled block beside the description (#498, #503): the property kind, the
+    neighbourhood, the street with its house number, "suitable for roommates" when Yad2 says so,
+    the furniture text. Values as Yad2 gives them; a missing value's line is left out; `None`
+    when no line is left (#518: with no description either, the listing is rejected `no_text`)."""
+    street = _text(_get(d, "address", "street", "text"))
+    number = _get(d, "address", "house", "number")
+    if street is not None and _positive_int(number):
+        street = f"{street} {number}"
+    lines = [
+        ("property kind", _text(_get(d, "additionalDetails", "property", "text"))),
+        ("neighbourhood", _text(_get(d, "address", "neighborhood", "text"))),
+        ("street", street),
+        ("suitable for roommates", "yes" if _flag(d, "isForPartners") is True else None),
+        ("furniture", _text(d.get("furnitureInfo"))),
+    ]
+    kept = [f"{label}: {value}" for label, value in lines if value is not None]
+    return "\n".join([BLOCK_TITLE, *kept]) if kept else None
 
 
 def photo_urls(d: dict[str, Any]) -> list[str]:
