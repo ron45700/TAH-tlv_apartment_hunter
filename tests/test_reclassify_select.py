@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from tests.conftest import make_listing, overwrite_classification
 from tests.test_classification_run import lifecycle
-from tlv_hunter.contracts.listing import Listing
+from tlv_hunter.contracts.listing import LISTING_SCHEMA_VERSION, Listing
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.postmodel.reclassify import (
     Candidate,
@@ -27,7 +27,7 @@ from tlv_hunter.postmodel.reclassify import (
 )
 from tlv_hunter.store.base import Repository
 
-CURRENT = ("3", 1, "gpt-6-luna")
+CURRENT = ("3", LISTING_SCHEMA_VERSION, "gpt-6-luna")
 WRITTEN_PRICE = {"state": "written", "value": [4500]}
 
 
@@ -79,7 +79,7 @@ def shapes(make_repository: Callable[[], Repository], posts: list[RawPost]):
         "old_version_rejected": listing_for(
             named["old_version_rejected"], prompt_version="2", post_nature="seeking"
         ),
-        "old_schema": listing_for(named["old_schema"], schema_version=2),
+        "old_schema": listing_for(named["old_schema"], schema_version=LISTING_SCHEMA_VERSION + 1),
         "old_model": listing_for(named["old_model"], model_name="gpt-other", other_city="חולון"),
         "current": listing_for(named["current"]),
         "archived": listing_for(named["archived"], prompt_version="2"),
@@ -117,10 +117,10 @@ def test_each_of_the_three_attributes_selects_and_the_rest_is_left_out(shapes) -
     assert plan.current == CURRENT
     assert [c.listing_id for c in plan.selected] == sorted(c.listing_id for c in plan.selected)
     assert plan.stored == {
-        ("2", 1, "gpt-6-luna"): 5,
-        ("3", 2, "gpt-6-luna"): 1,
-        ("3", 1, "gpt-other"): 1,
-        ("3", 1, "gpt-6-luna"): 1,
+        ("2", LISTING_SCHEMA_VERSION, "gpt-6-luna"): 5,
+        ("3", LISTING_SCHEMA_VERSION + 1, "gpt-6-luna"): 1,
+        ("3", LISTING_SCHEMA_VERSION, "gpt-other"): 1,
+        ("3", LISTING_SCHEMA_VERSION, "gpt-6-luna"): 1,
     }
     assert plan.left_out == {
         "current": 1,
@@ -139,7 +139,10 @@ def test_the_flag_and_the_status_are_read_from_the_record(shapes) -> None:
         if post.listing_id == c.listing_id
     }
     assert by_name["old_version"] == Candidate(
-        named["old_version"].listing_id, ("2", 1, "gpt-6-luna"), ("active", None), False
+        named["old_version"].listing_id,
+        ("2", LISTING_SCHEMA_VERSION, "gpt-6-luna"),
+        ("active", None),
+        False,
     )
     assert by_name["old_version_rejected"].status == ("rejected", "seeking")
     assert by_name["flagged"].flagged and by_name["flagged"].status == ("rejected", "flagged")

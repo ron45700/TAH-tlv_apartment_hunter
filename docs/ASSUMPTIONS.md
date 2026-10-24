@@ -185,8 +185,7 @@ Gemini, now a researched alternative.
 | T9 | `sendPhoto` by a multipart upload with an HTML caption and an inline keyboard; `sendMessage`; `editMessageReplyMarkup`; `answerCallbackQuery`; `setChatMenuButton` with a `MenuButtonWebApp`; `setMyCommands`; a deep link's `/start <parameter>` | ✅ VERIFIED — documented (Bot API 10.3 and bots/features, read 2026-10-18) **and seen working at the real-bot test with Ron, 2026-10-18** (round 32, #457): the deep link's `/start <code>`, `sendMessage`, `sendPhoto` with its caption and keyboard, the keyboard edits and callback answers of the report flow, `setChatMenuButton`. No raw answer was captured (the bot logs none; the envelope is T6's) |
 | T10 | A user who blocked the bot is refused with 403 | ⚠️ ASSUMED — not stated on the pages read. The bot treats any refused send alike: no sent-alert record, tried again at the next pass, logged by the user's id |
 | T11 | Python finds `Asia/Jerusalem` on Windows and in the image | ✅ VERIFIED on Windows with the `tzdata` package (2026.5, IANA 2026e; Windows has no zone database, and the plain `zoneinfo` failed); the image installs the same locked package (checked in the built image, round 31) |
-| T12 | An `InlineKeyboardButton` with `web_app` opens the Mini App from an alert (#481) | ⚠️ ASSUMED — **documented** (Bot API 10.3 of 2026-08-24, read 2026-10-21: `web_app` "Available only in private chats between a user and the bot. Not supported for messages sent on behalf of a business account"); alerts go to private chats only, and the `MenuButtonWebApp` to the same address is VERIFIED (T5). Not yet seen on a phone: Ron's `send_test_alert` on the server settles it |
-| T13 | HTML parse mode takes `<blockquote>` (the alert's quoted text, #481) | ⚠️ ASSUMED — **documented** (Bot API 10.3, "HTML style", read 2026-10-21: `<blockquote>` and `<blockquote expandable>` listed; blockquote entities cannot be nested). Not yet seen in a real message: Ron's `send_test_alert` settles it |
+| T12 | An `InlineKeyboardButton` with `web_app` opens the Mini App from an alert (#481) | ✅ VERIFIED by Ron on his phone (recorded 2026-10-24): the alert's "פתיחה באתר" button opened the site inside Telegram on the post's page. Documented in Bot API 10.3 (read 2026-10-21: `web_app` "Available only in private chats between a user and the bot"); alerts go to private chats only |
 
 ---
 
@@ -252,4 +251,5 @@ Gemini, now a researched alternative.
 | Claim | Outcome |
 |---|---|
 | Near-duplicate matching may be required if hashes do not collide | Closed 2026-09-14. Did not occur — see D1–D3. No scope change. |
+| T13: HTML parse mode takes `<blockquote>` (the alert's quoted text, #481) | Closed 2026-10-24 by Ron as no longer needed: round 39 (#487) removed the `<blockquote>`, and nothing sends one. It was documented (Bot API 10.3, "HTML style") and never seen in a real message. |
 | Phone number is the real primary key of a listing | Closed 2026-09-14. **False.** Present in only 50% of posts; absent from both sides of one duplicate pair. Demoted to a one-directional signal. |

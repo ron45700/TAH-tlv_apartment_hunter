@@ -48,6 +48,7 @@ def test_listing_fields_are_exactly_approved() -> None:
         "areas",
         "other_city",
         "phone_names",
+        "field_sources",
     ]
 
 

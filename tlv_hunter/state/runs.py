@@ -83,7 +83,7 @@ class SqliteRunStore:
             row = conn.execute(
                 "SELECT doc FROM run_records WHERE run_id = ?", (record.run_id,)
             ).fetchone()
-            if row is None or RunRecord.model_validate_json(row[0]) != expected:
+            if row is None or RunRecord.from_stored_json(row[0]) != expected:
                 raise StaleRecordError(record.run_id)
             conn.execute(
                 "UPDATE run_records SET doc = ? WHERE run_id = ?",
@@ -94,7 +94,7 @@ class SqliteRunStore:
     def get_run(self, run_id: str) -> RunRecord | None:
         with self._connect() as conn:
             row = conn.execute("SELECT doc FROM run_records WHERE run_id = ?", (run_id,)).fetchone()
-        return None if row is None else RunRecord.model_validate_json(row[0])
+        return None if row is None else RunRecord.from_stored_json(row[0])
 
     def recent_runs(self, limit: int | None = None) -> list[RunRecord]:
         """The newest first; all of them when `limit` is `None`."""
@@ -105,7 +105,7 @@ class SqliteRunStore:
             params = (limit,)
         with self._connect() as conn:
             rows = conn.execute(sql, params).fetchall()
-        return [RunRecord.model_validate_json(doc) for (doc,) in rows]
+        return [RunRecord.from_stored_json(doc) for (doc,) in rows]
 
     # --- the schedule ---
 
@@ -114,7 +114,7 @@ class SqliteRunStore:
             row = conn.execute(
                 "SELECT doc FROM schedule_settings WHERE id = ?", (SETTINGS_ID,)
             ).fetchone()
-        return None if row is None else ScheduleSettings.model_validate_json(row[0])
+        return None if row is None else ScheduleSettings.from_stored_json(row[0])
 
     def save_settings(
         self, record: ScheduleSettings, *, expected: ScheduleSettings | None
@@ -124,7 +124,7 @@ class SqliteRunStore:
             row = conn.execute(
                 "SELECT doc FROM schedule_settings WHERE id = ?", (SETTINGS_ID,)
             ).fetchone()
-            stored = None if row is None else ScheduleSettings.model_validate_json(row[0])
+            stored = None if row is None else ScheduleSettings.from_stored_json(row[0])
             if stored != expected:
                 raise StaleRecordError(SETTINGS_ID)
             conn.execute(
@@ -143,7 +143,7 @@ class SqliteRunStore:
             ).fetchone()
             if row is None:
                 return False
-            stored = ScheduleSettings.model_validate_json(row[0])
+            stored = ScheduleSettings.from_stored_json(row[0])
             updated = ScheduleSettings.model_validate({**stored.model_dump(), "last_digest_at": at})
             conn.execute(
                 "UPDATE schedule_settings SET doc = ? WHERE id = ?",

@@ -34,8 +34,8 @@ Triple = tuple[str, int, str]
 Status = tuple[str, str | None]
 """A post's (state, rejection_reason)."""
 
-# What always differs between two classifications of one post, and `price_source`, which follows the
-# price: neither is a field that "changed".
+# What always differs between two classifications of one post, and `price_source` and
+# `field_sources`, which follow the fields: none is a field that "changed".
 _NOT_COMPARED = frozenset(
     {
         "schema_version",
@@ -44,6 +44,7 @@ _NOT_COMPARED = frozenset(
         "prompt_version",
         "classified_at",
         "price_source",
+        "field_sources",
     }
 )
 COMPARED_FIELDS = tuple(name for name in Listing.model_fields if name not in _NOT_COMPARED)

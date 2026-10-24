@@ -518,7 +518,7 @@ a mark on the card and hides nothing.
 last publication, repost log, image paths). Gate C now also covers the user, key and profile
 records.
 
-### 60 — Yad2 stays future, and will likely need its own scraper
+### 60 — Yad2 stays future, and will likely need its own scraper *("stays future" amended by #489)*
 Not through an Apify provider. The design stays open to it.
 
 ---
@@ -4293,6 +4293,161 @@ nothing on blockquote rendering by platform; the only direction setting is `is_r
 *Ron's decision, 2026-10-21.* **Decided in the build:** the headings "ריצות שנכשלו" and "בעיות פתוחות" take the same
 dashes (the latter after its "⚠️"); the digest's title "📊 סיכום יומי" and its time line stay as they were; the colour
 lines open with their circle, not a bullet, as Ron wrote them; the silent-group lines keep their "⚠️".
+
+## Yad2 opened (2026-10-22, round 40)
+
+### 489 — Yad2 is the next piece of work, starting with a read-only spike (amends #60)
+Yad2 is opened as the next piece of work. It starts with a **read-only spike before any plan**: Ron's own browser script
+(`scraper.py`, the map requests' JSON), extended to save every Yad2 response, run by Ron in four runs (the control URL
+headed, the unfiltered path headed, two or three listing pages headed, the control URL headless), into
+`data/spike_yad2/` (gitignored); its report is `docs/SPIKE_YAD2_2026-10-22.md`. The spike decides nothing about
+integration: every field, schema, Gate A, area-mapping and filter question it raises goes to Ron. **#60's "stays
+future" is amended; its "likely its own scraper" stands** (not through an Apify provider). `BASELINE.md` (§1, §12's
+phase 6, §13) is not amended until a plan exists. *Ron's decision, 2026-10-22.*
+
+### 490 — Yad2 goes ahead: unattended on homeserver, headed on a virtual display
+After the spike (`docs/SPIKE_YAD2_2026-10-22.md`): **Yad2 goes ahead.** It runs on `homeserver`, unattended, in a
+**headed browser on a virtual display**, at a **lower rhythm than the Facebook runs** (for example hourly or every two
+hours, daytime only). **A block raises the existing failure alert.** Ron has read Yad2's terms of use and accepts them
+(the spike's §9 question 13). **No evasion beyond what the spike script already does**: its launch flag and persistent
+profile, no stealth plugin, no CAPTCHA solving. `BASELINE.md` stays as it is until a plan exists. This answers the
+spike's §9 questions 8 and 13; the others (Gate A, the watermark, coverage, invariant 13 and Yad2's visitor cookies,
+the model, the areas, dedup, filters) stay open. Next: a second read-only spike (`SPIKE_YAD2_2026-10-22.md`, "Spike 2").
+*Ron's decision, 2026-10-24.*
+
+## Yad2: the decisions on spikes 1 and 2 (2026-10-24, round 42)
+
+Building on #489 and #490; the evidence is `docs/SPIKE_YAD2_2026-10-22.md` (§9, §S2.6). The plan is `docs/PHASE_6.md`
+(a draft for Ron's approval): every name, table and number these decisions leave open is a proposal there.
+
+### 491 — Yad2's coverage: Tel Aviv-Yafo only, every listing kind
+Tel Aviv-Yafo only, by the page's own city link (`?area=1&city=5000`); private and agency listings; every property kind
+is collected, and the non-apartments are rejected after collection (#501). *Approved by Ron, 2026-10-24.*
+
+### 492 — Yad2's posting time, what is new, paging, bumps, and invariant 2
+- **`posted_at` is the listing page's `updatedAt`.** It is written in Israel local time with no zone, so code converts
+  it to UTC (invariant 9). `rebouncedAt` is not used: on private listings it is `updatedAt` + 3 h, after the fetch, a
+  suspected zone error (spike §S2.4).
+- **A listing is new when its token has not been seen before.** Its listing page is opened for new tokens only.
+- **Each run pages the list from page 1 while new tokens appear, with a minimum number of pages per run and a cap.** The
+  minimum is needed because the mixed shape places agency listings in a fixed pattern, not by date (§S2.2). The numbers
+  come after the volume measurement (§S2.3).
+- **A bump (a known token back at the top) is a repost:** `last_published_at` updates and the repost log gets a line,
+  with no new card and no alert. How a bump is detected is the plan's.
+- **Invariant 2 for Yad2: a failed run marks no token as seen.**
+*Approved by Ron, 2026-10-24.*
+
+### 493 — Yad2's bootstrap: the first 3 list pages, no alerts
+The first run takes the first 3 list pages (about 120 listings) and alerts nothing, as Facebook's bootstrap. *Approved
+by Ron, 2026-10-24.*
+
+### 494 — Yad2's `raw` is the listing page's `data`; the phone response is never stored
+`RawPost.raw` for a Yad2 post is the listing page's `data` object (from `__NEXT_DATA__`), stored whole (invariant 4). The
+phone response (`realestate-item/customer/<token>`) is never stored. *Approved by Ron, 2026-10-24.*
+
+### 495 — The model for Yad2: combined with Yad2's form
+The model reads the description verbatim. **Yad2's form fields win wherever they cover a field.** The model decides
+`apartment_kind`, `post_nature` and `gender`, plus any field the form left empty. **The source of each value is
+recorded** (as `price_source` is today). This is a Gate B change: the names and the field-by-field mapping are
+proposals for Ron (`PHASE_6.md`). *Approved by Ron, 2026-10-24.*
+
+### 496 — Gate A for Yad2 (Facebook unchanged)
+`source` gets a third value, `"yad2"`. `group_id` is one fixed value for Yad2, `"yad2-tel-aviv"`: it has its
+`GroupWatermark` record, and silent-group detection applies to it. `listing_id = sha256("yad2:" + token)` (Facebook's
+stays `sha256(source_post_id)`). Every other `RawPost` field's mapping for Yad2 is proposed in one table
+(`PHASE_6.md`). *Approved by Ron, 2026-10-24.*
+
+### 497 — No phone is ever fetched from Yad2
+No automated "show number". The card links to the Yad2 listing, with no WhatsApp button for Yad2. To be revisited only
+after weeks of runs without a block. *Approved by Ron, 2026-10-24.*
+
+### 498 — Yad2's area: shown as given, decided by the model for filtering (widens #167's input)
+The card shows Yad2's neighbourhood and street as given (stored as written, as `streets` and `stated_area_names` are).
+For filtering, the model decides the municipal numbers from the 71: it reads the description verbatim, plus **a
+separate, labelled block with Yad2's neighbourhood and street, sent beside the text, never inside it** (invariants 8
+and 14 hold). This widens #167's input for Yad2 posts. A Yad2 neighbourhood that joins several of the 71 gives several
+areas, shown orange (#110). *Approved by Ron, 2026-10-24.*
+
+### 499 — Invariant 13 reworded: Yad2's own visitor cookies are allowed
+Invariant 13 now reads: **"No account, no login, and never a cookie or credential of any user (the admin included),
+with any source. The anonymous-visitor cookies Yad2 sets itself, in Yad2's browser profile, are allowed."** The profile
+lives on the server in its own folder, outside git and outside the image. CLAUDE.md amended. *Approved by Ron,
+2026-10-24.*
+
+### 500 — No cross-source dedup for now; each card shows its source
+No dedup between Facebook and Yad2 for now. Each card shows its source (Facebook or Yad2). To be revisited after a few
+weeks of data; perceptual photo comparison stays under "Future". Inside Yad2: the token is stable, and dedup A (the
+text hash) still applies. *Approved by Ron, 2026-10-24.*
+
+### 501 — Yad2's form values for the filters (values only, no filter rule changes)
+`adType` `commercial` means broker yes, `private` broker no. A price of 0 means no price. A price above 20,000 is kept.
+Parking, storage and apartment swap are `not_listing`. Yad2's sublet kind is `sublet_offer`. A housing unit (יחידת
+דיור) is `whole_apartment`. The full mapping of the 22 property kinds is proposed in a table (`PHASE_6.md`). *Approved by
+Ron, 2026-10-24.*
+
+## Yad2: `PHASE_6.md`'s 25 points answered (2026-10-24, round 43)
+
+Ron's answers to `PHASE_6.md` §6.12, all 25. The plan's tables and wording are in `PHASE_6.md`; the approved schema
+is written into `SCHEMA.md` (Gates A, B, E and G for Yad2).
+
+### 502 — The points approved as proposed
+**1** the Gate A table (§6.2); **2** `RawPost.schema_version` stays 1; **3** `native_currency` `"ILS"` stated for Yad2,
+not parsed from a symbol; **4** `author_name` is the poster's name from the listing page; **5** the provenance field
+`field_sources` (field → `"form"` / `"model"`), `Listing` version 2; **6** Yad2's floor 0 is the ground floor and a
+basement −1, `squareMeter` (not `squareMeterBuild`) is `size_sqm`, checked on the bootstrap's posts; **7** the model
+chooses `furnished` when `includeFurniture` is true (`false` writes `"no"`); **8** `streets` and `stated_area_names`
+from the form, exempt from #162's "not in the text" drop, the model's own names from the description added after them;
+**10** the proposed kinds of §6.3.1 are `not_listing` (the purchase right too); **11** a kind mapped to `not_listing`
+is rejected before the model, with no call; **16** the promoted lists (`platinum`, `kingOfTheHar`, `trio`, `booster`,
+`leadingBroker`, `lookalike`) are ignored; **18** a Yad2 run stores its new posts at the end, in one transaction, only
+on success; **19** Gate G: `RunRecord.source`, and Yad2's interval and hours in `ScheduleSettings`, schema version 2 on
+each; **20** a listing removed from Yad2: nothing beyond retention; **22** the DoD as drafted; **25** the form's property
+kind wins for `post_nature` / `apartment_kind` where §6.3.1 maps it, the model decides otherwise. *Approved by Ron,
+2026-10-24.*
+
+### 503 — The model's block also carries the kind, `isForPartners` and `furnitureInfo` (amends #498)
+Point 12 as proposed: the labelled block beside the description carries Yad2's neighbourhood and street (#498) **and**
+the property kind, `isForPartners` and `furnitureInfo`, labelled the same way (for `apartment_kind` and `furnished`).
+This widens #498's block, as #498 widened #167's input; it is still beside the text, never inside it (invariants 8,
+14). *Approved by Ron, 2026-10-24.*
+
+### 504 — A bump is read from the listing page, with a cap; every known token on the pages read is checked
+Point 17: a bump is detected by opening the listing page of a known token and reading its `updatedAt`, at most a cap
+of such pages per run. **Amended by Ron:** a known token is checked wherever it stands on the pages read, not only
+above the run's last new token; otherwise a run with no new token would detect no bump. The cap is proposed after the
+volume measurement (`PHASE_6.md` §6.8). *Approved by Ron, 2026-10-24.*
+
+### 505 — The spikes' three phone responses are deleted
+Point 21: the three `realestate-item/customer/…` responses (spike 1's run 3b, two; spike 2's items run, one) are
+deleted from `data/spike_yad2/`, only those files. Done in round 43 (`SESSION_LOG.md`). *Approved by Ron, 2026-10-24.*
+
+### 506 — The browser runs in a second image; the scheduler moves to it
+Point 14, option A: a second image with the browser (the Playwright image of `PHASE_6.md` §6.5 plus the package). The
+`scheduler` service moves to it and runs Facebook's and Yad2's jobs one at a time (#140, no lock); every other service
+keeps the slim image. The GitHub Action builds both images. *Approved by Ron, 2026-10-24.*
+
+### 507 — Yad2 is its own seam
+Point 15, option C: Yad2 is collected by its own seam, not through `providers/`, whose contract
+(`fetch(group_ids, since)`) is unchanged. Its name and contract are proposed in `PHASE_6.md` §6.5 and listed in
+CLAUDE.md's seam table. *Approved by Ron, 2026-10-24.*
+
+### 508 — Dedup A does not apply to Yad2's agency listings (amends #500)
+Point 9, option B: an agency listing (`adType` `commercial`) is not deduplicated by the text hash (agencies reuse short
+boilerplate); a private Yad2 listing keeps dedup A as today. This narrows #500's "dedup A still applies". *Approved by
+Ron, 2026-10-24.*
+
+### 509 — A Yad2 listing with no description is classified from the form and the block
+Point 23, option B: a Yad2 listing with no description is **not** rejected `no_text`. The form fills its fields and the
+model receives the labelled block only: the empty text is not invented or replaced. An exception to the pre-model
+`no_text` rule, for Yad2 only; Facebook's rule is unchanged. *Approved by Ron, 2026-10-24.*
+
+### 510 — A Yad2 listing with no photo is not rejected
+Point 24, option B: a Yad2 listing with no photo is not rejected `no_images`; it shows as usual, without a photo.
+Facebook's rule is unchanged. Ron may revisit it if it brings noise. *Approved by Ron, 2026-10-24.*
+
+### 511 — Instructions version 7: a regression run on the existing set; no Yad2 labelled set
+Point 13: the regression run on the existing set (paid, cap $0.10) for prompt version 7. **No Yad2 labelled set:** Ron
+judges Yad2's classification on the real cards after the bootstrap. *Approved by Ron, 2026-10-24.*
 
 ---
 

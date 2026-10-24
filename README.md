@@ -33,7 +33,7 @@ scanning every group, several times a day.
 TLV Apartment Hunter does the scanning. It collects the posts, reads each one once, and shows every user the posts
 that fit them first, with an alert on Telegram when a new one arrives.
 
-It is a personal tool for a small group of friends, not a product.
+It serves a small, private group of users: access is by invitation from the admin, inside a private network.
 
 ## Features
 
@@ -120,7 +120,7 @@ profile and is pure; `notify/` and `telegram/` send. The job commands, the site 
   adds text of its own; the rejection reasons are derived from its answer by code.
 - **The original post is what the card shows.** The model receives a copy; classification never changes the stored
   post, and a test pins that.
-- **No Facebook account, login or cookies,** with any provider. Public groups only.
+- **No account and no login, with any source,** and never a user's cookie or credential. Public groups only.
 - **Real scraped data never enters git.** Posts contain real people's phone numbers; `data/` is ignored, and the
   tests that read captured provider responses read them in place and fail, rather than skip, when they are missing.
 - **No personal identifiers in outgoing requests.** No email, name or phone of any user in a header, URL or body;
@@ -131,8 +131,8 @@ profile and is pure; `notify/` and `telegram/` send. The job commands, the site 
 - **Capped paid commands.** Every command that costs money runs under an explicit cap: a charge cap on each Apify
   run, and a dollar cap (`--cap`) on every command that calls the model.
 - **Tests never hit the network.** A socket guard in the test suite raises on any connection attempt.
-- **External contracts are verified, not remembered.** Every parameter and response shape of an outside API is
-  checked against its current documentation and a real captured response before code relies on it.
+- **Outside contracts are pinned by captured responses.** Every provider adapter is tested against real responses
+  captured from the service, so a change in an outside API shows up as a failing test.
 
 ## Tech stack
 
@@ -232,7 +232,7 @@ retention, the reports) is free.
 
 ### Deployment overview
 
-- On every push to `main`, the GitHub Action runs the checks and publishes the image to `ghcr.io/<owner>/<repo>`,
+- On every push to `main`, the GitHub Action runs the checks and publishes the image to `ghcr.io/<account>/<repo>`,
   tagged `latest` and by commit.
 - A home server runs a Compose stack that pulls that image: the **site**, the **bot**, the **scheduler** (collection,
   classification, cost settlement, and retention once a night inside the quiet hours), and a **Tailscale** container
@@ -250,18 +250,22 @@ retention, the reports) is free.
 
 <!--
   Placeholder for a fifth image: a Telegram alert.
-  Ron: on your phone, capture one alert message from the bot (the photo, the lines and the buttons under it).
-  Crop to the message only; blur or cover any real post text, phone number, name, link and chat name, or capture a
-  test alert over invented data. Save it as docs/images/telegram-alert.png (under ~300 KB) and replace this comment
-  with:
+  Capture one alert message from the bot on a phone (the photo, the lines and the buttons under it). Crop to the
+  message only; blur or cover any real post text, phone number, name, link and chat name, or capture a test alert over
+  invented data. Save it as docs/images/telegram-alert.png (under ~300 KB) and replace this comment with:
   <p align="center"><img src="docs/images/telegram-alert.png" alt="A Telegram alert with its buttons" width="300"></p>
 -->
 
+## Coming next
+
+- **Yad2 as a second source.** Tel Aviv-Yafo listings from Yad2, collected by a browser on the server beside the
+  Facebook groups, classified by the same model with Yad2's own form fields taken as they are, and shown with their
+  source on each card.
+
 ## Possible extensions
 
-Recorded as future ideas, not planned:
+Ideas for later:
 
-- **Yad2 as a second source**, beside the Facebook groups
 - **Editing the group list from the dashboard**, with the number of posts fetched per group
 - **Failover to a second Apify actor** when the first one fails
 - **Favourites** on a card
@@ -270,13 +274,12 @@ Recorded as future ideas, not planned:
 
 ## Data and responsible use
 
-The system reads **public groups only**, with no Facebook account, login or cookies. It is for personal use by a few
-people searching together, not a commercial service. Real posts, which contain real people's phone numbers, are kept
+The system reads **public groups only**, with no account, login or user's cookies. It is a private, non-commercial
+service for a small group of users searching together. Real posts, which contain real people's phone numbers, are kept
 out of this repository: the store, captured responses and exports live only on the machines that run it. The site is
 served only inside a private tailnet, and an account needs a one-time key from the admin.
 
 ## Further reading
 
 The design is documented in [`docs/`](docs/): [`BASELINE.md`](docs/BASELINE.md) describes what the system is and how
-it is built, [`SCHEMA.md`](docs/SCHEMA.md) is the source of truth for every field and filter rule, and
-[`DECISIONS.md`](docs/DECISIONS.md) records why each decision was made.
+it is built, and [`SCHEMA.md`](docs/SCHEMA.md) is the source of truth for every field and filter rule.

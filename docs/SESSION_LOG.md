@@ -7579,3 +7579,348 @@ colour lines open with their circle (as Ron wrote them), the pending line with "
    the quiet hours' line).
 4. On the server, then on the iPhone: `docker compose run --rm bot python -m tlv_hunter.jobs.send_test_alert --listing
    <prefix>` and `docker compose run --rm bot python -m tlv_hunter.jobs.send_test_digest --hours 24`.
+
+## 2026-10-22 — Round 40: rounds 38–39 closed; Yad2 opened (#489), the spike script
+
+No package code, no store, no paid call, nothing on the server, no git write (read-only git only). Network: PyPI (the
+`playwright` wheel into uv's cache, for a dry run) and HEAD requests to Playwright's CDN for the browser sizes; no
+request to Yad2. The script was not run.
+
+**Recorded (A):** Ron deployed rounds 38 and 39 on `homeserver` in an earlier session, read the test alert and the test
+digest on his phone and approved both: closed. `BACKLOG.md`: item 11 removed, round 38's and 39's lines no longer point
+at it, round 40's line, item 15 (the spike); the "Future" row "Yad2 as an additional source" moved into item 15 with its
+open points. `DECISIONS.md` #489 (Yad2 opened, a read-only spike before any plan; amends #60's "stays future", "likely
+its own scraper" stands), #60's heading annotated. CLAUDE.md's "Now/Next" (five lines). **Not changed:** `BASELINE.md`
+§1, §12 (phase 6) and §13 still call Yad2 later; #489 says they wait for a plan.
+
+**T12 and T13 (`ASSUMPTIONS.md`), left ASSUMED for Ron:**
+- **T12** (an inline `web_app` button opens the Mini App from an alert): the alert still sends it
+  (`notify/alert.py`, "פתיחה באתר"). Reading the alert proves the message arrived, not the button. **It needs:** Ron's
+  word that he tapped "פתיחה באתר" on the test alert on the phone and the site opened inside Telegram on that post's
+  page. With that it is VERIFIED; if he did not tap it, one tap on the next real or test alert settles it.
+- **T13** (HTML parse mode takes `<blockquote>`): **round 39 made it moot.** #487 removed the `<blockquote>` from the
+  alert, and nothing in `tlv_hunter/` sends one now (searched: the only mention is `notify/alert.py`'s docstring saying
+  there is none). The deployed test alert had no `<blockquote>`, so it could not verify T13 either. Ron decides: close it
+  as no longer relied on (moved under "Closed"), or keep it ASSUMED in case a quote returns.
+
+**Built (B), the spike script `data/spike_yad2/spike_yad2.py`** (gitignored with `data/`, checked with
+`git check-ignore`), from Ron's `scraper.py`: the same `launch_persistent_context`, the same
+`--disable-blink-features=AutomationControlled` flag and nothing else added, the same response listener and his
+`extract_ads_recursively` (to count listings and take run 3's tokens). Profile `data/spike_yad2/profile/` (new and empty:
+Ron's old `./yad2_profile` is not on this machine, so the first run starts with no cookies). What it saves: every
+response from a `yad2.co.il` host with a JSON content type, whatever its URL; every Yad2 XHR/fetch whatever its type (an
+error page in an API call is evidence for question 7); every document, Yad2's or another host's (a challenge page). Each
+body exactly as received, to `responses/<run_id>/NNNN_<host>_<path>.<ext>`; `manifest.json` gets one entry per response
+(run, page, URL, status, content type, resource type, size, file, time in UTC; a parse or body error in `error`), each
+failed request with Playwright's failure text, and each run (headless or not, the user agent, each page's document
+status, final URL, challenge signals and Ron's answers, listings found, errors). The manifest is rewritten after each
+entry; `spike.log` gets the same events and every error. No bare `except`: Playwright's errors and `OSError` are caught
+by name, written to the manifest and logged. A screenshot of each page after its wait. Runs: 1 the control URL headed;
+2 `…/realestate/rent/tel-aviv-area` with no query, headed; 3 `https://www.yad2.co.il/item/<token>` for the first three
+tokens of the latest run 1 (`--items 2` for two), headed; 4 the control URL headless, same profile. `--run 1|2|3|4|all`
+(default `all`), 5 s between runs, 15 s on each page (scraper.py's wait). **Challenges:** after each page's wait the
+script looks for challenge words (captcha, perfdrive, shieldsquare, radware, perimeterx, hcaptcha, turnstile, "access
+denied", "אני לא רובוט"…) in the title, the visible text and the frames' URLs, and for a page that left Yad2's host; it
+records the word and the place only. In a headed run it then asks Ron what the window shows; on a challenge, what it is,
+then lets him pass it by hand and asks whether he did (then waits 15 s more). In run 4 a signal is recorded as "blocked
+(suspected)" and the run goes on. **Verified:** `ruff check` and `ruff format` clean on the file; imported under
+Playwright 1.64.0 with the API names it uses checked (`Request.failure`, `Request.resource_type`, `Response.body`,
+`Page.inner_text(timeout=)`) and its helpers called on synthetic input. No browser opened.
+
+**Playwright on Windows:** not in the project (`pyproject.toml`, `uv.lock` unchanged), not in the system Pythons, no
+browser in `%LOCALAPPDATA%\ms-playwright` (only another tool's `ms-playwright-go`). `uv run --no-project --with` gives a
+throwaway environment and touches neither file. The latest on PyPI is 1.64.0; `install --dry-run chromium` lists Chrome
+for Testing 156.0.8078.4 (**207 MB**, the headed runs), Chrome Headless Shell 156.0.8078.4 (**124 MB**, run 4) and two
+helpers (FFmpeg 1.7 MB, winldd 0.1 MB): **about 332 MB to download**, more on disk once unpacked.
+
+**For Ron, from the repository root (PowerShell or Git Bash):**
+1. Once: `uv run --no-project --python 3.12 --with playwright==1.64.0 python -m playwright install chromium`
+2. All four runs: `uv run --no-project --python 3.12 --with playwright==1.64.0 python data/spike_yad2/spike_yad2.py`
+   (or one at a time with `--run 1`, `--run 2`, `--run 3`, `--run 4`; run 3 needs a run 1 that found listings).
+
+**What he should see:** a Chrome window on Ron's map URL. After 15 s the terminal asks "What does the browser show?"
+(`l` listings, `c` a challenge; on `c` a short description, then pass it by hand and answer `y`/`n`). Then the run's
+line, e.g. "run 1 done: N responses saved, M unique listings found by scraper.py's rule" (about the count scraper.py
+printed two weeks ago). Run 2 the same on the unfiltered map (the count is what question 4 is about). Run 3 opens three
+listing pages, one question each, and at the end asks whether he clicked "show phone" (optional: clicking it during a
+page's 15 s records that request too). Run 4 shows no window; it prints the signals it found, if any, and its count.
+Then "Done" with the manifest's path. Everything lands in `data/spike_yad2/`; nothing is printed of a listing but counts.
+
+**Decided by me:** the file name `spike_yad2.py` and one command with `--run`; `--no-project` and the pinned
+`playwright==1.64.0`; `page.wait_for_timeout` instead of `time.sleep` for the 15 s (in Playwright's sync API a sleep
+stops it handling the responses that arrive meanwhile; the wait is the same length); also saving Yad2's non-JSON
+XHR/fetch and every document, and recording failed requests (for questions 3 and 7: a listing page's data may come in
+the page itself, and a block may be an HTML page); the challenge words and Ron's answers in the terminal; screenshots;
+run 3's first three tokens in arrival order; run 4's plain `headless=True` (Playwright's headless shell, what an
+unattended server would run by default; its user agent is recorded); the 5 s pause; leaving "show phone" to Ron's hand
+rather than a scripted click.
+
+**Next:** Ron runs the four runs and says so here; then `docs/SPIKE_YAD2_2026-10-22.md` from `data/spike_yad2/` (shapes,
+counts and field names only), with the questions for Ron. Ron also answers T12 and T13 above.
+
+**Continued (same day): Ron ran the spike; the report written.** Ron ran all four runs, run 3 twice (the second time he
+clicked "show number" on pages 2 and 3, not 1, and answered `y`). He answers T12 and T13 after reading the results, and
+`BASELINE.md` stays as it is (#489). Read only: `data/spike_yad2/` (manifest, log, bodies) through small scripts in
+the scratchpad that print keys, types, counts and masked string shapes (digits, letters and Hebrew replaced), plus
+`reference/areas.yaml` for the name comparison. No request to Yad2 or anywhere else; nothing in the package changed.
+- **Written:** `docs/SPIKE_YAD2_2026-10-22.md`: the runs; the map marker's fields with paths, shapes and counts; the
+  dates; text and phone; the cap and the volume; roommates; headless; what a block looks like; 13 questions for Ron
+  (§9), no recommendation. Checked: none of the three tokens, customer ids or any phone-shaped number is in it.
+- **Found:** the map is capped at 200 markers (100 `private`, 100 `commercial`); totals in `clusters[].docCount` (8,081
+  for region 3, Tel Aviv-Yafo 4,460) and the page's list feed (`pagination.total` 8,067). No date, text or phone on
+  the map; the listing page's `__NEXT_DATA__` holds `dates` (`createdAt`, `updatedAt`, `rebouncedAt`, `endsAt`, naive,
+  read as Israel time), `metaData.description` and the poster's name; the phone only from
+  `realestate-item/customer/<token>` on a click, which Yad2 counts (`stats-collector/<token>/phone-displayed`); both
+  numbers seen virtual. The map ignores `multiNeighborhood` (Ron's filter): his 279 "unique" were the box and the
+  recommendations, the page's matching list held 15. Headless: `302` to `validate.perfdrive.com`, "Radware Bot Manager
+  Captcha"; headed: no challenge in four runs.
+- **Two faults, written in the report's §1:** run 3's tokens came from run 1's recommendations (agency listings in the
+  south), so no private listing page or private phone was observed; and the script's file names reused a counter that
+  another response's handler could move while a body was read: 18 names written twice, one map response's body lost
+  (run 1 #42; its count kept in the manifest). **Fixed in `data/spike_yad2/spike_yad2.py`:** the number is taken before
+  `body()`; ruff check and format clean. Not run again.
+- **Recorded:** `BACKLOG.md` item 15 (the findings, the questions); CLAUDE.md's "Next".
+- **Decided by me:** the report's order (the brief's questions 1–8, then the questions for Ron by theme); masked or
+  made-up examples only, never a real value; a neighbourhood's name and Yad2 id shown (public place names), never a
+  street, agency, person or coordinate; the time zone read from the three pages' times against their fetch times; the
+  name comparison against the 71 as exact equality of the whole name (or the label); `__pycache__` left in
+  `data/spike_yad2/` (from my import check, gitignored).
+- **Next:** Ron reads the report and answers its §9, and T12 and T13. No Yad2 plan before that.
+
+## 2026-10-24 — Round 41: Yad2 goes ahead (#490); T12 VERIFIED, T13 closed; spike 2's script
+
+No package code, no store, no paid call, nothing on the server, no git write (read-only git only). Network: Playwright's
+Docker page, Microsoft's container registry (the tag list), GitHub (the image's Dockerfile, Playwright's native
+dependency list and its seccomp profile at v1.63.0), PyPI (playwright 1.63.0's page). No request to Yad2. Not run.
+
+**Recorded:** `DECISIONS.md` #490 (Yad2 goes ahead: unattended on `homeserver`, headed on a virtual display, a lower
+daytime rhythm than Facebook's, a block raises the existing failure alert, Yad2's terms read and accepted by Ron, no
+evasion beyond spike 1's script, `BASELINE.md` unchanged; it answers §9 questions 8 and 13, the others stay open).
+`ASSUMPTIONS.md`: **T12 VERIFIED** by Ron (the alert's button opened the site inside Telegram on the post); **T13 moved
+to "Closed"** as no longer needed (#487 removed the `<blockquote>`). `BACKLOG.md` item 15 and the round line; CLAUDE.md's
+"Next". **Still open, for Ron:** #490 does not say whether invariant 13 ("no cookies, with any provider") covers Yad2's
+visitor cookies in the browser profile (§9 question 7); spike 2 keeps spike 1's profile, as both spikes were approved.
+
+**Read first, from spike 1's saved pages (no guessed parameter):** the rent page's sort control ("מיון לפי") offers
+four options: **"תאריך", checked by default, whose link is the bare path with no parameter**; "מחיר - מהזול ליקר"
+(`?sort=price-asc`); "מחיר - מהיקר לזול" (`?sort=price-desc`); "קרוב אליי" (a button). There is no separate "newest"
+parameter: the default is the date sort, and whether it is newest first is what spike 2 checks. **The city filter is the
+page's own link "נדל״ן להשכרה בתל אביב יפו": `/realestate/rent/tel-aviv-area?area=1&city=5000`.** The pagination is
+the page's own links (`?page=2`, labelled "2"; an unlabelled `?page=0` too). The cards link to
+`/realestate/item/tel-aviv-area/<token>?opened-from=…&component-type=…&spot=…&location=…`.
+
+**Built, `data/spike_yad2/spike_yad2_2.py`** (gitignored): it imports spike 1's `spike_yad2.py` (its `Recorder`, with
+round 40's naming fix; its `visit`; the same launch flag and profile; the same `manifest.json` and `spike.log`) and adds
+three runs:
+- `--run list` (headed): `?area=1&city=5000`, then pages 2 and 3 **by the hrefs of the page's own links labelled "2" and
+  "3"**. Per page it records the sort label shown and the option checked, every pagination link with its label, and the
+  cards' links in the page's order; the documents themselves hold the feed (`__NEXT_DATA__`).
+- `--run items` (headed): from the latest list run, the private Tel Aviv-Yafo listings in the feed (`adType`
+  `private`, city 5000): the first private on page 1, the last private on page 1, the first private on page 3, each
+  opened **by its own card's href** (not from recommendations). At the end it asks on which page, if any, Ron clicked
+  "show number" (one page at most).
+- `--run server` (headed under `xvfb-run`, asks nothing; it refuses to start without `DISPLAY`): list page 1 only; it
+  records `DISPLAY` and the user agent. A challenge is recorded as "blocked (suspected)", as in spike 1's run 4.
+**Verified:** ruff check and format clean; its helpers run on spike 1's saved page (the feed read as 20 private, 20
+agency, 3 platinum; the page-2 link found by its label; the private picks matched to their card links). No browser
+opened. **Found and fixed while checking:** the cards' hrefs carry a query string, so the first draft's "ends with the
+token" never matched; it now compares the path.
+
+**The server's container (checked under `external-contract-verification`):**
+- **Image `mcr.microsoft.com/playwright/python:v1.63.0-noble`.** It is the version Playwright's Docker page names (the
+  page shows v1.63.0: tags `v1.63.0`, `-noble`, `-jammy`, `-resolute`), and the tag is in Microsoft's registry (which
+  also lists `v1.64.0-noble` and `v1.64.1-noble`, not named on the page). Ubuntu 24.04.
+- **The page says the image does not include the Playwright package** ("should be installed separately"): the commands
+  install `playwright==1.63.0` (on PyPI, 2026-09-15), the version of the image's browsers (`/ms-playwright`). Python
+  3.12 with pip system-wide (the image's `Dockerfile.noble` at v1.63.0).
+- **Xvfb:** the page does not mention it. The image runs `playwright install --with-deps`, and Playwright's dependency
+  list (`nativeDeps.ts` at v1.63.0) puts `xvfb` among the tools for `ubuntu24.04-x64`. Read from the source, not seen in
+  the image: **ASSUMED**, so step 3 below checks it first.
+- **Flags from the page:** `--init`, `--ipc=host`; for crawling it recommends **the non-root `pwuser` with Playwright's
+  seccomp profile** (`--user pwuser --security-opt seccomp=seccomp_profile.json`); root disables Chromium's sandbox and is
+  meant for trusted end-to-end tests. The commands follow the crawling form.
+- The laptop runs Playwright 1.64.0 (Chrome for Testing 156); the server 1.63.0 (its own Chrome). The user agents differ
+  by version; each run records its own.
+
+**For Ron, on the laptop (PowerShell, repository root), headed, the same profile as spike 1:**
+1. `uv run --no-project --python 3.12 --with playwright==1.64.0 python data/spike_yad2/spike_yad2_2.py --run list`
+2. Right after: `uv run --no-project --python 3.12 --with playwright==1.64.0 python data/spike_yad2/spike_yad2_2.py --run items`
+3. A few hours later: step 1 again (question 2: the new tokens on the first pages).
+
+Expect: a Chrome window on the Tel Aviv-Yafo list; after each page's 15 s the question "What does the browser show?"
+(`l` / `c`, as in spike 1); a line per page, "list page N: sort shown 'מיון לפי תאריך', M card links"; then the next
+page by its own link. `items` opens three listing pages, one question each, and at the end asks
+"Did you click 'show number'? n = no, or the page you clicked: 1/2/3". Click it on one page at most, or not at all.
+
+**For Ron, on `homeserver`** (over SSH; the folder `~/yad2-spike`, outside homelab, never `stacks/tlv-hunter/`, its
+volume or its `.env`; the scheduler and the stack untouched; use his usual SSH name if not `homeserver`):
+1. Laptop: `ssh homeserver "mkdir -p ~/yad2-spike && chmod 777 ~/yad2-spike"` (`pwuser` in the container writes there)
+2. Laptop: `scp data/spike_yad2/spike_yad2.py data/spike_yad2/spike_yad2_2.py homeserver:yad2-spike/`
+3. Server: `curl -fsSLo ~/yad2-spike/seccomp_profile.json https://raw.githubusercontent.com/microsoft/playwright/v1.63.0/utils/docker/seccomp_profile.json`
+   then the check: `docker run --rm mcr.microsoft.com/playwright/python:v1.63.0-noble sh -c "command -v xvfb-run && id pwuser"`
+   (expect a path such as `/usr/bin/xvfb-run` and a `uid=` line; if `xvfb-run` is missing, stop and tell me).
+4. Server, the run:
+   ```
+   docker run --rm --init --ipc=host --user pwuser \
+     --security-opt seccomp="$HOME/yad2-spike/seccomp_profile.json" \
+     -v "$HOME/yad2-spike:/spike" -w /spike \
+     mcr.microsoft.com/playwright/python:v1.63.0-noble \
+     bash -c "pip install --user --quiet playwright==1.63.0 && xvfb-run -a python spike_yad2_2.py --run server"
+   ```
+   Expect pip's notes, then "=== spike 2: list page 1 on homeserver, headed on xvfb", "list page 1: sort shown …, M
+   card links" (or a line of challenge signals and none), "done: N responses saved".
+5. Laptop, copy back: `mkdir data/spike_yad2/server` then
+   `scp -r homeserver:yad2-spike/manifest.json homeserver:yad2-spike/spike.log homeserver:yad2-spike/responses homeserver:yad2-spike/screenshots data/spike_yad2/server/`
+6. Afterwards, on the server (the files are `pwuser`'s, so a root container removes them):
+   `docker run --rm -v "$HOME/yad2-spike:/spike" mcr.microsoft.com/playwright/python:v1.63.0-noble sh -c "rm -rf /spike/*"`
+   then `rmdir ~/yad2-spike` and, if wanted, `docker image rm mcr.microsoft.com/playwright/python:v1.63.0-noble`.
+
+**Decided by me:** one new file importing spike 1's rather than a copy; one manifest for both spikes (runs named
+`s2-list`, `s2-items`, `s2-server`); the default "תאריך" sort used as the page offers it (no parameter exists to add);
+the three private picks spread over pages 1 and 3 to test the order against their dates; the server run asks nothing and
+records signals only; `v1.63.0-noble` (named in the docs) over the registry's newer `v1.64.x`; the crawling form
+(`pwuser`, seccomp) over root; `chmod 777` on the throwaway folder and its removal through a container; `xvfb-run -a`.
+
+**Next:** Ron runs the laptop's three steps and the server's six and says so here; then "Spike 2" is appended to
+`docs/SPIKE_YAD2_2026-10-22.md` (shapes and counts only).
+
+**Continued (same day): spike 2 run by Ron; "Spike 2" written.** Ron ran `--run list` and `--run items` on the laptop
+(11:36 and 11:37 UTC; "show number" clicked on listing 1) and `--run server` on `homeserver` (11:47 UTC); the server's
+files are in `data/spike_yad2/server/` and its folder is cleaned up. **Ron changed the server command on the reviewer's
+advice: `xvfb-run -a -s '-screen 0 1920x1080x24'`** (the default screen is 640×480×8). The second `--run list` comes
+later. Read only: both manifests and the saved bodies, through scratchpad scripts that print keys, counts and masked
+shapes. No request anywhere; nothing in the package changed; the script unchanged.
+- **Written:** "Spike 2" at the end of `docs/SPIKE_YAD2_2026-10-22.md` (§S2.1–S2.6), one file with spike 1 because its
+  questions continue §9. §S2.3 (volume) marked "pending the second list run". Checked: none of the run's tokens or
+  customer ids and no phone-shaped number is in it.
+- **Found:** sort by "תאריך" is the page's default (no parameter); the city link `?area=1&city=5000` filters the feed
+  (44 of 44 items in city 5000 on every page, total 4,438) but not the map. **Two feed shapes for the same URL:** the
+  laptop got `private` 20 + `agency` 20 (167 pages), the server one `yad2` list of 40 in a fixed pattern (`PPPC`
+  repeating after a short head; 111 pages). The private order is the same on both. On six dated positions the laptop's
+  private list runs newest first by `updatedAt`; the server's mixed list is not in date order. No main-list listing
+  repeats across pages 1–3. Private pages: Israel local time as in spike 1; **`rebouncedAt` = `updatedAt` + exactly
+  3 h** (after the fetch), `endsAt` = `createdAt`'s date + 45 days; descriptions 313–386 characters; `isForPartners` on
+  1 of 3; no agency fields, new keys (`houseCommittee`, `propertyTax`, `furnitureInfo`, `isLongTermContract`);
+  **`isVirtualPhoneNumber` true on all three, and in the phone response** (5 of 5 listings so far).
+- **The server run passed**, though its manifest says `"blocked (suspected)"`: as Ron noted, the only signal was the
+  background reCAPTCHA frame every Yad2 page loads (the script's server run writes any signal as a block); the document
+  was 200, 1,258,673 bytes, on `www.yad2.co.il`; two map responses (319,757 and 321,554 bytes) reached `gw.yad2.co.il`;
+  the feed was whole; the screenshot shows the Tel Aviv-Yafo list, 4,438 results, by date. User agent
+  `… (X11; Linux x86_64) … Chrome/153.0.0.0 …`, no "HeadlessChrome"; `DISPLAY` `:99`; screenshot 1280×720 (Playwright's
+  default viewport).
+- **Recorded:** `BACKLOG.md` item 15; CLAUDE.md's "Next".
+- **Decided by me:** one file for both spikes; dates for the order check taken also from the `dates` that recommendation
+  and agency responses carry for listings in the feed (152 tokens), each matched by token; "stable between pages" judged
+  on the feed's main lists only (the carousel cards repeat on every page by design); the false "blocked" left in the
+  manifest as written and explained in the report, the script not changed (no further server run is planned).
+- **Next:** Ron's second `--run list`; then §S2.3 is filled in (new tokens on the first pages against the 11:36 run).
+  Then Ron's answers to §9 and §S2.6.
+
+## 2026-10-24 (continued) — Round 42: Yad2's eleven decisions (#491–#501); the README; `PHASE_6.md` drafted
+
+Docs and plan only: no code, no store, no paid call, nothing on the server, no git write (read-only git only). No
+network. Read: `SCHEMA.md` Gates A, B, E, G and `ListingExtraction`; `classify/instructions.py`'s version;
+`providers/base.py`'s contract; `jobs/scheduler.py`, `Dockerfile` and both compose files; the digest and
+`settle_costs` on the Apify fields; the spikes' listing pages again (the form fields' shapes, masked).
+
+**Recorded (A):** `DECISIONS.md` #491–#501, "approved by Ron" on each: coverage (Tel Aviv-Yafo, every kind, #491);
+posting time `updatedAt` → UTC, new = an unseen token, paging with a minimum and a cap, bumps as reposts, invariant 2
+(#492); the bootstrap, 3 pages, no alerts (#493); `raw` the listing page's `data`, the phone never stored (#494); the
+model combined with the form, the source of each value recorded (#495); Gate A's `source` `"yad2"`, `group_id`
+`"yad2-tel-aviv"`, `listing_id = sha256("yad2:" + token)` (#496); no phone ever fetched, no WhatsApp for Yad2 (#497);
+the area shown as given and decided by the model with a labelled block beside the text (#498); invariant 13 reworded
+(#499); no cross-source dedup, the card's source (#500); the form's values for the filters (#501). **CLAUDE.md:**
+invariant 13 in Ron's words, with #499 and where the profile lives; "Now/Next"; `PHASE_6.md` and the spike report added
+to "Where things are written down". **`BASELINE.md`:** the header's amendment line; §1 (Yad2 the second source); §4 (a
+Yad2 bullet, the decided points only); §12 (row 6 is now Yad2 and points at `PHASE_6.md`; memo23 and the group editing
+move to a new row 7, "Later"); §13 (Yad2's own scraper). Because phase 6 is now Yad2, the "phase 6" of the later items
+became "phase 7" in `BASELINE.md` §11 and in five `BACKLOG.md` rows (group editing, `max_posts`, memo23). Nothing still
+a proposal entered `BASELINE.md`.
+
+**README (B):** Ron's name removed (it was only in the screenshot placeholder's comment), and "owner" nowhere (the
+image path's `<owner>` is now `<account>`); "user" and "admin" only. Product wording: the "not a product" line replaced
+by who it serves and how access works; Yad2 moved from "Possible extensions" to a new "Coming next"; the process
+wording removed (the "verified, not remembered" principle became what the tests pin; the link to `DECISIONS.md`
+dropped from "Further reading"); invariant 13's new wording in the principles and in "Data and responsible use". No
+phase, decision, date or count number. Screenshots unchanged. The diff is in the report to Ron.
+
+**BACKLOG (C):** item 16, a later round of its own: "Ron" → "the owner" across `docs/`, mechanical; not done now. Item
+15 updated; the round line.
+
+**The plan (D): `docs/PHASE_6.md`, a draft for Ron.** The goal and a five-point DoD; the anchors; the order of work;
+what Yad2 gives; **the Gate A table** (every `RawPost` field, its source in the page's `data`, or null; decided rows
+marked); **the Gate B table** (every `Listing` field, the form field that fills it or the model, the tri-state form
+flags, a proposed `field_sources` provenance field and `Listing` version 2); **the 22 property kinds**; the model's
+labelled block, `PROMPT_VERSION` 7 with its fingerprint, and a regression check (needed: Facebook posts get new
+instructions too); the collector (the Playwright image, Xvfb at 1920×1080×24, the profile's folder) with **two
+contradictions presented, not resolved**: today's scheduler runs jobs inside its own slim image (options A, B, C), and
+#492's token rules do not fit `fetch(group_ids, since)` (three shapes that would); both list shapes read; paging; a
+proposed bump detection; a proposed all-at-the-end store for invariant 2; block detection (never "captcha"); the
+scheduler, `RunRecord` with its Apify fields `None` and a proposed `source` field, the digest; photos, retention, the
+card, alerts; tests on fixtures read in place; a cost estimate ($0.04–0.16 a day at 100–400 new listings, pending the
+volume); the paging numbers and the rhythm left for the measurement; **25 points for Ron** (§6.12).
+
+**Decided by me:** this round is 42 (the last entry was 41); the eleven decisions one number each, under one heading;
+the BASELINE wording of §4's Yad2 bullet; phase 6 = Yad2 in `BASELINE.md` §12 (matching `PHASE_6.md`) with the later
+items moved to row 7; `<account>` for the image path; the README's "Coming next" section; in the plan, every proposal
+marked and gathered in §6.12, the recommended option given in each row; the reading of #495 with #501 (the form's kind
+wins where mapped, point 25); the cost per call from #448/#449's own figures, not a price list.
+
+**Next:** Ron reads `PHASE_6.md` and answers §6.12; his second `--run list`, then §S2.3 filled in and §6.8's numbers
+proposed in the plan. No code before both.
+
+## 2026-10-24 (continued) — Round 43: `PHASE_6.md` approved (#502–#511); Yad2's build step 1; §S2.3 measured
+
+No paid call, no model call, no store write, nothing on the server, no Docker, no browser, no git write (read-only git
+only). No network.
+
+**Recorded (A):** `DECISIONS.md` #502 (the points approved as proposed: 1–8, 10, 11, 16, 18–20, 22, 25), #503 (the block
+also carries the kind, `isForPartners`, `furnitureInfo`; amends #498), #504 (bumps read from the listing page with a cap;
+a known token checked wherever it stands), #505 (the phone responses deleted), #506 (a second image; the scheduler moves
+to it; the Action builds both), #507 (Yad2 its own seam), #508 (no dedup A for agency listings; amends #500), #509 (no
+`no_text` for Yad2), #510 (no `no_images` for Yad2), #511 (the regression run; no Yad2 labelled set). **`PHASE_6.md`**
+rewritten: approved status, the DoD, build steps 1–7, every point resolved (§6.12), the seam's proposed name and
+contract (§6.5), §6.8's numbers, §6.11's cost, §6.13 (step 1), §6.14 (six points for Ron). **`SCHEMA.md`:** Gate A's
+Yad2 section, Gate B version 2 with `field_sources`, the Yad2 mapping and the 22 kinds, Gate E's three Yad2 rules, Gate
+G version 2 on both records. **CLAUDE.md:** nine seams, the `yad2/` row marked proposed; "Now/Next"; the `PHASE_6.md`
+row. **`BASELINE.md`:** §3 (the second image), §4 (the Yad2 bullet), §5 (the two rejection rows), §12 (phase 6
+approved), the amendment line.
+
+**Deleted (B), Ron's point 21:** `data/spike_yad2/responses/20261022T135152Z_run3/0082_…_realestate_item_customer_fy0h7j0v.json`,
+`…/20261022T135152Z_run3/0132_…_realestate_item_customer_3tokpujc.json`,
+`…/20261024T113750Z_s2items/0047_…_realestate_item_customer_8rbybx2e.json`. Nothing else (the `phone-displayed`
+counters, 16 bytes each, are not phone responses and were kept; the manifest still lists the three).
+
+**Built (C), build step 1:** `parsing/datetimes.py` (`parse_israel_local_utc`, `parse_local_date`); `parsing/ids.py`
+(`compute_listing_id(…, source=)`); `RawPost.source` `"yad2"`; `Listing.field_sources`, version 2,
+`Listing.from_stored_json` (both stores read through it); `RunRecord.source`, version 2; `ScheduleSettings`' Yad2
+rhythm, version 2 (`state/runs.py` reads through `from_stored_json`); reclassify leaves `field_sources` out of the diff;
+`tlv_hunter/yad2/` (`pages.py`, `kinds.py`, `mapping.py`). Fixtures copied once into `data/raw/`:
+`yad2_listing_private_{1,2,3}_2026-10-24.html`, `yad2_listing_agency_1_2026-10-22.html`, `yad2_list_page1_2026-10-24.html`
+(no phone response; the agency page's rendered HTML holds the agency's number in a WhatsApp link, outside `data`; the
+list page holds two phone-shaped numbers, as the Facebook fixtures do). Tests: `tests/test_yad2_mapping.py` (13, marked
+`raw_fixtures`), `tests/test_phase6_contracts.py` (32).
+
+**Verified:** `uv run pytest`: **2,290 passed** (2,245 before the round). ruff check and format clean. The 22 kinds equal
+Yad2's own `base-search-options` (ids, titles, groups); its floor range starts at −1. The three private pages' `updatedAt`
+convert to 7, 37 and 58 minutes before their fetch, as the spike measured. **Facebook's tests:** five files that pin a
+schema's version or field list were updated for the approved versions (the drift test's code-filled list, the Gate B
+field list, Gate G's "unknown version" 2 → 3, the reclassify tests' current version 1 → `LISTING_SCHEMA_VERSION`); no
+behaviour test changed.
+
+**Measured (D), §S2.3:** the second list run at 13:14 UTC, 98 minutes after the first: all 60 private listings on pages
+1–3 new (at least 37 an hour; the first run's dated positions give about 48), at least about 600 a day on a Saturday;
+the agency list not by date (unseen tokens at the bottom). §6.8: interval 60 minutes, runs 07:00–23:00, 3 to 10 list
+pages, "new" counted on private tokens, 30 bump checks a run, a 3-hour threshold. §6.11: about $8–11 the first month,
+then about $1–2.5 a month.
+
+**Decided by me:** the decisions grouped as #502 (all "as proposed") and one number per other answer; a stored
+version-1 `Listing`, `RunRecord`, `ScheduleSettings` read as version 2 (the `Listing` so reclassify's triple, #217, does
+not select every Facebook post for an added field); defaults on the new fields so constructors elsewhere need no change;
+the Yad2 rhythm's names and "all `None` = no Yad2 runs", from before until, no wrap (§6.14 C4); `listing_data` finds the
+query keyed `"item"` rather than index 0; an unknown kind decides nothing; a form count of 0 or an absent flag left to
+the model; arnona, house committee, building floors 0 left to the model; `native_currency` only with a price; Marked
+values as plain dicts; the autumn change's repeated hour read as summer time; `media` `[]` until C1; the seam's name and
+contract proposed (§6.5).
+
+**Next:** Ron answers `PHASE_6.md` §6.14 (C1–C6) and §6.8's numbers; then build step 2 (Yad2's rules around the model).

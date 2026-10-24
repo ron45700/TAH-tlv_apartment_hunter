@@ -52,6 +52,13 @@ from "later"), §12 (Phase 5 built; Phase 6 no longer holds the quiet hours).
 Amended again 2026-10-17 (round 28): §3 (the same image, not the same compose file, #433; the server's store in
 `./appdata/store/`, #432) and §12 (the deployment row: a fresh store, the first friend as a procedure, the new "done
 means", `DECISIONS.md` #436–#440).
+Amended 2026-10-24 (round 42, Yad2, `DECISIONS.md` #489–#501): §1 (Yad2 the second source), §4 (Yad2's path, what is
+decided only), §12 (phase 6 is Yad2, planned in `PHASE_6.md`; the later items move to phase 7), §13 (Yad2's own
+scraper). What `PHASE_6.md` still proposes (names, tables, numbers) is not here.
+Amended 2026-10-24 (round 43, `PHASE_6.md` approved, `DECISIONS.md` #502–#511): §3 (the scheduler in a second image with
+the browser, #506), §4 (Yad2's own seam, #507; the block's content, #503; dedup A not for agency listings, #508; no
+`no_text` or `no_images` rejection for Yad2, #509, #510; the regression run, no Yad2 labelled set, #511), §5 (the two
+rejection rows), §12 (phase 6 approved). The paging numbers and the rhythm (`PHASE_6.md` §6.8) are still proposals.
 **Owner:** Ron
 
 > This file is the description of what the system is and how it is built. It replaces
@@ -75,9 +82,10 @@ saved profile.
 that fit.
 
 **Sources:** Facebook public groups through Apify actors. The group list is one shared list: every
-user sees posts from all of them. Editing the list from the dashboard is a later addition. Yad2 is
-also a later addition and will probably need its own scraper; the design must stay open to it
-(see §13).
+user sees posts from all of them. Editing the list from the dashboard is a later addition. **Yad2 is
+the second source** (`DECISIONS.md` #489–#501): Tel Aviv-Yafo rental listings of every kind,
+private and agency, collected by its own scraper, a headed browser on the home server, unattended,
+at a lower daytime rhythm than the Facebook runs (#490, #491). Each card shows its source (#500).
 
 ---
 
@@ -105,7 +113,7 @@ also a later addition and will probably need its own scraper; the design must st
 |---|---|
 | Machine | Ron's home server (a laptop being converted), running 24/7. Development and first runs on Ron's personal laptop. |
 | OS | Ubuntu Server LTS or Debian, no desktop. |
-| Runtime | Docker Compose. **The same image runs on the personal laptop and on the server (#433)**: the laptop's compose file is the repo's `compose.yaml`, which builds it; the server's is homelab's `stacks/tlv-hunter/`, which pulls it from ghcr. *Until 2026-10-17: "The same compose file runs on the personal laptop and on the server."* **Every command that opens the store runs in a container (#416); on the laptop the store is in a named Docker volume, on the server in the stack's `./appdata/store/` (#432).** The server's deployment is from git; never `.env` or the volume in git or the image; an update never touches the volume; a backup before each update (#420, Phase 5). |
+| Runtime | Docker Compose. **The same image runs on the personal laptop and on the server (#433)**: the laptop's compose file is the repo's `compose.yaml`, which builds it; the server's is homelab's `stacks/tlv-hunter/`, which pulls it from ghcr. *Until 2026-10-17: "The same compose file runs on the personal laptop and on the server."* **Every command that opens the store runs in a container (#416); on the laptop the store is in a named Docker volume, on the server in the stack's `./appdata/store/` (#432).** The server's deployment is from git; never `.env` or the volume in git or the image; an update never touches the volume; a backup before each update (#420, Phase 5). **From phase 6 a second image** holds the headed browser for Yad2; the `scheduler` service runs from it, every other service from the slim image, and the GitHub Action builds both (#506). |
 | Database | SQLite, one file, behind the `store` interface (posts and their lifecycle records), the `state` interface (per-group watermarks) and, from phase 3, a third interface for what users and the admin write through the site, `userdata/` (`DECISIONS.md` #267, #289). The rollback journal with an explicit busy timeout in phase 3 (#259). Postgres stays a cheap swap. |
 | Images | Downloaded at fetch time to a directory on disk (Facebook image links expire within days). |
 | Remote access | Tailscale, **on the home server only** (amended 2026-10-16, #417, #419). The site gets its own tailnet machine, `tlvapthunter`: a Tailscale container beside the site on `homeserver`, publishing it with Tailscale Serve (HTTPS, tailnet only). Friends are shared `tlvapthunter` only (device sharing). **The laptop is for development: the site there is served on 127.0.0.1 only, with no Serve and no sharing;** no one but Ron uses the system before it runs on the server. *Until 2026-10-16: "The dashboard is published with Tailscale Serve (HTTPS, tailnet only). Friends get access through Tailscale device sharing."* |
@@ -181,6 +189,24 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   reclassification.
 - **Street and area:** the model returns the areas itself, from the 71 in its instructions, and
   the streets and neighbourhood names as written (§7, `DECISIONS.md` #167).
+- **Yad2** (`DECISIONS.md` #489–#501; the plan is `PHASE_6.md`): its own collector, a headed browser
+  on a virtual display on the home server, at a lower daytime rhythm; never two runs of any kind at
+  once (#140). **Yad2 is its own seam, not a provider** (#507). The scheduler runs in a second image that
+  holds the browser and runs both sources one at a time; the other services keep the slim image (#506). Each run pages Yad2's Tel Aviv-Yafo list from page 1 while new listings appear, with a
+  minimum and a cap of pages (#492); a listing is new when its token was never seen, and only a new
+  one's own page is opened; a failed run marks no token as seen (invariant 2). The bootstrap takes the
+  first 3 list pages and alerts nothing (#493). The stored original (`raw`) is the listing page's
+  data, whole; the phone is never fetched or stored (#494, #497). The posting time is the listing's
+  last update, converted from Israel time to UTC (#492). A listing back at the top is a repost: it
+  updates the last publication and the repost log, with no new card and no alert (#492). The model
+  reads the description verbatim and, beside it in a separate labelled block, Yad2's neighbourhood,
+  street, property kind, "suitable for roommates" and furniture text (#498, #503); Yad2's own form fields
+  win wherever they cover a field, and the source of each value is recorded (#495). Non-apartments are
+  rejected by their property kind before the model, with no call (#491, #501, #502). A listing with no
+  description is classified from the form and the block, and one with no photo shows without one: neither
+  is rejected (#509, #510). No dedup across sources for now (#500), and none for agency listings (#508).
+  New instructions are checked by a regression run on the existing set; Yad2's classification is judged
+  on the real cards (#511). A block raises the failure alert (#490).
 
 Provider inputs, the field map, traps, the duplicate rate and the group IDs are in
 `docs/RESEARCH.md`.
@@ -213,8 +239,8 @@ names are swept after 24 hours. It runs as a dry run until Ron allows `--apply` 
 
 | Reason | Decided | Notes |
 |---|---|---|
-| No text | Before the model | Not sent to the model. A post rejected before the model and fetched again is checked against both pre-model rules on its current content: it returns to pending and goes to the model only if it passes both; otherwise it stays rejected, with the first reason that applies. A pending post fetched again is re-checked the same way; a post with a verdict, or an archived one, is left as it is (`DECISIONS.md` #69, #72.1, #73) |
-| No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again is re-checked as in "No text" (`DECISIONS.md` #67, #68, #72.1). The post also returns to pending when a repost of it with identical text arrives with media, video or reel included: the repost's photos are downloaded and kept with the post while the post holds no downloaded image or when it is archived, and the repost stays a repost (#70, #72.3, #72.4). Which media are downloaded (photos only) is a separate rule |
+| No text | Before the model | Not sent to the model. A post rejected before the model and fetched again is checked against both pre-model rules on its current content: it returns to pending and goes to the model only if it passes both; otherwise it stays rejected, with the first reason that applies. A pending post fetched again is re-checked the same way; a post with a verdict, or an archived one, is left as it is (`DECISIONS.md` #69, #72.1, #73) **Not for a Yad2 listing** (#509): one with no description is classified from Yad2's form and its labelled block. |
+| No images | Before the model | Not sent to the model. Means **no media at all**: a post whose only media is video or reel is not rejected. A post that shares another post is checked first: it is rejected only if the shared post has no media either. A post rejected for this and fetched again is re-checked as in "No text" (`DECISIONS.md` #67, #68, #72.1). The post also returns to pending when a repost of it with identical text arrives with media, video or reel included: the repost's photos are downloaded and kept with the post while the post holds no downloaded image or when it is archived, and the repost stays a repost (#70, #72.3, #72.4). Which media are downloaded (photos only) is a separate rule **Not for a Yad2 listing** (#510): it shows without a photo. |
 | Other city | By Facebook's location field when the post has one, else by the model (#214) | The post is in a city that is not Tel Aviv–Yafo: its location field's locality (the part before the first comma) is another city, or, with no usable locality, the model finds that the text names one. The city is shown next to the post. Applies to all users. A nearby city mentioned as a landmark ("5 minutes from Givatayim") is not a rejection. Only about a quarter of the posts carry the field (thedoor's structured listings, `RawPost.native_location`) |
 | Seeking | By the model | The poster is looking for an apartment, not offering one |
 | For sale | By the model | Facebook's `sale_post` type does **not** mean sale; it is mostly rentals |
@@ -502,7 +528,7 @@ repost, never alerts; a post whose kind is unclear or not written never alerts (
 - The schedule page: the run interval (30 minutes by default) and the quiet hours (00:00–07:00 by default), a "run now"
   button, the last runs with their Apify cost (phase 5, `DECISIONS.md` #61, #471, #474; the quiet hours moved here from
   "later")
-- `max_posts` (later, phase 6): one value for all groups; a value where groups × `max_posts`
+- `max_posts` (later, phase 7): one value for all groups; a value where groups × `max_posts`
   reaches the charge cap's `maxItems` is refused on save
 
 ---
@@ -521,7 +547,8 @@ real runs met its DoD (`PHASE_1.md`, `RESEARCH.md` §11).
 | **Server deployment** (between 3 and 4, #426) — **DONE 2026-10-18 (#441, #451)** | After Phase 3, taken from Phase 5: the image on `homeserver`, published from git by the repo's GitHub Action and pulled by homelab's `stacks/tlv-hunter/` (#420, #433) · the site's own tailnet machine `tlvapthunter`, a Tailscale container with Serve (#419) · a fresh store: `run_once --bootstrap` (30 posts per group, #437), then `create_admin`; the Windows store is not moved (#436) · the `Host`/`Origin` probe through Serve and a real sign-in (#422) · the measured working day, Phase 3's DoD 6 (#428) · "Adding the first friend" as a written procedure, run when Ron adds one: the sharing rule, DoD 2 and 5 on the real store (#438, #440). Planned in `docs/DEPLOY.md` | The site is reached at `tlvapthunter.<tailnet>.ts.net`, the probe passes, and Ron signs in as the admin on the server (#440) |
 | **4. Telegram** — **DONE 2026-10-19 (#469)** | Bot · account linking · alerts by profile · sent-alert record per user and post, so nothing is alerted twice · Mini App spike, against `tlvapthunter` (#426) · a bridge `scheduler` for continuous collection on the server (#454) · the `web_app` menu button on every linked chat (#470) | A real alert arrives according to Ron's profile |
 | **5. Server** (`docs/PHASE_5.md`) — **DONE 2026-10-21 (#476)**; built in round 36 (#471–#474) | The home server already runs the system from the deployment step (#426); Phase 5 adds the scheduler with the admin-set interval and quiet hours (#474) and a manual "run now" · the run and schedule records (Gate G, #472) · archive and deletion job · digest, including native-price vs model-price mismatches and the real Apify cost (#450) · failure alert to the admin · silent-group detection · no burst of alerts after a pause (#473) | Two days unattended (#427) |
-| **6. Later** | memo23 failover · editing the group list and `max_posts` from the dashboard · Yad2 | |
+| **6. Yad2** (`docs/PHASE_6.md`, approved 2026-10-24; `DECISIONS.md` #489–#511; build step 1 built in round 43) | The second source: Tel Aviv-Yafo listings collected by a headed browser on the home server, unattended (#490, #491) · Gate A and Gate B for Yad2 (#495, #496) · the model combined with Yad2's form (#495, #498) · bumps as reposts, bootstrap without alerts (#492, #493) · the card's source, a link to Yad2, no phone (#497, #500) | `PHASE_6.md`'s DoD (#502 point 22): two days unattended at its rhythm, a Yad2 card that alerts once, a block reported once |
+| **7. Later** | memo23 failover · editing the group list and `max_posts` from the dashboard | |
 
 Phases 1–4 are developed on Ron's personal laptop in Docker, **for development only (#417)**: no one but Ron uses the
 system before it runs on the home server, from the server deployment step (#426), which comes after Phase 3 and before
@@ -564,7 +591,7 @@ everything. The field list can start lean.
 | Firestore, Cloud Run, Cloud Scheduler | SQLite, Docker Compose, a scheduler in the container |
 | Image re-hosting deferred to Phase 6 | Images downloaded at fetch time |
 | Phases 0–6 of `MACRO_PLAN.md` | §12 |
-| Yad2 through `providers/` | Still future; likely its own scraper |
+| Yad2 through `providers/` | Its own scraper, a headed browser on the home server (`DECISIONS.md` #490); phase 6, planned in `PHASE_6.md` |
 
 Unchanged: no Facebook login, adapter layer, classification without summaries, null as
 information, watermark rules, dedup layers and findings, schema gates, verification method,

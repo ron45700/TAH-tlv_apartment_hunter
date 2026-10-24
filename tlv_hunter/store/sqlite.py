@@ -232,7 +232,7 @@ class SqliteRepository:
             row = conn.execute(
                 "SELECT doc FROM listings WHERE listing_id = ?", (listing_id,)
             ).fetchone()
-        return None if row is None else Listing.model_validate_json(row[0])
+        return None if row is None else Listing.from_stored_json(row[0])
 
     def find_pending_canonicals(self) -> list[RawPost]:
         return self._select_posts(

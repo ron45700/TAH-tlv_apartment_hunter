@@ -88,7 +88,7 @@ def test_a_run_record_round_trips_through_json() -> None:
         {"charged_events": {"x": -1}},
         {"cost_usd": 0.1},  # a cost with no settling time
         {"started_at": datetime(2026, 10, 20, 7, 0)},  # naive
-        {"schema_version": 2},
+        {"schema_version": 3},
         {"run_id": ""},
     ],
 )

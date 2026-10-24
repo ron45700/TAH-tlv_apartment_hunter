@@ -9,9 +9,11 @@ failure alert, the site's "last run" and the scheduler's timer (#61).
 failed to map (#71 D); both `None` until known. `charged_events` is the run's `chargedEventCounts`:
 the end-of-run (preliminary, `ASSUMPTIONS.md` P19) map when the run ends, the settled one once
 `cost_usd` is set. `window_capped` is always false: collection is never capped after a pause
-(#473, point 12 B).
+(#473, point 12 B). `source` (version 2, `PHASE_6.md` point 19) tells Facebook's runs from Yad2's;
+a Yad2 run leaves the Apify fields `None`.
 """
 
+import json
 from datetime import datetime
 from typing import Literal, Self
 
@@ -19,10 +21,11 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from tlv_hunter.parsing.datetimes import require_utc
 
-RUN_RECORD_SCHEMA_VERSION = 1
+RUN_RECORD_SCHEMA_VERSION = 2
 
 Trigger = Literal["scheduled", "manual"]
 RunStatus = Literal["running", "succeeded", "failed"]
+RunSource = Literal["facebook", "yad2"]
 
 
 class RunRecord(BaseModel):
@@ -43,6 +46,20 @@ class RunRecord(BaseModel):
     charged_events: dict[str, int] | None
     cost_usd: float | None
     cost_settled_at: datetime | None
+    source: RunSource = "facebook"
+
+    @classmethod
+    def from_stored_json(cls, doc: str) -> "RunRecord":
+        """Read a stored run. A version-1 one (every run before Yad2) reads as version 2 with
+        `source` `"facebook"`. Read-time only, as `User.from_stored_json` does."""
+        data = json.loads(doc)
+        if isinstance(data, dict) and data.get("schema_version") == 1:
+            if "source" in data:
+                raise ValueError("a version-1 RunRecord cannot carry source")
+            doc = json.dumps(
+                {**data, "source": "facebook", "schema_version": RUN_RECORD_SCHEMA_VERSION}
+            )
+        return cls.model_validate_json(doc)
 
     @field_validator("started_at", "finished_at", "window_since", "cost_settled_at")
     @classmethod
@@ -73,4 +90,10 @@ class RunRecord(BaseModel):
             raise ValueError("cost_usd cannot be negative")
         if self.cost_usd is not None and self.status == "running":
             raise ValueError("a running run has no settled cost")
+        if self.source == "yad2" and (
+            self.apify_run_id is not None
+            or self.charged_events is not None
+            or self.cost_usd is not None
+        ):
+            raise ValueError("a Yad2 run has no Apify run, charged events or cost")
         return self

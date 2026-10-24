@@ -18,6 +18,7 @@ from tests.test_openai_classifier import FakeTransport
 from tlv_hunter.classify.instructions import PROMPT_FINGERPRINT, PROMPT_VERSION
 from tlv_hunter.classify.transport import TransportError
 from tlv_hunter.config.yaml_config import YamlConfig
+from tlv_hunter.contracts.listing import LISTING_SCHEMA_VERSION
 from tlv_hunter.jobs.common import SQLITE_FILENAME
 from tlv_hunter.jobs.reclassify import main
 from tlv_hunter.labeling.regression_set import LABELING_DIR, text_sha256
@@ -105,8 +106,9 @@ def test_the_plan_needs_no_key_calls_nothing_and_writes_nothing(tmp_path: Path, 
     code, out, _, keys, _ = run_main(tmp_path, environ={})
     assert code == 0 and keys == []
     assert "reclassify plan: nothing written, no call" in out
-    assert f"current: prompt {PROMPT_VERSION} / schema 1 / gpt-6-luna" in out
-    assert "stored Listings: 3" in out and "prompt 2 / schema 1 / gpt-6-luna: 3" in out
+    assert f"current: prompt {PROMPT_VERSION} / schema {LISTING_SCHEMA_VERSION} / gpt-6-luna" in out
+    assert "stored Listings: 3" in out
+    assert f"prompt 2 / schema {LISTING_SCHEMA_VERSION} / gpt-6-luna: 3" in out
     assert "selected: 3; to ask about with these flags: 3" in out
     assert "estimate: 3 x $0.000219 = $0.0007" in out and "worst case of one call" in out
     assert "--run --cap <USD> --limit 3" in out
@@ -246,7 +248,12 @@ def test_a_run_writes_the_report_and_the_lists_and_never_the_store(tmp_path: Pat
         0,
     )
     assert summary["selected_by_triple"] == [
-        {"prompt_version": "2", "schema_version": 1, "model_name": "gpt-6-luna", "count": 3}
+        {
+            "prompt_version": "2",
+            "schema_version": LISTING_SCHEMA_VERSION,
+            "model_name": "gpt-6-luna",
+            "count": 3,
+        }
     ]
     assert summary["reported_models"] == ["gpt-6-luna"] and summary["calls"] == 3
     assert 0 < summary["spent"] < 0.01

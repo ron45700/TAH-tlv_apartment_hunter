@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime
 from typing import Literal, Self
 
@@ -6,8 +7,20 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from tlv_hunter.parsing.datetimes import require_utc
 from tlv_hunter.textnorm.phones import canonical_phone
 
-LISTING_SCHEMA_VERSION = 1
+LISTING_SCHEMA_VERSION = 2
 AREA_NUMBERS = range(1, 72)
+# The record's provenance: the fields `field_sources` never names (Gate B, version 2).
+PROVENANCE_FIELDS = frozenset(
+    {
+        "schema_version",
+        "listing_id",
+        "model_name",
+        "prompt_version",
+        "classified_at",
+        "price_source",
+        "field_sources",
+    }
+)
 
 
 class Marked[T](BaseModel):
@@ -74,6 +87,22 @@ class Listing(BaseModel):
     areas: list[int]
     other_city: str | None
     phone_names: list[PhoneName]
+    field_sources: dict[str, Literal["form", "model"]] = {}
+    """Where each value came from (Gate B version 2, DECISIONS.md #495): `{}` for a Facebook post;
+    for a Yad2 post one entry per field outside `PROVENANCE_FIELDS`, `"form"` or `"model"`."""
+
+    @classmethod
+    def from_stored_json(cls, doc: str) -> "Listing":
+        """Read a stored `Listing`. A version-1 one (every Facebook `Listing` before Yad2) reads as
+        version 2 with `field_sources` `{}` (#495), so reclassify's triple (#217) does not select it
+        for an added field alone. Read-time only, as `User.from_stored_json` does."""
+        data = json.loads(doc)
+        if isinstance(data, dict) and data.get("schema_version") == 1:
+            if data.get("field_sources", {}) != {}:
+                raise ValueError("a version-1 Listing cannot carry field sources")
+            data = {**data, "field_sources": {}, "schema_version": LISTING_SCHEMA_VERSION}
+            doc = json.dumps(data)
+        return cls.model_validate_json(doc)
 
     @field_validator("classified_at")
     @classmethod
@@ -101,4 +130,9 @@ class Listing(BaseModel):
         rooms = self.rooms.value
         if rooms is not None and (rooms <= 0 or (rooms * 2) != int(rooms * 2)):
             raise ValueError("rooms is a positive multiple of 0.5")
+        if self.field_sources and set(self.field_sources) != SOURCED_FIELDS:
+            raise ValueError("field_sources is empty or names every field outside the provenance")
         return self
+
+
+SOURCED_FIELDS = frozenset(Listing.model_fields) - PROVENANCE_FIELDS

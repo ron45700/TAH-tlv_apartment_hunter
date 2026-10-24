@@ -23,6 +23,7 @@ CODE_FILLED = {
     "price_source",
     "entry_date",
     "phone_names",
+    "field_sources",
 }
 RESPONSE_ONLY = {"entry_date_parts", "phone_name_pairs"}
 FORBIDDEN_KEYWORDS = {"allOf", "not", "if", "then", "else", "dependentRequired", "dependentSchemas"}

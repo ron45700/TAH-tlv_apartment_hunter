@@ -5,7 +5,13 @@
 Nothing here is written without Ron's explicit approval. Nothing outside this file redefines it —
 code, prompts, and other documents reference it, never restate it.
 
-**Last updated:** 2026-10-18 (round 31) — **Gate F approved by Ron (`DECISIONS.md` #453):** `telegram_chat_id` and `telegram_linked_at` on `User` (schema version 2; a stored version-1 user reads as 2), `TelegramLinkCode` and `SentAlert`; the Phase 0 stub contracts removed. Before that, 2026-10-12 (round 8) — **a field moved, approved explicitly by Ron (`DECISIONS.md` #317):**
+**Last updated:** 2026-10-24 (round 43) — **Yad2, approved by Ron (`DECISIONS.md` #496, #501–#511; `PHASE_6.md` §6.2,
+§6.3, §6.7):** Gate A's third `source` `"yad2"` and Yad2's table (`RawPost.schema_version` stays 1); Gate B's
+`field_sources`, `Listing` version 2 (a stored version-1 `Listing` reads as 2 with `{}`), and the Yad2 mapping with the
+22 kinds; Gate E's three Yad2 rules (`not_listing` by kind before the model; no `no_text`, no `no_images` rejection);
+Gate G's `RunRecord.source` and `ScheduleSettings`' Yad2 rhythm, version 2 on each (stored version-1 rows read with
+defaults). **Two items wait for Ron** (`PHASE_6.md` §6.14): the media row (C1) and the rhythm's field names (C4).
+Before that, 2026-10-18 (round 31) — **Gate F approved by Ron (`DECISIONS.md` #453):** `telegram_chat_id` and `telegram_linked_at` on `User` (schema version 2; a stored version-1 user reads as 2), `TelegramLinkCode` and `SentAlert`; the Phase 0 stub contracts removed. Before that, 2026-10-12 (round 8) — **a field moved, approved explicitly by Ron (`DECISIONS.md` #317):**
 `include_sublets` is now one switch on `Profile` (schema version 2), no longer one per `SearchOption`; a stored version-1
 profile reads as version 2. Before that, 2026-10-11 (round 6) — rule text only, approved by Ron: a correction of `other_city` in force
 outranks Facebook's location field (Gate B, "The city comes from…", `DECISIONS.md` #296); the gate table's row D says
@@ -108,12 +114,13 @@ Gate E was added to the table and Gate C widened, per `DECISIONS.md` #59.
 
 | Gate | Covers | Status |
 |---|---|---|
-| A | `RawPost` | ✅ Approved 2026-09-14 |
-| E | Post lifecycle record (state, rejection reason, flag, last publication, images, classification failures) and `GroupWatermark` | ✅ Approved 2026-10-04; classification-failure fields approved 2026-10-05 (#139, #152); amended 2026-10-10 for Gate C (`"misclassified"`, the restore rule, the exemption, `schema_version` 3; #288) |
-| B | `Listing`, and the model's response `ListingExtraction` | ✅ Approved 2026-10-05 (#81–#125; the response #137, #151) |
+| A | `RawPost` | ✅ Approved 2026-09-14; Yad2 approved 2026-10-24 (#496, #502), schema version 1 |
+| E | Post lifecycle record (state, rejection reason, flag, last publication, images, classification failures) and `GroupWatermark` | ✅ Approved 2026-10-04; classification-failure fields approved 2026-10-05 (#139, #152); amended 2026-10-10 for Gate C (`"misclassified"`, the restore rule, the exemption, `schema_version` 3; #288); Yad2's three rules 2026-10-24 (#502, #509, #510; no field change) |
+| B | `Listing`, and the model's response `ListingExtraction` | ✅ Approved 2026-10-05 (#81–#125; the response #137, #151); `field_sources` and Yad2's mapping 2026-10-24 (#495, #501, #502), schema version 2 |
 | D | Dedup stage B key | ✅ Key decided 2026-10-08 (#230, rule 1 amended by #232: a shared phone that is not an agent number and the fields rule, or an identical photo and one of the two rules; nothing else merges). **Nothing is stored:** the result is derived from the stored posts and never written onto a post (#231); it is the same for every user, computed once for all users, held in the site's memory and computed again only when the store changed (#301); no field, record or schema change |
 | C | Filter rules, and the user, key, session, profile, viewed-post, report and correction records | ✅ Approved 2026-10-10: content #242–#257, #262–#287; names and types, R1–R9 and the Gate E amendments #288 |
 | F | Telegram: the link on `User`, `TelegramLinkCode`, `SentAlert` | ✅ Approved 2026-10-18 (#453) |
+| G | Collection runs and the schedule: `RunRecord`, `ScheduleSettings` | ✅ Approved 2026-10-19 (#472); `RunRecord.source` and Yad2's rhythm 2026-10-24 (#502 point 19), schema version 2 on each |
 
 ---
 
@@ -158,9 +165,9 @@ regardless. The question is: **will I filter, query, or dedup on it?** If not, i
 | Field | Type | Source (thedoor) | Rationale |
 |---|---|---|---|
 | `schema_version` | `int` | — | `reclassify` depends on it entirely. Without it there is no way to know which records need reprocessing. |
-| `source` | `str` | — | `"thedoor"` / `"memo23"`. Set at fetch time, not present in `raw`. The only trace of origin after normalization. |
+| `source` | `str` | — | `"thedoor"` / `"memo23"`; `"yad2"` for a Yad2 listing (2026-10-24, #496). Set at fetch time, not present in `raw`. The only trace of origin after normalization. |
 | `source_post_id` | `str` | `post_id` | Facebook's own post ID, as the provider gave it. Dedup layer 1. |
-| `listing_id` | `str` | derived | `sha256(source_post_id)`. **`source` is deliberately excluded** — see below. |
+| `listing_id` | `str` | derived | `sha256(source_post_id)`. **`source` is deliberately excluded** — see below. A Yad2 listing: `sha256("yad2:" + token)` (#496). |
 | `group_id` | `str` | `group_id` | Per-group watermark, silent-group detection. |
 | `group_title` | `str \| None` | ❌ (memo23 has it) | Displayed on the card. |
 | `permalink` | `str` | `post_url` | The link Ron clicks. |
@@ -281,8 +288,8 @@ The pair `(no_text, text_hash)` resolves the ambiguity: `no_text=True` with `tex
 |---|---|---|---|
 | `text_hash` | `str \| None` | Phase 0 | sha256 of aggressively normalized text. Dedup layer 2, the primary key. `None` when `no_text` is `True` — two empty strings must never collide — or when textnorm has not run. |
 | `phones` | `list[str] \| None` | Phase 0 | Dedup layer 3, a one-directional signal. ~50% coverage. **Stored normalized**: digits only, `+972` converted to a leading `0`, so `05X-XXXXXXX` and `+9725XXXXXXXX` both become `05XXXXXXXX`. One stored format is what makes an equality lookup in the store possible; nothing is lost, since the card always shows the full original text and `raw` keeps the rest. An identical number within one post is stored once, in order of first appearance (`DECISIONS.md` #57). `find_by_phone` normalizes its input before comparing. `None` means not extracted; `[]` means extracted and none found. |
-| `no_text` | `bool \| None` | Phase 0 | Stored, and rejected with the reason "no text" (`BASELINE.md` §5). **Not sent to the model** — we do not analyse images. Seen only in the admin's rejected list. True when the text is absent, whitespace-only, **or normalizes to nothing** (an emoji-only post). A post that normalizes to nothing must never raise: a failed run does not advance the watermark, so one throwaway post would block the window permanently. `text_source` still records where the text came from — `"text"` with `no_text=True` means it arrived and was unusable. |
-| `is_canonical` | `bool \| None` | Phase 1 (task 1.3) | Dedup result. A property of the post, not of any user, so it lives here and not on `Decision`. |
+| `no_text` | `bool \| None` | Phase 0 | Stored, and rejected with the reason "no text" (`BASELINE.md` §5); **not for a Yad2 listing** (#509, Gate E's Yad2 rules). **Not sent to the model** — we do not analyse images. Seen only in the admin's rejected list. True when the text is absent, whitespace-only, **or normalizes to nothing** (an emoji-only post). A post that normalizes to nothing must never raise: a failed run does not advance the watermark, so one throwaway post would block the window permanently. `text_source` still records where the text came from — `"text"` with `no_text=True` means it arrived and was unusable. |
+| `is_canonical` | `bool \| None` | Phase 1 (task 1.3) | Dedup result. A property of the post, not of any user, so it lives here and not on `Decision`. A Yad2 agency listing (`raw.adType` `commercial`) is not deduplicated by the text hash (#508). |
 | `duplicate_of` | `str \| None` | Phase 1 (task 1.3) | The canonical `listing_id` this post duplicates. `None` is ambiguous on its own — read it together with `is_canonical`. |
 
 ---
@@ -306,6 +313,40 @@ write it."** The second meaning belongs to `Listing`. Do not conflate them.
 memo23 has **not** been verified against a real response by anyone but Ron, at research time. Its
 input field is `startUrls`, not `url`. See `ASSUMPTIONS.md` M1–M3; verification happens when the
 failover adapter is built.
+
+---
+
+## Yad2 (approved 2026-10-24, `DECISIONS.md` #494, #496, #502; `PHASE_6.md` §6.2)
+
+Yad2 is a **source, not a provider**: its own seam reads Yad2's pages (#507); `providers/` and its contract are
+unchanged. `d` is the listing page's `data` (`__NEXT_DATA__` → the dehydrated query keyed `"item"` → `state.data`).
+**Schema version 1**: one more `source` value, no field changed (#502 point 2). Every field is still a pure function of
+`raw` (`raw` is `d`), but for `source` and `fetched_at`, as for Facebook.
+
+| Field | Yad2 source |
+|---|---|
+| `source` | `"yad2"` |
+| `source_post_id` | `d.token` (8 lower-case letters and digits) |
+| `listing_id` | `sha256("yad2:" + d.token)` |
+| `group_id` | `"yad2-tel-aviv"`: one fixed value, with its `GroupWatermark` and silent-group detection |
+| `group_title` | `"יד2 · תל אביב-יפו"` |
+| `permalink` | `https://www.yad2.co.il/realestate/item/tel-aviv-area/<token>` |
+| `posted_at` | `d.dates.updatedAt`, Israel local time with no zone, converted to UTC by the one datetime module (invariant 9; #492). `rebouncedAt` and `createdAt` are never used |
+| `fetched_at` | When the listing page was read |
+| `raw` | `d`, whole (#494). The phone response (`realestate-item/customer/<token>`) is never fetched or stored (#497) |
+| `text` | `d.metaData.description`; `""` when absent |
+| `text_source` | `"text"`; `"none"` when there is no description |
+| `post_type` | `"yad2_listing"` |
+| `media[]` | `d.metaData.images[]` as `Photo` items, `d.metaData.video` as one `Video` item, `width` and `height` `None`. **The approved row gives `media_id` and `page_url` `None`, which `Media`'s types (`str`) do not allow: waits for Ron (`PHASE_6.md` §6.14 C1); built as `[]` until then** |
+| `native_price`, `native_price_raw` | `d.price` and its text when above 0, else `None` (0 means no price; above 20,000 kept, #501) |
+| `native_currency` | `"ILS"` when there is a price: **stated, not parsed from a symbol** (#502 point 3) |
+| `native_title` | `None` |
+| `native_location` | `d.address.city.text`: the city rule (Gate B, #214) reads it |
+| `author_name` | `d.customer.name` (#502 point 4) |
+| `author_id_raw` | `str(d.customer.id)`; never a key |
+| `author_profile_url`, `top_comment`, `reactions_count`, `comments_count`, `shares_count` | `None` |
+| `text_hash`, `phones`, `no_text` | `textnorm` over `text`, as for Facebook; `phones` only from the description's own text |
+| `is_canonical`, `duplicate_of` | Dedup A for a private listing; an agency listing (`adType` `commercial`) is not deduplicated (#508). No dedup across sources (#500) |
 
 ---
 
@@ -391,6 +432,11 @@ Exactly one of `local_path` and `error` is set.
   post whose only media is video or reel is not rejected. For a post that shares another post, the
   same test applies to the shared post's media: it is rejected only if the shared post has no media
   either. This is the rejection rule; the download rule below is separate.
+- **Yad2's rejections** (2026-10-24; no field changed): a listing whose property kind maps to `not_listing`
+  (`PHASE_6.md` §6.3.1; Gate B, "Yad2") is stored and **rejected `not_listing` before the model**, with no call
+  (#502 point 11). **A Yad2 listing with no description is not rejected `no_text`**: the form fills its fields and the
+  model receives Yad2's labelled block only (#509). **A Yad2 listing with no photo is not rejected `no_images`**: it
+  shows without a photo (#510). Facebook's rules are unchanged.
 - **Images (download):** photos are downloaded for every canonical post that has photos, whatever
   its state, a `no_text` post included (`DECISIONS.md` #76). Photos only, no video or reels (a
   video shows its `page_url` link). One retry within a run for an error that is not a network
@@ -433,7 +479,9 @@ Every field changes only after a successful run, for all configured groups toget
 types), #123–#125 (the last two points). The stubs below (`ListingStub`) are replaced by it, not
 extended. The model's response shape, `ListingExtraction`, follows this gate (#151).
 
-**Schema version:** 1
+**Schema version:** 2 (2026-10-24, #502 point 5: `field_sources`). A stored version-1 `Listing` reads as version 2
+with `field_sources` `{}` (read-time only, as `User` and `Profile`; nothing rewritten in bulk), so reclassify's triple
+(#217) does not select it for the added field alone.
 
 ## The record
 
@@ -468,6 +516,7 @@ response shape, `ListingExtraction`, is below, after this gate (#137, #151).
 | `model_name` | `str` | The model identifier as sent in the call |
 | `prompt_version` | `str` | Changes whenever the prompt changes, with or without a schema change |
 | `classified_at` | `datetime` UTC | When the model's answer was received |
+| `field_sources` | `dict[str, "form" / "model"]` | Where each value came from (2026-10-24, #495, #502 point 5): `{}` for a Facebook post; for a Yad2 post, one entry for **every** field outside the provenance (`schema_version`, `listing_id`, `model_name`, `prompt_version`, `classified_at`, `price_source`, `field_sources`). Set by code, never by the model |
 
 ### Kind of post
 
@@ -553,10 +602,62 @@ street or an area name, unclear, no alert; empty and the post gave no location, 
   place returns no area. With no area name and no street, a well-known landmark that places the
   apartment decides, every area it touches when it lies on a border; a general distance phrase
   places nothing (#178). Filtering is by area, never by street.
+- **Yad2** (2026-10-24): see "Yad2: the form and the model" below; its own rules there take precedence for a Yad2
+  post where they differ (the price, #162's drop for the form's names).
 - **Not carried over from the research schema** (`data/raw/research_listing_model_2026-09-13.py.txt`,
   `ASSUMPTIONS.md` C5), since the approved content does not list them: `confidence`, `flags`,
   `language`, `total_roommates`, `has_living_room`, `price_includes_bills`, a `duration`, and
   `"men_only"` / `"men_preferred"`.
+
+## Yad2: the form and the model (approved 2026-10-24, `DECISIONS.md` #495, #498, #501–#503; `PHASE_6.md` §6.3)
+
+**The form wins wherever it covers a field; the model decides `apartment_kind`, `post_nature` and `gender`, and every
+field the form left empty** (#495). **The property kind wins for `post_nature` / `apartment_kind` where the kinds' table
+maps it** (#502 point 25). Each value's source is in `field_sources`. A form flag: `true` → `True`, `false` → `False`,
+absent → the model. `d` is the listing page's `data`.
+
+| Field | From Yad2's form | Else |
+|---|---|---|
+| `post_nature`, `apartment_kind` | the property kind (`d.additionalDetails.property.id`), where the table below maps it | model |
+| `price` | `d.price` > 0 → `[d.price]`, `price_source` `"native"`. **For a Yad2 post the form's price wins over the text's** (#495; Facebook's rule, "the text wins", unchanged) | model, from the description |
+| `entry_date_written` | — (the form's date is not "as written", #96) | model |
+| `entry_date` | `d.inProperty.isImmediateEntrance` true → `"immediate"`; else `d.additionalDetails.entranceDate` → its calendar date | model |
+| `rooms` | `d.additionalDetails.roomsCount` (a positive multiple of 0.5) | model |
+| `floor` | `d.address.house.floor`: 0 the ground floor, a basement −1 (#502 point 6) | model |
+| `building_floors` | `d.additionalDetails.buildingTopFloor` | model |
+| `size_sqm` | `d.additionalDetails.squareMeter`, not `squareMeterBuild` (#502 point 6) | model |
+| `room_size_sqm` | — | model |
+| `broker` | `d.adType`: `commercial` → `True`, `private` → `False` (#501) | model, for another value |
+| `balcony` | `balconiesCount` > 0 or `includeBalcony` true → `True`; `includeBalcony` false → `False` | model |
+| `parking` | `parkingSpacesCount` > 0 or `includeParking` true → `True`; `includeParking` false → `False` | model |
+| `elevator`, `air_conditioning` | `includeElevator`, `includeAirconditioner` | model |
+| `furnished` | `includeFurniture` false → `"no"`; true → the model chooses (#502 point 7) | model |
+| `arnona`, `house_committee` | `d.propertyTax`, `d.houseCommittee` when above 0 (no period; as written, #116) | model |
+| `gender`, `room_size_sqm`, `areas`, `other_city`, `phone_names` | — | model (`areas` with Yad2's labelled block, #498, #503) |
+| `streets` | `d.address.street.text`, with `d.address.house.number` when present | the model's own streets from the description added after it |
+| `stated_area_names` | `d.address.neighborhood.text`, as given | the model's own names added after it |
+
+**The form's `streets` and `stated_area_names` are exempt from #162's "not in the text" drop** (#502 point 8); the
+model's own names stay under it. **Yad2's labelled block** goes to the model beside the description, never inside it:
+the neighbourhood, the street, the property kind, `isForPartners` and `furnitureInfo` (#498, #503); with no
+description, the block alone (#509). Not mapped, kept in `raw`: `isForPartners`, `isPetsAllowed`,
+`includeSecurityRoom`, `includeWarehouse`, `isRenovated`, `propertyCondition`, `squareMeterGarden`,
+`isLongTermContract`, `paymentsInYear`, `furnitureInfo`, `tags`, `priceBeforeTag`, `abovePrice`.
+
+**The 22 property kinds** (Yad2's rent search options; #501, #502 points 10, 11, 25). "model": the model decides.
+`not_listing`: rejected before the model, with no call (Gate E). A kind not in the table decides nothing.
+
+| id | Kind | `post_nature` | `apartment_kind` |
+|---|---|---|---|
+| 1, 3, 6, 7, 51, 49 | דירה, דירת גן, גג/ פנטהאוז, דופלקס, טריפלקס, מרתף/ פרטר | model | model |
+| 4 | סטודיו/ לופט | model | `whole_apartment` (#94) |
+| 11 | יחידת דיור | model | `whole_apartment` |
+| 43 | סאבלט | `sublet_offer` | model |
+| 5, 39 | בית פרטי/ קוטג', דו משפחתי | model | model |
+| 41 | כללי | model | model |
+| 31, 25 | החלפת דירות, תיירות ונופש | `not_listing` | — |
+| 32, 55 | משק חקלאי/ נחלה, משק עזר | `not_listing` | — |
+| 30, 45, 33, 44, 61, 50 | חניה, מחסן, מגרשים, בניין מגורים, דיור מוגן, קב' רכישה/ זכות לנכס | `not_listing` | — |
 
 ## The 71 areas (#81)
 
@@ -687,7 +788,7 @@ below.
 
 **Code-filled `Listing` fields** (in `Listing`, not in the response): `schema_version`,
 `listing_id`, `model_name`, `prompt_version`, `classified_at`, `price_source`, `entry_date`,
-`phone_names`.
+`phone_names`, `field_sources` (2026-10-24).
 
 The provider's structured-output rules (`RESEARCH.md` §15): every field required (an optional
 value is a `null` union), `additionalProperties: false` on every object, the root an object.
@@ -1088,7 +1189,9 @@ retention job.
 # GATE G — collection runs and the schedule
 
 **Approved:** 2026-10-19 (`DECISIONS.md` #472; the content, `PHASE_5.md` point 5, approved with every point as
-recommended, #471). **Schema version:** 1 on both.
+recommended, #471). **Schema version:** 2 on both since 2026-10-24 (#502 point 19: `RunRecord.source`, Yad2's rhythm
+on `ScheduleSettings`); a stored version-1 row reads as version 2 with the defaults below (read-time only; written as 2
+on its next save).
 
 Stored by `SqliteRunStore` (`state/runs.py`) in the same SQLite file, in their own tables (`run_records`,
 `schedule_settings`) with their own layout row (`store.runs`, version 1, created when absent, as `userdata.telegram`):
@@ -1102,15 +1205,16 @@ starts and when it ends; its cost by `settle_costs` later (#450). Never deleted.
 
 | Field | Type | Rule |
 |---|---|---|
-| `schema_version` | `int` | Starts at 1 |
+| `schema_version` | `int` | 2 (1 until 2026-10-24) |
+| `source` | `"facebook"` / `"yad2"` | Which source the run collected (2026-10-24, #502 point 19); a version-1 row reads as `"facebook"`. **A Yad2 run's Apify fields (`apify_run_id`, `charged_events`, `cost_usd`, `cost_settled_at`) are always `None`**; its `window_since` is `None` (no time window) |
 | `run_id` | `str` | The run's `run_id` in its log lines; not empty |
 | `trigger` | `"scheduled"` / `"manual"` | The scheduler's runs are `scheduled`; "run now" and a run by hand `manual` |
 | `started_at` | `datetime` UTC | When the run started |
 | `finished_at` | `datetime` UTC / `None` | `None` exactly while `running`; not before `started_at` |
 | `status` | `"running"` / `"succeeded"` / `"failed"` | A record left `running` is closed `failed` when the next run starts ("abandoned") |
 | `failure_kind` | `str` / `None` | Set exactly when `failed`: the error's kind and message (at most 300 characters; no post content) |
-| `rows_fetched` | `int` / `None` | The rows the Apify dataset returned (what is billed); `None` until known; not negative |
-| `rows_skipped` | `int` / `None` | The rows that failed to map (#71 D); `None` until known; not negative |
+| `rows_fetched` | `int` / `None` | The rows the Apify dataset returned (what is billed); a Yad2 run: the listings read on its list pages. `None` until known; not negative |
+| `rows_skipped` | `int` / `None` | The rows that failed to map (#71 D); a Yad2 run: the listing pages that failed to map. `None` until known; not negative |
 | `window_since` | `datetime` UTC / `None` | The run's `since`; `None` when the run failed before it was used |
 | `window_capped` | `bool` | Always `false`: collection is never capped after a pause (#473, point 12 B) |
 | `apify_run_id` | `str` / `None` | The Apify run's id; `None` when no Apify run started |
@@ -1125,7 +1229,7 @@ scheduler (the first row, from its `.env`). Read by the scheduler at every pass 
 
 | Field | Type | Rule |
 |---|---|---|
-| `schema_version` | `int` | Starts at 1 |
+| `schema_version` | `int` | 2 (1 until 2026-10-24) |
 | `interval_minutes` | `int` | 5 to 1440. The next scheduled run starts this long after the start of the last run that was scheduled, or manual and succeeded (#61) |
 | `quiet_from` | `str` `HH:MM` | Israel local time (converted by the schedule only, invariant 9) |
 | `quiet_until` | `str` `HH:MM` | Israel local time; equal to `quiet_from`: no quiet hours; across midnight when earlier |
@@ -1133,3 +1237,9 @@ scheduler (the first row, from its `.env`). Read by the scheduler at every pass 
 | `last_digest_at` | `datetime` UTC / `None` | When the bot last sent the daily digest |
 | `updated_by` | `str` / `None` | The admin's `user_id` who last changed the settings; `None` for the scheduler's first row |
 | `updated_at` | `datetime` UTC | When the settings were last changed |
+| `yad2_interval_minutes` | `int` / `None` | Yad2's own interval (2026-10-24, #502 point 19), 5 to 1440 |
+| `yad2_hours_from` | `str` `HH:MM` / `None` | Israel local time: Yad2's runs start from it, daytime only (#490) |
+| `yad2_hours_until` | `str` `HH:MM` / `None` | Israel local time: Yad2's runs start before it; later than `yad2_hours_from` (no wrap past midnight) |
+
+The three Yad2 fields are set together or all `None`; all `None` (a version-1 row) means no Yad2 runs. **Their names
+are proposed and built; Ron's word on them is pending** (`PHASE_6.md` §6.14 C4).

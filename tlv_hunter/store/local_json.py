@@ -108,7 +108,7 @@ class LocalJsonRepository:
         path = self._listing_path(listing_id)
         if not path.exists():
             return None
-        return Listing.model_validate_json(path.read_text(encoding="utf-8"))
+        return Listing.from_stored_json(path.read_text(encoding="utf-8"))
 
     def find_pending_canonicals(self) -> list[RawPost]:
         found = []

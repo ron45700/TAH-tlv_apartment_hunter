@@ -1,5 +1,8 @@
 from datetime import UTC, date, datetime, timedelta
 from email.utils import parsedate_to_datetime
+from zoneinfo import ZoneInfo
+
+ISRAEL_ZONE = ZoneInfo("Asia/Jerusalem")
 
 
 def parse_rfc2822_utc(value: str) -> datetime:
@@ -8,6 +11,25 @@ def parse_rfc2822_utc(value: str) -> datetime:
     if parsed.tzinfo is None:
         raise ValueError(f"RFC 2822 datetime carries no usable timezone: {value!r}")
     return parsed.astimezone(UTC)
+
+
+def parse_israel_local_utc(value: str) -> datetime:
+    """Yad2's dates (`updatedAt`): ISO text with no zone, Israel local time (spike §3, §S2.4;
+    DECISIONS.md #492), to UTC. A time inside the autumn change's repeated hour reads as the
+    earlier one (summer time, `fold=0`); a time inside the spring gap reads with winter time."""
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is not None:
+        raise ValueError(f"expected Israel local time with no zone: {value!r}")
+    return parsed.replace(tzinfo=ISRAEL_ZONE).astimezone(UTC)
+
+
+def parse_local_date(value: str) -> date:
+    """A calendar date written as ISO text with no zone and no time of day (Yad2's
+    `entranceDate`, `"2026-11-01T00:00:00"`): its date as written, never moved by a zone."""
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is not None or parsed.time() != datetime.min.time():
+        raise ValueError(f"expected a date at midnight with no zone: {value!r}")
+    return parsed.date()
 
 
 def require_utc(value: datetime) -> datetime:

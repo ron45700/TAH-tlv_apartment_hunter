@@ -26,7 +26,7 @@ class RawPost(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     schema_version: int
-    source: Literal["thedoor", "memo23"]
+    source: Literal["thedoor", "memo23", "yad2"]
     source_post_id: str
     listing_id: str
     group_id: str
@@ -70,7 +70,7 @@ class RawPost(BaseModel):
 
     @model_validator(mode="after")
     def _check_consistency(self) -> Self:
-        if self.listing_id != compute_listing_id(self.source_post_id):
+        if self.listing_id != compute_listing_id(self.source_post_id, source=self.source):
             raise ValueError("listing_id does not match source_post_id")
         blank = is_blank(self.text)
         if self.text_source == "text" and blank:
