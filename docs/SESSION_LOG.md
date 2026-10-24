@@ -7969,3 +7969,77 @@ paragraph; `is_agency` on the `RawPost`; the C7 options and the recommendation (
 **Next:** Ron's go for the regression run (cap $0.10) and the block check (cap $0.01; its command first); Ron's answer
 on C7; then build step 4. **This round's code should not be deployed before the regression run is read**: version 7
 would classify the server's new Facebook posts.
+
+## 2026-10-24 (continued) — Round 45: C7 (#520); the block check passed; version 7's regression run failed
+
+Two paid runs, on Ron's go (#521), on Windows with `uv` (no Docker): **$0.025585 in all**. No store write (the
+regression run opens the development store read-only; the block check opens none), nothing on the server, nothing
+deployed, no git write (Ron committed round 44 as `171bad5`).
+
+**Recorded:** `DECISIONS.md` #520 (a Yad2 bump adds no repost line; amends #492 on that point), #521 (the go).
+`PHASE_6.md` (the DoD's bump line, §6.5, C7 answered, §6.4 "Results", the status), `BASELINE.md` §4's bump sentence,
+`ASSUMPTIONS.md` **O14 VERIFIED** (two `input_text` parts), CLAUDE.md (the new command, the key's readers, Now/Next),
+`BACKLOG.md` item 15. README never said a Yad2 bump adds a line.
+
+**Built:** `jobs/yad2_block_check.py` (`--check` free; paid: 3 calls on the saved pages, cap $0.01, each response
+saved to `data/raw/yad2_block_check_<n>_<date>.json`, no store opened) and `tests/test_yad2_block_check.py` (4, a fake
+transport, the pages copied into a temporary root).
+
+**The regression run** (`data/labeling/runs/v7-none-1dada328-b5db1eb3aa49`): 54 posts, 108 calls, **$0.024969** of $0.10;
+both passes `fail`. No version-6 run exists (#484), so compared with version 5's run (`09f15e8dac9f`) by a scratchpad
+script (positions, fields and values only). Positions 3, 58, 59, 60 failed before (with #367's truths) and still do.
+**New: `apartment_kind` below its bar** (pass 1: 2 of 32, positions 8 and 9; pass 2: 1), with 8 posts in pass 1 going
+from `whole_apartment` to not written; pass 1's areas miss position 37 ([31] → []), the exact rate 0.81 → 0.74. The
+likely reason is version 7's own sentence, "Use it for apartment_kind", read by the model on posts that carry no block;
+not proven, as version 6 had no run. Streets with their house numbers are version 6's (#484); the rest is noise of the
+kind seen before (25 flips against version 5's 29).
+
+**The block check:** 3 of 3 `completed`, **$0.000616**; private 1: area 50 for "נווה עופר, תל כביר" (תל כביר is not
+among the 71 names nor the known places), furnished `partial`; private 3: area 22 for its own name, furnished `yes`;
+the agency page (outside Tel Aviv-Yafo): no area. All three `rental_offer`, `whole_apartment`, `no_restriction`;
+11–14 fields from the form.
+
+**Verified:** `uv run pytest`: **2,335 passed**; ruff clean.
+
+**Decided by me:** the block check's command name and output; comparing against version 5 with the corrected truths;
+the reading of the cause (stated as likely, not proven).
+
+**Next:** version 7 reworded so the Yad2 section applies only to a post that carries the block, and its regression
+run again, on Ron's go (cap $0.10, about $0.025); optionally a version-6 run first to settle the cause (about $0.025).
+Then build step 4 (the Yad2 seam: paging, new tokens' pages, bump checks, block detection on saved HTML), which needs
+nothing more from Ron. **Version 7 stays off the server until a run passes or Ron accepts it.**
+
+## 2026-10-24 (continued) — Round 46: instructions version 8 (#522); its regression run restores `apartment_kind`
+
+One paid run, on Ron's go (#522), on Windows with `uv` (no Docker): **$0.025091**. No store write (the development store
+opened read-only), nothing on the server, nothing deployed, no git write. The block check was not run again: the
+block's handling did not change.
+
+**Recorded:** `DECISIONS.md` #522 (the Yad2 section scoped to posts that carry the block; version 8; version 7 never
+deployed; no version-6 run unless version 8 still failed `apartment_kind`). `PHASE_6.md` (status, §6.4 "Version 8"),
+`BACKLOG.md` item 15, CLAUDE.md's "Now/Next".
+
+**Changed:** `classify/instructions.txt`, the "YAD2 LISTINGS" section only: it opens with the scope ("This section
+applies only to a post that comes with a second part starting with "[Yad2 listing form — not the poster's text]". A
+post without that part is classified exactly as before, from its text alone, by the rules below: every field,
+apartment_kind included, is read from the text as usual, and nothing in this section applies to it."), and its four
+rules (areas, apartment_kind and furnished beside the text, never copied into the text fields, everything else from
+the text) hold "for such a post only". `PROMPT_VERSION` "8", `PROMPT_FINGERPRINT` `16202ae9…`; the pins in
+`test_classify_instructions.py` and `test_yad2_block_check.py` follow.
+
+**The regression run** (`data/labeling/runs/v8-none-16202ae9-5364752fe609`): 54 posts, 109 calls (one retried),
+$0.025091 of $0.10; both passes `fail`, on non-deciding fields only. Compared with versions 5 and 7 by a scratchpad
+script (positions, fields, values): **`apartment_kind` 0 of 32 in both passes** (7: 2 and 1; 5: 0), the eight posts
+version 7 left not written back to `whole_apartment`; **`areas` 0 errors** (7: 1), exact rate 0.806 and 0.742. With
+#367's truths, against version 5: `furnished` 3 and 2 (5: 3 and 3); `parking` 2 and 1 (1 and 1; position 9, pass 1
+only); `entry_date_written` 2 and 2 (1 and 1; position 2 copies "הכניסה מידית" for "מידית", as version 7's pass 2
+did); `broker` 0 and 1 (0 and 1); `house_committee` 0 and 0 (0 and 1). Every deciding field clean.
+
+**Verified:** `uv run pytest`: **2,335 passed**; ruff clean.
+
+**Decided by me:** the wording inside the section; the block check not repeated (the request, the block and the rules
+for a post that carries it are as checked in round 45).
+
+**Next:** Ron's acceptance of version 8's run (#511) and the deploy's timing (a backup first: the deploy writes
+version-2 `Listing`, `RunRecord` and `ScheduleSettings` rows that an older image cannot read). Build step 4, the Yad2
+seam (`PHASE_6.md` §6.5, §6.6, §6.8): needs nothing more from Ron.

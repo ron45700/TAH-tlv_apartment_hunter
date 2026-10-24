@@ -4491,6 +4491,30 @@ list of one or many input items"); not yet seen in a real response, and the regr
 **With the regression run's go:** a check of 3 calls on the saved Yad2 pages, cap $0.01, the responses saved to
 `data/raw/`, nothing stored. *Ron's decision, 2026-10-24, round 44.*
 
+## Yad2: C7 and the go for the paid runs (2026-10-24, round 45)
+
+### 520 — A Yad2 bump adds no repost line (amends #492)
+`PHASE_6.md` §6.14 C7, option A: a bump of a known Yad2 listing moves only its `last_published_at` (the card's time,
+and retention's clock); **it adds no repost line**, since the repost log is derived from duplicate records and a bump
+keeps its token and its `listing_id` (#496). #492's "the repost log gets a line" is amended on that point; its "no new
+card and no alert" stands. *Approved by Ron, 2026-10-24.*
+
+### 521 — The go for the regression run of version 7 and the block check
+Ron's go for the two paid runs of `PHASE_6.md` §6.4: the regression run of instructions version 7 on the existing set,
+cap $0.10 (#511); the block check, 3 calls on the saved Yad2 pages (the two private listings and the agency one), cap
+$0.01, its small command built first, each response saved to `data/raw/` with a dated name, nothing stored (#519); the
+request shape moves to VERIFIED if it works. Nothing deployed. *Approved by Ron, 2026-10-24.*
+
+### 522 — Instructions version 8: the Yad2 section scoped to posts that carry the block; version 7 never deployed
+Version 7's regression run failed on `apartment_kind` (round 45, `PHASE_6.md` §6.4 "Results"). The "YAD2 LISTINGS"
+section is reworded to apply **only to a post that carries the labelled block**, saying plainly that a post with no
+block is classified exactly as before, `apartment_kind` included, from its text alone; the change is kept to that
+section. The reworded instructions are **version 8**, with a new fingerprint (#179). **Version 7 keeps its failed run
+and is never deployed.** Go for version 8's regression run on the existing set, cap $0.10, compared with version 5
+(the corrected labels, #367) and with version 7. **No version-6 run now:** only if version 8 still fails
+`apartment_kind`, the round stops and Ron decides on one. The block check is not run again unless the block's handling
+changed. *Approved by Ron, 2026-10-24.*
+
 ---
 
 ## Corrections to recorded facts

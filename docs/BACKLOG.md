@@ -7,7 +7,7 @@ is approved*. `SESSION_LOG.md` records *what happened*. None of them tracks whet
 actually reached the code, which is how decisions #37 and #38 were approved on 2026-09-14 and were
 still unimplemented on 2026-10-02.
 
-**Last updated:** 2026-10-24 (round 44)
+**Last updated:** 2026-10-24 (round 46)
 
 ## Rules
 
@@ -89,6 +89,11 @@ proposed; six points for Ron in §6.14 (item 15).**
 **Round 44 (2026-10-24): §6.14 and §6.8 answered (#512–#519); Yad2's build step 2 built (the rules around the model,
 the media, dedup kept within a source) and instructions version 7 written; the regression run and the block check
 planned, not run (item 15).**
+**Round 45 (2026-10-24): C7 answered (#520, a bump adds no repost line); the two paid runs (#521): the block check
+passed (O14 VERIFIED, $0.000616); the regression run of version 7 failed on `apartment_kind` ($0.024969): version 7
+to be reworded and run again (item 15).**
+**Round 46 (2026-10-24): version 8 (#522: the Yad2 section scoped to the block) restores `apartment_kind` and
+`areas` ($0.025091); version 7 never deployed (item 15).**
 
 | # | Item | Source | Needs |
 |---|---|---|---|
@@ -100,7 +105,7 @@ planned, not run (item 15).**
 | 12 | **Ron reads the first applied retention's log line** (the first archive is due about 2026-11-11, the first delete about 2026-11-26): the scheduler's nightly `retention --apply`. Not a blocker | `DECISIONS.md` #478 | Ron, around 2026-11-11 |
 | 13 | **"ניתוח מידע" (the admin's data analysis) is a placeholder page** (#483): its content is planned after round 38. Open from Phase 5 for the same planning: whether the digest should carry retention's last numbers (not built: no record holds them, a Gate G change) | `DECISIONS.md` #471, #483 | Ron: the content |
 | 14 | **Ron checks v6 streets on real alerts** (#484): instructions version 6 copies a street with its house number; no regression run was made for it (Ron's decision). On the next real alerts, a multi-area post whose text gives a number should show "- רחוב: <street> <number>" with no " (מיקום מדויק לא ודאי)". A number written apart from the name is kept with it, and a number not in the text is dropped with the name kept (#486, amending #162); watch the classify log's dropped-names line for streets still dropped. Stored posts keep their version-5 streets (no reclassify) | `DECISIONS.md` #484, #486 | Ron, on the next alerts |
-| 15 | **Yad2 (phase 6, `docs/PHASE_6.md`)**: decisions #489–#519; **build steps 1 and 2 built** (round 43: the contracts, the mapping, the kinds; round 44: the media, the rules around the model, dedup within a source, the form merged with `field_sources`, the request's block) and **instructions version 7 written**. **Waiting for Ron:** (1) the go for the regression run (cap $0.10, about $0.025 expected) and the block check (3 calls, cap $0.01; its small command built first, on his word), `PHASE_6.md` §6.4; (2) §6.14 C7, the repost line of a Yad2 bump, before build step 4 (the seam). New Facebook posts are classified at version 7 from the next deploy of this code | `DECISIONS.md` #60, #489–#519 | Ron: the go; C7 |
+| 15 | **Yad2 (phase 6, `docs/PHASE_6.md`)**: decisions #489–#522; **build steps 1 and 2 built**; the block check passed (`ASSUMPTIONS.md` O14); **instructions version 8** (#522) passed every deciding field in its regression run, `apartment_kind` and `areas` restored; its non-deciding fails are version 5's (`PHASE_6.md` §6.4). **Waiting for Ron:** whether he accepts version 8's run (#511) and when it is deployed (the deploy also writes version-2 `Listing`, `RunRecord` and `ScheduleSettings` rows, which an older image cannot read: a backup first, no rollback past it). **Next build step: 4, the Yad2 seam** (`PHASE_6.md` §6.5–§6.6) | `DECISIONS.md` #60, #489–#522 | Ron: accept version 8; the deploy's timing |
 | 16 | **A separate later round (not round 42): "Ron" becomes "the owner" across `docs/`.** Mechanical, the content unchanged; a quote of Ron's becomes "the owner's words". `README.md` already names neither (round 42: "user" and "admin" only) | Ron, round 42 | A round of its own, when Ron schedules it |
 
 ### For phase 3 (`DECISIONS.md` #214, #225)

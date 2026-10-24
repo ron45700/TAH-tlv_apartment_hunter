@@ -2,8 +2,10 @@
 
 **Status (2026-10-24, round 44): APPROVED by Ron** (§6.12, all 25 points, #502–#511; §6.14 and §6.8, #512–#519). The
 schema is in `SCHEMA.md` (Gates A, B, E, G for Yad2). **Build steps 1 and 2 are built, and instructions version 7 is
-written** (§6.13, §6.13b). **Waiting for Ron's go:** the regression run and the block check (§6.4, paid, not run).
-**Open for Ron:** the repost-log gap (§6.14 C7), before step 4.
+written** (§6.13, §6.13b). C7 answered: a bump adds no repost line (#520). **Round 45 (#521):** the block check
+passed (the request shape VERIFIED, `ASSUMPTIONS.md` O14); **the regression run of version 7 failed on
+`apartment_kind`**, new against version 5 (§6.4, "Results"). **Round 46 (#522): version 8** (the Yad2 section
+scoped to posts that carry the block) **restores `apartment_kind` and `areas`**; version 7 is never deployed.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §1, §4, §12 (the phase 6 row), §13 · **After:** Phase 5 (closed, #476) · **Evidence:**
 `docs/SPIKE_YAD2_2026-10-22.md` (spike 1, §1–§10; spike 2, §S2.1–§S2.6) · **Decisions:** #489–#519 · **Schema:**
@@ -17,7 +19,7 @@ taken as they are, each card showing its source, and a block reported to the adm
 1. On `homeserver`, Yad2 runs unattended for two days at its rhythm, daytime only; no Yad2 run overlaps any other run;
    every run leaves a `RunRecord`.
 2. A new Yad2 listing appears as a card with the Yad2 badge, the link to Yad2 and no WhatsApp button, and alerts a
-   linked user whose profile it passes, once; the bootstrap alerts nothing; a bump adds a repost line and alerts nothing.
+   linked user whose profile it passes, once; the bootstrap alerts nothing; a bump moves the card's time and alerts nothing (no repost line, #520).
 3. A block (the top document on `validate.perfdrive.com`, or no request reaching `gw.yad2.co.il`) fails the run, marks no
    token as seen, and raises the failure alert once; a page that carries the background reCAPTCHA frame does not.
 4. Tests (no network) pin: Facebook's `RawPost`, `Listing` and `listing_id` unchanged; the Yad2 mapping on fixtures read
@@ -217,6 +219,37 @@ both (decided in round 43, §6.13).
   stay well under $0.002. The responses are saved to `data/raw/` with a dated name; nothing is stored. **It needs a
   small command first**: `regression_run` reads only the labelled set; the command is built with step 3's remainder,
   on Ron's word.
+- **Results (round 45, #521).** **The block check** (`jobs/yad2_block_check.py`): 3 of 3 accepted (`completed`), $0.000616
+  in all, each answer valid and using the block; the request shape is VERIFIED (`ASSUMPTIONS.md` O14). Private 1:
+  `rental_offer`, `whole_apartment`, furnished `partial`, `no_restriction`, Yad2's "נווה עופר, תל כביר" → area 50
+  only (תל כביר is neither one of the 71 names nor a known place). Private 3: the same kind, furnished `yes`, "גני
+  צהלה, רמות צהלה" → area 22, whose own name it is. The agency page (outside Tel Aviv-Yafo, "עיר היין") → no area, as
+  it should; its city rules it `other_city` by `native_location` (#214). `field_sources`: 11–14 fields `"form"` on
+  each, the rest `"model"`. **The regression run** (`v7-none-1dada328-b5db1eb3aa49`): 108 calls, **$0.024969** of the
+  $0.10 cap; both passes `fail`. **Against version 5's run** (`09f15e8dac9f`, the last: version 6 had none, #484),
+  with #367's corrected truths: positions 3, 58, 59, 60 failed before and still do (`furnished`, `parking`,
+  `entry_date_written`); **new: `apartment_kind` fails its 0.95 bar (2 of 32 in pass 1, positions 8 and 9; 1 in pass
+  2)**, and pass 1's areas miss one post (37: [31] → []; the exact rate 0.81 → 0.74). In pass 1, 8 posts went from
+  `whole_apartment` to not written (4, 8, 9, 13, 21, 24, 56, and 20 in pass 2). **The likely reason:** version 7's
+  section tells the model to use the block "for apartment_kind"; on a Facebook post, with no block, it now leaves the
+  kind not written where the text says it. Not proven: version 6 had no run of its own (#484), though it changed
+  streets only. The other changes are expected or noise: streets now with their house number (version 6, #484); a
+  prefix letter dropped or kept on names; prices of millions on sale-like posts; the two passes disagreeing as before
+  (25 flips, against 29). **Not deployed.**
+- **Version 8 (round 46, #522).** The "YAD2 LISTINGS" section only, reworded: it now opens with "This section applies
+  only to a post that comes with a second part starting with "[Yad2 listing form — not the poster's text]". A post
+  without that part is classified exactly as before, from its text alone, by the rules below: every field,
+  apartment_kind included, is read from the text as usual, and nothing in this section applies to it.", and its four
+  rules are for "such a post only". `PROMPT_VERSION` "8", `PROMPT_FINGERPRINT` `16202ae9…`. **The block's handling is
+  unchanged** (the same request, the same block, the same rules for a post that carries it): the block check is not
+  run again (#522). **Its regression run** (`v8-none-16202ae9-5364752fe609`): 109 calls (one retried), **$0.025091**
+  of $0.10; both passes `fail`, on the non-deciding fields that failed for version 5. **`apartment_kind`: 0 of 32 in
+  both passes** (version 7: 2 and 1; version 5: 0); the 8 posts version 7 left not written are `whole_apartment`
+  again. **`areas`: 0 errors** in both passes (version 7: 1 in pass 1); the exact rate 0.806 and 0.742 (version 5:
+  0.806 in both). Every other deciding field clean, as for version 5. **Against version 5 with #367's truths:**
+  `furnished` 3 and 2 of 9 (version 5: 3 and 3); `parking` 2 and 1 (1 and 1: position 9 answered `True` for "unclear"
+  in pass 1 only); `entry_date_written` 2 and 2 (1 and 1: position 2 now copies "הכניסה מידית" for "מידית", also
+  seen in version 7's pass 2); `broker` 0 and 1 (0 and 1); `house_committee` 0 and 0 (0 and 1). **Not deployed.**
 
 ## 6.5 The collector (#490, #506, #507): the browser, its image, and the Yad2 seam
 
@@ -251,7 +284,7 @@ most the cap (§6.8). **Bootstrap (#493):** pages 1–3, every listing new, no a
 once; one that fails to load is tried again at the next run (its token not marked seen).
 
 **Bump detection (#504):** a **known token anywhere on the pages read** whose stored `last_published_at` is older than
-a threshold has its listing page opened to read `updatedAt`; a later `updatedAt` is a repost (#492). At most a cap of
+a threshold has its listing page opened to read `updatedAt`; a later `updatedAt` is a bump (#492): it moves `last_published_at` only, with no repost line (#520). At most a cap of
 such pages per run (§6.8).
 
 **Invariant 2 (#502 point 18):** a Yad2 run stores its new posts and its bumps **at the end, in one transaction, only
@@ -414,7 +447,7 @@ schedule page.
 - **A stored version-1 `Listing` reads as version 2** (as the earlier gates read their records), so reclassify's
   triple (#217) does not select every stored Facebook `Listing` for the added field alone.
 
-## 6.14 Contradictions and names: C1–C6 answered (round 44, #512–#517); C7 open
+## 6.14 Contradictions and names: all answered (C1–C6 round 44, #512–#517; C7 round 45, #520)
 
 | # | What | Options | Proposed |
 |---|---|---|---|
@@ -424,7 +457,7 @@ schedule page.
 | C4 | **`ScheduleSettings`' Yad2 field names** (#502 point 19 approved the fields, not their names) | `yad2_interval_minutes`, `yad2_hours_from`, `yad2_hours_until` (Israel time, `HH:MM`, from before until; runs start inside; all three `None` = no Yad2 runs), as built | As built |
 | C5 | **Old listings bumped look new in the first weeks** (§S2.3): a token never seen is new (#492), so a long-listed apartment bumped today becomes a card and can alert | Accept; or a later rule on `createdAt` (a filter change, not proposed) | Accept; watch the first week |
 | C6 | **`field_sources` for `streets` and `stated_area_names`** when the form gives one and the model adds more (#502 point 8) | `"form"` when the form gave a value; or `"model"` | `"form"` (the form's value leads the list) |
-| C7 | **A bump has no carrier for its repost line (open, for step 4).** #492: a bump "updates `last_published_at` and the repost log gets a line". The repost log is derived from the duplicate records pointing at the post (Gate E, "Repost log"; not stored); a Yad2 bump keeps its token, so its `listing_id` (#496): no record holds the second publication. `last_published_at` can move; the repost line has nowhere to come from | **A.** No repost line for a Yad2 bump: the card's time moves, nothing else (amends #492). **B.** A stored record of each bump (a new record or field: a Gate E change). **C.** Each bump stored as a duplicate `RawPost` with its own id (breaks #496's `listing_id`) | A, the simplest; B if Ron wants the history |
+| C7 | **A bump has no carrier for its repost line — answered: A (#520).** #492: a bump "updates `last_published_at` and the repost log gets a line". The repost log is derived from the duplicate records pointing at the post (Gate E, "Repost log"; not stored); a Yad2 bump keeps its token, so its `listing_id` (#496): no record holds the second publication. `last_published_at` can move; the repost line has nowhere to come from | **A.** No repost line for a Yad2 bump: the card's time moves, nothing else (amends #492). **B.** A stored record of each bump (a new record or field: a Gate E change). **C.** Each bump stored as a duplicate `RawPost` with its own id (breaks #496's `listing_id`) | A, the simplest; B if Ron wants the history |
 
 **Answers (round 44):** C1 option A (#512); C2 as proposed (#513); C3 private only (#514); C4 as built (#515); C5
 accepted (#516); C6 `"form"` (#517). Also #518 (nothing for the model: `no_text`) and #519 (the block check).

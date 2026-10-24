@@ -26,7 +26,7 @@ from tlv_hunter.classify.instructions import (
 def test_the_version_pins_everything_sent_except_the_post() -> None:
     """A change to the text, to reference/areas.yaml, to ListingExtraction or to the setting
     fails here until PROMPT_VERSION and PROMPT_FINGERPRINT are updated together."""
-    assert PROMPT_VERSION == "7"  # version 7: Yad2's labelled block (#498, #503)
+    assert PROMPT_VERSION == "8"  # version 8: the Yad2 section scoped to the block (#522)
     assert build_prompt().fingerprint() == PROMPT_FINGERPRINT
 
 

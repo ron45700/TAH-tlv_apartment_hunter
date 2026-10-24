@@ -198,7 +198,7 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   first 3 list pages and alerts nothing (#493). The stored original (`raw`) is the listing page's
   data, whole; the phone is never fetched or stored (#494, #497). The posting time is the listing's
   last update, converted from Israel time to UTC (#492). A listing back at the top is a repost: it
-  updates the last publication and the repost log, with no new card and no alert (#492). The model
+  updates the last publication (the card's time), with no repost line, no new card and no alert (#492, #520). The model
   reads the description verbatim and, beside it in a separate labelled block, Yad2's neighbourhood,
   street, property kind, "suitable for roommates" and furniture text (#498, #503); Yad2's own form fields
   win wherever they cover a field, and the source of each value is recorded (#495). Non-apartments are
