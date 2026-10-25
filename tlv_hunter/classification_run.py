@@ -28,6 +28,9 @@ ATTEMPTS: dict[ErrorKind, int] = {
     "invalid": 2,
     "incomplete": 2,
     "refusal": 1,
+    # OpenAI refused this post's input (#536): one attempt a run, counted as a failed run, so the
+    # post reaches the 3-failed-runs skip and the run goes on with the next post.
+    "invalid_prompt": 1,
 }
 # These stop the job, and the post is not counted: every post would fail the same way.
 STOP_KINDS: frozenset[ErrorKind] = frozenset(
@@ -149,6 +152,7 @@ def attempt_post(
         except CapReached as error:
             raise RunStop(f"cap: {error}") from error
         except ClassificationError as error:
+            _log_provider_error(post, error)
             if error.kind in STOP_KINDS:
                 raise RunStop(str(error)) from error
             wait = _wait_before_next(error, attempts)
@@ -156,6 +160,20 @@ def attempt_post(
                 return error, attempts
             if wait:
                 sleep(wait)
+
+
+def _log_provider_error(post: RawPost, error: ClassificationError) -> None:
+    """OpenAI's message and request id for a call that failed (#536 C): the post's id, never its
+    text, the prompt or the block."""
+    if error.provider_message is None and error.request_id is None:
+        return
+    logger.warning(
+        "model call failed for %s: %s; openai message %r; request id %s",
+        post.listing_id,
+        error.kind,
+        error.provider_message,
+        error.request_id,
+    )
 
 
 def _classify_one(

@@ -99,7 +99,11 @@ class OpenAIClassifier:
             response = self._transport.send(request)
         except TransportError as error:
             raise ClassificationError(
-                error.kind, _transport_detail(error), retry_after=error.retry_after
+                error.kind,
+                _transport_detail(error),
+                retry_after=error.retry_after,
+                provider_message=error.message,
+                request_id=error.request_id,
             ) from error
         received = require_utc(self._clock())
         record = _Recorder(self._meter, post.listing_id, response, received - started)

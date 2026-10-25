@@ -13,6 +13,10 @@ run the bootstrap; one failed Yad2 run alerts; Playwright's image; the stack and
 built** (§6.13d), not run: no image built, no browser run.
 **Round 49: #533–#535** (the badge, Yad2's wording, the digest's counts); **build step 6 built** (§6.13e). Every build
 step is built; what is left is the deploy (step 7, §6.16).
+**Round 50 (2026-10-25): DEPLOYED on `homeserver` by Ron, and Yad2 turned on from the schedule page** (§6.17): the
+bootstrap and the next two runs clean, no block; `ASSUMPTIONS.md` Y1 and Y3 VERIFIED. **DoD 1 and 2 are RUNNING,
+not done:** two days unattended, and Ron's reading of real Yad2 cards and alerts. Open: the card's field order
+(`BACKLOG.md` item 17). Round 51: the `400 invalid_prompt` stops decided and built (#536).
 **Owner:** Ron
 **Parent:** `BASELINE.md` §1, §4, §12 (the phase 6 row), §13 · **After:** Phase 5 (closed, #476) · **Evidence:**
 `docs/SPIKE_YAD2_2026-10-22.md` (spike 1, §1–§10; spike 2, §S2.1–§S2.6) · **Decisions:** #489–#519 · **Schema:**
@@ -24,9 +28,10 @@ taken as they are, each card showing its source, and a block reported to the adm
 
 **Phase DoD (approved, #502 point 22):**
 1. On `homeserver`, Yad2 runs unattended for two days at its rhythm, daytime only; no Yad2 run overlaps any other run;
-   every run leaves a `RunRecord`.
+   every run leaves a `RunRecord`. **— RUNNING since 2026-10-25 (§6.17).**
 2. A new Yad2 listing appears as a card with the Yad2 badge, the link to Yad2 and no WhatsApp button, and alerts a
-   linked user whose profile it passes, once; the bootstrap alerts nothing; a bump moves the card's time and alerts nothing (no repost line, #520).
+   linked user whose profile it passes, once; the bootstrap alerts nothing; a bump moves the card's time and alerts nothing (no repost line, #520). **— RUNNING: Ron has read a Yad2 card on the site (it looks right,
+   2026-10-25); alerts on real Yad2 cards are not yet reported.**
 3. A block (the top document on `validate.perfdrive.com`, or no request reaching `gw.yad2.co.il`) fails the run, marks no
    token as seen, and raises the failure alert once; a page that carries the background reCAPTCHA frame does not.
 4. Tests (no network) pin: Facebook's `RawPost`, `Listing` and `listing_id` unchanged; the Yad2 mapping on fixtures read
@@ -405,6 +410,8 @@ schedule page.
     month.**
   - **After about 45 days** (the stock seen; new listings only): at least about 70 private a day plus agency's (not
     measured): **about 100–200 calls a day, $0.04–0.08 a day, about $1–2.5 a month.**
+- **Measured, 2026-10-25 (§6.17):** two classification passes over Yad2 listings cost about $0.0093 for 45 calls and
+  $0.0090 for 43: **about $0.0002 a call**, half the estimate above; the first weeks' figures above are an upper bound.
 - One-off: the regression run, under its $0.10 cap (§6.4, #511).
 - The server: one Chromium and one Xvfb per run, 16 runs a day of 10–15 minutes (§6.8).
 
@@ -572,7 +579,8 @@ scheduler stopped first (#140). Every other service unchanged.
 0. Commit and push both repos; the Action builds both images. **On the new `…-browser` package's page, make it public
    as the slim one is** (it is private on its first publish; making it public cannot be undone).
 1. On `homeserver`: `cd ~/homelab && git pull && cd stacks/tlv-hunter`, then
-   `mkdir -p appdata/yad2-profile && sudo chown 10001:10001 appdata/yad2-profile && chmod 700 appdata/yad2-profile`.
+   `mkdir -p appdata/yad2-profile && sudo chown 10001:10001 appdata/yad2-profile && sudo chmod 700 appdata/yad2-profile`
+   (**the `chmod` needs `sudo` too**, after the `chown`: the folder is then the container user's, not Ron's).
 2. **A fresh backup first** (the rollback point: the deploy writes version-2 `Listing`, `RunRecord` and
    `ScheduleSettings` rows an older image cannot read): `docker compose run --rm jobs python -m
    tlv_hunter.jobs.export_backup --no-photos`. A rollback is this backup and the previous `sha-` tags.
@@ -581,6 +589,30 @@ scheduler stopped first (#140). Every other service unchanged.
 4. On the site, "תזמון": Yad2 shows off; tick it, keep 60 / 06:00 / 23:00, save. The scheduler logs `===== yad2 every
    60 minutes, starting 06:00-23:00`; inside the hours the first Yad2 run starts at once and is the bootstrap (3 pages).
 5. Read its run on the schedule page (source "יד2", rows) and the cards; `docker image prune` afterwards.
+
+## 6.17 The deploy, as it ran (2026-10-25)
+
+Ron's, following §6.16; recorded from what he reported, nothing re-read from the server.
+
+- `appdata/yad2-profile` made, owned by 10001, mode 700 (**the `chmod` needed `sudo` after the `chown`**: §6.16 step 1
+  now says so). The scheduler stopped first.
+- Backup: `tlv_hunter.2026-10-25T143122.backup.sqlite3` (SHA-256 `0f2b4e31…5040`), its export beside it; the oldest
+  export rotated out (the 7 newest are kept, #447).
+- The `scheduler` runs the `-browser` image; `site`, `bot` and `jobs` the slim one.
+- The scheduler started with "yad2 off", then logged "yad2 every 60 minutes, starting 06:00-23:00" when Ron saved the
+  schedule page. **Facebook's run went first** (#528 seen working).
+- **Yad2's bootstrap:** 3 list pages, 120 listings read, 112 new, 1 listing page timed out and was skipped (read again
+  at a later run, as designed), about 14 minutes of collection, no block. **The next two Yad2 runs:** 42 and 45 new, 0
+  bumps, 425 s each, no block. Their classification passes: 45 and 43 posts, about $0.009 each (§6.11), "stopped no";
+  rejections `not_listing` (1, then 5), `other_city` (1, by the city field), `for_sale` (1).
+- **`ASSUMPTIONS.md` Y1** (the browser code against Yad2) **VERIFIED** by these runs; Y3 (the browser image) VERIFIED in
+  use.
+- Ron read a Yad2 card on the site: it looks right. His note: the order of the fields on the card changed in round 49, on
+  every card, Facebook's too; nothing is missing, only the order (`BACKLOG.md` item 17; not changed).
+- **Not yet seen:** a block (DoD 3), a bump (0 so far), a Yad2 alert on a real card, the 06:00 run and how long it takes
+  with no cap on listing pages (#526), the retry of the skipped listing page confirmed in a log.
+- Three classification passes stopped on `400 invalid_prompt` the same afternoon (`ASSUMPTIONS.md` O15); later passes
+  ran normally. **Decided and built in round 51 (#536):** such a post now fails alone and the pass goes on.
 
 ## 6.15 Out of this plan
 

@@ -302,3 +302,15 @@ def test_a_changed_text_is_refused_at_any_effort() -> None:
     prompt = replace(build_prompt(reasoning_effort="low"), instructions="changed")
     with pytest.raises(ValueError, match="PROMPT_VERSION"):
         OpenAIClassifier(FakeTransport(), CostMeter(cap=1.0), clock=ticking_clock(), prompt=prompt)
+
+
+def test_openais_message_and_request_id_reach_the_classification_error(
+    posts: list[RawPost],
+) -> None:
+    """#536 C: carried for the log; the stored detail stays the status and the code."""
+    raised = TransportError("invalid_prompt", status=400, code="invalid_prompt")
+    raised.message, raised.request_id = "Invalid prompt: flagged.", "req_42"
+    error, meter = attempt(posts, raised)
+    assert (error.kind, error.detail) == ("invalid_prompt", "400 invalid_prompt")
+    assert (error.provider_message, error.request_id) == ("Invalid prompt: flagged.", "req_42")
+    assert meter.calls == []

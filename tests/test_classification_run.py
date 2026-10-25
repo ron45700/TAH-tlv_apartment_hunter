@@ -478,3 +478,70 @@ def test_a_failure_whose_record_changed_is_read_again_and_counted(setup) -> None
     record = repository.get_lifecycle(post.listing_id)
     assert record.classification_failures == 1
     assert record.flag_note == "another writer 1"
+
+
+# --- invalid_prompt: a failure of the post, not of the run (DECISIONS.md #536) ---
+
+FLAGGED = "Invalid prompt: your prompt was flagged as potentially violating our usage policy."
+
+
+def flagged() -> ClassificationError:
+    return ClassificationError(
+        "invalid_prompt", "400 invalid_prompt", provider_message=FLAGGED, request_id="req_abc123"
+    )
+
+
+def test_invalid_prompt_fails_that_post_once_and_the_run_goes_on(setup) -> None:
+    repository, stored, classifier = setup
+    post = stored[0]
+    classifier.script[post.listing_id] = [flagged(), "rental_offer"]
+    result, sleeps = run(repository, classifier)
+    assert result.stopped is None
+    assert classifier.calls.count(post.listing_id) == 1  # one attempt a run
+    assert [outcome.outcome for outcome in result.outcomes] == ["failed: invalid_prompt"] + [
+        "active"
+    ] * 3
+    record = repository.get_lifecycle(post.listing_id)
+    assert (record.state, record.classification_failures) == ("pending", 1)
+    assert record.last_classification_error == "invalid_prompt: 400 invalid_prompt"
+    for later in stored[1:]:
+        assert repository.get_listing(later.listing_id) is not None
+    assert sleeps == []
+
+
+def test_three_invalid_prompt_runs_and_the_post_is_skipped(setup) -> None:
+    repository, stored, classifier = setup
+    post = stored[0]
+    for _ in range(3):
+        classifier.script[post.listing_id] = [flagged()]
+        run(repository, classifier)
+    assert repository.get_lifecycle(post.listing_id).classification_failures == 3
+    classifier.calls.clear()
+    result, _ = run(repository, classifier)
+    assert post.listing_id not in classifier.calls and result.skipped == (post.listing_id,)
+
+
+def test_another_400_still_stops_the_run_and_counts_nothing(setup) -> None:
+    repository, stored, classifier = setup
+    classifier.script[stored[0].listing_id] = [
+        ClassificationError("bad_request", "400 invalid_value", provider_message="Bad.")
+    ]
+    result, _ = run(repository, classifier)
+    assert result.stopped == "bad_request: 400 invalid_value"
+    assert classifier.calls == [stored[0].listing_id]
+    assert repository.get_lifecycle(stored[0].listing_id).classification_failures == 0
+
+
+def test_the_log_carries_openais_message_and_request_id_and_no_post_text(
+    setup, caplog: pytest.LogCaptureFixture
+) -> None:
+    repository, stored, classifier = setup
+    post = stored[0]
+    classifier.script[post.listing_id] = [flagged()]
+    with caplog.at_level("INFO", logger="tlv_hunter.classification_run"):
+        run(repository, classifier)
+    (line,) = [r.getMessage() for r in caplog.records if r.getMessage().startswith("model call")]
+    assert post.listing_id in line and FLAGGED in line and "req_abc123" in line
+    text = "\n".join(record.getMessage() for record in caplog.records)
+    for each in stored:
+        assert each.text not in text

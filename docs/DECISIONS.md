@@ -4616,6 +4616,19 @@ holds); the new listings (Yad2 posts first stored in the window); **the bumped l
 run and cost sections count Facebook's runs only. The group shows as "יד2 · תל אביב-יפו". No field added. (Not chosen:
 list pages and bumps on `RunRecord`, a Gate G version 3.) Amends §6.7's line. *Approved by Ron, 2026-10-25.*
 
+## Classification: OpenAI's `invalid_prompt` (2026-10-25, round 51)
+
+### 536 — A 400 `invalid_prompt` fails that one post, not the pass; OpenAI's message and request id are logged
+`BACKLOG.md` item 18, options A and C. **A:** an OpenAI 400 whose code is `invalid_prompt` is a failure of that post
+only: one attempt a run, recorded as a failed run on the post (`classification_failures`, `last_classification_error`),
+so it reaches the 3-failed-runs skip (#139); the pass goes on with the next post. **Any other 400 still stops the
+pass**, since a different 400 means the request is wrong for every post (#182's stop kinds). **C:** when a call fails
+with an answer from OpenAI, its own message (the error body's `message`, one line, at most 300 characters, a key-like
+token masked, #128) and the `x-request-id` are logged, with the post's `listing_id`; never the post's text, the prompt
+or the block, and neither is stored. Amends #182's table of attempts by one kind (#139's fields unchanged; no schema
+or version change). `ASSUMPTIONS.md` O15 stays UNKNOWN: these log lines are how it will be learned. *Approved by Ron,
+2026-10-25.*
+
 ---
 
 ## Corrections to recorded facts

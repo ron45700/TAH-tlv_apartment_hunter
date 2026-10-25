@@ -121,3 +121,37 @@ def test_a_timeout_and_a_network_error() -> None:
 def test_the_key_appears_in_no_error() -> None:
     error = failure(answering(401, error_body("invalid_api_key")))
     assert "sk-test-not-a-key" not in str(error)
+
+
+# --- invalid_prompt and OpenAI's own words (DECISIONS.md #536) ---
+
+FLAGGED = "Invalid prompt: your prompt was flagged as potentially violating our usage policy."
+
+
+def test_a_400_invalid_prompt_is_its_own_kind_with_the_message_and_request_id() -> None:
+    body = {"error": {"message": FLAGGED, "type": "invalid_request_error", "param": None,
+                      "code": "invalid_prompt"}}  # fmt: skip
+    error = failure(answering(400, body, {"x-request-id": "req_0123abcd"}))
+    assert (error.kind, error.status, error.code) == ("invalid_prompt", 400, "invalid_prompt")
+    assert (error.message, error.request_id) == (FLAGGED, "req_0123abcd")
+
+
+def test_any_other_400_is_still_bad_request_and_carries_its_message() -> None:
+    error = failure(answering(400, error_body("invalid_value"), {"x-request-id": "req_9"}))
+    assert (error.kind, error.code, error.request_id) == ("bad_request", "invalid_value", "req_9")
+    assert error.message == "..."
+
+
+def test_a_key_in_openais_message_is_masked_and_the_message_is_one_line() -> None:
+    message = "Incorrect API key provided: sk-proj-Ab_1****xY9z.\nSee docs."
+    body = {
+        "error": {
+            "message": message,
+            "type": "invalid_request_error",
+            "param": None,
+            "code": "invalid_api_key",
+        }
+    }
+    error = failure(answering(401, body))
+    assert error.message == "Incorrect API key provided: sk-***. See docs."
+    assert error.request_id is None

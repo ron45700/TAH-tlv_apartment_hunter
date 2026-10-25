@@ -8166,3 +8166,158 @@ run has succeeded.
 
 **Next:** Ron's one deploy (`PHASE_6.md` §6.16): the backup first, the `…-browser` package made public, Yad2 turned on
 from the schedule page; then two days unattended (DoD 1) and Ron's reading of the real Yad2 cards (#511).
+
+## 2026-10-25 (continued) — Round 50: Yad2 deployed; the `invalid_prompt` stops investigated (read-only)
+
+Docs only, plus one read-only investigation. No code, no paid call, no store access (the snippet below was checked for
+syntax and imports only, never run against a store), no deploy, no git write. Ron committed round 49 as `cc8ec97`.
+Two OpenAI pages and three forum threads were read; no request to Yad2.
+
+**What happened (Ron's report, recorded as he gave it; nothing re-read from the server):** Ron deployed the Yad2 build on
+`homeserver` on 2026-10-25 by `PHASE_6.md` §6.16 and turned Yad2 on from the schedule page. The `yad2-profile` folder was
+made owned by 10001, mode 700 (**the `chmod` needed `sudo`**: added to §6.16 step 1). The scheduler was stopped first.
+Backup `tlv_hunter.2026-10-25T143122.backup.sqlite3` (SHA-256 `0f2b4e31…5040`), its export beside it, the oldest export
+rotated out. The scheduler is on the `-browser` image; site, bot and jobs on the slim one. It logged "yad2 off", then "yad2
+every 60 minutes, starting 06:00-23:00" after the save; Facebook's run went first (#528 seen working). **Bootstrap:** 3 list
+pages, 120 read, 112 new, 1 listing page timed out and was skipped (read again later, as designed), about 14 minutes, no
+block. **Next two Yad2 runs:** 42 and 45 new, 0 bumps, 425 s each, no block; their classification passes 45 and 43 posts,
+about $0.009 each, "stopped no"; rejections `not_listing`, `other_city`, `for_sale`. Ron read a Yad2 card on the site: it looks
+right; the order of the fields changed in round 49 on every card, Facebook's too, nothing missing.
+
+**Recorded:** `PHASE_6.md` (status; DoD 1 and 2 marked RUNNING, not done; §6.16 step 1; §6.11's measured $0.0002 a call, half
+the estimate; new §6.17), `BACKLOG.md` (round entry; item 15; **item 17**, Ron's sentence on the card's field order, not
+changed; **item 18**, the `invalid_prompt` stops with the findings and the options), CLAUDE.md "Now/Next" (five lines),
+`BASELINE.md` (only §12's phase 6 row and its amendment line: the phase is built and deployed), `ASSUMPTIONS.md` **Y1
+VERIFIED**, Y3 VERIFIED in use, **O15 added (UNKNOWN)**. No decision was made, so `DECISIONS.md` is unchanged.
+
+**The card's field order:** round 49's card diff (`git diff c3f104f cc8ec97`, `Card.tsx` and `card.css`) adds the source pill to
+the kind row, and makes the link's words and a Yad2 card's location line depend on the source. It moves no field, so I could
+not find the change Ron sees; the BACKLOG row says so and leaves it for him to point out.
+
+**The investigation (the full findings and options are in `BACKLOG.md` item 18).** The log Ron pasted shows **three stops
+and two posts**, not one pass: `5ffc015fbd30` (15:02:18Z, the bootstrap's) after 42 of 109 posts, before `5caa007f…1954`;
+`98a887c90618` (16:19:57Z) and `15d2179a7b0b` (16:40:22Z), 0 attempted, before `11ef3c1e…0ff3`; all exit 2, $0.000000;
+every pass from 16:50Z normal. By the code: the id in "stopped before X" is the post whose own request got the 400;
+`bad_request` is a stop kind, so the post is not counted and nothing is written for it; `find_pending_canonicals` is
+ordered by `listing_id`, so such a post blocks every higher id on every pass and never reaches the 3-failed-runs skip;
+the scheduler ignores `classify_pending`'s exit code and the failure alerts read `RunRecord`s only, so exit 2 is not a
+failed run and cannot raise a false failure alert (only the true "pending over 2 hours" alert can follow). **The
+description hypothesis:** the code never sends an empty `input_text` (a Yad2 request drops a blank description; a listing
+with neither description nor block lines is rejected `no_text` first, #518, and would raise, not 400); a block-only request
+is one non-empty part that never ran against the API before the deploy, and is not excluded. Whether either post was a Yad2
+listing or had a description the code cannot say (the id is a hash). **OpenAI:** `invalid_prompt` is **not defined** on the
+two OpenAI pages read (the error-codes guide, the reasoning guide); forum posts and one OpenAI_Support reply describe it as
+an intermittent safety flag on the input. The log keeps only the status and the code. **Inference, to be checked:** both posts
+look to have been classified later (109 pending at 15:02, 2 at 16:19, all 45 attempted at 16:50), so the refusal looks
+tied to the attempt, not to the post. Fix options A to E, with A and C recommended, are in item 18; Ron decides.
+
+**Read-only checks for Ron on `homeserver`:**
+1. `docker logs tlv-hunter-scheduler 2>&1 | grep -E "(post|before) (5caa007f|11ef3c1e)"` (the same in
+   `appdata/measure/scheduler/scheduler.2026-10-25.log` if the container log has rotated): a "post 11ef3c1e…: active, …" line
+   gives when it was classified.
+2. The pending count now, and the two posts' facts, by this snippet. It opens the store read-only (it creates and writes
+   nothing) and prints counts and fields, never a post's text, name or phone. Save it as `pending_check.py` in the stack's
+   folder and run `docker compose run --rm -T jobs python - 5caa007f 11ef3c1e < pending_check.py` (no argument: only the
+   pending count). The scheduler may keep running. Checked here only for syntax and for its imports.
+
+```python
+import sys
+from collections import Counter
+from pathlib import Path
+
+from tlv_hunter.jobs.common import SQLITE_FILENAME
+from tlv_hunter.store.sqlite import SqliteRepository
+from tlv_hunter.textnorm.blank import is_blank
+from tlv_hunter.yad2.mapping import model_block
+
+prefixes = tuple(sys.argv[1:])
+repo = SqliteRepository(Path("/app/data/store") / SQLITE_FILENAME, read_only=True)
+pending = repo.find_pending_canonicals()
+failed = {p.listing_id: repo.get_lifecycle(p.listing_id).classification_failures for p in pending}
+print("pending canonicals:", len(pending))
+print(
+    "by (source, failed runs):",
+    dict(sorted(Counter((p.source, failed[p.listing_id]) for p in pending).items())),
+)
+if pending:
+    oldest = min(pending, key=lambda p: p.fetched_at)
+    print("oldest first stored:", oldest.fetched_at.isoformat(), oldest.source)
+    print("lowest listing_id (a pass reaches it first):", pending[0].listing_id[:12])
+for post in repo.query() if prefixes else []:
+    if not post.listing_id.startswith(prefixes):
+        continue
+    record, listing = repo.get_lifecycle(post.listing_id), repo.get_listing(post.listing_id)
+    print("---", post.listing_id[:12])
+    print(
+        "source:",
+        post.source,
+        "| type:",
+        post.post_type,
+        "| text characters:",
+        len(post.text),
+        "| blank:",
+        is_blank(post.text),
+        "| no_text:",
+        post.no_text,
+    )
+    if post.source == "yad2":
+        print("Yad2 block lines present:", model_block(post.raw) is not None)
+    print("first stored:", post.fetched_at.isoformat(), "| posted:", post.posted_at.isoformat())
+    print(
+        "state:",
+        record.state,
+        "| reason:",
+        record.rejection_reason,
+        "| failed runs:",
+        record.classification_failures,
+        "| last error:",
+        record.last_classification_error,
+    )
+    print(
+        "classified:",
+        listing is not None,
+        "| at:",
+        None if listing is None else listing.classified_at.isoformat(),
+        "| prompt version:",
+        None if listing is None else listing.prompt_version,
+    )
+```
+
+**Decided by me:** Y3 marked VERIFIED in use, though Ron named only Y1 (the image is the one the scheduler runs and it ran the
+Yad2 runs; he can revert it); O15 added as UNKNOWN; BASELINE's phase 6 row stamped as built and deployed (no other fact
+there changed); the findings kept whole in BACKLOG item 18 rather than only pointed at, because Ron asked for them there;
+Option A with C recommended.
+
+**Next:** Ron's two days of watching and his reading of the cards and alerts (DoD 1 and 2); his choice on item 18 and the
+design round for item 17.
+
+## 2026-10-25 (continued) — Round 51: #536, a 400 `invalid_prompt` fails one post; OpenAI's message logged
+
+No paid call, no store access, nothing on the server, no git write. Ron decided `BACKLOG.md` item 18: options A and C.
+
+**Recorded:** `DECISIONS.md` #536; `BACKLOG.md` item 18 removed (done) and the round entry; `ASSUMPTIONS.md` O15 stays
+UNKNOWN, with the new log lines named as how it will be learned; `PHASE_6.md` (status, §6.17's line); CLAUDE.md Now/Next.
+
+**Built:**
+- `classify/base.py`: a kind `invalid_prompt`; `ClassificationError` carries `provider_message` and `request_id` (for the
+  log only; the stored detail stays the status and the code).
+- `classify/transport.py`: a 400 whose code is `invalid_prompt` maps to that kind; every other 400 stays `bad_request`.
+  Every status error carries OpenAI's own message and the `x-request-id`.
+- `classify/openai_classifier.py`: passes both on.
+- `classification_run.py`: `invalid_prompt` takes one attempt a run, is not a stop kind, and is saved as a failed run on
+  the post (#139's fields), so the pass goes on and the 3-failed-runs skip applies. A failed call with OpenAI's answer logs
+  "model call failed for <listing_id>: <kind>; openai message …; request id …".
+- Tests: 4 in `test_classification_run.py` (both stores), 3 in `test_openai_transport.py`, 1 in `test_openai_classifier.py`.
+
+**Found while building (read in the installed `openai` 3.24.0):** the SDK's `APIError.message` is not OpenAI's message.
+It is "Error code: 400 - {…}", the whole body's repr. OpenAI's own words are the error body's `message`; the SDK's `body` is
+the error object, the same one `code` is read from. The request id is `APIStatusError.request_id`, from `x-request-id`.
+
+**Verified:** `uv run pytest`: **2,458 passed**; ruff clean.
+
+**Decided by me:** the kind's name `invalid_prompt`; one attempt a run (as `refusal`); the message taken from the body,
+one line, at most 300 characters, any `sk-…` token masked as `sk-***` (a 401's message can quote part of the key, #128);
+the log line for every failed call that carries OpenAI's answer, stop kinds included, so a stopping 400 shows its message
+too; WARNING level.
+
+**Next:** Ron deploys #536 when he chooses; DoD 1 and 2 keep running; item 17 (the card's field order) in a design round.
