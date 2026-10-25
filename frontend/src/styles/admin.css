@@ -700,6 +700,32 @@
   margin-top: 16px;
 }
 
+/* Yad2's own rhythm: a switch, then its three fields while it is on */
+.schedform-yad2 {
+  margin: 20px 0 0;
+  padding: 4px 16px 14px;
+  border: 1px solid #c9c4bb;
+  border-radius: 10px;
+}
+
+.schedform-yad2 legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.schedform .checkrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.schedform .checkrow input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
 .issue .formerror {
   margin-bottom: 0;
 }

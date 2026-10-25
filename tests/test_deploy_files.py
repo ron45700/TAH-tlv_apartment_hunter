@@ -115,3 +115,52 @@ def test_the_build_context_is_an_allow_list() -> None:
     for never in ("data", ".env", "scratch", "docs", ".git", "CLAUDE.md"):
         assert not any(a == never or a.startswith(never + "/") for a in allowed), never
     assert {"frontend/node_modules", "frontend/dist"} <= set(lines)
+
+
+# --- the browser image (PHASE_6.md §6.5, build step 5; DECISIONS.md #506, #531) ---
+
+
+@pytest.fixture(scope="module")
+def browser_dockerfile() -> str:
+    return (ROOT / "Dockerfile.browser").read_text(encoding="utf-8")
+
+
+def test_the_browser_image_is_playwrights_at_the_spikes_version_pinned(
+    browser_dockerfile: str,
+) -> None:
+    (base,) = [line for line in browser_dockerfile.splitlines() if line.startswith("FROM ")]
+    assert base.startswith("FROM mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:")
+    assert DIGEST.search(base)
+    mounted = [line for line in browser_dockerfile.splitlines() if "--mount=from=" in line]
+    assert len(mounted) == 1 and DIGEST.search(mounted[0])
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert '"playwright==1.63.0"' in pyproject
+
+
+def test_the_browser_image_adds_the_browser_group_runs_the_scheduler_as_10001(
+    browser_dockerfile: str,
+) -> None:
+    assert "UV_NO_DEV=1" in browser_dockerfile
+    assert "uv sync --locked --group browser" in browser_dockerfile
+    assert "--uid 10001" in browser_dockerfile and "USER app" in browser_dockerfile
+    assert 'CMD ["python", "-m", "tlv_hunter.jobs.scheduler"]' in browser_dockerfile
+    assert "frontend/dist" not in browser_dockerfile  # the site is not served from it
+
+
+def test_a_plain_sync_never_installs_the_browser_group() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert "default-groups" not in pyproject  # uv's default: the dev group only
+
+
+def test_the_action_builds_both_images() -> None:
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "docker.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["image"]["steps"]
+    images = [step["with"]["images"] for step in steps if "metadata-action" in step.get("uses", "")]
+    assert images == [
+        "ghcr.io/${{ github.repository }}",
+        "ghcr.io/${{ github.repository }}-browser",
+    ]
+    builds = [step["with"] for step in steps if "build-push-action" in step.get("uses", "")]
+    assert [build.get("file") for build in builds] == [None, "Dockerfile.browser"]

@@ -8,6 +8,9 @@ passed (the request shape VERIFIED, `ASSUMPTIONS.md` O14); **the regression run 
 scoped to posts that carry the block) **restores `apartment_kind` and `areas`**; version 7 is never deployed.
 **Round 47: version 8 accepted (#523), deployed with the collector in one deploy; #524 (a bump returns an archived
 listing), #525 (the bootstrap's no-alert rule, step 6); build step 4 built** (§6.13c), on saved pages, no browser run.
+**Round 48: #526–#532** (no cap on listing pages; Yad2 from 06:00; Facebook first; Yad2 off at the deploy, its first
+run the bootstrap; one failed Yad2 run alerts; Playwright's image; the stack and the deploy, §6.16); **build step 5
+built** (§6.13d), not run: no image built, no browser run.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §1, §4, §12 (the phase 6 row), §13 · **After:** Phase 5 (closed, #476) · **Evidence:**
 `docs/SPIKE_YAD2_2026-10-22.md` (spike 1, §1–§10; spike 2, §S2.1–§S2.6) · **Decisions:** #489–#519 · **Schema:**
@@ -53,8 +56,8 @@ taken as they are, each card showing its source, and a block reported to the adm
 | 2 | **Yad2's rules around the model**: the pre-model `not_listing` by kind, no call (#502 point 11); no `no_text` and no `no_images` rejection for Yad2 (#509, #510); dedup A skipped for agency listings (#508); the merge of the form and the model's answer with `field_sources` (§6.3), the form's `streets` and `stated_area_names` exempt from #162 (#502 point 8); the city by `native_location` (#214); dedup A and the Gate D key never across sources (#500); `no_text` when nothing is left for the model (#518). Tests with a fake classifier, no model call | **Built, round 44** (§6.13b) |
 | 3 | **The block and instructions version 7** (#498, #503): the block as a second input item, the instructions' paragraph, `PROMPT_VERSION` "7" with its fingerprint; then **the regression run on the existing set and the block check** (paid, on Ron's go, #511, #519; §6.4) | **Version 7 written, round 44**; the two paid runs wait for Ron's go (the block check needs a small command first) |
 | 4 | **The Yad2 seam** (#507, §6.5): the list pages in both shapes, paging (§6.8's numbers), the new tokens' pages, the bump checks (#504), block detection (§6.6), all tested on saved HTML; the browser wrapper (Playwright) the only part not run in tests; the run's store write at the end (#502 point 18); its `RunRecord` (`source` `"yad2"`) and the `GroupWatermark` `yad2-tel-aviv` | **Built, round 47** (§6.13c); the `RunRecord` is written by step 5's command from the run's counts |
-| 5 | **The job, the scheduler, the image** (#506): the Yad2 run command; the scheduler reading Yad2's rhythm and running both sources one at a time; the second image, the scheduler moved to it, the GitHub Action building both; the profile's folder; the digest's Yad2 line and the schedule page's Yad2 fields | After 4 |
-| 6 | **The card and the alert**: the source badge, "open on Yad2", no WhatsApp, Yad2's neighbourhood and street; the photos (after §6.14 C1); **the alert pass skips the first succeeded Yad2 run's posts** (#525) | After 2 |
+| 5 | **The job, the scheduler, the image** (#506): the Yad2 run command; the scheduler reading Yad2's rhythm and running both sources one at a time; the second image, the scheduler moved to it, the GitHub Action building both; the profile's folder; the digest's Yad2 line and the schedule page's Yad2 fields | **Built, round 48** (§6.13d), but the digest's Yad2 line, moved to step 6 |
+| 6 | **The card and the alert**: the source badge, "open on Yad2", no WhatsApp, Yad2's neighbourhood and street; the photos (after §6.14 C1); **the alert pass skips the first succeeded Yad2 run's posts** (#525); **the digest's Yad2 line** (§6.7) | After 2 |
 | 7 | **The deploy** on `homeserver` (Ron): the bootstrap, 3 pages, no alerts (#493); two days unattended (DoD 1); Ron judges Yad2's classification on the real cards (#511) | Ron |
 
 ---
@@ -323,6 +326,9 @@ does. Headless is never used (it is blocked, spike 1's run 4).
 
 ## 6.8 The paging numbers and the rhythm — APPROVED (#514), with Ron's two amendments
 
+**Amended in round 48:** Yad2's runs start from **06:00**, not 07:00 (#527); **no cap on the listing pages a run
+opens**, the morning run included (#526): the list pages stay 3 to 10 and the bump checks 10.
+
 **Approved:** every 60 minutes; runs start between 07:00 and 23:00 Israel time; at least 3 and at most 10 list pages;
 only private listings decide whether a page holds a new token (the minimum of 3 covers the agency listings at the
 bottom of pages 2–3); a bump check only when the stored `last_published_at` is over 3 hours old, **at most 10
@@ -501,6 +507,57 @@ accepted (#516); C6 `"form"` (#517). Also #518 (nothing for the model: `no_text`
 - Tests: `test_yad2_collector.py` (synthetic pages, no fixture: the rules), `test_yad2_list_pages.py` (the saved pages:
   both shapes, the links, the challenge and check pages, a bootstrap over pages 1–3), `test_yad2_run.py` (the store,
   invariant 2, the bumps, the archive return with its photos), `save_batch` in `test_repository_contract.py`.
+
+## 6.13d Build step 5 (round 48): what is built
+
+- `jobs/run_yad2.py`: the Yad2 run command (no key read). It bootstraps itself with no `yad2-tel-aviv` record (#529);
+  writes its `RunRecord` (`source` `"yad2"`; `rows_fetched` the listings read, `rows_skipped` the pages skipped; a
+  block's own reason as `failure_kind`; the Apify fields `None`), closing a record left running first; opens the
+  browser on `data/yad2-profile/`.
+- `schedule.py`: each source's `timer_base`; `yad2_rhythm_of` (Yad2's interval, its off-hours as the quiet hours);
+  `YAD2_DEFAULTS` (60, 06:00, 23:00).
+- `jobs/scheduler.py`: both sources, one run at a time, **Facebook's looked at first on every pass** (#528); Yad2 only
+  while its three settings are set and inside its hours, Facebook's quiet hours not applying to it; `run_yad2 --trigger
+  scheduled` under `xvfb-run -a -s '-screen 0 1920x1080x24'`, then `classify_pending --cap 0.05`; "run now" stays
+  Facebook's; a change of Yad2's settings logged.
+- `telegram/health.py`, `watch.py`: `failed_runs` and `no_run` on Facebook's runs; `yad2_failed` (the newest Yad2
+  run failed) and `yad2_no_run` (Yad2's own rhythm, while it is on); no "no run" while any run is in progress (#530).
+- `web/admin.py` and the schedule page: Yad2's switch and three fields (off by default, 60 / 06:00 / 23:00 offered),
+  its next run, each run's source; the save takes the three, or three nulls.
+- `Dockerfile.browser` (#531) on Playwright's image pinned by digest, the `browser` dependency group
+  (`playwright==1.63.0`, locked, installed only there), uid 10001, the scheduler as its command; the Action builds and
+  publishes `…-browser` beside the slim image.
+- homelab's `stacks/tlv-hunter/`: the scheduler on the browser image, the `yad2` service, Playwright's seccomp profile
+  (§6.16).
+- Tests: `test_run_yad2_job.py`, the Yad2 parts of `test_scheduler.py`, `test_watch.py`, `test_schedule.py`,
+  `test_web_schedule.py`, `test_deploy_files.py`.
+
+## 6.16 The stack and the deploy (#532) — for step 7, after step 6 is built
+
+**Images:** `ghcr.io/ron45700/tah-tlv_apartment_hunter:latest` (slim: `site`, `jobs`, `bot`) and
+`ghcr.io/ron45700/tah-tlv_apartment_hunter-browser:latest` (`scheduler`, `yad2`), each also `:sha-<short>`.
+Playwright's base is 1,014 MB compressed (amd64); the unpacked size is seen at the first pull.
+
+**homelab's `stacks/tlv-hunter/compose.yaml`:** `scheduler` on the browser image, `ipc: host`,
+`security_opt: seccomp=./seccomp_profile.json` (Playwright v1.63.0's, in the stack folder, in git), the new folder
+`./appdata/yad2-profile:/app/data/yad2-profile`, `stop_grace_period: 90m`; a `yad2` service (profile `jobs`, the same
+image, folders and options, no key) for a Yad2 run by hand:
+`docker compose run --rm yad2 xvfb-run -a -s '-screen 0 1920x1080x24' python -m tlv_hunter.jobs.run_yad2`, the
+scheduler stopped first (#140). Every other service unchanged.
+
+**The deploy (Ron; nothing here has run):**
+0. Commit and push both repos; the Action builds both images. **On the new `…-browser` package's page, make it public
+   as the slim one is** (it is private on its first publish; making it public cannot be undone).
+1. On `homeserver`: `cd ~/homelab && git pull && cd stacks/tlv-hunter`, then
+   `mkdir -p appdata/yad2-profile && sudo chown 10001:10001 appdata/yad2-profile && chmod 700 appdata/yad2-profile`.
+2. **A fresh backup first** (the rollback point: the deploy writes version-2 `Listing`, `RunRecord` and
+   `ScheduleSettings` rows an older image cannot read): `docker compose run --rm jobs python -m
+   tlv_hunter.jobs.export_backup --no-photos`. A rollback is this backup and the previous `sha-` tags.
+3. **Dockge "Update" with no run in progress** (`docker logs --tail 3 tlv-hunter-scheduler` ends with an `exit` line or
+   the quiet hours' line). Then `docker logs --tail 5 tlv-hunter-scheduler`: `… yad2 off`.
+4. On the site, "תזמון": Yad2 shows off; tick it, keep 60 / 06:00 / 23:00, save. The scheduler logs `===== yad2 every
+   60 minutes, starting 06:00-23:00`; inside the hours the first Yad2 run starts at once and is the bootstrap (3 pages).
+5. Read its run on the schedule page (source "יד2", rows) and the cards; `docker image prune` afterwards.
 
 ## 6.15 Out of this plan
 

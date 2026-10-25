@@ -110,6 +110,22 @@ class World:
             )
             if self.on_run is not None:
                 self.on_run(len(self.started("run_once")))
+        if name == "run_yad2":
+            self.runs.runs.insert(
+                0,
+                run_record(
+                    run_id=f"yad2run{len(self.ran)}",
+                    source="yad2",
+                    trigger=args[1],
+                    started_at=started,
+                    finished_at=self.now,
+                    status="succeeded" if code == 0 else "failed",
+                    failure_kind=None if code == 0 else "blocked: boom",
+                    window_since=None,
+                    apify_run_id=None,
+                    charged_events=None,
+                ),
+            )
         if self.stop_after is not None and len(self.ran) >= self.stop_after:
             self.stopped = True
         return code
@@ -118,11 +134,17 @@ class World:
         return [at for command, _, at in self.ran if command == name]
 
 
-def run(world: World, tmp_path: Path, *, retention_apply: bool = False) -> str:
+def run(
+    world: World,
+    tmp_path: Path,
+    *,
+    retention_apply: bool = False,
+    first: ScheduleSettings | None = None,
+) -> str:
     out = io.StringIO()
     Scheduler(
         world.runs,
-        settings(),
+        first or settings(),
         tmp_path / "measure",
         retention_apply=retention_apply,
         runner=world.runner,
@@ -417,3 +439,127 @@ def test_the_real_runner_streams_a_commands_output_and_returns_its_code(
     (call,) = started
     assert call["command"][1:] == ["-m", "tlv_hunter.jobs.classify_pending", "--cap", "0.05"]
     assert call["start_new_session"] is True  # a stop reaches the scheduler only
+
+
+# --- Yad2 (PHASE_6.md §6.7; DECISIONS.md #527-#530) ---
+
+YAD2_ON = {"yad2_interval_minutes": 60, "yad2_hours_from": "06:00", "yad2_hours_until": "23:00"}
+
+
+def yad2_world(start: datetime, **changes) -> World:
+    return World(start, FakeRuns(settings(**{**YAD2_ON, **changes})))
+
+
+def commands(world: World) -> list[str]:
+    return [name for name, _, _ in world.ran]
+
+
+def test_with_yad2_off_no_yad2_run_ever_starts(tmp_path: Path) -> None:
+    world = World(israel(18, 10), FakeRuns(settings()))
+    world.stop_after = 12
+    out = run(world, tmp_path)
+    assert "run_yad2" not in commands(world)
+    assert "yad2 off" in out
+
+
+def test_facebook_goes_first_when_both_are_due_then_yad2(tmp_path: Path) -> None:
+    """#528: no run yet of either: both due at once."""
+    world = yad2_world(israel(18, 10))
+    world.stop_after = 5
+    run(world, tmp_path)
+    assert commands(world) == [
+        "run_once",
+        "classify_pending",
+        "settle_costs",
+        "run_yad2",
+        "classify_pending",
+    ]
+    assert world.ran[3][1] == ("--trigger", "scheduled")
+    assert world.ran[4][1] == ("--cap", CLASSIFY_CAP)
+
+
+def test_facebook_goes_first_every_time_both_are_due(tmp_path: Path) -> None:
+    """Both at 60 minutes: each time both are due, Facebook's run starts first."""
+    world = yad2_world(israel(18, 10), interval_minutes=60)
+    world.stop_after = 15
+    run(world, tmp_path)
+    collections = [name for name in commands(world) if name in ("run_once", "run_yad2")]
+    assert collections == ["run_once", "run_yad2"] * 3
+
+
+def test_yad2_runs_every_interval_from_its_own_last_run(tmp_path: Path) -> None:
+    world = yad2_world(israel(18, 10), interval_minutes=30)
+    world.stop_after = 40
+    run(world, tmp_path)
+    starts = world.started("run_yad2")
+    assert len(starts) >= 3
+    for earlier, later in pairwise(starts):
+        assert timedelta(minutes=60) <= later - earlier < timedelta(minutes=70)
+
+
+def test_yad2_runs_from_06_00_inside_facebooks_quiet_hours_and_not_from_23_00(
+    tmp_path: Path,
+) -> None:
+    world = yad2_world(israel(19, 5, 50))
+    world.stop_after = 3  # retention, then the 06:00 Yad2 run and its classification
+    run(world, tmp_path)
+    assert commands(world) == ["retention", "run_yad2", "classify_pending"]
+    assert world.started("run_yad2") == [israel(19, 6, 0)]
+
+    late = yad2_world(israel(18, 23, 5))
+    late.stop_after = 7  # Facebook at 23:05 and 23:35, then retention at midnight
+    run(late, tmp_path)
+    assert commands(late)[-1] == "retention"
+    assert "run_yad2" not in commands(late)
+
+
+def test_a_failed_yad2_run_is_logged_and_the_next_one_still_starts(tmp_path: Path) -> None:
+    world = yad2_world(israel(18, 10))
+    world.codes["run_yad2"] = [1, 0]
+    world.stop_after = 12
+    out = run(world, tmp_path)
+    assert "yad2 run failed (1 in a row" in out
+    assert len(world.started("run_yad2")) == 2
+
+
+def test_a_change_of_yad2s_settings_is_logged_and_applies_at_the_next_pass(
+    tmp_path: Path,
+) -> None:
+    runs = FakeRuns(settings())
+    world = World(israel(18, 10), runs)
+
+    def turn_on(count: int) -> None:
+        if count == 1:
+            runs.stored = settings(**YAD2_ON)
+
+    world.on_run = turn_on
+    world.stop_after = 5
+    out = run(world, tmp_path)
+    assert "===== yad2 every 60 minutes, starting 06:00-23:00" in out
+    assert "run_yad2" in commands(world)
+
+
+def test_the_yad2_run_starts_under_a_virtual_display(monkeypatch: pytest.MonkeyPatch) -> None:
+    started: list[list[str]] = []
+
+    class FakeProcess:
+        def __init__(self, command: list[str], **options: object) -> None:
+            started.append(command)
+            self.stdout = io.StringIO("")
+
+        def __enter__(self) -> "FakeProcess":
+            return self
+
+        def __exit__(self, *exc: object) -> None:
+            pass
+
+        def wait(self) -> int:
+            return 0
+
+    monkeypatch.setattr(scheduler.subprocess, "Popen", FakeProcess)
+    scheduler.subprocess_runner("run_yad2", ["--trigger", "scheduled"], lambda line: None)
+    scheduler.subprocess_runner("run_once", ["--trigger", "scheduled"], lambda line: None)
+    yad2, facebook = started
+    assert yad2[:4] == ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24"]
+    assert yad2[5:] == ["-m", "tlv_hunter.jobs.run_yad2", "--trigger", "scheduled"]
+    assert facebook[1:3] == ["-m", "tlv_hunter.jobs.run_once"]

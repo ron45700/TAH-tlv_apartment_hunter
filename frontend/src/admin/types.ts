@@ -165,6 +165,7 @@ export interface ReportsAnswer {
 /** A collection run's record (Gate G, #472), as the schedule page lists it. */
 export interface RunRow {
   run_id: string
+  source: 'facebook' | 'yad2'
   trigger: 'scheduled' | 'manual'
   status: 'running' | 'succeeded' | 'failed'
   started_at: string
@@ -187,7 +188,18 @@ export interface ScheduleAnswer {
   running: RunRow | null
   next_run: string | null
   run_now_waiting: boolean
+  /** Yad2's rhythm (#515, #529); null while Yad2 is off. */
+  yad2: Yad2Rhythm | null
+  /** What the page offers while Yad2 is off (#527). */
+  yad2_defaults: Yad2Rhythm
+  yad2_next_run: string | null
   runs: RunRow[]
+}
+
+export interface Yad2Rhythm {
+  interval_minutes: number
+  hours_from: string
+  hours_until: string
 }
 
 export interface Key {

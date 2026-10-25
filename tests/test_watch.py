@@ -444,3 +444,60 @@ def test_each_grouping_recompute_logs_its_time_and_the_store_s_size(
         snapshot_of(store)
     (line,) = [r.message for r in caplog.records if r.message.startswith("grouping recomputed")]
     assert " ms: generation " in line and "6 canonical posts" in line and "cards" in line
+
+
+# --- two sources (PHASE_6.md §6.6, DECISIONS.md #530) ---
+
+YAD2_RHYTHM = Rhythm(timedelta(minutes=60), day_time(23, 0), day_time(6, 0))
+YAD2_ONLY = {"source": "yad2", "apify_run_id": None, "charged_events": None, "window_since": None}
+
+
+def yad2_run(n: int, at: datetime, *, failure: str | None = None):
+    return run_record(
+        **YAD2_ONLY,
+        run_id=f"y{n}",
+        started_at=at,
+        finished_at=at + timedelta(minutes=15),
+        status="failed" if failure else "succeeded",
+        failure_kind=failure,
+    )
+
+
+def test_one_failed_yad2_run_is_a_problem_until_a_yad2_run_succeeds() -> None:
+    now = israel(18, 10, 10)
+    blocked = "blocked: the page moved to validate.perfdrive.com"
+    runs = [finished(2, israel(18, 10, 0)), yad2_run(1, israel(18, 9, 40), failure=blocked)]
+    (found,) = problems(runs, RHYTHM, ZONE, now, [], [], yad2=YAD2_RHYTHM)
+    assert found.key == "yad2_failed" and blocked in found.text
+    runs = [yad2_run(2, israel(18, 10, 5)), *runs]
+    assert problems(runs, RHYTHM, ZONE, now, [], [], yad2=YAD2_RHYTHM) == []
+
+
+def test_facebooks_three_failures_read_facebooks_runs_only() -> None:
+    now = israel(18, 10, 10)
+    runs = [
+        finished(3, israel(18, 10, 0), failed=True),
+        yad2_run(9, israel(18, 9, 45)),
+        finished(2, israel(18, 9, 30), failed=True),
+        finished(1, israel(18, 9, 0), failed=True),
+    ]
+    assert keys(problems(runs, RHYTHM, ZONE, now, [], [], yad2=YAD2_RHYTHM)) == ["failed_runs"]
+
+
+def test_yad2s_no_run_reads_its_own_runs_and_hours_and_only_while_it_is_on() -> None:
+    runs = [finished(5, israel(18, 13, 0)), yad2_run(1, israel(18, 10, 0))]
+    at = israel(18, 13, 10)
+    assert keys(problems(runs, RHYTHM, ZONE, at, [], [], yad2=YAD2_RHYTHM)) == ["yad2_no_run"]
+    assert keys(problems(runs, RHYTHM, ZONE, at, [], [])) == []  # Yad2 off
+    # The night is outside Yad2's hours: 22:30 to 06:10 is 40 minutes of its active time.
+    night = [finished(5, israel(19, 6, 5)), yad2_run(1, israel(18, 22, 30))]
+    assert keys(problems(night, RHYTHM, ZONE, israel(19, 6, 10), [], [], yad2=YAD2_RHYTHM)) == []
+
+
+def test_no_run_is_not_judged_while_a_run_of_either_source_is_in_progress() -> None:
+    """A long Yad2 morning run makes Facebook's first run wait (#140, #526)."""
+    live = run_record(
+        **YAD2_ONLY, run_id="live", status="running", finished_at=None, started_at=israel(19, 6, 0)
+    )
+    runs = [live, finished(1, israel(18, 23, 30))]
+    assert keys(problems(runs, RHYTHM, ZONE, israel(19, 7, 25), [], [], yad2=YAD2_RHYTHM)) == []

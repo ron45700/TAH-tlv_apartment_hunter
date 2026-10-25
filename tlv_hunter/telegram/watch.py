@@ -18,6 +18,7 @@ from tlv_hunter.schedule import (
     Rhythm,
     parse_hh_mm,
     rhythm_of,
+    yad2_rhythm_of,
 )
 from tlv_hunter.state.base import WatermarkStore
 from tlv_hunter.state.runs import SqliteRunStore
@@ -113,6 +114,7 @@ class Watch:
             now,
             pending,
             self.silences(snapshot, now),
+            yad2=None if (settings := self.settings()) is None else yad2_rhythm_of(settings),
         )
 
     def digest(self, start: datetime, end: datetime) -> Digest:

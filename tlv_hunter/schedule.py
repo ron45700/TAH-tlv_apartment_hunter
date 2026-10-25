@@ -9,6 +9,11 @@ quiet hours is at their end. With no run at all, the next is now.
 
 The quiet hours are Israel local time (`Asia/Jerusalem`); converting is the schedule's own
 (invariant 9). From equal to until means none. They run across midnight when `from` is later.
+
+**Two sources (`PHASE_6.md` §6.7; DECISIONS.md #528, #530):** each source's timer reads its own
+runs only. Yad2's rhythm is a `Rhythm` too: its interval, and as its quiet hours the complement of
+its daytime hours (from `yad2_hours_until` to `yad2_hours_from`), so every rule here applies to it
+unchanged; `None` when its three settings are `None` (no Yad2 runs).
 """
 
 from collections.abc import Iterable
@@ -17,12 +22,14 @@ from datetime import UTC, datetime, timedelta
 from datetime import time as day_time
 from zoneinfo import ZoneInfo
 
-from tlv_hunter.contracts.run_record import RunRecord
+from tlv_hunter.contracts.run_record import RunRecord, RunSource
 from tlv_hunter.contracts.schedule_settings import ScheduleSettings
 
 ZONE = "Asia/Jerusalem"
 DEFAULT_INTERVAL_MINUTES = 30
 DEFAULT_QUIET = ("00:00", "07:00")
+# What the schedule page offers while Yad2 is off (DECISIONS.md #514, #527, #529).
+YAD2_DEFAULTS = (60, "06:00", "23:00")
 # A "run now" older than this is not started (the scheduler was down when it was asked).
 RUN_NOW_FRESH = timedelta(minutes=15)
 
@@ -50,6 +57,21 @@ def rhythm_of(settings: ScheduleSettings) -> Rhythm:
     )
 
 
+def yad2_rhythm_of(settings: ScheduleSettings) -> Rhythm | None:
+    """Yad2's rhythm: runs start from `yad2_hours_from` until before `yad2_hours_until`."""
+    if (
+        settings.yad2_interval_minutes is None
+        or settings.yad2_hours_from is None
+        or settings.yad2_hours_until is None
+    ):
+        return None
+    return Rhythm(
+        timedelta(minutes=settings.yad2_interval_minutes),
+        parse_hh_mm(settings.yad2_hours_until),
+        parse_hh_mm(settings.yad2_hours_from),
+    )
+
+
 def in_quiet_hours(moment: datetime, rhythm: Rhythm, zone: ZoneInfo) -> bool:
     local = moment.astimezone(zone).time()
     start, end = rhythm.quiet_from, rhythm.quiet_until
@@ -69,11 +91,13 @@ def quiet_end(moment: datetime, rhythm: Rhythm, zone: ZoneInfo) -> datetime:
     return end.astimezone(UTC)
 
 
-def timer_base(runs: Iterable[RunRecord]) -> datetime | None:
-    """The start of the newest run that resets the timer (#61): scheduled, or manual and
-    succeeded."""
+def timer_base(runs: Iterable[RunRecord], source: RunSource = "facebook") -> datetime | None:
+    """The start of the source's newest run that resets its timer (#61): scheduled, or manual
+    and succeeded."""
     starts = [
-        run.started_at for run in runs if run.trigger == "scheduled" or run.status == "succeeded"
+        run.started_at
+        for run in runs
+        if run.source == source and (run.trigger == "scheduled" or run.status == "succeeded")
     ]
     return max(starts, default=None)
 

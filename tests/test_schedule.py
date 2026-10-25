@@ -21,6 +21,7 @@ from tlv_hunter.schedule import (
     run_now_pending,
     running,
     timer_base,
+    yad2_rhythm_of,
 )
 
 ZONE = ZoneInfo("Asia/Jerusalem")
@@ -122,3 +123,28 @@ def test_the_run_in_progress_is_the_newest_record_while_running() -> None:
     assert running([live, done]) == live
     assert running([done, live]) is None
     assert running([]) is None
+
+
+# --- two sources (PHASE_6.md §6.7, DECISIONS.md #527-#530) ---
+
+
+def test_yad2s_rhythm_is_its_interval_and_the_complement_of_its_hours() -> None:
+    assert yad2_rhythm_of(settings()) is None  # off
+    on = settings(yad2_interval_minutes=60, yad2_hours_from="06:00", yad2_hours_until="23:00")
+    assert yad2_rhythm_of(on) == Rhythm(timedelta(minutes=60), day_time(23, 0), day_time(6, 0))
+
+
+def test_each_sources_timer_reads_its_own_runs() -> None:
+    start = datetime(2026, 10, 25, 8, 0, tzinfo=UTC)
+    facebook = run_record(run_id="f", started_at=start, finished_at=start + timedelta(minutes=5))
+    yad2 = run_record(
+        run_id="y",
+        source="yad2",
+        started_at=start + timedelta(minutes=20),
+        finished_at=start + timedelta(minutes=40),
+        apify_run_id=None,
+        charged_events=None,
+        window_since=None,
+    )
+    assert timer_base([yad2, facebook]) == start
+    assert timer_base([yad2, facebook], "yad2") == start + timedelta(minutes=20)

@@ -20,6 +20,11 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.8",
 ]
+# The browser image only (Dockerfile.browser; PHASE_6.md §6.5, DECISIONS.md #531): the version the
+# spikes ran, matching the base image's browsers. Never installed by a plain `uv sync`.
+browser = [
+    "playwright==1.63.0",
+]
 
 [tool.uv]
 package = false

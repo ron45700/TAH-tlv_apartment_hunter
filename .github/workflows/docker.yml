@@ -1,7 +1,8 @@
-# Checks every push and pull request; on main, also builds the image and publishes it to GitHub's
-# registry (docs/DEPLOY.md, points 2 and 3):
-#   ghcr.io/<owner>/<repo>:latest       what the home server's stack pulls
-#   ghcr.io/<owner>/<repo>:sha-<short>  one per commit, to roll back to
+# Checks every push and pull request; on main, also builds both images and publishes them to GitHub's
+# registry (docs/DEPLOY.md, points 2 and 3; PHASE_6.md §6.16, DECISIONS.md #506, #532):
+#   ghcr.io/<owner>/<repo>:latest               the slim image: the site, the jobs, the bot
+#   ghcr.io/<owner>/<repo>-browser:latest       the browser image (Dockerfile.browser): the scheduler
+#   …:sha-<short>                               one per commit of each, to roll back to
 # The tests that read data/raw/ (gitignored: real people's phone numbers) are marked raw_fixtures
 # and left out here; Ron's full local run (`uv run pytest`) stays the gate before a server update.
 # Every action is pinned by the commit its release tag pointed at on 2026-10-17 (the tag beside it).
@@ -75,3 +76,19 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - id: browser-meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository }}-browser
+          tags: |
+            type=raw,value=latest
+            type=sha
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Dockerfile.browser
+          push: true
+          tags: ${{ steps.browser-meta.outputs.tags }}
+          labels: ${{ steps.browser-meta.outputs.labels }}
+          cache-from: type=gha,scope=browser
+          cache-to: type=gha,mode=max,scope=browser

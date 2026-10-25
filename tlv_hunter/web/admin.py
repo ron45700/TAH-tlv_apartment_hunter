@@ -54,6 +54,7 @@ from tlv_hunter.postmodel.seen import seen_listing
 from tlv_hunter.schedule import (
     DEFAULT_INTERVAL_MINUTES,
     DEFAULT_QUIET,
+    YAD2_DEFAULTS,
     ZONE,
     in_quiet_hours,
     next_run,
@@ -61,6 +62,7 @@ from tlv_hunter.schedule import (
     run_now_pending,
     running,
     timer_base,
+    yad2_rhythm_of,
 )
 from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.store.base import StaleRecordError
@@ -572,6 +574,10 @@ class ScheduleBody(_Body):
     interval_minutes: int
     quiet_from: str
     quiet_until: str
+    # Yad2's rhythm (#515, #529): the three set together, or all null for no Yad2 runs.
+    yad2_interval_minutes: int | None
+    yad2_hours_from: str | None
+    yad2_hours_until: str | None
     version: str
 
 
@@ -587,7 +593,8 @@ def schedule(request: Request) -> Response:
 
 @router.post("/schedule")
 async def save_schedule(request: Request) -> Response:
-    """The interval and the quiet hours, against the `version` the page showed (409 `changed`);
+    """The interval and the quiet hours, and Yad2's interval and hours (or none: Yad2 off), against
+    the `version` the page showed (409 `changed`);
     a value out of range 422 (point 11). Applies at the scheduler's next pass."""
     site = _site(request)
     admin, _ = _admin(request, site)
@@ -604,6 +611,9 @@ async def save_schedule(request: Request) -> Response:
                 "interval_minutes": body.interval_minutes,
                 "quiet_from": body.quiet_from,
                 "quiet_until": body.quiet_until,
+                "yad2_interval_minutes": body.yad2_interval_minutes,
+                "yad2_hours_from": body.yad2_hours_from,
+                "yad2_hours_until": body.yad2_hours_until,
                 "updated_by": admin.user_id,
                 "updated_at": now,
             }
@@ -670,6 +680,9 @@ def schedule_version(settings: ScheduleSettings | None) -> str:
             str(settings.interval_minutes),
             settings.quiet_from,
             settings.quiet_until,
+            str(settings.yad2_interval_minutes),
+            str(settings.yad2_hours_from),
+            str(settings.yad2_hours_until),
             settings.updated_at.isoformat(),
         )
     )
@@ -692,6 +705,12 @@ def _schedule_json(
     zone = ZoneInfo(ZONE)
     rhythm = rhythm_of(settings)
     upcoming = None if in_progress else next_run(timer_base(recent), rhythm, zone, now)
+    yad2 = yad2_rhythm_of(settings)
+    yad2_upcoming = (
+        None
+        if in_progress or yad2 is None
+        else next_run(timer_base(recent, "yad2"), yad2, zone, now)
+    )
     usernames = _usernames(site)
     return {
         "stored": stored is not None,
@@ -705,6 +724,17 @@ def _schedule_json(
         "running": None if in_progress is None else _run_json(in_progress),
         "next_run": None if upcoming is None else upcoming.isoformat(),
         "run_now_waiting": run_now_pending(settings, recent, None, now),
+        "yad2": None
+        if yad2 is None
+        else {
+            "interval_minutes": settings.yad2_interval_minutes,
+            "hours_from": settings.yad2_hours_from,
+            "hours_until": settings.yad2_hours_until,
+        },
+        "yad2_defaults": dict(
+            zip(("interval_minutes", "hours_from", "hours_until"), YAD2_DEFAULTS, strict=True)
+        ),
+        "yad2_next_run": None if yad2_upcoming is None else yad2_upcoming.isoformat(),
         "runs": [_run_json(run) for run in recent[:RUNS_SHOWN]],
     }
 
@@ -712,6 +742,7 @@ def _schedule_json(
 def _run_json(run: RunRecord) -> dict[str, object]:
     return {
         "run_id": run.run_id,
+        "source": run.source,
         "trigger": run.trigger,
         "status": run.status,
         "started_at": run.started_at.isoformat(),

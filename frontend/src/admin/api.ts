@@ -18,6 +18,17 @@ import type {
   Summary,
 } from './types'
 
+/** A save of the schedule: Yad2's three are set together, or all null for no Yad2 runs (#529). */
+export interface ScheduleSave {
+  interval_minutes: number
+  quiet_from: string
+  quiet_until: string
+  yad2_interval_minutes: number | null
+  yad2_hours_from: string | null
+  yad2_hours_until: string | null
+  version: string
+}
+
 const enc = encodeURIComponent
 
 export const adminApi = {
@@ -64,7 +75,6 @@ export const adminApi = {
   enable: (username: string) => call<AdminUser>('POST', `/api/admin/users/${enc(username)}/enable`, {}),
   // Phase 5 (#61, #471): the scheduler reads the settings at every pass and starts the runs.
   schedule: (signal?: AbortSignal) => call<ScheduleAnswer>('GET', '/api/admin/schedule', undefined, signal),
-  saveSchedule: (body: { interval_minutes: number; quiet_from: string; quiet_until: string; version: string }) =>
-    call<ScheduleAnswer>('POST', '/api/admin/schedule', body),
+  saveSchedule: (body: ScheduleSave) => call<ScheduleAnswer>('POST', '/api/admin/schedule', body),
   runNow: () => call<ScheduleAnswer>('POST', '/api/admin/schedule/run-now', {}),
 }

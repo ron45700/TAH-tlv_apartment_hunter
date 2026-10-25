@@ -18,6 +18,15 @@ parallel** (#140). **Once a night**, at the first pass inside the quiet hours: `
 run that only logs, **unless `RETENTION_APPLY=yes`** in the stack's `.env` (read at start), which
 Ron sets only after reading a dry run over a dated copy of the server's store (#471 C).
 
+**Yad2 (`PHASE_6.md` §6.7; DECISIONS.md #506, #527–#530)**, when the site's three Yad2 settings
+are set (all `None`: no Yad2 runs): every `yad2_interval_minutes` from the start of the last Yad2
+run that was scheduled, or manual and succeeded, starting only from `yad2_hours_from` until before
+`yad2_hours_until` (Israel time; Facebook's quiet hours do not apply to it): `run_yad2 --trigger
+scheduled` under `xvfb-run` (`XVFB`), then `classify_pending --cap 0.05` (no `settle_costs`: a
+Yad2 run has no Apify cost). **One run at a time across both sources, and Facebook's first when
+both are due** (#528): each pass looks at Facebook's run before Yad2's. "Run now" is Facebook's.
+Each source's timer and failure count read its own runs only.
+
 Each command's output, and the scheduler's lines, go to stdout (`docker logs`) and to
 `data/measure/scheduler.<date>.log`, in `measure_day.sh`'s form. 3 failed collection runs in a row
 are logged and it goes on (the bot's failure alert reads the run records, point 10). **A stop
@@ -57,6 +66,7 @@ from tlv_hunter.schedule import (
     rhythm_of,
     run_now_pending,
     timer_base,
+    yad2_rhythm_of,
 )
 from tlv_hunter.state.runs import SqliteRunStore
 from tlv_hunter.store.base import StaleRecordError
@@ -71,6 +81,10 @@ POLL_SECONDS = 5.0
 RECENT_RUNS = 50
 LOG_DIRECTORY = Path("data") / "measure"
 EXIT_STOPPED, EXIT_REFUSED = 0, 1
+YAD2_COMMAND = "run_yad2"
+# The virtual display a headed browser needs on the server (#490; spike 2 §S2.1), one per run.
+XVFB = ("xvfb-run", "-a", "-s", "-screen 0 1920x1080x24")
+DISPLAY_COMMANDS = frozenset({YAD2_COMMAND})
 
 # A job command: its name and arguments, and where its output lines go -> its exit code.
 Runner = Callable[[str, Sequence[str], Callable[[str], None]], int]
@@ -142,9 +156,11 @@ def retention_applies(environ: Mapping[str, str]) -> bool:
 
 def subprocess_runner(name: str, args: Sequence[str], write: Callable[[str], None]) -> int:
     """`python -m tlv_hunter.jobs.<name>` in its own session (a stop reaches the scheduler only),
-    its output line by line to `write`, its environment this one's (the job keys)."""
+    its output line by line to `write`, its environment this one's (the job keys). A command that
+    opens a headed browser runs under `XVFB`."""
+    display = XVFB if name in DISPLAY_COMMANDS else ()
     with subprocess.Popen(
-        [sys.executable, "-m", f"tlv_hunter.jobs.{name}", *args],
+        [*display, sys.executable, "-m", f"tlv_hunter.jobs.{name}", *args],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -181,6 +197,7 @@ class Scheduler:
         self._stdout = sys.stdout if stdout is None else stdout
         self._zone = ZoneInfo(ZONE) if zone is None else zone
         self._failed = 0
+        self._yad2_failed = 0
 
     def run(self, stop: Stop) -> None:
         """Until `stop` is set; a wait ends at once on a stop, a running command never does."""
@@ -189,15 +206,22 @@ class Scheduler:
             f"===== scheduler started {self._israel(self._clock())}; every "
             f"{settings.interval_minutes} minutes from the last run's start; quiet "
             f"{settings.quiet_from}-{settings.quiet_until} {ZONE}; classify cap ${CLASSIFY_CAP}; "
-            f"retention {'APPLIES' if self._retention_apply else 'dry run only'}"
+            f"retention {'APPLIES' if self._retention_apply else 'dry run only'}; "
+            f"{self._yad2_words(settings)}"
         )
         handled: datetime | None = None
-        base: datetime | None = None  # this process's own runs, beside the records
+        base: datetime | None = None  # this process's own Facebook runs, beside the records
+        yad2_base: datetime | None = None  # and its Yad2 runs
+        yad2_words = self._yad2_words(settings)
         retention_for: datetime | None = None  # the end of the quiet hours it ran in
         quiet_logged = False
         while not stop.is_set():
             settings = self._settings()
             rhythm = rhythm_of(settings)
+            yad2 = yad2_rhythm_of(settings)
+            if self._yad2_words(settings) != yad2_words:
+                yad2_words = self._yad2_words(settings)
+                self._line(f"===== {yad2_words}")
             now = self._clock()
             recent = self._runs.recent_runs(RECENT_RUNS)
             if run_now_pending(settings, recent, handled, now):
@@ -207,35 +231,59 @@ class Scheduler:
                 if self._cycle("manual", stop) == 0:
                     base = now
                 continue
+            # Facebook's first: its quiet hours, its retention, its run (#528).
+            waits: list[datetime] = []
             if in_quiet_hours(now, rhythm, self._zone):
                 end = quiet_end(now, rhythm, self._zone)
                 if not quiet_logged:
                     self._line(
-                        f"===== quiet hours from {self._israel(now, '%Y-%m-%d %H:%M')}: no run "
-                        f"until {settings.quiet_until}"
+                        f"===== quiet hours from {self._israel(now, '%Y-%m-%d %H:%M')}: no "
+                        f"Facebook run until {settings.quiet_until}"
                     )
                     quiet_logged = True
                 if retention_for != end:
                     retention_for = end
                     self._job("retention", *(("--apply",) if self._retention_apply else ()))
                     continue
-                if stop.wait(min(POLL_SECONDS, (end - now).total_seconds())):
-                    break
-                continue
-            quiet_logged = False
-            last = max((t for t in (timer_base(recent), base) if t is not None), default=None)
-            due = next_run(last, rhythm, self._zone, now)
-            if now >= due:
-                self._line(
-                    f"===== run {self._israel(now, '%Y-%m-%d %H:%M %Z')}, due "
-                    f"{self._israel(due, '%H:%M:%S')}"
-                )
-                self._cycle("scheduled", stop)
-                base = now
-                continue
-            if stop.wait(min(POLL_SECONDS, (due - now).total_seconds())):
+                waits.append(end)
+            else:
+                quiet_logged = False
+                last = _latest(timer_base(recent), base)
+                due = next_run(last, rhythm, self._zone, now)
+                if now >= due:
+                    self._line(
+                        f"===== run {self._israel(now, '%Y-%m-%d %H:%M %Z')}, due "
+                        f"{self._israel(due, '%H:%M:%S')}"
+                    )
+                    self._cycle("scheduled", stop)
+                    base = now
+                    continue
+                waits.append(due)
+            if yad2 is not None:
+                last = _latest(timer_base(recent, "yad2"), yad2_base)
+                due = next_run(last, yad2, self._zone, now)
+                if now >= due:
+                    self._line(
+                        f"===== yad2 run {self._israel(now, '%Y-%m-%d %H:%M %Z')}, due "
+                        f"{self._israel(due, '%H:%M:%S')}"
+                    )
+                    self._yad2_cycle(stop)
+                    yad2_base = now
+                    continue
+                waits.append(due)
+            seconds = min((moment - now).total_seconds() for moment in waits)
+            if stop.wait(min(POLL_SECONDS, max(seconds, 0))):
                 break
         self._line(f"===== scheduler stopped {self._israel(self._clock())}")
+
+    @staticmethod
+    def _yad2_words(settings: ScheduleSettings) -> str:
+        if settings.yad2_interval_minutes is None:
+            return "yad2 off"
+        return (
+            f"yad2 every {settings.yad2_interval_minutes} minutes, starting "
+            f"{settings.yad2_hours_from}-{settings.yad2_hours_until} {ZONE}"
+        )
 
     def _settings(self) -> ScheduleSettings:
         """The site's settings; on the first start the `.env`'s, written as the first row."""
@@ -267,6 +315,19 @@ class Scheduler:
             self._job("settle_costs")
         return code
 
+    def _yad2_cycle(self, stop: Stop) -> int:
+        code = self._job(YAD2_COMMAND, "--trigger", "scheduled")
+        if code == 0:
+            self._yad2_failed = 0
+        else:
+            self._yad2_failed += 1
+            self._line(
+                f"===== yad2 run failed ({self._yad2_failed} in a row; the bot alerts the admin)"
+            )
+        if not stop.is_set():
+            self._job("classify_pending", "--cap", CLASSIFY_CAP)
+        return code
+
     def _job(self, name: str, *args: str) -> int:
         self._line(f"--- {name}, started {self._israel(self._clock())}")
         code = self._runner(name, args, self._line)
@@ -282,6 +343,10 @@ class Scheduler:
 
     def _israel(self, moment: datetime, form: str = "%Y-%m-%d %H:%M:%S %Z") -> str:
         return moment.astimezone(self._zone).strftime(form)
+
+
+def _latest(*moments: datetime | None) -> datetime | None:
+    return max((moment for moment in moments if moment is not None), default=None)
 
 
 def main(

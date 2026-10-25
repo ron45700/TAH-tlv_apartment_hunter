@@ -15,6 +15,12 @@ comes back (the bot keeps the keys).
   `stuck:<run_id>`: a record `running` for longer than `STUCK_AFTER`;
 - `pending`: a canonical post pending classification for more than `PENDING_AFTER`;
 - `silent:<group_id>`: a group at its threshold.
+
+**Two sources (`PHASE_6.md` §6.6; DECISIONS.md #530):** `failed_runs` and `no_run` read Facebook's
+runs only. Yad2's own: `yad2_failed`, its newest finished run failed (a block or any failure), one
+problem until a Yad2 run succeeds; `yad2_no_run`, no Yad2 run started for two of its intervals of
+its own active time, only while Yad2 is on. No "no run" is judged while a run is in progress (one at
+a time, #140: the other source waits for it); `stuck` reads the newest run of either source.
 """
 
 import math
@@ -100,10 +106,13 @@ def problems(
     now: datetime,
     pending_since: Iterable[datetime],
     groups: Sequence[GroupSilence],
+    yad2: Rhythm | None = None,
 ) -> list[Problem]:
-    """`runs` newest first. What stands now, each with its episode's key."""
+    """`runs` newest first, both sources. `yad2` is Yad2's rhythm, `None` while Yad2 is off.
+    What stands now, each with its episode's key."""
     found: list[Problem] = []
-    finished = [run for run in runs if run.status != "running"]
+    facebook = [run for run in runs if run.source == "facebook"]
+    finished = [run for run in facebook if run.status != "running"]
     newest = finished[:MAX_FAILED]
     if len(newest) == MAX_FAILED and all(run.status == "failed" for run in newest):
         found.append(
@@ -112,14 +121,27 @@ def problems(
                 f"{MAX_FAILED} ריצות איסוף אחרונות נכשלו. האחרונה: {newest[0].failure_kind or ''}",
             )
         )
+    yad2_runs = [run for run in runs if run.source == "yad2"]
+    yad2_finished = next((run for run in yad2_runs if run.status != "running"), None)
+    if yad2_finished is not None and yad2_finished.status == "failed":
+        found.append(
+            Problem("yad2_failed", f"ריצת האיסוף של יד2 נכשלה: {yad2_finished.failure_kind or ''}")
+        )
     if runs:
         last = runs[0]
         if last.status == "running":
             if now - last.started_at > STUCK_AFTER:
                 minutes = int((now - last.started_at).total_seconds() // 60)
                 found.append(Problem(f"stuck:{last.run_id}", f"ריצת איסוף רצה כבר {minutes} דקות."))
-        elif active_time(last.started_at, now, rhythm, zone) > 2 * rhythm.interval:
-            found.append(Problem("no_run", "לא התחילה ריצת איסוף כבר שני מרווחים: המתזמן לא רץ?"))
+        else:
+            if facebook and _overdue(facebook[0], rhythm, zone, now):
+                found.append(
+                    Problem("no_run", "לא התחילה ריצת איסוף כבר שני מרווחים: המתזמן לא רץ?")
+                )
+            if yad2 is not None and yad2_runs and _overdue(yad2_runs[0], yad2, zone, now):
+                found.append(
+                    Problem("yad2_no_run", "לא התחילה ריצת יד2 כבר שני מרווחים: המתזמן לא רץ?")
+                )
     waiting = [moment for moment in pending_since if now - moment > PENDING_AFTER]
     if waiting:
         found.append(
@@ -138,3 +160,7 @@ def problems(
                 )
             )
     return found
+
+
+def _overdue(last: RunRecord, rhythm: Rhythm, zone: ZoneInfo, now: datetime) -> bool:
+    return active_time(last.started_at, now, rhythm, zone) > 2 * rhythm.interval

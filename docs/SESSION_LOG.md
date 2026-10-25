@@ -8089,3 +8089,39 @@ browser's wait (each second, at most 15 s, until the data and an API answer arri
 **Next:** build step 5 (the Yad2 run command and its `RunRecord`, the scheduler running both sources one at a time,
 the second image with `playwright==1.63.0`, the profile's folder, the digest's line, the schedule page's fields), then
 step 6 (the card, the alert, #525), then Ron's deploy (version 8 with the collector, one backup).
+
+## 2026-10-25 — Round 48: #526–#532; Yad2's build step 5 (the command, the scheduler, the browser image)
+
+No paid call, no browser run, no image built or pulled, no store write outside tests, nothing on the server, no git
+write (Ron committed round 47 as `68ee25e`). Reads from Microsoft's container registry only (a manifest, a config blob, a
+`HEAD` for the index digest) and Playwright's seccomp profile from GitHub; `uv lock` from PyPI.
+
+**Recorded:** `DECISIONS.md` #526 (no cap on listing pages a run, the morning run included), #527 (Yad2 from 06:00), #528
+(Facebook first when both are due, always): Ron's three answers. Then the points the docs did not state, put to Ron
+before any code and answered as recommended: #529 (Yad2 off at the deploy, turned on from the schedule page; the first
+Yad2 run bootstraps itself), #530 (one failed Yad2 run alerts; the run rules per source), #531 (Playwright's image,
+1,014 MB compressed for amd64), #532 (the stack's changes and the deploy). `PHASE_6.md` (status, steps 5 and 6, §6.8's
+amendment, §6.13d, §6.16), `ASSUMPTIONS.md` Y3, CLAUDE.md (Now/Next, the commands, the scheduler paragraph),
+`BACKLOG.md` item 15.
+
+**Built:** `jobs/run_yad2.py` (the command, its `RunRecord`, the self-bootstrap); `schedule.py` (per-source
+`timer_base`, `yad2_rhythm_of`, `YAD2_DEFAULTS`); `jobs/scheduler.py` (both sources, Facebook first on every pass,
+Yad2 inside its hours under `xvfb-run`, then `classify_pending`); `telegram/health.py` and `watch.py` (`yad2_failed`,
+`yad2_no_run`, Facebook's rules on its own runs, no "no run" while a run is in progress); `web/admin.py` and the
+schedule page (Yad2's switch and three fields, its next run, each run's source); `Dockerfile.browser`, the `browser`
+dependency group (`playwright==1.63.0`, locked), the Action building `…-browser`; homelab's `stacks/tlv-hunter/`
+(`compose.yaml`: the scheduler on the browser image, the `yad2` service; `seccomp_profile.json`, untracked there).
+
+**Verified:** `uv run pytest`: **2,434 passed**; ruff clean; `npm run build` (tsc and vite) and `npm test` (101
+passed). The two stack files and the image are not built or run; the schedule page not opened in a browser.
+
+**Decided by me:** the command's name `run_yad2` and its no-flag bootstrap; "run now" stays Facebook's; the scheduler
+logs a change of Yad2's settings; a Yad2 run is followed by `classify_pending` and not `settle_costs`; Xvfb per Yad2
+run (the scheduler's runner, not the service's command); the browser image's user uid 10001 with a home (the store's
+owner, Chromium's caches), not `pwuser`; no site pages in the browser image; Playwright as a locked `browser` group;
+the GHCR name `…-browser` and its own build cache; the stop grace raised to 90 minutes; no `yad2` service in the
+laptop's `compose.yaml` (the browser runs on the server only); the Hebrew of the two new alert lines and the page's
+fields.
+
+**Next:** build step 6 (the card: badge, "open on Yad2", no WhatsApp; the alert with #525's rule; the digest's Yad2
+line), then Ron's one deploy (§6.16).

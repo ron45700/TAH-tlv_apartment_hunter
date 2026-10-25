@@ -4540,6 +4540,56 @@ linked, so the Yad2 bootstrap's posts would alert. **Option A:** the alert pass 
 and `status` `"succeeded"`): Gate G's records are read, no field is added. Built in step 6 (the alert); step 4's
 collector does not depend on it. *Approved by Ron, 2026-10-24.*
 
+## Yad2: the rhythm and the order of runs (2026-10-25, round 48)
+
+Ron committed round 47 after his own test run.
+
+### 526 — No cap on listing pages per Yad2 run
+A Yad2 run opens every new token's listing page it finds, with no cap, **the morning run after the quiet hours
+included**, as Facebook's runs collect after a pause with no cap (#473). The list pages keep §6.8's 3 to 10 and the bump
+checks their 10 (#514). The first days' `RunRecord`s show how long the morning run takes; revisited only if blocks
+appear. *Approved by Ron, 2026-10-25.*
+
+### 527 — Yad2's runs start from 06:00 Israel time (amends #514's 07:00)
+Yad2's window is **06:00 to 23:00** Israel time, every 60 minutes, so a long morning run ends before Facebook's first
+run (Facebook's quiet hours end at 07:00, #442). All three values stay editable on the admin's schedule page (#515).
+*Approved by Ron, 2026-10-25.*
+
+### 528 — When both sources are due at once, Facebook's run goes first, always
+The scheduler runs one run at a time across both sources (#140, #506, no lock); **when a Facebook run and a Yad2 run
+are due at the same moment, Facebook's goes first**, every time, not only the first. *Approved by Ron, 2026-10-25.*
+
+### 529 — Yad2 is off at the deploy; Ron turns it on from the schedule page; the first Yad2 run bootstraps itself
+The server's `ScheduleSettings` row exists (written by the scheduler in Phase 5), so its three Yad2 fields read as
+`None`: no Yad2 runs. **No seeding code:** the schedule page shows Yad2 as off and prefills 60 / 06:00 / 23:00 (#527);
+Ron's save turns it on. **The Yad2 run command bootstraps itself when there is no `yad2-tel-aviv` record** (3 list
+pages, no bump checks, #493; #525 keeps its posts from alerting), so the scheduler's first Yad2 run is the bootstrap:
+no manual paid command, no stopping the scheduler. (Not chosen: three `.env` lines seeding the fields, which could not
+tell "never set" from "turned off" without a new field.) *Approved by Ron, 2026-10-25.*
+
+### 530 — One failed Yad2 run alerts the admin; the run rules are judged per source
+The failure alert (`telegram/health.py`): **the newest Yad2 run failed (blocked or not) is one problem**, alerted once
+with its `failure_kind`, and again only after a Yad2 run has succeeded and a later one fails (DoD 3). Facebook keeps its
+3 failed runs in a row. "No run for two intervals" and "stuck" are judged per source, Yad2's only while it is on and
+inside its hours; the scheduler's timer and the schedule page's "next run" are per source too. (Not chosen: 3 Yad2
+failures in a row, under which a single block would not alert.) *Approved by Ron, 2026-10-25.*
+
+### 531 — The browser image is Playwright's `python:v1.63.0-noble`
+As `PHASE_6.md` §6.5 approved and the one spike 2 ran on `homeserver`: pinned by tag and digest, with the project's
+locked packages and `playwright==1.63.0`, its own browsers and Xvfb. 1,014 MB compressed for amd64 (the registry's
+manifest, read 2026-10-25); unpacked not measured (about 2–2.5 GB expected); the server's NVMe is 512 GB. (Not chosen:
+the slim base with Chromium only, smaller but not the image the spike verified.) *Approved by Ron, 2026-10-25.*
+
+### 532 — The homelab stack's changes and the deploy steps
+As proposed in round 48 (`PHASE_6.md` §6.16): the image `ghcr.io/ron45700/tah-tlv_apartment_hunter-browser`
+(`latest` and `sha-<short>`), built by the Action beside the slim one; **the `scheduler` service moves to it** (user
+10001, the store's owner; `init`, `ipc: host`, Playwright v1.63.0's seccomp profile from the stack folder; the profile
+folder `./appdata/yad2-profile`, outside git and the image; `stop_grace_period` 90 minutes, a Yad2 morning run having
+no cap, #526); each Yad2 run under `xvfb-run` at 1920×1080×24; a manual `yad2` service (profile `jobs`) for a Yad2 run
+by hand, the scheduler stopped first (#140); every other service unchanged. The deploy: both repos pushed, the folder
+made and owned by 10001, `export_backup --no-photos` first (the rollback point), Dockge's update with no run in
+progress, then Yad2 turned on from the schedule page. *Approved by Ron, 2026-10-25.*
+
 ---
 
 ## Corrections to recorded facts

@@ -35,6 +35,11 @@ def test_the_admin_only(site, ron: TestClient, dana: TestClient) -> None:  # noq
     assert ron.post("/api/admin/schedule/run-now", json={}).status_code == 403  # no Origin
 
 
+FACEBOOK = {"interval_minutes": 30, "quiet_from": "00:00", "quiet_until": "07:00"}
+YAD2_OFF = {"yad2_interval_minutes": None, "yad2_hours_from": None, "yad2_hours_until": None}
+YAD2 = {"yad2_interval_minutes": 60, "yad2_hours_from": "06:00", "yad2_hours_until": "23:00"}
+
+
 def test_before_any_row_the_page_shows_the_defaults_and_the_next_run_is_now(
     ron: TestClient,  # noqa: F811
     clock: Clock,  # noqa: F811
@@ -54,7 +59,7 @@ def test_a_save_writes_the_row_against_the_version_shown(
     store: AdminStore,  # noqa: F811
     clock: Clock,  # noqa: F811
 ) -> None:
-    body = {"interval_minutes": 45, "quiet_from": "23:30", "quiet_until": "06:30"}
+    body = {"interval_minutes": 45, "quiet_from": "23:30", "quiet_until": "06:30", **YAD2_OFF}
     saved = write(ron, "POST", "/api/admin/schedule", {**body, "version": "none"})
     assert saved.status_code == 200, saved.text
     answer = saved.json()
@@ -76,8 +81,11 @@ def test_a_save_writes_the_row_against_the_version_shown(
 
 def test_a_value_out_of_range_is_refused(ron: TestClient) -> None:  # noqa: F811
     for body in (
-        {"interval_minutes": 4, "quiet_from": "00:00", "quiet_until": "07:00"},
-        {"interval_minutes": 30, "quiet_from": "7am", "quiet_until": "07:00"},
+        {"interval_minutes": 4, "quiet_from": "00:00", "quiet_until": "07:00", **YAD2_OFF},
+        {"interval_minutes": 30, "quiet_from": "7am", "quiet_until": "07:00", **YAD2_OFF},
+        {**FACEBOOK, **YAD2, "yad2_interval_minutes": 4},
+        {**FACEBOOK, **YAD2, "yad2_hours_from": "23:00", "yad2_hours_until": "06:00"},
+        {**FACEBOOK, **YAD2, "yad2_hours_until": None},
     ):
         refused = write(ron, "POST", "/api/admin/schedule", {**body, "version": "none"})
         assert refused.status_code == 422
@@ -137,3 +145,45 @@ def test_the_page_lists_the_last_runs_newest_first_with_their_cost(
     assert [r["run_id"] for r in answer["runs"]] == ["two", "one"]
     assert answer["runs"][1]["cost_usd"] == 0.023 and answer["runs"][0]["cost_usd"] is None
     assert answer["next_run"] is not None
+
+
+def test_yad2_is_off_until_saved_on_with_its_offered_defaults(
+    ron: TestClient,  # noqa: F811
+    store: AdminStore,  # noqa: F811
+    clock: Clock,  # noqa: F811
+) -> None:
+    """#529: off at the deploy; the page offers 60 / 06:00 / 23:00 (#527); a save turns it on."""
+    answer = schedule(ron)
+    assert answer["yad2"] is None and answer["yad2_next_run"] is None
+    assert answer["yad2_defaults"] == {
+        "interval_minutes": 60,
+        "hours_from": "06:00",
+        "hours_until": "23:00",
+    }
+    saved = write(ron, "POST", "/api/admin/schedule", {**FACEBOOK, **YAD2, "version": "none"})
+    assert saved.status_code == 200, saved.text
+    on = saved.json()
+    assert on["yad2"] == {"interval_minutes": 60, "hours_from": "06:00", "hours_until": "23:00"}
+    assert on["yad2_next_run"] is not None
+    stored = SqliteRunStore(store.db).get_settings()
+    assert stored is not None
+    assert (stored.yad2_interval_minutes, stored.yad2_hours_from, stored.yad2_hours_until) == (
+        60,
+        "06:00",
+        "23:00",
+    )
+    off = write(
+        ron, "POST", "/api/admin/schedule", {**FACEBOOK, **YAD2_OFF, "version": on["version"]}
+    )
+    assert off.status_code == 200 and off.json()["yad2"] is None
+
+
+def test_each_run_shows_its_source(
+    ron: TestClient,  # noqa: F811
+    store: AdminStore,  # noqa: F811
+    clock: Clock,  # noqa: F811
+) -> None:
+    runs = SqliteRunStore(store.db)
+    yad2 = {"source": "yad2", "apify_run_id": None, "charged_events": None, "window_since": None}
+    runs.add_run(run_record(**yad2, started_at=clock.now, finished_at=clock.now))
+    assert [run["source"] for run in schedule(ron)["runs"]] == ["yad2"]

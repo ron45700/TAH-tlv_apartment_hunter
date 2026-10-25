@@ -1,0 +1,39 @@
+# The browser image (docs/PHASE_6.md §6.5, build step 5; DECISIONS.md #506, #531, #532): the one the
+# home server's `scheduler` service runs, and its manual `yad2` service. Every other service keeps the
+# slim image (Dockerfile). The site's pages are not built here: nothing here serves them.
+#
+# The base is Playwright's own image at the version the spikes ran on homeserver, pinned by its tag
+# and the index digest the registry answered on 2026-10-25 (never by pulling). Its build steps (the
+# registry's image config, read the same day): Ubuntu 24.04's python3 (3.12) as /usr/bin/python3,
+# the browsers of Playwright 1.63.0 in /ms-playwright (open to every user) with their system
+# packages, Xvfb among them; Playwright's Python package itself is not left installed, so it comes
+# from this project's lock (the `browser` group, playwright==1.63.0).
+FROM mcr.microsoft.com/playwright/python:v1.63.0-noble@sha256:72bd171a9ffc2b4b59532aaa6210e21014d07093120dc25528870c0b840da1f0
+ENV UV_NO_DEV=1 \
+    UV_PYTHON=/usr/bin/python3 \
+    UV_PYTHON_DOWNLOADS=0 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+WORKDIR /app
+# The locked dependencies and the browser group, no dev group; uv mounted for this one step only.
+RUN --mount=from=ghcr.io/astral-sh/uv:0.12.11@sha256:79c6f4776b851471cc73b7d21d0cc834bb94383c292e83640d27eff512864df7,source=/uv,target=/bin/uv \
+    --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=.python-version,target=.python-version \
+    uv sync --locked --group browser
+# The store's owner, as in the slim image (uid 10001), so both write the same store. A home of its
+# own: Chromium writes its caches there.
+RUN useradd --system --uid 10001 --user-group --create-home --home-dir /home/app app
+COPY tlv_hunter/ tlv_hunter/
+COPY config/ config/
+COPY reference/ reference/
+# The store root and the browser's profile are the stack's folders mounted over these.
+RUN mkdir -p data/store data/measure data/yad2-profile \
+    && chown -R app:app data
+ENV PATH="/app/.venv/bin:$PATH"
+USER app
+# The scheduler runs each Yad2 run under xvfb-run -a -s '-screen 0 1920x1080x24' (jobs/scheduler.py).
+CMD ["python", "-m", "tlv_hunter.jobs.scheduler"]
