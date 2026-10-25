@@ -7,7 +7,7 @@ is approved*. `SESSION_LOG.md` records *what happened*. None of them tracks whet
 actually reached the code, which is how decisions #37 and #38 were approved on 2026-09-14 and were
 still unimplemented on 2026-10-02.
 
-**Last updated:** 2026-10-24 (round 46)
+**Last updated:** 2026-10-24 (round 47)
 
 ## Rules
 
@@ -94,6 +94,9 @@ passed (O14 VERIFIED, $0.000616); the regression run of version 7 failed on `apa
 to be reworded and run again (item 15).**
 **Round 46 (2026-10-24): version 8 (#522: the Yad2 section scoped to the block) restores `apartment_kind` and
 `areas` ($0.025091); version 7 never deployed (item 15).**
+**Round 47 (2026-10-24): version 8 accepted (#523; deployed with the collector, one deploy, one backup); #524 (a bump
+returns an archived listing, as #74), #525 (the Yad2 bootstrap's no-alert rule, for step 6); build step 4 built (the
+Yad2 seam, on saved pages; no browser run) (item 15).**
 
 | # | Item | Source | Needs |
 |---|---|---|---|
@@ -105,7 +108,7 @@ to be reworded and run again (item 15).**
 | 12 | **Ron reads the first applied retention's log line** (the first archive is due about 2026-11-11, the first delete about 2026-11-26): the scheduler's nightly `retention --apply`. Not a blocker | `DECISIONS.md` #478 | Ron, around 2026-11-11 |
 | 13 | **"ניתוח מידע" (the admin's data analysis) is a placeholder page** (#483): its content is planned after round 38. Open from Phase 5 for the same planning: whether the digest should carry retention's last numbers (not built: no record holds them, a Gate G change) | `DECISIONS.md` #471, #483 | Ron: the content |
 | 14 | **Ron checks v6 streets on real alerts** (#484): instructions version 6 copies a street with its house number; no regression run was made for it (Ron's decision). On the next real alerts, a multi-area post whose text gives a number should show "- רחוב: <street> <number>" with no " (מיקום מדויק לא ודאי)". A number written apart from the name is kept with it, and a number not in the text is dropped with the name kept (#486, amending #162); watch the classify log's dropped-names line for streets still dropped. Stored posts keep their version-5 streets (no reclassify) | `DECISIONS.md` #484, #486 | Ron, on the next alerts |
-| 15 | **Yad2 (phase 6, `docs/PHASE_6.md`)**: decisions #489–#522; **build steps 1 and 2 built**; the block check passed (`ASSUMPTIONS.md` O14); **instructions version 8** (#522) passed every deciding field in its regression run, `apartment_kind` and `areas` restored; its non-deciding fails are version 5's (`PHASE_6.md` §6.4). **Waiting for Ron:** whether he accepts version 8's run (#511) and when it is deployed (the deploy also writes version-2 `Listing`, `RunRecord` and `ScheduleSettings` rows, which an older image cannot read: a backup first, no rollback past it). **Next build step: 4, the Yad2 seam** (`PHASE_6.md` §6.5–§6.6) | `DECISIONS.md` #60, #489–#522 | Ron: accept version 8; the deploy's timing |
+| 15 | **Yad2 (phase 6, `docs/PHASE_6.md`)**: decisions #489–#525; **build steps 1, 2 and 4 built** (step 4: the seam, `yad2/feed.py`, `block.py`, `collector.py`, `browser.py`, and `yad2_run.py`, §6.13c); the block check passed (O14); **version 8 accepted (#523)**, deployed together with the collector in one deploy at the end of the build steps, one backup before it (version-2 rows an older image cannot read). The browser wrapper is not run yet (`ASSUMPTIONS.md` Y1, ASSUMED). **Next build step: 5** (the Yad2 run command writing its `RunRecord`, the scheduler, the second image, the digest's line, the schedule page's fields), then **6** (the card, the alert, #525's rule), then the deploy (7) | `DECISIONS.md` #60, #489–#525 | Nothing for step 5; Ron: the deploy's timing |
 | 16 | **A separate later round (not round 42): "Ron" becomes "the owner" across `docs/`.** Mechanical, the content unchanged; a quote of Ron's becomes "the owner's words". `README.md` already names neither (round 42: "user" and "admin" only) | Ron, round 42 | A round of its own, when Ron schedules it |
 
 ### For phase 3 (`DECISIONS.md` #214, #225)
@@ -143,7 +146,7 @@ Planned in `PHASE_3.md` (draft, 2026-10-10), §3.
 | #142, #143, #157, #171, #172, #177, #183 the regression set, run twice at effort `none`, temperature 0; the labelling page (areas picked from the 71; `other_city` labelled blind; no controls for streets and area names) and the review report (errors per field; streets and area names judged there only; the dropped-names files of `classify_runs/`; corrected posts join the regression set), in `data/labeling/` | Built: the set, the labelling page, the runner (`label_overrides.json`, #196) and the review report (2026-10-06). Version 3 passed `areas` in both passes; `gender` failed in pass 2 and pass 1 was incomplete. Version 4 ran on 2026-10-08, accepted by Ron (#238); position 3's `furnished` still fails (#241, deferred, item 3) | Ron signed off the review of the first run (DoD 5, #224); what remains is the review of pass 1 (`review_page --run`, #193). The row leaves when Ron accepts the set |
 | #144, #217–#222 reclassify: two commands (`jobs/reclassify.py`, paid, store read-only, writes the diff report and two list files; `jobs/apply_reclassify.py`, free, the fourth store writer, `--allow` / `--allow-file`, no apply all); `find_reviewed` reads the replaced `Listing`s | Built 2026-10-08 and accepted. The first real `--run` was made on 2026-10-09 (five posts, item 5). No real `--apply`: it waits for Ron's go. The remaining 189 are not scheduled (item 4) | Ron's reading of `diff.html`, then his go for `--apply` (item 5) |
 | #45 sniper removed | Not in the package. Research copies may sit in `data/raw/` (gitignored) | Nothing in code. Ron may delete the research copies |
-| #502–#519 Yad2 (phase 6): the Yad2 seam (#507), the second image and the scheduler (#506), the block and version 7 (#503, #511), dedup A not for agency (#508), no `no_text` / `no_images` for Yad2 (#509, #510), `not_listing` by kind before the model, the form/model merge, the store at the end (#502) | Build steps 1–2 built (rounds 43, 44) and version 7 written (`PHASE_6.md` §6.13, §6.13b) | Build step 3's paid runs and the block check's command; steps 4–6 (`PHASE_6.md`, "Order of work") |
+| #502–#525 Yad2 (phase 6): the Yad2 seam (#507), the second image and the scheduler (#506), the block and version 7 (#503, #511), dedup A not for agency (#508), no `no_text` / `no_images` for Yad2 (#509, #510), `not_listing` by kind before the model, the form/model merge, the store at the end (#502) | Build steps 1, 2 and 4 built (rounds 43, 44, 47); version 8 accepted (#523); #524 built with step 4 (`PHASE_6.md` §6.13, §6.13b, §6.13c) | Steps 5 and 6 (`PHASE_6.md`, "Order of work"); #525 (the alert pass skips the first succeeded Yad2 run's posts) in step 6 |
 | #258 the framework: React + TypeScript with Vite, hand-written CSS, `@fontsource`; FastAPI + uvicorn serve the API and the static build; one image, two-stage | Built (rounds 10, 11): FastAPI and uvicorn; `frontend/` with React, TypeScript, Vite, hand-written CSS and the bundled font, served by `serve` | The image (3.9, planned in round 23: `PHASE_3.md` 3.9 (b)) |
 
 ---

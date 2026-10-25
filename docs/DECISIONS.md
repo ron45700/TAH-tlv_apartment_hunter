@@ -4515,6 +4515,31 @@ and is never deployed.** Go for version 8's regression run on the existing set, 
 `apartment_kind`, the round stops and Ron decides on one. The block check is not run again unless the block's handling
 changed. *Approved by Ron, 2026-10-24.*
 
+## Yad2: version 8 accepted; build step 4 (2026-10-24, round 47)
+
+### 523 — Instructions version 8 is accepted; deployed with the Yad2 collector, in one deploy
+Ron accepts version 8's regression run (`v8-none-16202ae9-5364752fe609`, #511, #522: every deciding field clean; the
+non-deciding fails are version 5's). **Version 8 is not deployed on its own:** it goes to `homeserver` together with the
+Yad2 collector, **in one deploy at the end of the build steps, with one backup before it** (the deploy writes
+version-2 `Listing`, `RunRecord` and `ScheduleSettings` rows that an older image cannot read), not before. Until then
+the server stays at version 6. Ron committed rounds 45–46 himself. *Approved by Ron, 2026-10-24.*
+
+### 524 — A bump of an archived Yad2 listing returns it, as #74 (a Gate E rule; amends #520's "only")
+Not stated by the approved docs: a listing archived (25 days with no bump) and then bumped while still on Yad2. Taken
+literally ("moves `last_published_at` only", #520) it would stay archived, never shown, deleted 40 days after the bump.
+**Option A:** the bump returns it to the state it had before the archive, as a Facebook repost returns an archived
+post (#74, the same rule: active with a `Listing`, pending without one, rejected with its reason), and moves
+`last_published_at`; the archive deleted its photos, so they are downloaded again from the stored `RawPost`'s media
+(Yad2's URLs are unsigned). Still no new card, no alert, no repost line (#520). A bump of a listing not archived moves
+`last_published_at` only. *Approved by Ron, 2026-10-24.*
+
+### 525 — The Yad2 bootstrap alerts nothing: the alert pass skips the first Yad2 run's posts
+#493's "no alerts" rested, for Facebook, on nobody being linked at the bootstrap (#357); on `homeserver` users are
+linked, so the Yad2 bootstrap's posts would alert. **Option A:** the alert pass skips a Yad2 post first stored
+(`fetched_at`) at or before the end of the first succeeded Yad2 run (the earliest `RunRecord` with `source` `"yad2"`
+and `status` `"succeeded"`): Gate G's records are read, no field is added. Built in step 6 (the alert); step 4's
+collector does not depend on it. *Approved by Ron, 2026-10-24.*
+
 ---
 
 ## Corrections to recorded facts

@@ -159,6 +159,25 @@ def _returned_from_archive(
         return record
     if not any(post.posted_at > record.last_published_at for post in new_reposts):
         return record
+    return _restored(record, has_listing)
+
+
+def bumped_lifecycle(
+    record: PostLifecycle, published_at: datetime, has_listing: Callable[[str], bool]
+) -> PostLifecycle | None:
+    """A Yad2 bump (#492, #520, #524): a known listing's page read with a later `updatedAt`.
+    `last_published_at` moves to it; an archived listing also returns to the state it had, by
+    #74's rule (its photos are the run's to download again). No repost line, no new card.
+    `None` when `published_at` is not later than the stored clock: no bump."""
+    if published_at <= record.last_published_at:
+        return None
+    if record.state == "archived":
+        record = _restored(record, has_listing)
+    return _replace(record, last_published_at=published_at)
+
+
+def _restored(record: PostLifecycle, has_listing: Callable[[str], bool]) -> PostLifecycle:
+    """#74's state for an archived record brought back."""
     if record.rejection_reason is None:
         return _replace(record, state="active" if has_listing(record.listing_id) else "pending")
     # A model reason, a flag, or a pre-model one: `"rejected"` with the same reason. A

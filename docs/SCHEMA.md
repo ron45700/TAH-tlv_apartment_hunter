@@ -439,6 +439,11 @@ Exactly one of `local_path` and `error` is set.
   model receives Yad2's labelled block only (#509); **unless the block has no line either** (no property kind,
   neighbourhood, street, "suitable for roommates" or furniture text): then it is rejected `no_text` (#518). **A Yad2 listing with no photo is not rejected `no_images`**: it
   shows without a photo (#510). Facebook's rules are unchanged.
+- **A Yad2 bump** (2026-10-24, #492, #520, #524; no field changed): a known listing's page read with a later
+  `updatedAt` moves its `last_published_at` (and, for a duplicate, its canonical's, as a repost does); no repost line,
+  no new post, the `RawPost` unchanged. **An archived listing bumped returns to the state it had** by the rule a
+  repost of an archived post follows (#74: `"active"` with a `Listing`, `"pending"` without one, `"rejected"` with its
+  reason), and its photos are downloaded again from its stored `RawPost`'s media.
 - **Images (download):** photos are downloaded for every canonical post that has photos, whatever
   its state, a `no_text` post included (`DECISIONS.md` #76). Photos only, no video or reels (a
   video shows its `page_url` link). One retry within a run for an error that is not a network

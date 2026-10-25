@@ -36,6 +36,18 @@ class Repository(Protocol):
         `StaleRecordError` and writes nothing. KeyError if the post is not stored."""
         ...
 
+    def save_batch(
+        self,
+        posts: Sequence[tuple[RawPost, PostLifecycle]],
+        records: Sequence[tuple[PostLifecycle, PostLifecycle | None]],
+    ) -> None:
+        """A run's whole store write in one transaction (a Yad2 run, #502 point 18): each post
+        upserted with its record created if it has none (as `upsert_with_lifecycle`), then each
+        record written by compare and set against its expected one (as `save_lifecycle`). A
+        stale record raises `StaleRecordError` and nothing is written; a record whose post is
+        not stored raises KeyError, nothing written."""
+        ...
+
     def get_lifecycle(self, listing_id: str) -> PostLifecycle | None: ...
 
     def find_without_lifecycle(self) -> list[RawPost]: ...

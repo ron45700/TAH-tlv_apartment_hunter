@@ -61,6 +61,30 @@ class LocalJsonRepository:
         self._write_lifecycle(record)
         return record
 
+    def save_batch(
+        self,
+        posts: Sequence[tuple[RawPost, PostLifecycle]],
+        records: Sequence[tuple[PostLifecycle, PostLifecycle | None]],
+    ) -> None:
+        """Every check first, then the writes, one file at a time: all or nothing for one
+        process, not across a crash (a test store, as the class says)."""
+        for post, initial in posts:
+            _require_same_post(post, initial)
+        initials = {post.listing_id: initial for post, initial in posts}
+        for record, expected in records:
+            listing_id = record.listing_id
+            if listing_id not in initials and not self._post_path(listing_id).exists():
+                raise KeyError(listing_id)
+            current = self.get_lifecycle(listing_id)
+            if current is None:
+                current = initials.get(listing_id)
+            if current != expected:
+                raise StaleRecordError(listing_id)
+        for post, initial in posts:
+            self.upsert_with_lifecycle(post, initial)
+        for record, _ in records:
+            self._write_lifecycle(record)
+
     def get_lifecycle(self, listing_id: str) -> PostLifecycle | None:
         path = self._lifecycle_path(listing_id)
         if not path.exists():

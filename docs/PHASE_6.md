@@ -6,6 +6,8 @@ written** (§6.13, §6.13b). C7 answered: a bump adds no repost line (#520). **R
 passed (the request shape VERIFIED, `ASSUMPTIONS.md` O14); **the regression run of version 7 failed on
 `apartment_kind`**, new against version 5 (§6.4, "Results"). **Round 46 (#522): version 8** (the Yad2 section
 scoped to posts that carry the block) **restores `apartment_kind` and `areas`**; version 7 is never deployed.
+**Round 47: version 8 accepted (#523), deployed with the collector in one deploy; #524 (a bump returns an archived
+listing), #525 (the bootstrap's no-alert rule, step 6); build step 4 built** (§6.13c), on saved pages, no browser run.
 **Owner:** Ron
 **Parent:** `BASELINE.md` §1, §4, §12 (the phase 6 row), §13 · **After:** Phase 5 (closed, #476) · **Evidence:**
 `docs/SPIKE_YAD2_2026-10-22.md` (spike 1, §1–§10; spike 2, §S2.1–§S2.6) · **Decisions:** #489–#519 · **Schema:**
@@ -50,9 +52,9 @@ taken as they are, each card showing its source, and a block reported to the adm
 | 1 | **The contracts and the mapping** (no Docker, no browser): `RawPost`'s third source and Yad2's `listing_id`; `Listing.field_sources`, version 2; `RunRecord.source` and `ScheduleSettings`' Yad2 rhythm, version 2, stored rows read with defaults; a listing page's `data` to `RawPost` and to the form's part of `Listing`; the 22 kinds; `updatedAt` → UTC; tests on the spikes' pages read in place | **Built, round 43**; the media (#512) in round 44 (§6.13) |
 | 2 | **Yad2's rules around the model**: the pre-model `not_listing` by kind, no call (#502 point 11); no `no_text` and no `no_images` rejection for Yad2 (#509, #510); dedup A skipped for agency listings (#508); the merge of the form and the model's answer with `field_sources` (§6.3), the form's `streets` and `stated_area_names` exempt from #162 (#502 point 8); the city by `native_location` (#214); dedup A and the Gate D key never across sources (#500); `no_text` when nothing is left for the model (#518). Tests with a fake classifier, no model call | **Built, round 44** (§6.13b) |
 | 3 | **The block and instructions version 7** (#498, #503): the block as a second input item, the instructions' paragraph, `PROMPT_VERSION` "7" with its fingerprint; then **the regression run on the existing set and the block check** (paid, on Ron's go, #511, #519; §6.4) | **Version 7 written, round 44**; the two paid runs wait for Ron's go (the block check needs a small command first) |
-| 4 | **The Yad2 seam** (#507, §6.5): the list pages in both shapes, paging (§6.8's numbers), the new tokens' pages, the bump checks (#504), block detection (§6.6), all tested on saved HTML; the browser wrapper (Playwright) the only part not run in tests; the run's store write at the end (#502 point 18); its `RunRecord` (`source` `"yad2"`) and the `GroupWatermark` `yad2-tel-aviv` | After 2; needs §6.8's numbers |
+| 4 | **The Yad2 seam** (#507, §6.5): the list pages in both shapes, paging (§6.8's numbers), the new tokens' pages, the bump checks (#504), block detection (§6.6), all tested on saved HTML; the browser wrapper (Playwright) the only part not run in tests; the run's store write at the end (#502 point 18); its `RunRecord` (`source` `"yad2"`) and the `GroupWatermark` `yad2-tel-aviv` | **Built, round 47** (§6.13c); the `RunRecord` is written by step 5's command from the run's counts |
 | 5 | **The job, the scheduler, the image** (#506): the Yad2 run command; the scheduler reading Yad2's rhythm and running both sources one at a time; the second image, the scheduler moved to it, the GitHub Action building both; the profile's folder; the digest's Yad2 line and the schedule page's Yad2 fields | After 4 |
-| 6 | **The card and the alert**: the source badge, "open on Yad2", no WhatsApp, Yad2's neighbourhood and street; the photos (after §6.14 C1) | After 2 |
+| 6 | **The card and the alert**: the source badge, "open on Yad2", no WhatsApp, Yad2's neighbourhood and street; the photos (after §6.14 C1); **the alert pass skips the first succeeded Yad2 run's posts** (#525) | After 2 |
 | 7 | **The deploy** on `homeserver` (Ron): the bootstrap, 3 pages, no alerts (#493); two days unattended (DoD 1); Ron judges Yad2's classification on the real cards (#511) | Ron |
 
 ---
@@ -284,7 +286,7 @@ most the cap (§6.8). **Bootstrap (#493):** pages 1–3, every listing new, no a
 once; one that fails to load is tried again at the next run (its token not marked seen).
 
 **Bump detection (#504):** a **known token anywhere on the pages read** whose stored `last_published_at` is older than
-a threshold has its listing page opened to read `updatedAt`; a later `updatedAt` is a bump (#492): it moves `last_published_at` only, with no repost line (#520). At most a cap of
+a threshold has its listing page opened to read `updatedAt`; a later `updatedAt` is a bump (#492): it moves `last_published_at` only, with no repost line (#520); an archived listing bumped also returns to its state before the archive, its photos downloaded again (#524). At most a cap of
 such pages per run (§6.8).
 
 **Invariant 2 (#502 point 18):** a Yad2 run stores its new posts and its bumps **at the end, in one transaction, only
@@ -370,8 +372,9 @@ schedule page.
 - **Fixtures read in place from `data/raw/`**, gitignored, copied once from the spikes with dated names (round 43):
   `yad2_listing_private_{1,2,3}_2026-10-24.html`, `yad2_listing_agency_1_2026-10-22.html` (spike 1's agency page,
   outside Tel Aviv-Yafo: read for the agency's fields only), `yad2_list_page1_2026-10-24.html` (the laptop's shape; the
-  kinds' search options). Still to copy for step 4: a list page in the mixed shape (`data/spike_yad2/server/`), pages 2
-  and 3, and Radware's challenge page (spike 1's run 4). **A missing fixture fails the test**, as today. **The phone
+  kinds' search options). **Copied in round 47:** `yad2_list_page{2,3}_2026-10-24.html` (the same list run as page 1),
+  `yad2_list_mixed_page1_2026-10-24.html` (the server's shape), `yad2_challenge_2026-10-22.html` (spike 1's run 4) and
+  `yad2_radware_interstitial_2026-10-24.html` (Radware's check page, the server run's first document). **A missing fixture fails the test**, as today. **The phone
   responses are never fixtures** (#494; deleted, #505).
 - What they pin: the `RawPost` table (§6.2) field by field; the form's part (§6.3) and `field_sources`; the 22 kinds
   against Yad2's own options; `updatedAt` → UTC (also across a daylight-saving change); Yad2's `listing_id`, and
@@ -474,6 +477,30 @@ accepted (#516); C6 `"form"` (#517). Also #518 (nothing for the model: `no_text`
   `classify/openai_classifier.py`: the request's parts (§6.4). `classify/instructions.txt`: version 7.
 - Tests: `tests/test_yad2_rules.py` (40, no fixture); `tests/test_yad2_mapping.py` (the media and the block on the
   saved pages). Facebook's tests unchanged but for `test_classify_instructions.py`'s pinned version ("6" → "7").
+
+## 6.13c Build step 4 (round 47): what is built
+
+- `yad2/feed.py`: the feed's `private`, `agency` and `yad2` lists in the page's order, the promoted lists left out; the
+  page's own pagination link labelled with the next number (never one leaving `www.yad2.co.il`).
+- `yad2/block.py`: `PageLoad` (the address asked, the final address, the last Yad2 document's body, the hosts that
+  answered) and the two signs of §6.6; no word in a page or a frame is looked at (a test pins that no `yad2/` module
+  holds it).
+- `yad2/collector.py`: `Yad2Collector.collect(known, *, bootstrap)` with §6.8's numbers (3 to 10 list pages, private
+  tokens decide, bootstrap 3 pages and no bump check; bump checks over 3 hours, at most 10, private first; 4 s plus
+  0–2 s before every load but the first); a listing page that fails to load or to map is skipped (`skipped`, the
+  `RunRecord`'s `rows_skipped`), its token not stored; a list page that fails fails the run; a block raises
+  `Yad2Blocked` at once.
+- `yad2/browser.py`: Playwright, headed, the spikes' profile and flag, only the calls the spikes ran (`ASSUMPTIONS.md`
+  Y1); imported when the browser opens, so the slim image needs no Playwright. Not run in this round.
+- `yad2_run.py`: the run's wiring: `known` from the store, the collection, dedup A, the bumps (#520, #524: a duplicate's
+  bump also moves its canonical's clock, as a repost does), the photos, then **one transaction**
+  (`Repository.save_batch`, new on the Repository contract, both stores), then the `yad2-tel-aviv` record
+  (`watermark.window.advance_group`, the per-group rule Facebook's `advance` now calls too): its rows are the new
+  listings and the bumps.
+- `dedup/stage_a.py`: `bumped_lifecycle` (#524), sharing #74's state rule.
+- Tests: `test_yad2_collector.py` (synthetic pages, no fixture: the rules), `test_yad2_list_pages.py` (the saved pages:
+  both shapes, the links, the challenge and check pages, a bootstrap over pages 1–3), `test_yad2_run.py` (the store,
+  invariant 2, the bumps, the archive return with its photos), `save_batch` in `test_repository_contract.py`.
 
 ## 6.15 Out of this plan
 

@@ -100,40 +100,55 @@ def advance(
     for group_id in configured:
         before = by_group.get(group_id)
         group_posts = posts_by_group[group_id]
-        if (
-            before is not None
-            and before.last_success_at is not None
-            and run_started_at < before.last_success_at
-        ):
-            raise ValueError(
-                f"group {group_id}: run started {run_started_at.isoformat()}, before its last "
-                f"success {before.last_success_at.isoformat()}"
-            )
-        watermark = before.watermark if before is not None else None
-        failures = before.consecutive_failures if before is not None else 0
-        if group_posts:
-            newest = max(post.posted_at for post in group_posts)
-            # The highest posted_at seen; it never moves backwards.
-            watermark = newest if watermark is None else max(watermark, newest)
-            failures = 0
-        else:
-            # A successful run in which the group returned zero rows (#78 W5b).
-            failures += 1
-
+        record = advance_group(
+            before,
+            group_id,
+            [post.posted_at for post in group_posts],
+            run_started_at=run_started_at,
+        )
         gap = _cut_off(group_id, group_posts, before, since, max_posts)
         if gap is not None:
             cut_off.append(gap)
-
-        updated.append(
-            GroupWatermark(
-                schema_version=GROUP_WATERMARK_SCHEMA_VERSION,
-                group_id=group_id,
-                watermark=watermark,
-                last_success_at=run_started_at,
-                consecutive_failures=failures,
-            )
-        )
+        updated.append(record)
     return WatermarkAdvance(records=tuple(updated), cut_off=tuple(cut_off))
+
+
+def advance_group(
+    before: GroupWatermark | None,
+    group_id: str,
+    published_at: Sequence[datetime],
+    *,
+    run_started_at: datetime,
+) -> GroupWatermark:
+    """One group's record after a successful run: `published_at` holds the publication times of
+    the rows the group returned (a Yad2 run: its new listings and its bumps, `PHASE_6.md` §6.5)."""
+    require_utc(run_started_at)
+    if (
+        before is not None
+        and before.last_success_at is not None
+        and run_started_at < before.last_success_at
+    ):
+        raise ValueError(
+            f"group {group_id}: run started {run_started_at.isoformat()}, before its last "
+            f"success {before.last_success_at.isoformat()}"
+        )
+    watermark = before.watermark if before is not None else None
+    failures = before.consecutive_failures if before is not None else 0
+    if published_at:
+        newest = max(require_utc(at) for at in published_at)
+        # The highest posted_at seen; it never moves backwards.
+        watermark = newest if watermark is None else max(watermark, newest)
+        failures = 0
+    else:
+        # A successful run in which the group returned zero rows (#78 W5b).
+        failures += 1
+    return GroupWatermark(
+        schema_version=GROUP_WATERMARK_SCHEMA_VERSION,
+        group_id=group_id,
+        watermark=watermark,
+        last_success_at=run_started_at,
+        consecutive_failures=failures,
+    )
 
 
 def _cut_off(

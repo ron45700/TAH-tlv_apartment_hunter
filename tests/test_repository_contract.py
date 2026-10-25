@@ -491,3 +491,62 @@ def test_find_pending_canonicals_returns_exactly_the_pending_canonicals(
 
 def test_find_pending_canonicals_on_an_empty_store(make_repository: MakeRepository) -> None:
     assert make_repository().find_pending_canonicals() == []
+
+
+def test_save_batch_writes_new_posts_and_changed_records_together(
+    make_repository: MakeRepository, posts
+) -> None:
+    """A Yad2 run's one transaction (#502 point 18)."""
+    repo = make_repository()
+    stored, first, second = posts[:3]
+    repo.upsert_with_lifecycle(stored, _pending(stored))
+    moved = _pending(stored, last_published_at=stored.posted_at + timedelta(hours=1))
+    repo.save_batch(
+        [(first, _pending(first)), (second, _pending(second))], [(moved, _pending(stored))]
+    )
+    fresh = make_repository()
+    assert fresh.get(first.listing_id) == first and fresh.get(second.listing_id) == second
+    assert fresh.get_lifecycle(first.listing_id) == _pending(first)
+    assert fresh.get_lifecycle(stored.listing_id) == moved
+
+
+def test_save_batch_keeps_a_stored_posts_record(make_repository: MakeRepository, posts) -> None:
+    """As `upsert_with_lifecycle`: a post's record is created only when it has none."""
+    repo = make_repository()
+    post = posts[0]
+    active = _pending(post, state="active")
+    repo.upsert_with_lifecycle(post, active)
+    repo.save_batch([(post, _pending(post))], [])
+    assert make_repository().get_lifecycle(post.listing_id) == active
+
+
+def test_save_batch_with_a_stale_record_writes_nothing(
+    make_repository: MakeRepository, posts
+) -> None:
+    repo = make_repository()
+    stored, new = posts[:2]
+    repo.upsert_with_lifecycle(stored, _pending(stored, flag_note="the site"))
+    moved = _pending(stored, last_published_at=stored.posted_at + timedelta(hours=1))
+    with pytest.raises(StaleRecordError):
+        repo.save_batch([(new, _pending(new))], [(moved, _pending(stored))])
+    fresh = make_repository()
+    assert fresh.get(new.listing_id) is None
+    assert fresh.get_lifecycle(new.listing_id) is None
+    assert fresh.get_lifecycle(stored.listing_id) == _pending(stored, flag_note="the site")
+
+
+def test_save_batch_with_a_record_of_a_post_not_stored_writes_nothing(
+    make_repository: MakeRepository, posts
+) -> None:
+    repo = make_repository()
+    new, missing = posts[:2]
+    with pytest.raises(KeyError):
+        repo.save_batch([(new, _pending(new))], [(_pending(missing), None)])
+    assert make_repository().get(new.listing_id) is None
+
+
+def test_save_batch_refuses_a_record_of_another_post(
+    make_repository: MakeRepository, posts
+) -> None:
+    with pytest.raises(ValueError):
+        make_repository().save_batch([(posts[0], _pending(posts[1]))], [])

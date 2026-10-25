@@ -157,18 +157,30 @@ class SqliteRepository:
         self, record: PostLifecycle, *, expected: PostLifecycle | None
     ) -> PostLifecycle:
         with self._transaction() as conn:
-            exists = conn.execute(
-                "SELECT 1 FROM raw_posts WHERE listing_id = ?", (record.listing_id,)
-            ).fetchone()
-            if exists is None:
-                raise KeyError(record.listing_id)
-            _require_expected(conn, record.listing_id, expected)
-            conn.execute(
-                "INSERT INTO post_lifecycle (listing_id, doc) VALUES (?, ?) "
-                "ON CONFLICT (listing_id) DO UPDATE SET doc = excluded.doc",
-                (record.listing_id, record.model_dump_json()),
-            )
+            _save_lifecycle(conn, record, expected)
         return record
+
+    def save_batch(
+        self,
+        posts: Sequence[tuple[RawPost, PostLifecycle]],
+        records: Sequence[tuple[PostLifecycle, PostLifecycle | None]],
+    ) -> None:
+        for post, initial in posts:
+            if initial.listing_id != post.listing_id:
+                raise ValueError(
+                    f"lifecycle record {initial.listing_id} does not belong to post "
+                    f"{post.listing_id}"
+                )
+        with self._transaction() as conn:
+            for post, initial in posts:
+                _upsert(conn, post)
+                conn.execute(
+                    "INSERT INTO post_lifecycle (listing_id, doc) VALUES (?, ?) "
+                    "ON CONFLICT (listing_id) DO NOTHING",
+                    (initial.listing_id, initial.model_dump_json()),
+                )
+            for record, expected in records:
+                _save_lifecycle(conn, record, expected)
 
     def get_lifecycle(self, listing_id: str) -> PostLifecycle | None:
         with self._connect() as conn:
@@ -295,6 +307,22 @@ class SqliteRepository:
                 conn.execute("ROLLBACK")
                 raise
             conn.execute("COMMIT")
+
+
+def _save_lifecycle(
+    conn: sqlite3.Connection, record: PostLifecycle, expected: PostLifecycle | None
+) -> None:
+    exists = conn.execute(
+        "SELECT 1 FROM raw_posts WHERE listing_id = ?", (record.listing_id,)
+    ).fetchone()
+    if exists is None:
+        raise KeyError(record.listing_id)
+    _require_expected(conn, record.listing_id, expected)
+    conn.execute(
+        "INSERT INTO post_lifecycle (listing_id, doc) VALUES (?, ?) "
+        "ON CONFLICT (listing_id) DO UPDATE SET doc = excluded.doc",
+        (record.listing_id, record.model_dump_json()),
+    )
 
 
 def _require_expected(

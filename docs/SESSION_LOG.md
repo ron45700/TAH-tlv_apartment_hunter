@@ -8043,3 +8043,49 @@ for a post that carries it are as checked in round 45).
 **Next:** Ron's acceptance of version 8's run (#511) and the deploy's timing (a backup first: the deploy writes
 version-2 `Listing`, `RunRecord` and `ScheduleSettings` rows that an older image cannot read). Build step 4, the Yad2
 seam (`PHASE_6.md` §6.5, §6.6, §6.8): needs nothing more from Ron.
+
+## 2026-10-24 (continued) — Round 47: version 8 accepted (#523); #524, #525; Yad2's build step 4, the seam
+
+No paid call, no browser run, no store write outside tests, nothing on the server, no git write (Ron committed rounds
+45–46 himself).
+
+**Recorded:** `DECISIONS.md` #523 (version 8 accepted; deployed with the Yad2 collector in one deploy, one backup, at
+the end of the build steps), and two points the approved docs did not state, put to Ron before any code and answered
+as recommended: **#524** (a bump of an archived listing returns it, as #74, its photos downloaded again; amends #520's
+"only") and **#525** (the Yad2 bootstrap's "no alert": the alert pass skips posts first stored at or before the end of
+the first succeeded Yad2 run, read from `RunRecord`; built in step 6). `PHASE_6.md` (status, steps 4 and 6, §6.5's
+bump line, §6.10's fixtures, §6.13c), `SCHEMA.md` Gate E (the Yad2 bump rule, no field changed), `ASSUMPTIONS.md` Y1
+(the Playwright wrapper: every call one the spikes ran, the composition ASSUMED until the first headed run) and Y2
+(every Yad2 page load reaches `gw.yad2.co.il`: VERIFIED from the spikes' manifests, 20–34 answers a page, 0 on the
+blocked load), CLAUDE.md (Now/Next, the `yad2/` and `store/` seam rows), `BACKLOG.md` item 15.
+
+**Fixtures copied** into `data/raw/` (no phone response among them): `yad2_list_page{2,3}_2026-10-24.html`,
+`yad2_list_mixed_page1_2026-10-24.html`, `yad2_challenge_2026-10-22.html`, and `yad2_radware_interstitial_2026-10-24.html`
+(found this round: on a new profile the server's first document was Radware's 118 KB check page on `www.yad2.co.il`,
+then the real page; the browser waits past it).
+
+**Built:** `yad2/feed.py` (both list shapes, promoted lists left out, the page's own next-page link), `yad2/block.py`
+(`PageLoad`; the two signs of a block; no word looked at), `yad2/collector.py` (`Yad2Collector.collect`: 3–10 list
+pages, private tokens decide, bootstrap 3 pages and no bump check, bump checks over 3 hours at most 10 private first,
+4 s + 0–2 s before every load but the first, a failed listing page skipped and its token not stored, a block raising
+`Yad2Blocked`), `yad2/browser.py` (Playwright, headed, imported only when opened; not run), `yad2_run.py` (the wiring:
+`known`, collect, dedup A, the bumps, the photos, **one transaction** by the new `Repository.save_batch` on both stores,
+then the `yad2-tel-aviv` record), `dedup.stage_a.bumped_lifecycle` (#524, sharing #74's rule),
+`watermark.window.advance_group` (the per-group rule, now also called by Facebook's `advance`). Tests:
+`test_yad2_collector.py` (28, synthetic pages, runs in the Action), `test_yad2_list_pages.py` (21, the saved pages),
+`test_yad2_run.py` (15), five `save_batch` contract tests on both stores; helpers in `tests/yad2_synthetic.py`.
+
+**Verified:** `uv run pytest`: **2,409 passed**; ruff clean. Facebook's tests unchanged and passing.
+
+**Decided by me:** the module names and split (`feed`, `block`, `collector`, `browser`, `yad2_run`); `save_batch` as
+the one-transaction write (a contract addition, within #502 point 18); the watermark saved after the store transaction
+as Facebook's (a failure between the two leaves the posts stored and the record unmoved, nothing missed); the
+record's rows are the new listings and the bumps (so `consecutive_failures` counts runs with neither); a duplicate's
+bump moves its canonical's clock too; a token repeated on a later page is not "new" there; a list page that fails or
+has no feed fails the run, a listing page skipped; the bootstrap honours `known` and warns when the record exists; the
+browser's wait (each second, at most 15 s, until the data and an API answer arrived) in place of the spikes' fixed
+15 s; `rows_fetched`/`rows_skipped` counts carried for step 5's `RunRecord`.
+
+**Next:** build step 5 (the Yad2 run command and its `RunRecord`, the scheduler running both sources one at a time,
+the second image with `playwright==1.63.0`, the profile's folder, the digest's line, the schedule page's fields), then
+step 6 (the card, the alert, #525), then Ron's deploy (version 8 with the collector, one backup).
