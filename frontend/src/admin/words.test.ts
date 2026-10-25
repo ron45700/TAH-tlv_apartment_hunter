@@ -15,6 +15,7 @@ function row(id: string, by: string | null, at: string | null): Row {
     last_published_at: '2026-10-13T09:00:00+00:00',
     publications: 1,
     text: 'דירה',
+    source: 'facebook',
     permalink: 'https://example.invalid',
     photo: null,
     photo_count: 0,

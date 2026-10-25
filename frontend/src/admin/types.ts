@@ -1,6 +1,6 @@
 // The admin's payloads as the page reads them (tlv_hunter/web/admin_rows.py, admin.py). A user is
 // named by username only; no hash of any kind ever comes here.
-import type { ListingFields, Phone, Publication } from '../types'
+import type { ListingFields, Phone, Publication, Source } from '../types'
 
 export type ListName = 'rejected' | 'pending' | 'archive' | 'flags'
 export type Reason =
@@ -34,6 +34,7 @@ export interface Row extends StateWords {
   posted_at: string
   last_published_at: string
   publications: number
+  source: Source
   text: string | null
   permalink: string
   photo: string | null
@@ -123,6 +124,7 @@ export interface Detail {
     last_published_at: string
     image_errors: string[]
   }
+  source: Source
   text: string | null
   permalink: string
   posted_at: string

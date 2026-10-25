@@ -19,6 +19,10 @@ line; no icon but the colour circles:
 The caption's limit is checked. Buttons: the site's post page inside the Mini App (`web_app`),
 Facebook, WhatsApp (with a mobile number only), report.
 
+**A Yad2 post (#534):** the same layout; its "Facebook" button is "יד2" with the listing's link, and
+no WhatsApp button (#497); its location as given (#498): "שכונה" Yad2's neighbourhood, "רחוב" its
+street (Yad2's form: no "not exact" suffix); with neither, the rule above.
+
 The photo: the first stored photo of the card's shown post, uploaded from the store (its Facebook
 link expires); a photo over 10 MB, out of Telegram's proportions or of another type, or no photo:
 a text message with the same lines and buttons.
@@ -42,7 +46,7 @@ from tlv_hunter.policy.colours import glow
 from tlv_hunter.schedule import ZONE
 from tlv_hunter.telegram import callbacks
 from tlv_hunter.telegram.client import Button, Keyboard
-from tlv_hunter.web.cards import whatsapp_links
+from tlv_hunter.web.cards import source_of, whatsapp_links
 
 CAPTION_LIMIT = 1024  # sendPhoto caption, after entities parsing
 TEXT_LIMIT = 4096  # sendMessage text
@@ -86,6 +90,7 @@ ENTRY_WORD = re.compile(r"\s*כניסה(?=[\s:\-–]|$)[\s:\-–]*")
 
 BUTTON_SITE = "פתיחה באתר"
 BUTTON_FACEBOOK = "פייסבוק"
+BUTTON_YAD2 = "יד2"
 BUTTON_WHATSAPP = "וואטסאפ"
 BUTTON_REPORT = "דיווח"
 
@@ -155,7 +160,7 @@ def build_alert(
         [_e(line) for line in excerpt.split("\n")] if excerpt else [],
         [f"- <b>{_e(_kind_words(listing))}</b>" + (f" {circle}" if circle else "")],
         [
-            *location_lines(listing, areas),
+            *location_lines(listing, areas, source=source_of(shown.post)),
             _line("מחיר", price_words(listing)),
             _line("כניסה", entry_words(listing)),
             _line("חדרים", rooms_words(listing)),
@@ -186,7 +191,8 @@ def alert_keyboard(card: Card, site_url: str, *, report: bool = True) -> Keyboar
     rows: list[list[Button]] = [
         [Button(BUTTON_SITE, web_app_url=f"{site_url.rstrip('/')}/post/{shown.listing_id}")]
     ]
-    links = [Button(BUTTON_FACEBOOK, url=shown.post.permalink)]
+    source = BUTTON_YAD2 if source_of(shown.post) == "yad2" else BUTTON_FACEBOOK
+    links = [Button(source, url=shown.post.permalink)]
     mobiles = whatsapp_links(shown)
     if mobiles:
         links.append(Button(BUTTON_WHATSAPP, url=mobiles[0]))
@@ -233,9 +239,13 @@ def rtl_lines(text: str) -> str:
 # --- the blocks ---
 
 
-def location_lines(listing: Listing, areas: AreaWords) -> list[str]:
+def location_lines(listing: Listing, areas: AreaWords, *, source: str = "facebook") -> list[str]:
     """Block 2's location (#481): exact with one area; with several, the street alone or the
-    region headings. With none (such a post never alerts, §9), the street or "לא צוין"."""
+    region headings. With none (such a post never alerts, §9), the street or "לא צוין". A Yad2
+    post's as given: the form's neighbourhood and street, first in their lists (#498, #517)."""
+    if source == "yad2" and (listing.stated_area_names or listing.streets):
+        given = [_line("שכונה", listing.stated_area_names[0])] if listing.stated_area_names else []
+        return given + ([_line("רחוב", listing.streets[0])] if listing.streets else [])
     street = ", ".join(listing.streets)
     if len(listing.areas) == 1:
         (number,) = listing.areas

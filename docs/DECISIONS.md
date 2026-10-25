@@ -4590,6 +4590,32 @@ by hand, the scheduler stopped first (#140); every other service unchanged. The 
 made and owned by 10001, `export_backup --no-photos` first (the rollback point), Dockge's update with no run in
 progress, then Yad2 turned on from the schedule page. *Approved by Ron, 2026-10-25.*
 
+## Yad2: the card, the alert and the digest (2026-10-25, round 49)
+
+Ron committed round 48 after his own test run.
+
+### 533 — The source badge: a small pill in the card's kind row
+Every card shows its source (#500): a small pill at the far end of the card's first text line, beside "נצפה" and
+"מוסתרת": **"פייסבוק"** or **"יד2"**. The card's fixed slots do not change (#341). In the opened post the source follows
+the publication line: "פורסם לפני שעה · יד2". (Not chosen: a label on the photo's corner.) *Approved by Ron,
+2026-10-25.*
+
+### 534 — Yad2's wording on the card, the opened post, the alert and the admin's post page
+For a Yad2 post: the card's "פייסבוק" link becomes **"יד2"** (the listing's permalink), and the alert's "פייסבוק" button
+the same; **no WhatsApp button and no phones anywhere** (#497), the admin's post page included; the location as given
+(#498): **"<Yad2's neighbourhood> · <street>"** on the card and **"- שכונה: …", "- רחוב: …"** in the alert (no "(מיקום
+מדויק לא ודאי)": the street is Yad2's form), the colour and the orange rule still the area's; a video's link **"צפייה
+בסרטון ביד2"**; the admin's link **"המודעה ביד2"**. "למודעה המקורית", "תוקן", "תוקן ידנית" and the reports as for
+Facebook. *Approved by Ron, 2026-10-25.*
+
+### 535 — The digest counts Yad2 from what is stored; Facebook's run section counts Facebook's runs
+A section **"-יד2-"**: its runs; the failed ones, with how many of them were blocks (`failure_kind` starting
+"blocked:"); the listings read on the list pages (`rows_fetched`, in place of §6.7's "list pages read", which no record
+holds); the new listings (Yad2 posts first stored in the window); **the bumped listings** (Yad2 posts whose
+`last_published_at` lies in the window and is later than their own `posted_at`: listings, not bump events). Facebook's
+run and cost sections count Facebook's runs only. The group shows as "יד2 · תל אביב-יפו". No field added. (Not chosen:
+list pages and bumps on `RunRecord`, a Gate G version 3.) Amends §6.7's line. *Approved by Ron, 2026-10-25.*
+
 ---
 
 ## Corrections to recorded facts

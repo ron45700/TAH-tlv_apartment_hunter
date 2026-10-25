@@ -26,6 +26,7 @@ import {
   sizeOpen,
   NOT_STATED,
   type StatText,
+  SOURCE_WORDS,
 } from '../format'
 import type { CardData, Colour, Colours, PostData, ReportableField } from '../types'
 import { ActionMenu, ReportForm, type MenuItem } from './actions'
@@ -256,7 +257,7 @@ function Body({
 
   return (
     <>
-      <Carousel photos={post.photos} videos={post.videos} variant="open" eager />
+      <Carousel photos={post.photos} videos={post.videos} variant="open" eager source={post.source} />
       <div className="content">
         <div className="pblock">
           {card?.tier_label && <p className={`tierline t-${card.glow ?? 'none'}`}>{card.tier_label}</p>}
@@ -278,7 +279,9 @@ function Body({
               )}
             </div>
           )}
-          <p className="meta">פורסם {relativeTime(post.last_published_at, now)}</p>
+          <p className="meta">
+            פורסם {relativeTime(post.last_published_at, now)} · {SOURCE_WORDS[post.source]}
+          </p>
         </div>
 
         <div className="feats feats-open">
@@ -357,7 +360,7 @@ function Body({
           <section className="videos">
             {post.videos.map((video, i) => (
               <a key={video} className="lk" href={video} target="_blank" rel="noopener noreferrer">
-                {post.videos.length > 1 ? `צפייה בסרטון ${i + 1} בפייסבוק` : 'צפייה בסרטון בפייסבוק'}
+                {`צפייה בסרטון${post.videos.length > 1 ? ` ${i + 1}` : ''} ${post.source === 'yad2' ? 'ביד2' : 'בפייסבוק'}`}
               </a>
             ))}
           </section>

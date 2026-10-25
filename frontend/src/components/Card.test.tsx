@@ -47,6 +47,7 @@ function card(whatsapp: string | null, viewed?: boolean): CardData {
     glow: null,
     tier_label: null,
     colours: {},
+    source: 'facebook',
     text: 'דירה',
     permalink: 'https://www.facebook.com/groups/1/posts/2',
     photos: [],
@@ -141,5 +142,36 @@ describe('hiding (#464–#466, #468): the pill on the photo, the tag, the faded 
 
   it('leaves the foot as it was (#341, #351)', () => {
     expect(buttons(render(tiered('critical_met', false), signedIn))).toEqual(['btn-fb', 'btn-rep'])
+  })
+})
+
+// Yad2 (#533, #534): the source pill in the kind row, the "יד2" link, no WhatsApp, the place as given.
+describe('a Yad2 card', () => {
+  const yad2: CardData = {
+    ...card(null),
+    source: 'yad2',
+    permalink: 'https://www.yad2.co.il/realestate/item/tel-aviv-area/p0000001',
+    areas: [{ number: 50, name: 'נווה עופר' }],
+    stated_area_names: ['נווה עופר, תל כביר', 'יפו'],
+    streets: ['שלמה 12', 'רחוב אחר'],
+  }
+
+  it('names its source in the kind row and links to the listing as "יד2"', () => {
+    const html = renderToStaticMarkup(<Card card={yad2} now={new Date('2026-10-14T09:00:00Z')} onOpen={() => {}} />)
+    expect(html).toContain('<span class="src src-yad2">יד2</span>')
+    expect(html).toContain('href="https://www.yad2.co.il/realestate/item/tel-aviv-area/p0000001"')
+    expect(html).not.toContain('פייסבוק')
+    expect(html).not.toContain('וואטסאפ')
+  })
+
+  it('shows the neighbourhood and street Yad2 gave, not the names of the areas', () => {
+    const html = renderToStaticMarkup(<Card card={yad2} now={new Date('2026-10-14T09:00:00Z')} onOpen={() => {}} />)
+    expect(html).toContain('נווה עופר, תל כביר · שלמה 12')
+    expect(html).not.toContain('רחוב אחר')
+  })
+
+  it('a Facebook card names its source too', () => {
+    const html = renderToStaticMarkup(<Card card={card(null)} now={new Date('2026-10-14T09:00:00Z')} onOpen={() => {}} />)
+    expect(html).toContain('<span class="src src-facebook">פייסבוק</span>')
   })
 })

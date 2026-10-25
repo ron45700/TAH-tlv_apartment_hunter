@@ -65,6 +65,8 @@ export interface CardData extends ListingFields {
   glow: Glow | null
   tier_label: string | null
   colours: Colours
+  /** The post's source (#500, #533). */
+  source: Source
   text: string | null
   permalink: string
   photos: string[]
@@ -99,6 +101,9 @@ export interface CardsPage {
   gone: string[]
 }
 
+/** Facebook's (either provider) or Yad2's (#500). A Yad2 post has no phone (#497). */
+export type Source = 'facebook' | 'yad2'
+
 export interface Phone {
   phone: string
   name: string | null
@@ -115,6 +120,7 @@ export interface PostData extends ListingFields {
   post_ids: string[]
   corrected: string[]
   own_colours: Colours
+  source: Source
   text: string | null
   permalink: string
   photos: string[]

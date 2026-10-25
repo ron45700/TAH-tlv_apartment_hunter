@@ -11,6 +11,8 @@ listing), #525 (the bootstrap's no-alert rule, step 6); build step 4 built** (§
 **Round 48: #526–#532** (no cap on listing pages; Yad2 from 06:00; Facebook first; Yad2 off at the deploy, its first
 run the bootstrap; one failed Yad2 run alerts; Playwright's image; the stack and the deploy, §6.16); **build step 5
 built** (§6.13d), not run: no image built, no browser run.
+**Round 49: #533–#535** (the badge, Yad2's wording, the digest's counts); **build step 6 built** (§6.13e). Every build
+step is built; what is left is the deploy (step 7, §6.16).
 **Owner:** Ron
 **Parent:** `BASELINE.md` §1, §4, §12 (the phase 6 row), §13 · **After:** Phase 5 (closed, #476) · **Evidence:**
 `docs/SPIKE_YAD2_2026-10-22.md` (spike 1, §1–§10; spike 2, §S2.1–§S2.6) · **Decisions:** #489–#519 · **Schema:**
@@ -57,7 +59,7 @@ taken as they are, each card showing its source, and a block reported to the adm
 | 3 | **The block and instructions version 7** (#498, #503): the block as a second input item, the instructions' paragraph, `PROMPT_VERSION` "7" with its fingerprint; then **the regression run on the existing set and the block check** (paid, on Ron's go, #511, #519; §6.4) | **Version 7 written, round 44**; the two paid runs wait for Ron's go (the block check needs a small command first) |
 | 4 | **The Yad2 seam** (#507, §6.5): the list pages in both shapes, paging (§6.8's numbers), the new tokens' pages, the bump checks (#504), block detection (§6.6), all tested on saved HTML; the browser wrapper (Playwright) the only part not run in tests; the run's store write at the end (#502 point 18); its `RunRecord` (`source` `"yad2"`) and the `GroupWatermark` `yad2-tel-aviv` | **Built, round 47** (§6.13c); the `RunRecord` is written by step 5's command from the run's counts |
 | 5 | **The job, the scheduler, the image** (#506): the Yad2 run command; the scheduler reading Yad2's rhythm and running both sources one at a time; the second image, the scheduler moved to it, the GitHub Action building both; the profile's folder; the digest's Yad2 line and the schedule page's Yad2 fields | **Built, round 48** (§6.13d), but the digest's Yad2 line, moved to step 6 |
-| 6 | **The card and the alert**: the source badge, "open on Yad2", no WhatsApp, Yad2's neighbourhood and street; the photos (after §6.14 C1); **the alert pass skips the first succeeded Yad2 run's posts** (#525); **the digest's Yad2 line** (§6.7) | After 2 |
+| 6 | **The card and the alert**: the source badge, "open on Yad2", no WhatsApp, Yad2's neighbourhood and street; the photos (after §6.14 C1); **the alert pass skips the first succeeded Yad2 run's posts** (#525); **the digest's Yad2 line** (§6.7) | **Built, round 49** (§6.13e) |
 | 7 | **The deploy** on `homeserver` (Ron): the bootstrap, 3 pages, no alerts (#493); two days unattended (DoD 1); Ron judges Yad2's classification on the real cards (#511) | Ron |
 
 ---
@@ -321,7 +323,8 @@ does. Headless is never used (it is blocked, spike 1's run 4).
 - **`ScheduleSettings` version 2:** Yad2's interval and daytime hours (names in §6.14 C4; all `None` means no Yad2 runs,
   as a stored version-1 row reads). **Built** (step 1).
 - **The digest:** a Yad2 line of its own (runs, failed runs, new listings, list pages read), apart from the Apify cost
-  line; the group "יד2 · תל אביב-יפו" among the groups, its silence counted as any group's (#496). Step 5.
+  line; the group "יד2 · תל אביב-יפו" among the groups, its silence counted as any group's (#496). **As built (#535):**
+  runs, failed and of them blocks, listings read (no record holds list pages), new listings, bumped listings; step 6.
 - **The schedule page:** Yad2's interval and hours beside Facebook's. Step 5.
 
 ## 6.8 The paging numbers and the rhythm — APPROVED (#514), with Ron's two amendments
@@ -531,6 +534,26 @@ accepted (#516); C6 `"form"` (#517). Also #518 (nothing for the model: `no_text`
   (§6.16).
 - Tests: `test_run_yad2_job.py`, the Yad2 parts of `test_scheduler.py`, `test_watch.py`, `test_schedule.py`,
   `test_web_schedule.py`, `test_deploy_files.py`.
+
+## 6.13e Build step 6 (round 49): what is built
+
+- `web/cards.py`: each card and opened post carries `source` ("facebook" / "yad2"); a Yad2 post's `whatsapp` is `None`
+  and its `phones` empty (`shown_phones`), whatever its description holds (#497, #534); `web/admin_rows.py` the same
+  for the admin's rows and opened post.
+- The front end: the source pill at the end of the kind row (#533); the link "יד2" in place of "פייסבוק"; the location
+  as Yad2 gave it (the form's neighbourhood and street, first in their lists, #517), the colour still the area's;
+  "פורסם … · יד2" in the opened post; "צפייה בסרטון ביד2"; the admin's "המודעה ביד2", and its city ruling "לפי שדה
+  העיר של יד2" for a Yad2 post.
+- `notify/alert.py`: the "יד2" button with the listing's link, no WhatsApp; "- שכונה:", "- רחוב:" as given (#534).
+- `telegram/alerts.py`: `yad2_bootstrap_end` and `due_alerts(…, yad2_end=)`: no Yad2 post first stored by the first
+  succeeded Yad2 run alerts, and none before it (#525); the bot reads the run records until it is found. A bump and a
+  return from archive were already held back by the post's own times (#520, #524): pinned by tests.
+- `telegram/digest.py`: "-ריצות פייסבוק-" counts Facebook's runs; "-יד2-" (#535) when Yad2 ran in the window; a failed
+  Yad2 run listed as "יד2 · …"; the bot names the group "יד2 · תל אביב-יפו".
+- Tests: `test_yad2_card_alert.py` (12), the Yad2 cards in `Card.test.tsx` (3), one heading in `test_watch.py`.
+- **Checked and unchanged:** the filters (no rule names a source; the broker filter reads the form's value, #501);
+  the Gate D key and dedup A (already within a source, #500); the price-mismatch line (text-sourced prices only, so
+  never a Yad2 post); retention (the same rule, #502 point 20).
 
 ## 6.16 The stack and the deploy (#532) — for step 7, after step 6 is built
 

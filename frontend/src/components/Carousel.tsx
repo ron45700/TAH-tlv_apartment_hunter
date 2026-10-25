@@ -4,6 +4,7 @@
 // but a video shows the link to the video in the photo's place, never "no photos" (round 9).
 import { useRef, useState } from 'react'
 import { photoPosition } from '../format'
+import type { Source } from '../types'
 
 interface Props {
   photos: string[]
@@ -11,9 +12,11 @@ interface Props {
   variant: 'card' | 'open'
   /** The first photo loads at once in the opened post; on a card it waits for the card's view. */
   eager?: boolean
+  /** Where the video plays (#534): Facebook's page or Yad2's listing. */
+  source?: Source
 }
 
-export function Carousel({ photos, videos, variant, eager = false }: Props) {
+export function Carousel({ photos, videos, variant, eager = false, source = 'facebook' }: Props) {
   const track = useRef<HTMLDivElement>(null)
   const [index, setIndex] = useState(0)
   const total = photos.length
@@ -23,7 +26,7 @@ export function Carousel({ photos, videos, variant, eager = false }: Props) {
       <div className={`car car-${variant} car-empty`}>
         {videos.length > 0 ? (
           <a className="vlink" href={videos[0]} target="_blank" rel="noopener noreferrer">
-            צפייה בסרטון בפייסבוק
+            {source === 'yad2' ? 'צפייה בסרטון ביד2' : 'צפייה בסרטון בפייסבוק'}
           </a>
         ) : (
           <span className="car-none">אין תמונות</span>

@@ -19,6 +19,12 @@ A card alerts a linked user when all of these hold:
   is not sent.
 - **`policy.alert.no_alert_reason` is `None`** against the user's saved profile (§9, #360).
 
+**Yad2 (#520, #524, #525):** a Yad2 post first stored at or before the end of the first succeeded
+Yad2 run (the bootstrap, `yad2_bootstrap_end`) never alerts, and none does before that run exists.
+A bump keeps the post's `fetched_at` and `posted_at` (#520), so it never makes a post new; a listing
+a bump brings back from archive was published 25 days or more before (#524), so the 24-hour rule
+above holds it back.
+
 Sent in publication order, at most one message a second per chat (point 6). A send that fails
 leaves no record: the next pass tries again. Disabled users get nothing.
 """
@@ -30,11 +36,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from tlv_hunter.contracts.profile import Profile
+from tlv_hunter.contracts.run_record import RunRecord
 from tlv_hunter.contracts.sent_alert import SENT_ALERT_SCHEMA_VERSION, SentAlert
 from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import Card
 from tlv_hunter.notify.alert import AreaWords, build_alert
 from tlv_hunter.notify.base import Notifier
+from tlv_hunter.parsing.ids import YAD2_SOURCE
 from tlv_hunter.policy.alert import no_alert_reason, published_too_long_ago
 from tlv_hunter.policy.base import Evaluation
 from tlv_hunter.policy.evaluate import evaluate
@@ -51,14 +59,28 @@ def is_linked(user: User) -> bool:
     return user.telegram_chat_id is not None and user.disabled_at is None
 
 
+def yad2_bootstrap_end(runs: Iterable[RunRecord]) -> datetime | None:
+    """When the first succeeded Yad2 run ended (#525): its posts are the bootstrap's."""
+    succeeded = [
+        run
+        for run in runs
+        if run.source == "yad2" and run.status == "succeeded" and run.finished_at
+    ]
+    first = min(succeeded, key=lambda run: run.started_at, default=None)
+    return None if first is None else first.finished_at
+
+
 def due_alerts(
     user: User,
     profile: Profile,
     cards: Iterable[Card],
     sent_ids: set[str],
     now: datetime,
+    *,
+    yad2_end: datetime | None = None,
 ) -> list[tuple[Card, Evaluation]]:
-    """The cards to alert this user now, in publication order. Pure."""
+    """The cards to alert this user now, in publication order. Pure. `yad2_end`: the end of the
+    first succeeded Yad2 run (`None`: none yet, so no Yad2 post alerts)."""
     linked_at = user.telegram_linked_at
     if not is_linked(user) or linked_at is None:
         return []
@@ -66,6 +88,10 @@ def due_alerts(
     for card in cards:
         shown = card.shown
         if shown.post.fetched_at <= linked_at:
+            continue
+        if shown.post.source == YAD2_SOURCE and (
+            yad2_end is None or shown.post.fetched_at <= yad2_end
+        ):
             continue
         if shown.seen.listing.classified_at < now - ALERT_WINDOW:
             continue
@@ -96,7 +122,11 @@ class AlertPass:
         store_root: Path,
         clock: Callable[[], datetime],
         sleep: Callable[[float], None],
+        runs: Callable[[], Sequence[RunRecord]] = lambda: (),
     ) -> None:
+        """`runs`: every run record, read until the first succeeded Yad2 run is found (#525)."""
+        self._runs = runs
+        self._yad2_end: datetime | None = None
         self._userdata = userdata
         self._notifier = notifier
         self._areas = areas
@@ -110,6 +140,8 @@ class AlertPass:
     ) -> PassResult:
         sent = 0
         failed: list[str] = []
+        if self._yad2_end is None:  # once found it never changes
+            self._yad2_end = yad2_bootstrap_end(self._runs())
         for user in self._userdata.list_users():
             if not is_linked(user) or should_stop():
                 continue
@@ -117,7 +149,12 @@ class AlertPass:
             if profile is None:
                 continue
             due = due_alerts(
-                user, profile, cards, self._userdata.sent_listing_ids(user.user_id), self._clock()
+                user,
+                profile,
+                cards,
+                self._userdata.sent_listing_ids(user.user_id),
+                self._clock(),
+                yad2_end=self._yad2_end,
             )
             for card, evaluation in due:
                 if should_stop():

@@ -40,6 +40,7 @@ from tlv_hunter.telegram.client import TelegramClient, Transport, urllib_transpo
 from tlv_hunter.telegram.watch import Watch
 from tlv_hunter.userdata.sqlite import SqliteUserDataStore
 from tlv_hunter.web.grouping import Grouping
+from tlv_hunter.yad2.mapping import GROUP_ID, GROUP_TITLE
 
 TOKEN_VARIABLE = "TELEGRAM_BOT_TOKEN"
 SITE_VARIABLE = "SITE_URL"
@@ -131,7 +132,8 @@ def main(
                     grouping,
                     userdata,
                     clock,
-                    YamlConfig(config_root).collection().group_names,
+                    # Yad2's one group by its own title (#496, #535), beside the config's.
+                    {**YamlConfig(config_root).collection().group_names, GROUP_ID: GROUP_TITLE},
                 ),
             )
             bot.start()

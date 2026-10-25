@@ -12,8 +12,14 @@ The window is from the last digest to now (24 hours with none). Counted from the
   rejected; and the pending ones;
 - the collected canonicals the admin's saved profile shows (`policy.evaluate`);
 - the price mismatches: a native price that is not among the text's prices;
-- the runs: how many, the failed ones with their reason, the rows fetched and skipped (#71 D);
+- Facebook's runs: how many, the failed ones with their reason, the rows fetched and skipped
+  (#71 D);
 - the Apify cost (#450): the runs settled by `settle_costs`, and how many are not yet;
+- **Yad2 (#535)**, when it ran in the window: its runs, the failed ones and how many were blocks
+  (`failure_kind` "blocked: …"), the listings read on its list pages (`rows_fetched`), the new
+  listings (first stored in the window), the bumped ones (a stored `last_published_at` in the
+  window, later than the post's own `posted_at`: listings, not bump events). No record holds a
+  list page count or a bump (Gate G unchanged);
 - the silent groups: only a suspect one or one over its threshold (point 9 B; the thresholds are
   not printed, #482), and the problems that stand.
 
@@ -39,6 +45,7 @@ from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.contracts.run_record import RunRecord
 from tlv_hunter.contracts.sent_alert import SentAlert
 from tlv_hunter.notify.alert import rtl_lines
+from tlv_hunter.parsing.ids import YAD2_SOURCE
 from tlv_hunter.policy.evaluate import evaluate
 from tlv_hunter.postmodel.seen import SeenListing
 from tlv_hunter.telegram.health import GroupSilence, Problem
@@ -49,6 +56,7 @@ DEFAULT_WINDOW = timedelta(hours=24)
 MESSAGE_LIMIT = 4096
 FAILED_LISTED = 10
 BULLET = "• "  # every value line inside a section (#488)
+BLOCKED = "blocked:"  # a Yad2 block's failure_kind (`yad2/block.py`)
 
 
 @dataclass
@@ -58,6 +66,16 @@ class GroupCounts:
     classified: int = 0
     rejected: int = 0
     alerted: int = 0
+
+
+@dataclass(frozen=True)
+class Yad2Counts:
+    runs: int = 0
+    failed: int = 0
+    blocked: int = 0
+    listings_read: int = 0
+    new: int = 0
+    bumped: int = 0
 
 
 @dataclass(frozen=True)
@@ -79,6 +97,8 @@ class Digest:
     problems: tuple[Problem, ...]
     alerted: int = field(default=0)
     group_names: Mapping[str, str] = field(default_factory=dict)
+    yad2: Yad2Counts = field(default_factory=Yad2Counts)
+    """`runs`, `failed`, the rows and the cost above are Facebook's; Yad2's are here (#535)."""
 
 
 def digest_due(last: datetime | None, now: datetime, zone: ZoneInfo) -> bool:
@@ -147,13 +167,39 @@ def build_digest(
             group = group_of.get(alert.listing_id)
             if group is not None:
                 by_group[group].alerted += 1
-    in_window = [run for run in runs if within(run.started_at)]
+    window_runs = [run for run in runs if within(run.started_at)]
+    in_window = [run for run in window_runs if run.source == "facebook"]
     settled = [run for run in in_window if run.cost_usd is not None]
+    yad2_runs = [run for run in window_runs if run.source == "yad2"]
+    yad2_failed = [run for run in yad2_runs if run.status == "failed"]
+    yad2_posts = [post for post, _, _ in canonicals if post.source == YAD2_SOURCE]
+    yad2_posts += [
+        duplicate
+        for duplicates in snapshot.duplicates.values()
+        for duplicate in duplicates
+        if duplicate.source == YAD2_SOURCE
+    ]
+    clocks = [(member.post, member.lifecycle) for member in snapshot.members.values()]
+    clocks += [(other.post, other.lifecycle) for other in snapshot.others.values()]
+    yad2 = Yad2Counts(
+        runs=len(yad2_runs),
+        failed=len(yad2_failed),
+        blocked=sum(1 for run in yad2_failed if (run.failure_kind or "").startswith(BLOCKED)),
+        listings_read=sum(run.rows_fetched or 0 for run in yad2_runs),
+        new=sum(1 for post in yad2_posts if within(post.fetched_at)),
+        bumped=sum(
+            1
+            for post, lifecycle in clocks
+            if post.source == YAD2_SOURCE
+            and within(lifecycle.last_published_at)
+            and lifecycle.last_published_at > post.posted_at
+        ),
+    )
     return Digest(
         start=start,
         end=end,
         runs=len(in_window),
-        failed=tuple(run for run in in_window if run.status == "failed"),
+        failed=tuple(run for run in window_runs if run.status == "failed"),
         rows_fetched=sum(run.rows_fetched or 0 for run in in_window),
         rows_skipped=sum(run.rows_skipped or 0 for run in in_window),
         cost_usd=round(sum(run.cost_usd or 0.0 for run in settled), 6),
@@ -169,6 +215,7 @@ def build_digest(
         problems=tuple(problems),
         alerted=alerted,
         group_names=dict(group_names or {}),
+        yad2=yad2,
     )
 
 
@@ -188,9 +235,9 @@ def digest_messages(digest: Digest, zone: ZoneInfo) -> list[str]:
         "📊 <b>סיכום יומי</b>",
         f"{when(digest.start)} – {when(digest.end)}",
         "",
-        _heading("ריצות איסוף"),
+        _heading("ריצות פייסבוק"),
         f"{BULLET}{digest.runs} ריצות",
-        f"{BULLET}{len(digest.failed)} נכשלו",
+        f"{BULLET}{sum(1 for run in digest.failed if run.source == 'facebook')} נכשלו",
         f"{BULLET}{digest.rows_fetched} שורות",
         f"{BULLET}{digest.rows_skipped} דולגו",
         "",
@@ -200,6 +247,18 @@ def digest_messages(digest: Digest, zone: ZoneInfo) -> list[str]:
     ]
     if digest.unsettled:
         lines.append(f"{BULLET}{digest.unsettled} עוד לא סופיות")
+    yad2 = digest.yad2
+    if yad2.runs:
+        blocked = f" ({yad2.blocked} חסימות)" if yad2.blocked else ""
+        lines += [
+            "",
+            _heading("יד2"),
+            f"{BULLET}{yad2.runs} ריצות",
+            f"{BULLET}{yad2.failed} נכשלו{blocked}",
+            f"{BULLET}{yad2.listings_read} מודעות נקראו ברשימה",
+            f"{BULLET}{yad2.new} מודעות חדשות",
+            f"{BULLET}{yad2.bumped} הוקפצו",
+        ]
     lines += [
         "",
         _heading("מודעות"),
@@ -231,8 +290,10 @@ def digest_messages(digest: Digest, zone: ZoneInfo) -> list[str]:
     if digest.failed:
         lines += ["", _heading("ריצות שנכשלו")]
         for run in digest.failed[:FAILED_LISTED]:
+            source = "יד2 · " if run.source == "yad2" else ""
             lines.append(
-                f"{BULLET}{when(run.started_at, '%H:%M')} · {html.escape(run.failure_kind or '')}"
+                f"{BULLET}{when(run.started_at, '%H:%M')} · {source}"
+                f"{html.escape(run.failure_kind or '')}"
             )
         if len(digest.failed) > FAILED_LISTED:
             lines.append(f"{BULLET}ועוד {len(digest.failed) - FAILED_LISTED}")

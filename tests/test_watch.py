@@ -194,7 +194,7 @@ def test_the_digest_counts_the_window_and_names_failures_and_silences(store: Tie
         "• 1 ריצות סופיות",
         "• 2 עוד לא סופיות",
     ]
-    runs = lines.index("<b>-ריצות איסוף-</b>")
+    runs = lines.index("<b>-ריצות פייסבוק-</b>")
     assert lines[runs + 1 : runs + 5] == ["• 3 ריצות", "• 1 נכשלו", "• 36 שורות", "• 0 דולגו"]
     posts = lines.index("<b>-מודעות-</b>")
     assert lines[posts + 1 : posts + 6] == [

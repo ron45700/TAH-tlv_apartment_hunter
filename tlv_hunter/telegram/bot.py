@@ -149,6 +149,7 @@ class Bot:
             store_root=store_root,
             clock=clock,
             sleep=sleep,
+            runs=lambda: () if watch is None else watch.runs.recent_runs(),
         )
         self._attempts = linking.CodeAttempts()
         self._pending: dict[int, PendingNote] = {}

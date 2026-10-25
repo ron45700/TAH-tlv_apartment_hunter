@@ -174,7 +174,7 @@ function PostDetail({
             <ReasonChip row={life} />
             {life.reason && <span className="apost-statewords">{life.state_words}</span>}
             <a className="apost-fb" href={post.permalink} target="_blank" rel="noopener noreferrer">
-              המודעה בפייסבוק
+              {post.source === 'yad2' ? 'המודעה ביד2' : 'המודעה בפייסבוק'}
             </a>
           </div>
           <dl className="facts">
@@ -209,7 +209,13 @@ function PostDetail({
                 <dt>עיר</dt>
                 <dd>
                   {post.city.name}
-                  {post.city.source && <span className="facts-sub">{SOURCE_WORDS[post.city.source]}</span>}
+                  {post.city.source && (
+                    <span className="facts-sub">
+                      {post.city.source === 'native_location' && post.source === 'yad2'
+                        ? 'לפי שדה העיר של יד2'
+                        : SOURCE_WORDS[post.city.source]}
+                    </span>
+                  )}
                 </dd>
               </>
             )}
@@ -421,7 +427,7 @@ function PostDetail({
 
       <aside className="apost-side">
         <div className="apanel apost-photos">
-          <Carousel photos={post.photos} videos={post.videos} variant="open" eager />
+          <Carousel photos={post.photos} videos={post.videos} variant="open" eager source={post.source} />
         </div>
         {post.phones.length > 0 && (
           <section className="apanel" aria-labelledby="phones-head">

@@ -295,6 +295,23 @@
   white-space: nowrap;
 }
 
+/* The source (#500, #533): the row's last pill, at its far end; outlined, not filled, so it never
+   reads as "seen" */
+.src {
+  flex: none;
+  margin-inline-start: auto;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--grey);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.seen + .src {
+  margin-inline-start: 6px;
+}
+
 .kind {
   font-size: 0.8rem;
   font-weight: 600;

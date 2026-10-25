@@ -10,6 +10,10 @@ the stored record when it is asked for (`routes.py`), never from the address.
 The colours, the glow and the tier's reasons are `policy/colours.py`'s (step 3); this module only
 puts them into words, so the page holds no rule (#330 point 18). A WhatsApp link is built for each
 mobile number (`textnorm.phones.whatsapp_number`, #311, #330 point 22).
+
+Each card and opened post names its source (`RawPost.source`'s family: "facebook" or "yad2", #500,
+#533); **a Yad2 post has no phone and no WhatsApp link** (#497, #534): its `whatsapp` is `None` and
+its `phones` empty, whatever its description holds (the text itself is shown whole, invariant 11).
 """
 
 from collections.abc import Mapping
@@ -21,6 +25,7 @@ from tlv_hunter.contracts.listing import Listing, Marked
 from tlv_hunter.contracts.profile import Profile
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.dedup.stage_b import Card, KeyPost
+from tlv_hunter.parsing.ids import YAD2_SOURCE
 from tlv_hunter.policy.base import Evaluation
 from tlv_hunter.policy.colours import field_colours, glow, tier_reasons
 from tlv_hunter.textnorm.phones import whatsapp_number
@@ -130,6 +135,7 @@ def card_payload(
         "tier_label": tier_label(listing, evaluation, profile),
         "colours": dict(field_colours(listing, evaluation)),
         **listing_json(listing, area_names),
+        "source": source_of(shown.post),
         "text": shown.post.text,
         "permalink": shown.post.permalink,
         "photos": photo_urls(shown),
@@ -167,9 +173,20 @@ def _reason_words(name: str, listing: Listing, evaluation: Evaluation) -> str:
 
 
 def whatsapp_links(member: KeyPost) -> list[str]:
-    """A click-to-chat link for each mobile number of the post, in the post's order."""
-    links = (whatsapp_link(phone) for phone in (member.post.phones or []))
+    """A click-to-chat link for each mobile number of the post, in the post's order; none for a
+    Yad2 post (#497)."""
+    links = (whatsapp_link(phone) for phone in shown_phones(member.post))
     return [link for link in links if link is not None]
+
+
+def source_of(post: RawPost) -> str:
+    """The post's source as the card names it: "yad2", or "facebook" for either provider."""
+    return "yad2" if post.source == YAD2_SOURCE else "facebook"
+
+
+def shown_phones(post: RawPost) -> list[str]:
+    """The phones a page or an alert may show: none for a Yad2 post (#497, #534)."""
+    return [] if post.source == YAD2_SOURCE else list(post.phones or [])
 
 
 def post_payload(card: Card, area_names: Mapping[int, str]) -> dict:
@@ -186,13 +203,14 @@ def post_payload(card: Card, area_names: Mapping[int, str]) -> dict:
         **listing_json(listing, area_names),
         "corrected": sorted(shown.seen.corrected),
         "own_colours": dict(field_colours(listing, None)),
+        "source": source_of(shown.post),
         "text": shown.post.text,
         "permalink": shown.post.permalink,
         "photos": photo_urls(shown),
         "videos": video_links(shown),
         "phones": [
             {"phone": phone, "name": names.get(phone), "whatsapp": whatsapp_link(phone)}
-            for phone in (shown.post.phones or [])
+            for phone in shown_phones(shown.post)
         ],
         "last_published_at": card.last_published_at.isoformat(),
         "publications": [

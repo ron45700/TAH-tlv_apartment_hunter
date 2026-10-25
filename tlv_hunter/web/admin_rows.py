@@ -23,7 +23,14 @@ from tlv_hunter.contracts.user import User
 from tlv_hunter.dedup.stage_b import KeyPost, OtherPost
 from tlv_hunter.postmodel.rejects import ReportMark, other_city_ruling
 from tlv_hunter.postmodel.seen import SeenListing
-from tlv_hunter.web.cards import listing_json, photo_name, post_videos, whatsapp_link
+from tlv_hunter.web.cards import (
+    listing_json,
+    photo_name,
+    post_videos,
+    shown_phones,
+    source_of,
+    whatsapp_link,
+)
 from tlv_hunter.web.writes import REPORT_LABELS
 
 # Gate E's reasons and states as the admin reads them (3.8 (c)).
@@ -74,6 +81,7 @@ def post_row(
         "posted_at": post.posted_at.isoformat(),
         "last_published_at": lifecycle.last_published_at.isoformat(),
         "publications": 1 + duplicates,
+        "source": source_of(post),
         "text": post.text,
         "permalink": post.permalink,
         "photo": photos[0] if photos else None,
@@ -118,6 +126,7 @@ def post_detail(
             "last_published_at": lifecycle.last_published_at.isoformat(),
             "image_errors": [image.error for image in lifecycle.images if image.error is not None],
         },
+        "source": source_of(post),
         "text": post.text,
         "permalink": post.permalink,
         "posted_at": post.posted_at.isoformat(),
@@ -125,7 +134,7 @@ def post_detail(
         "videos": post_videos(post),
         "phones": [
             {"phone": phone, "name": names.get(phone), "whatsapp": whatsapp_link(phone)}
-            for phone in (post.phones or [])
+            for phone in shown_phones(post)
         ],
         "publications": [
             {"id": each.listing_id, "posted_at": each.posted_at.isoformat()}

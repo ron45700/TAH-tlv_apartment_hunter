@@ -15,6 +15,7 @@ import {
   publishedTimes,
   relativeTime,
   roomsClosed,
+  SOURCE_WORDS,
   sizeClosed,
   type StatText,
 } from '../format'
@@ -78,7 +79,7 @@ export function Card({ card, now, onOpen, actions }: Props) {
         aria-label={`פתיחת המודעה${card.viewed ? ', נצפתה' : ''}${card.hidden ? ', מוסתרת' : ''}${card.tier_label ? `. ${card.tier_label}` : ''}`}
       />
       <div className="media">
-        <Carousel photos={card.photos} videos={card.videos} variant="card" />
+        <Carousel photos={card.photos} videos={card.videos} variant="card" source={card.source} />
         {card.tier_label && <InfoButton label={card.tier_label} />}
         {/* "הסתר" on the photo's top-right corner, opposite the "i", so the foot stays as it is
             (#341, #351; #468, appendix A point 12); "בטל הסתרה" in the same place */}
@@ -102,6 +103,8 @@ export function Card({ card, now, onOpen, actions }: Props) {
           <span className={line.unclear ? 'kind kind-unclear' : 'kind'}>{line.text}</span>
           {card.hidden && <span className="seen hidden-tag">מוסתרת</span>}
           {card.viewed && <span className="seen">נצפה</span>}
+          {/* The source (#500, #533): last in the row, so at its far end */}
+          <span className={`src src-${card.source}`}>{SOURCE_WORDS[card.source]}</span>
         </div>
         <div className="pricerow">
           {price === null ? (
@@ -115,7 +118,7 @@ export function Card({ card, now, onOpen, actions }: Props) {
           {card.text}
         </p>
         <p className={`loc c-${card.colours.areas}`}>
-          {locationLine(card)}
+          {locationLine(card, card.source)}
           {corrected.has('areas') && <Fixed />}
         </p>
         <dl className="stats">
@@ -172,7 +175,7 @@ export function Card({ card, now, onOpen, actions }: Props) {
               in order sits furthest right, so the report button comes last (#328, #338). */}
           <div className="acts">
             <a className="btn-o btn-fb" href={card.permalink} target="_blank" rel="noopener noreferrer">
-              פייסבוק
+              {SOURCE_WORDS[card.source]}
             </a>
             {card.whatsapp && (
               <a className="btn-o btn-wa" href={card.whatsapp} target="_blank" rel="noopener noreferrer">

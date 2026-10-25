@@ -193,7 +193,19 @@ export function kindLine(
 
 /** The location line: the areas' names, then the streets as written (§7); no area with a street,
  *  "האזור לא ברור"; nothing at all, "מיקום: לא צוין" (#110, #321). */
-export function locationLine(fields: Pick<ListingFields, 'areas' | 'streets' | 'stated_area_names'>): string {
+/** The words of a post's source (#533, #534): the badge, the link to the original. */
+export const SOURCE_WORDS = { facebook: 'פייסבוק', yad2: 'יד2' } as const
+
+/** The location line. A Yad2 post's as given (#498, #534): the form's neighbourhood and street,
+ *  first in their lists (#517); the 71 areas' names only when the form gave neither. */
+export function locationLine(
+  fields: Pick<ListingFields, 'areas' | 'streets' | 'stated_area_names'>,
+  source: 'facebook' | 'yad2' = 'facebook',
+): string {
+  if (source === 'yad2') {
+    const given = [fields.stated_area_names[0], fields.streets[0]].filter(Boolean)
+    if (given.length) return given.join(' · ')
+  }
   const areas = fields.areas.map((area) => area.name)
   if (areas.length) return [...areas, ...fields.streets].join(' · ')
   const given = [...fields.stated_area_names, ...fields.streets]

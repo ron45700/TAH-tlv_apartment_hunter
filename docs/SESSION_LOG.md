@@ -8125,3 +8125,44 @@ fields.
 
 **Next:** build step 6 (the card: badge, "open on Yad2", no WhatsApp; the alert with #525's rule; the digest's Yad2
 line), then Ron's one deploy (§6.16).
+
+## 2026-10-25 (continued) — Round 49: #533–#535; Yad2's build step 6 (the card, the alert, the digest)
+
+No paid call, no browser run, no store write outside tests, nothing on the server, no git write (Ron committed round
+48 as `c3f104f`, and homelab's `a052d38`).
+
+**homelab's comment:** the `yad2` service's manual command in `stacks/tlv-hunter/compose.yaml` is one line again,
+`docker compose run --rm yad2 xvfb-run -a -s '-screen 0 1920x1080x24' python -m tlv_hunter.jobs.run_yad2`. The broken
+line was in the working copy only: Ron's commit `a052d38` already holds the correct one, so homelab shows no change.
+
+**Recorded:** `DECISIONS.md` #533 (the source pill at the end of the kind row; "פורסם … · יד2" in the opened post),
+#534 (Yad2's wording: "יד2" link and button, no WhatsApp and no phones anywhere, the place as given, "צפייה בסרטון
+ביד2", "המודעה ביד2"), #535 (the digest counts Yad2 from what is stored: runs, failed and blocks, listings read in
+place of the list pages no record holds, new listings, bumped listings; Facebook's run section its own runs): the
+three points put to Ron before any code, answered as recommended. `PHASE_6.md` (status, step 6, §6.7's line, §6.13e),
+CLAUDE.md (Now/Next), `BACKLOG.md` item 15.
+
+**Built:** `web/cards.py` and `web/admin_rows.py` (`source`; no phone or WhatsApp for a Yad2 post); the front end (the
+pill, the link's words, the location as given, the opened post's line, the video's words, the admin's link and city
+ruling); `notify/alert.py` (the "יד2" button, no WhatsApp, "שכונה" and "רחוב" as given); `telegram/alerts.py`
+(`yad2_bootstrap_end`, `due_alerts(…, yad2_end=)`, #525; the bot reads the run records until the first succeeded Yad2
+run is found); `telegram/digest.py` ("-ריצות פייסבוק-", "-יד2-"); `jobs/bot.py` (the group's name). Tests:
+`tests/test_yad2_card_alert.py` (12), three Yad2 cards in `Card.test.tsx`, a heading in `test_watch.py`.
+
+**Places that assumed a Facebook post, as found:** the card's "פייסבוק" link and WhatsApp; the opened post's phones,
+WhatsApp and video words; the carousel's video words; the location line (the 71 areas only); the alert's "פייסבוק"
+button, WhatsApp and location; the digest's run section (all runs together) and the Yad2 group's name; the admin's
+"המודעה בפייסבוק", its phones and its city ruling's words. **Checked, nothing to change:** the filters, the Gate D key
+and dedup A (within a source), the price-mismatch line (text-sourced prices only), retention.
+
+**Verified:** `uv run pytest`: **2,446 passed**; ruff clean; `npm run build` and `npm test` (104 passed). The site not
+opened in a browser this round.
+
+**Decided by me:** the pill's style (outlined, grey, the row's last item); the location as the form's first
+neighbourhood and street, the 71 areas' names only when the form gave neither; the admin's city ruling "לפי שדה העיר
+של יד2" (the counterpart of #534's words); the Yad2 digest section only when Yad2 ran in the window; a failed Yad2 run
+listed as "יד2 · …" in "-ריצות שנכשלו-"; "(N חסימות)" only when there was a block; no Yad2 post alerts before a Yad2
+run has succeeded.
+
+**Next:** Ron's one deploy (`PHASE_6.md` §6.16): the backup first, the `…-browser` package made public, Yad2 turned on
+from the schedule page; then two days unattended (DoD 1) and Ron's reading of the real Yad2 cards (#511).
