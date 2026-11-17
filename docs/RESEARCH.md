@@ -144,6 +144,9 @@ items omit `width` and `height` too (9 in spike 1.1a), so the keys are never ass
   filtered per group locally (`DECISIONS.md` #78 W1, W6). The window applies per group inside one
   run: verified in spike 1.1a (`ASSUMPTIONS.md` P1, `SPIKE_1_1a.md` Q1).
 
+*The cost figures below were computed under the old 15-minute buffer (`DECISIONS.md` #78 W2), amended to 5
+minutes by #537 (2026-11-17). Not recomputed.*
+
 **Cost, from the real runs (§11).** The rate is confirmed on four runs: $0.0015 per returned row
 (rows older than `since` included) and $0.005 per run start. A normal run asks for about 45
 minutes (30 plus the 15-minute buffer), so at the afternoon rate it returns about 10–11 rows,
@@ -184,7 +187,7 @@ run's start minus the buffer: about 5.8 rows per run, **about $15/month**. Hence
 2. **The run's window starts at the last successful run's start** (`last_success_at`, read from
    our clock before `fetch()`), **minus a 15-minute overlap**; dedup absorbs the repeats. Zero
    overlap loses posts silently, and the actor measures the relative window from its own start
-   (`ASSUMPTIONS.md` P1c).
+   (`ASSUMPTIONS.md` P1c). *Amended by `DECISIONS.md` #537 (2026-11-17): a 5-minute overlap.*
 3. **Per group**, never global, and never per user.
 4. **Advance only on a successful run.** A throttled run that advances the window loses that window
    for good. A failed run writes nothing, so the next window covers it.

@@ -328,8 +328,8 @@ only. Nothing calls it yet.
 Rules in `RESEARCH.md` §4. Settled by #78:
 
 - **The run's window** (W1, W2): the configured groups' earliest `last_success_at`, minus a
-  15-minute buffer (`BUFFER`, a module constant). The watermark, the highest `posted_at` seen, is
-  stored but no longer sets the window. A configured group with no record raises, naming it (W7);
+  15-minute buffer (`BUFFER`, a module constant; *amended by `DECISIONS.md` #537, 2026-11-17: 5 minutes*). The
+  watermark, the highest `posted_at` seen, is stored but no longer sets the window. A configured group with no record raises, naming it (W7);
   a bootstrap run supplies its own `since`, and `advance` creates the records.
 - **No per-group local filter** (W6): every fetched post goes on to dedup.
 - **After a successful run, every configured group** (W5a, W5b): `watermark` becomes the newest

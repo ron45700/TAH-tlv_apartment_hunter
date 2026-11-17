@@ -8321,3 +8321,197 @@ the log line for every failed call that carries OpenAI's answer, stop kinds incl
 too; WARNING level.
 
 **Next:** Ron deploys #536 when he chooses; DoD 1 and 2 keep running; item 17 (the card's field order) in a design round.
+
+## 2026-10-25 (continued) — Round 52: a design round, demos only (Impeccable; two directions; item 17)
+
+No paid call, no store write (the site ran by `serve --copy` over a new dated copy, `data/store/site/
+tlv_hunter.2026-10-25.site.sqlite3`; nothing signed in or written there), nothing in `frontend/`, `web/`, the API or
+the schema, no package added to `frontend/`, nothing on the server, no git write. Impeccable's commands ran with
+`DO_NOT_TRACK=1` and `IMPECCABLE_NO_TELEMETRY=1` (the engine honours both); no live mode, no generate.
+
+**Done:**
+- `.gitignore`: `PRODUCT.md`, `DESIGN.md`, `.impeccable/` (Ron's approval). `PRODUCT.md` written from `BASELINE.md`,
+  `PHASE_3.md` 3.7 and the site's decisions, pointing at them rather than copying; Impeccable's interview answered from
+  the docs (no gap needed Ron). `.impeccable/config.json`: `buildPath` `code`; live mode not configured. The two
+  direction contracts are in `.impeccable/surfaces/`.
+- **The critique of today's site** (two isolated sub-agents, a design review and the detector; snapshot in
+  `.impeccable/critique/`): 24/40, "Acceptable". In order of impact: (1) the tier, the product's point, is the quietest
+  thing on the card: a 2px ring and a faded "i", the green and amber rings close in lightness; (2) no typographic or
+  colour system of its own: one sans at two sizes, labels at 10.5–12px, teal controls and blue links as two primaries,
+  everything a pill, iOS switches on a desktop bar: the 2016–2019 marketplace card Ron calls dated; (3) the desktop
+  dialog's photo pushes every fact below the fold and the poster's text comes last; (4) the desktop bar is ~13
+  same-weight controls in one strip with underlined "נקה" links; (5) phone cards waste height (~1.7 a screen). Detector:
+  `.stat .note` at 10.56px (real), the amber location line's 1px padding, the logo's second word at 4.0:1 (a logotype),
+  three `admin.css` nav markers (false positives).
+- **Two static demos**, the same eight real posts in each (seven from the development store, read through the site's
+  own API on the copy, photos copied; one Yad2 card built from `data/raw/yad2_listing_private_1_2026-10-24.html` and its
+  saved model answer through the real code: mapping, `complete`, `evaluate`, `card_payload`). Every string comes from
+  the site's own `frontend/src/format.ts`, imported read-only. A room, a whole apartment, the Yad2 card, an orange
+  location, no price and no entry date, an unclear kind, "women only", one viewed card. The viewer is a signed-in user
+  with a temporary filter (rooms ≤ ₪3,500; whole ≤ ₪9,000, 2+ rooms; no broker and balcony as preferences). Hash links:
+  `#post=<id>`, `#sheet`.
+  - `data/mock/design_a/index.html`, **A "לוח"** (Impeccable's roll: the weekend paper's classifieds): an ink masthead,
+    cool newsprint ground, square cards ruled in hairlines, Frank Ruhl Libre for the poster's words (first line bold)
+    with Heebo for facts and controls, carbon violet only for what can be pressed; five columns at 1440. **Order:**
+    kind line and source; price with the entry date beside it; the place; rooms · size · floor; the poster's words
+    (3 lines); green chips; foot. The dialog: facts on the right, photos and the full text on the left.
+  - `data/mock/design_b/index.html`, **B "העיר הלבנה"** (Impeccable's pick): one sea-blue shell holding the header (a
+    darker band) and the bar, plaster-white rounded cards, sand for what is chosen, Rubik throughout; four columns at
+    1440. **Order:** the photo with the price as a white tag on it; the place as the card's heading; kind line and
+    source; rooms · size · floor · entry in one row; green chips; the poster's words (2 lines); foot. On a phone the
+    price sits beside the photo (#303). The dialog: a photo band, then facts and the full text side by side.
+  - Screenshots in `data/mock/screenshots/` (`today/`, `design_a/`, `design_b/`): list, opened post and sheet at 1440
+    and 390, plus deutan and protan simulations.
+
+**Verified:** no sideways scroll at 390 in either demo; 37 WCAG pairs pass in both palettes (B's switch track darkened
+after one failed at 2.89:1); the tier rings stay apart in lightness (relative luminance green 0.156, amber 0.226, red
+0.088), and under the deutan and protan matrices green and red differ by lightness only (as today, #323); the demos
+load nothing from another host; Impeccable's detector: A clean, B one `cramped-padding` on the full-bleed `.top` band
+(a false positive, left standing: its only suppression is file-wide). Chrome DevTools MCP failed to connect and
+Playwright is not installed (`browser` extra), so screenshots came from the installed Chrome, driven headless over its
+DevTools protocol by a scratch script; nothing was installed.
+
+**Decided by me:** the grounded list and taking the roll's assignment as A and my own top candidate as B; the fonts
+(fetched with `npm pack` into the scratchpad, `@fontsource/heebo`, `frank-ruhl-libre`, `rubik` 5.3.0, OFL-1.1, copied
+beside the demos with their licences); both palettes, with the meaning hues re-shaded only (green #0b7d61, amber
+#b97300, red #a11d3c); the eight posts; relative times as of 2026-10-25 18:00 UTC; the Yad2 card shows "10 תמונות ביד2 ·
+לא הורדו להדגמה" (no request to Yad2); the logo mark kept as drawn, the wordmark re-set; the "dark glow" finding on B
+recorded as an exception (it is #308's glow); the critique's question round replaced by this report's points (Ron's
+brief asked for a short report).
+
+**Points for Ron (departures from decisions, open choices):**
+1. Fonts: both demos leave IBM Plex Sans Hebrew (#330 point 16): A Heebo with Frank Ruhl Libre, B Rubik.
+2. The poster's text is no longer the card's heading (3.7 (c) row 3, #312): A sets it under the facts, B lower still.
+3. A moves the entry date from the fourth stat (row 7) to beside the price.
+4. B puts the price on the photo (row 5: "at the top of the text column") and the kind line under the place (row 11:
+   "above the price").
+5. B's bar is blue, not white (#342: the header's own background against a white bar); the header keeps its own darker
+   band.
+6. Open, not built (each would change a decision): a one-line colour legend once a preference is set; hiding the "i"
+   on a card with no glow; a colour band instead of the ring. The critique raised all three.
+7. Which direction (A, B or a mix), and which card order (item 17).
+
+**Next:** Ron opens the two demos and chooses; a build round then moves the chosen look into `frontend/` (fonts as
+`@fontsource` packages, Lighthouse and the six screen sizes again).
+
+## 2026-10-26 — Round 53: the design freed; three bold demo directions (C, D, E)
+
+No paid call, no store access (the demos reuse round 52's `data.js` and photos), nothing in `frontend/`, `web/`, the API
+or the schema, nothing installed in the project, no git write. Impeccable's commands ran with `DO_NOT_TRACK=1` and
+`IMPECCABLE_NO_TELEMETRY=1`; no live mode, no generate. Fonts fetched with `npm pack` into the scratchpad (all
+`@fontsource` 5.3.0, OFL-1.1, copied beside each demo with their licences). No `data/screenshots/inspiration/` exists.
+
+**Ron's verdict on round 52:** both demos too close to today's site; the brief had fixed the layout. Fixed now only: the
+information, the three tiers and "לא צוין" distinguishable and colour-vision safe, the actions, RTL Hebrew with a
+self-hostable font, WCAG AA, one-handed phone use, a quick 20-post scan, no rule in the page.
+
+**Built** (each self-contained: `index.html`, a shared `core.js` copied in, `data.js`, `photos/`, `fonts/`; the same
+eight real posts; working kind filter, hide and "show hidden", viewed and "mark as not viewed", the report menu, the
+filter sheet, the user menu; opening a post morphs its photo by the View Transitions API; `prefers-reduced-motion`
+honoured):
+- `data/mock/design_c/` **"לילה"**: a dark, immersive app. Desktop: a fast list rail and a large photo stage that
+  follows the pointer (130 ms intent); the opened post replaces the stage, the rail stays. Phone: a full-screen swipe
+  feed (scroll snap, photos settle in by a scroll-driven animation) with a bottom bar, and a "רשימה" toggle for the
+  compact list. Tier: a three-bar signal (3/2/1) and a word. Logo: a dark building with one lit window that flickers on.
+  Secular One and Assistant. Hiding "turns the lights out".
+- `data/mock/design_d/` **"גיליון"**: an editorial issue. A "TLV." nameplate, a dateline, the kinds as sections, an
+  index column "בגיליון" of every post (a sheet on the phone), a lead story, then stories; the opened post is a
+  full-page article with the poster's text as its body. Tier: a stamped seal in words, three shapes (circle, rounded
+  square, square). Suez One, Noto Serif Hebrew and Assistant; white, ink, cobalt.
+- `data/mock/design_e/` **"פסים"**: Swiss data. The list cut into three solid bands by tier, each headed by a huge
+  word and its count (counting up), dense tiles with giant condensed prices and a numbers row; a black control column
+  with the filter's summary; the post opens in a drawer with previous/next. Logo: three bars as a skyline. Karantina and
+  Heebo.
+
+**Critique** (per direction: an isolated design-review sub-agent on the screenshots and source, the detector run in
+the parent): C 27/40, D 27/40, E 29/40 before fixes. **Fixed after it:** C: photo arrows off touch screens, a top scrim
+and pills for text over bright photos, the rail's missing-entry badge and full fact lines, hover intent, 44 px controls
+in the phone sheet, two lines of the poster's text on the feed slide, the slide's focus ring. D: compact phone stories
+(photo beside the headline), section tabs with a visible box, the phone post's actions in the bottom bar, 44 px
+text-link targets, the article's seal beside its headline and the price in its header, a stamp animation that no
+longer widens the phone page. E: sticky band headings and a tier word on every tile (green and red bands are close in
+lightness), previous/next on the phone, 44 px tile actions, "ההעדפות שלי" in the phone bar, the unclear kind no longer
+cut, the poster's first line on each tile. All three: the filter button's "הצגת N מודעות" lost its space (flex), fixed.
+
+**Verified:** no sideways scroll at 390 in any; 43 contrast pairs pass AA; deuteranopia simulation keeps every tier
+readable (bars, seal shapes and words, band words); Impeccable's detector clean on all three after one fix. Screenshots
+in `data/mock/screenshots/design_c|d|e/`.
+
+**Departures from decisions (information for Ron, per his brief):** the grid with photo on top (#303), the dialog
+(#304: C's stage, D's full page, E's drawer), the bar at the top (#305: C top bar plus bottom bar, D masthead sections,
+E side column), the glow and the "i" (#308, #323, #337: signal, seal, bands), "no glyphs" (#323: C's bars and D's seal
+shapes are drawn marks, not glyphs), the closed card's fixed slots and items (#326, #332, #341: C's rail rows, D's
+stories, E's tiles; E shows the poster's first line only), the button outlines and order (#338, #351: text links and
+menus), the header's own band and the logo (#333, #342, #343: three new logos), #339's wording kept;
+C on the phone is one post per screen (scanning by swipe or the list toggle);
+E orders by tier band first, then viewed within a band (#62 kept within each band); previous/next added (C rail, E
+drawer).
+
+**Decided by me:** the three concepts and their names, fonts, palettes and logos; the shared `core.js`; the demo's
+client-side kind filter (the real page leaves this to the server, #330 point 18); counting band totals up; hover intent
+130 ms; the Yad2 card's photo placeholder as in round 52.
+
+**Next:** Ron opens the three and picks one (or a mix); a plan round then records the departures as decisions.
+
+## 2026-11-17 — Round 54: the watermark buffer, 15 → 5 minutes (#537), after Apify's token rotation
+
+**Context.** Apify had a security incident (2026-11-09/10) and rotated every API token on 2026-11-12. Since then the
+server's `APIFY_TOKEN` is invalid and every Facebook run fails (`HTTP 401`). Ron replaces the token on the server; no
+code change; Yad2 is unaffected. Worked on the desktop's copy of the folder (`.venv` rebuilt with `uv sync`).
+
+**Decided by Ron (#537):**
+- The buffer is 5 minutes, amending #78 W2. The round first built 2 minutes; Ron chose 5 after the server count below.
+- The run interval is 30 minutes, set on the site.
+- The Apify plan stays at $19 with the usage limit not raised: collection stops when the cycle's budget runs out and
+  resumes on 2026-11-24. Accepted.
+- The gap of about 5 days is accepted. The first run after the fix returns at most the newest 50 per group, and the
+  cut-off groups are logged.
+
+**The server count** (read-only, run by Ron on the server's store):
+- Scope: 1,110 runs from 2026-10-19 to 2026-11-12, and 5,792 Facebook posts first fetched in a used run.
+- **82 posts were caught only by the old overlap:** 70 late by 2–5 minutes and 12 by over 5 minutes.
+- All 82 were in two groups. `333022240594651`: 64 + 10, of 1,126. `733810383372996`: 6 + 2, of 86. The other four
+  groups had 0.
+- 687 posts fell outside a used run (before run records began); 0 were older than their run's `since`.
+- Ron chose 5 minutes: it keeps 70 of the 82 at a small part of the old overlap's cost; the 12 over 5 minutes are an
+  accepted loss.
+
+**Done.**
+- `BUFFER = timedelta(minutes=5)` in `watermark/window.py`. It is used by `run_since` (Facebook's window; Yad2 only
+  checks that its record exists) and by the cut-off rule's `max(since, watermark - BUFFER)`. A group at `max_posts` is
+  no longer reported for the 10 minutes that stopped being overlap; that is correct, since the previous run covered
+  them.
+- Tests: `test_the_buffer_is_five_minutes`, and a new test that a run 30 minutes after the last success sends
+  `"35 minutes"`.
+- Docs:
+  - DECISIONS #537, with the count's results, and amended-by notes on #78 W2 and #36.
+  - ASSUMPTIONS P1b and P1c: the documentation re-read; P1c stays ASSUMED, with an amended-by note.
+  - RESEARCH §3's cost figures marked as computed under 15 minutes (not recomputed); an amended-by note on §4 point 2.
+  - Amended-by notes on PHASE_1 (task 1.13's rule) and BASELINE (the watermark line).
+  - Unchanged: SCHEMA and PHASE_5 name no value, and CLAUDE.md doesn't state the buffer.
+- **The actor was rebuilt** (`latest` 1.8.23, modified 2026-11-15; OpenAPI build `VIslrfdVNl8QY1Ju7`). In the
+  schema, our six input fields and their defaults are unchanged; it adds fields we don't send (`onlyNewPosts` off,
+  `postsNewerThanDays`/`Hours`, `postsOlderThan`, an AI filter). Nothing has been checked against a real response since
+  the rebuild: **the first run after the token fix is that check.**
+- HEAD equals GitHub's `main` (`3b805d6`, read with `git ls-remote`). `thedoor.py`, `window.py` and `scheduler.py`
+  had no uncommitted changes.
+
+**Verified.** `ruff check` and `ruff format --check` are clean. The full `uv run pytest`: 2459 passed. `npm test`:
+104 passed (8 files). The server's count command was tested on a synthetic store with known answers. No paid call.
+Git: one commit, approved by Ron for this round only; no push.
+
+**Decided by me:**
+- The entry number #537.
+- The new `"35 minutes"` test.
+- Keeping `test_a_normal_run_fifteen_minutes_after_…`'s name, since that is Gate B's wording, not the buffer.
+- In the count command:
+  - The previous success's start is taken as the run's `window_since` + 15 minutes, which is exactly its
+    `last_success_at` under the old buffer.
+  - A run is used only if a succeeded Facebook `RunRecord` started between 5 minutes before and 1 minute after that
+    time; this leaves out a bootstrap run or one whose predecessor is unrecorded.
+  - A post belongs to the run whose start–finish holds its first `fetched_at`.
+
+**Next (Ron).**
+1. Replace `APIFY_TOKEN` on the server.
+2. Watch the first run after the fix, which is also the check of actor build 1.8.23.
+3. Push.

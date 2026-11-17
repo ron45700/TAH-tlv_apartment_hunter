@@ -159,7 +159,8 @@ scheduler -> Apify (thedoor) -> provider normalize -> text normalize -> pre-mode
   is not started.*
 - **Watermark:** per group, the highest post time seen, never moving backwards. The run's window
   starts at the last successful run's start minus a 15-minute overlap, the same for every group;
-  all groups advance together, only on a successful run (`DECISIONS.md` #78).
+  all groups advance together, only on a successful run (`DECISIONS.md` #78). *Amended by #537 (2026-11-17): a
+  5-minute overlap.*
 - **Bootstrap:** the first run stores everything and alerts nothing.
 - **Dedup A (before the model):** post ID and hash of normalized text, checked within the batch
   and against history. A phone-only match is not a duplicate; the phone is a candidate signal for

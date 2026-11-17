@@ -311,6 +311,9 @@ window by the delay — one more reason the 10–15 minute overlap buffer must n
 *Amended by #78 (2026-10-04): the window is `now - (last successful run's start - buffer)`,
 expressed in minutes; the buffer is 15 minutes. Relative minutes and the reasoning above stand.*
 
+*Amended by #537 (2026-11-17): the buffer shrinks to 5 minutes, against the "must not shrink" above. A delayed start
+is still why it is not 0.*
+
 ### 37 — A post that normalizes to nothing is `no_text`, never an error
 An emoji-only post produces an empty normalized string. Hashing it would collide with every other
 such post, so it must not be hashed — but **raising is the wrong remedy**: a failed run does not
@@ -1041,6 +1044,7 @@ it. The rest of the task 1.13 plan was approved as written.
 - **W2. The buffer is 15 minutes**, a module constant (`BUFFER` in `watermark/window.py`), not a
   config key.
   *Why:* about $2.5/month in rows billed twice; no reason to edit it from the dashboard.
+  *Amended by #537 (2026-11-17): the buffer is 5 minutes.*
 - **W3. `max_posts` goes from 30 to 50** in `config/collection.yaml`. A group at `max_posts` still
   advances; `advance` returns the cut-off groups so that task 1.14 logs them with the `run_id`. A
   group is cut off when it returned `max_posts` posts or more and its oldest is later than its own
@@ -4628,6 +4632,45 @@ token masked, #128) and the `x-request-id` are logged, with the post's `listing_
 or the block, and neither is stored. Amends #182's table of attempts by one kind (#139's fields unchanged; no schema
 or version change). `ASSUMPTIONS.md` O15 stays UNKNOWN: these log lines are how it will be learned. *Approved by Ron,
 2026-10-25.*
+
+## Collection: the watermark buffer after Apify's token rotation (2026-11-17, round 54)
+
+### 537 — The watermark buffer is 5 minutes; the Apify budget runs out and resumes on Nov 24
+**Context.** Apify had a security incident (2026-11-09/10) and rotated every API token on 2026-11-12. The server's
+`APIFY_TOKEN` has been invalid since, so every Facebook run fails (`ApifyApiError … HTTP 401`) and no watermark moves
+(invariant 2). Ron replaces the token on the server himself; no code change. Yad2 is unaffected.
+
+- **The buffer goes from 15 minutes to 5** (`BUFFER` in `watermark/window.py`). **Amends #78 W2.** It sets both the
+  run's window (`run_since`: the earliest `last_success_at` minus the buffer) and a group's own window start in the
+  cut-off rule (`max(since, watermark - buffer)`).
+  *Why (Ron):* the next run should start where the previous one ended, not pay again for 15 minutes of rows. Not 0,
+  because `postsNewerThan` is relative minutes computed at our clock before `fetch()`, while the actor evaluates it
+  later, so 0 can drop a post at the window's edge. The rounding up to whole minutes in `posts_newer_than` adds 0–59 s,
+  with no guaranteed minimum. The actor's documentation (read 2026-11-17, build 1.8.23) does not say what
+  `postsNewerThan` is measured from: `ASSUMPTIONS.md` P1c stays ASSUMED.
+  *What it gives up:* a post whose `posted_at` is more than about 5 minutes earlier than the moment it appears in the
+  feed (instead of about 15) is no longer caught by the overlap, and no rule detects it. Ron ran a read-only count on
+  the server's store: 1,110 runs from 2026-10-19 to 2026-11-12, and 5,792 Facebook posts first fetched in a used run.
+  **82 posts were caught only by the old overlap:** 70 late by 2–5 minutes and 12 by over 5 minutes. All were in two
+  groups:
+
+  | Group | Late 2–5 min | Late over 5 min | Posts counted |
+  |---|---|---|---|
+  | `333022240594651` | 64 | 10 | 1,126 |
+  | `733810383372996` | 6 | 2 | 86 |
+
+  The other four groups had 0. Also: 687 posts fell outside a used run (before run records began), and 0 were older
+  than their run's `since`. Ron chose 5 minutes: it keeps 70 of the 82 at a small part of the old overlap's cost; the
+  12 over 5 minutes are an accepted loss.
+  *Supersedes the reasoning* in #36 and `ASSUMPTIONS.md` P1c that the buffer "must not shrink" (both marked).
+- **Recorded, no code:** Ron set the run interval to 30 minutes on the site (`ScheduleSettings`). The Apify plan stays
+  at $19 and its usage limit is **not** raised, so collection stops when the cycle's budget runs out and resumes on
+  2026-11-24. Accepted.
+- **Recorded, no code:** the outage of about 5 days is an accepted gap. The first run after the token fix asks from the
+  last success before the outage. It returns at most the newest 50 posts per group (`max_posts`, #78 W3), and the cut-off
+  groups are logged.
+
+*Approved by Ron, 2026-11-17.*
 
 ---
 

@@ -13,8 +13,8 @@ from tlv_hunter.contracts.group_watermark import GROUP_WATERMARK_SCHEMA_VERSION,
 from tlv_hunter.contracts.raw_post import RawPost
 from tlv_hunter.parsing.datetimes import require_utc
 
-# The overlap subtracted from the last successful run's start (#78 W2).
-BUFFER = timedelta(minutes=15)
+# The overlap subtracted from the last successful run's start (#78 W2, amended by #537).
+BUFFER = timedelta(minutes=5)
 
 
 class MissingWatermarkError(LookupError):

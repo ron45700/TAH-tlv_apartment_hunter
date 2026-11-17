@@ -7,7 +7,7 @@ from tests.conftest import CONFIG_ROOT, FETCHED_AT, SQLITE_FILENAME, load_spike_
 from tlv_hunter.config.yaml_config import YamlConfig
 from tlv_hunter.contracts.group_watermark import GROUP_WATERMARK_SCHEMA_VERSION, GroupWatermark
 from tlv_hunter.contracts.raw_post import RawPost
-from tlv_hunter.providers.thedoor import to_raw_post
+from tlv_hunter.providers.thedoor import posts_newer_than, to_raw_post
 from tlv_hunter.state.sqlite import SqliteWatermarkStore
 from tlv_hunter.watermark.window import BUFFER, MissingWatermarkError, advance, run_since
 
@@ -86,8 +86,14 @@ def test_a_failed_run_writes_nothing_so_the_next_window_covers_it() -> None:
 # --- W2: the buffer ------------------------------------------------------------------------------
 
 
-def test_the_buffer_is_fifteen_minutes() -> None:
-    assert BUFFER == timedelta(minutes=15)
+def test_the_buffer_is_five_minutes() -> None:
+    assert BUFFER == timedelta(minutes=5)
+
+
+def test_a_run_thirty_minutes_after_the_last_success_asks_for_thirty_five_minutes() -> None:
+    # LAST_SUCCESS is RUN_START minus 30 minutes: the interval plus the buffer, sent as minutes.
+    since = run_since(_marks(), GROUPS)
+    assert posts_newer_than(since, RUN_START) == "35 minutes"
 
 
 # --- W3: max_posts 50, and a group at max_posts --------------------------------------------------
